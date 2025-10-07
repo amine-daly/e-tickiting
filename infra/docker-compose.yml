@@ -1,0 +1,50 @@
+version: "3.9"
+services:
+  mongo:
+    image: mongo:7
+    container_name: eticketing-mongo
+    ports:
+      - "27017:27017"
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: ${MONGO_INITDB_ROOT_USERNAME}
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_INITDB_ROOT_PASSWORD}
+    volumes:
+      - mongo_data:/data/db
+  mongo-express:
+    image: mongo-express:1
+    container_name: eticketing-mongo-express
+    restart: always
+    ports:
+      - "8081:8081"
+    environment:
+      ME_CONFIG_MONGODB_ADMINUSERNAME: ${MONGO_INITDB_ROOT_USERNAME}
+      ME_CONFIG_MONGODB_ADMINPASSWORD: ${MONGO_INITDB_ROOT_PASSWORD}
+      ME_CONFIG_MONGODB_SERVER: mongo
+    depends_on:
+      - mongo
+  backend:
+    build:
+      context: ../
+      dockerfile: infra/docker/backend.Dockerfile
+    container_name: eticketing-backend
+    environment:
+      SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE}
+      MONGODB_URI: mongodb://${MONGO_INITDB_ROOT_USERNAME}:${MONGO_INITDB_ROOT_PASSWORD}@mongo:27017/${MONGO_DB_NAME}?authSource=admin
+      JWT_SECRET: ${JWT_SECRET}
+    ports:
+      - "8080:8080"
+    depends_on:
+      - mongo
+  frontend:
+    build:
+      context: ../
+      dockerfile: infra/docker/frontend.Dockerfile
+      args:
+        API_URL: ${API_URL}
+    container_name: eticketing-frontend
+    ports:
+      - "4200:4200"
+    depends_on:
+      - backend
+volumes:
+  mongo_data:

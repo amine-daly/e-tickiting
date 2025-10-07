@@ -1,0 +1,12 @@
+{
+    "name": "e-ticketing-monorepo",
+    "private": true,
+    "workspaces": [
+        "apps/frontend"
+    ],
+    "scripts": {
+        "format": "echo format placeholder",
+        "lint": "echo lint placeholder",
+        "test": "echo test placeholder"
+    }
+}

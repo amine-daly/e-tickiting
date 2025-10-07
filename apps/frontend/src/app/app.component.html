@@ -1,0 +1,31 @@
+<nav class="navbar navbar-expand-lg bg-body-tertiary shadow-sm">
+  <div class="container">
+    <a class="navbar-brand fw-bold" routerLink="/">e‑Ticketing</a>
+    <button class="navbar-toggler" type="button" (click)="isNavCollapsed = !isNavCollapsed"
+      [attr.aria-expanded]="!isNavCollapsed" aria-controls="navContent" aria-label="Toggle navigation">
+      <span class="navbar-toggler-icon"></span>
+    </button>
+    <div id="navContent" class="collapse navbar-collapse" [ngbCollapse]="isNavCollapsed">
+      <ul class="navbar-nav ms-auto mb-2 mb-lg-0">
+        <li class="nav-item"><a class="nav-link" routerLink="/search" routerLinkActive="active">Search</a></li>
+        <li class="nav-item"><a class="nav-link" routerLink="/login" routerLinkActive="active">Login</a></li>
+        <li class="nav-item"><a class="nav-link" routerLink="/register" routerLinkActive="active">Register</a></li>
+      </ul>
+    </div>
+  </div>
+</nav>
+
+<section class="py-5 bg-light border-bottom">
+  <div class="container container-narrow text-center">
+    <h1 class="display-5 fw-bold mb-3">Find and book your trip</h1>
+    <p class="text-secondary mb-4">Search by city, pick your seats, and pay securely. Powered by Angular 19 +
+      ng‑bootstrap.</p>
+    <a routerLink="/search" class="btn btn-primary btn-lg">Search trips</a>
+  </div>
+</section>
+
+<div class="container my-4">
+  <router-outlet></router-outlet>
+</div>
+
+<app-toasts></app-toasts>

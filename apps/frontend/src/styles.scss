@@ -1,0 +1,26 @@
+/* Theme variables (override Bootstrap defaults before import) */
+/* When using @use, override Bootstrap variables via the with(...) config */
+@use "bootstrap/scss/bootstrap" as * with ($primary: #2b6cb0,
+    $secondary: #718096,
+    $success: #2f855a,
+    $danger: #c53030,
+    $warning: #b7791f,
+    $info: #3182ce,
+    $light: #f7fafc,
+    $dark: #1a202c);
+
+/* Global app styles */
+html,
+body {
+    height: 100%;
+}
+
+body {
+    margin: 0;
+    font-family: Inter, Roboto, "Helvetica Neue", Arial, "Noto Sans", sans-serif;
+    background: #f8fafc;
+}
+
+.container-narrow {
+    max-width: 900px;
+}

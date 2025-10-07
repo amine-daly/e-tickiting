@@ -1,0 +1,39 @@
+name: CI
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: "temurin"
+          java-version: "21"
+      - name: Cache npm
+        uses: actions/cache@v4
+        with:
+          path: ~/.npm
+          key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-node-
+      - name: Frontend install
+        working-directory: apps/frontend
+        run: |
+          if [ -f package.json ]; then npm ci; fi
+      - name: Frontend lint & build
+        working-directory: apps/frontend
+        run: |
+          if [ -f package.json ]; then npm run lint --if-present && npm run build --if-present; fi
+      - name: Backend build
+        working-directory: apps/backend
+        run: |
+          if [ -f mvnw ]; then ./mvnw -q -DskipTests package; fi

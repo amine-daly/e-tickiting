@@ -1,0 +1,85 @@
+# Node / Angular
+node_modules/
+dist/
+.angular/
+coverage/
+*.log
+
+# Angular cache
+apps/frontend/.angular/
+apps/frontend/dist/
+apps/frontend/node_modules/
+
+# Spring Boot / Maven
+apps/backend/target/
+**/target/
+*.class
+*.war
+
+# IDE / Project files
+.idea/
+*.iml
+.project
+.settings/
+.classpath
+.history/
+.vs/
+
+# VS Code (keep shared configs)
+.vscode/*
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+
+# Env / local configs
+*.env
+.env*
+**/application-local.properties
+**/application-local.yml
+
+# OS / OneDrive temp
+Thumbs.db
+.DS_Store
+~$*
+# Node
+node_modules/
+dist/
+.tmp/
+.angular/
+
+# Java / Maven
+apps/backend/target/
+.mvn/
+!.mvn/wrapper/
+
+# IDE
+.vscode/
+.idea/
+*.iml
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Env
+.env
+.env.*
+apps/**/.env
+
+# Logs
+logs/
+*.log
+
+# Docker
+**/.docker/
+**/.cache/
+
+# Coverage
+coverage/
+
+# Angular
+apps/frontend/.cache/
+apps/frontend/.angular/
+
+# Misc
+*.local
