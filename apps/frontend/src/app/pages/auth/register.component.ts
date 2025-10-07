@@ -1,139 +1,169 @@
-import { Component, inject } from '@angular/core';
+﻿import { Component, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
-import { Router } from '@angular/router';
+import {
+  ReactiveFormsModule,
+  FormBuilder,
+  FormGroup,
+  Validators,
+  AbstractControl,
+} from '@angular/forms';
+import { FormsModule } from '@angular/forms';
+import { RouterLink, Router } from '@angular/router';
+import { finalize } from 'rxjs';
+
 import { AuthService } from '../../core/services/auth.service';
+import { ToastService } from '../../core/ui/toast.service';
 
 @Component({
   selector: 'app-register',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule],
-  template: `
-    <div class="row justify-content-center">
-      <div class="col-12 col-md-7 col-lg-6">
-        <h2 class="mb-4">Create your account</h2>
-        <div *ngIf="error" class="alert alert-danger">{{ error }}</div>
-        <form [formGroup]="form" (ngSubmit)="onSubmit()" novalidate>
-          <div class="row g-2">
-            <div class="col-md-6">
-              <label class="form-label">First name</label>
-              <input
-                type="text"
-                class="form-control"
-                formControlName="firstName"
-                required
-              />
-            </div>
-            <div class="col-md-6">
-              <label class="form-label">Last name</label>
-              <input
-                type="text"
-                class="form-control"
-                formControlName="lastName"
-                required
-              />
-            </div>
-          </div>
-
-          <div class="mb-3 mt-3">
-            <label class="form-label">Email</label>
-            <input
-              type="email"
-              class="form-control"
-              formControlName="email"
-              placeholder="you@example.com"
-            />
-          </div>
-          <div class="text-center text-muted my-2">or</div>
-          <div class="row g-2 align-items-end">
-            <div class="col-4">
-              <label class="form-label">Country code</label>
-              <input
-                type="text"
-                class="form-control"
-                formControlName="countryCode"
-                placeholder="+1"
-              />
-            </div>
-            <div class="col-8">
-              <label class="form-label">Phone number</label>
-              <input
-                type="tel"
-                class="form-control"
-                formControlName="phoneNumber"
-                placeholder="555123456"
-              />
-            </div>
-          </div>
-          <div class="form-text" [class.text-danger]="xorInvalid">
-            Provide either email or phone, not both.
-          </div>
-
-          <div class="mb-3 mt-3">
-            <label class="form-label">Password</label>
-            <input
-              type="password"
-              class="form-control"
-              formControlName="password"
-              required
-            />
-          </div>
-
-          <button
-            class="btn btn-success w-100"
-            [disabled]="submitting || xorInvalid || form.invalid"
-          >
-            {{ submitting ? 'Creating…' : 'Create account' }}
-          </button>
-        </form>
-      </div>
-    </div>
-  `,
+  imports: [CommonModule, ReactiveFormsModule, FormsModule, RouterLink],
+  templateUrl: './register.component.html',
+  styleUrl: './register.component.scss',
 })
 export class RegisterComponent {
+  registerForm: FormGroup;
+  loading = false;
+  showPassword = false;
+  usePhone = false;
+
   private fb = inject(FormBuilder);
-  private auth = inject(AuthService);
+  private authService = inject(AuthService);
   private router = inject(Router);
+  private toastService = inject(ToastService);
 
-  error: string | null = null;
-  submitting = false;
+  constructor() {
+    this.registerForm = this.fb.group(
+      {
+        email: ['', [Validators.email]],
+        countryCode: ['+1'],
+        phoneNumber: [''],
+        password: ['', [Validators.required, Validators.minLength(8)]],
+        confirmPassword: ['', Validators.required],
+        acceptTerms: [false, Validators.requiredTrue],
+      },
+      { validators: this.passwordMatchValidator }
+    );
 
-  form = this.fb.group({
-    firstName: ['', Validators.required],
-    lastName: ['', Validators.required],
-    email: [''],
-    countryCode: [''],
-    phoneNumber: [''],
-    password: ['', Validators.required],
-  });
-
-  get xorInvalid() {
-    const email = this.form.value.email?.trim();
-    const cc = this.form.value.countryCode?.trim();
-    const pn = this.form.value.phoneNumber?.trim();
-    const hasEmail = !!email;
-    const hasPhone = !!cc && !!pn;
-    return !(hasEmail !== hasPhone);
+    this.updateValidators();
   }
 
-  onSubmit() {
-    this.error = null;
-    if (this.form.invalid || this.xorInvalid) return;
-    this.submitting = true;
-    const { firstName, lastName, email, countryCode, phoneNumber, password } =
-      this.form.getRawValue();
-    const payload: any = { firstName, lastName, password };
-    if (email) payload.email = email;
-    else payload.phone = { countryCode, number: phoneNumber };
-    this.auth.register(payload).subscribe({
-      next: () => {
-        this.submitting = false;
-        this.router.navigateByUrl('/');
-      },
-      error: (e) => {
-        this.submitting = false;
-        this.error = e?.error?.message || 'Registration failed';
-      },
-    });
+  updateValidators(): void {
+    const emailControl = this.registerForm.get('email');
+    const phoneControl = this.registerForm.get('phoneNumber');
+
+    if (this.usePhone) {
+      emailControl?.clearValidators();
+      phoneControl?.setValidators([
+        Validators.required,
+        Validators.pattern(/^\d{9,15}$/),
+      ]);
+    } else {
+      emailControl?.setValidators([Validators.required, Validators.email]);
+      phoneControl?.clearValidators();
+    }
+
+    emailControl?.updateValueAndValidity();
+    phoneControl?.updateValueAndValidity();
+  }
+
+  passwordMatchValidator(form: AbstractControl) {
+    const password = form.get('password');
+    const confirmPassword = form.get('confirmPassword');
+
+    if (
+      password &&
+      confirmPassword &&
+      password.value !== confirmPassword.value
+    ) {
+      confirmPassword.setErrors({ passwordMismatch: true });
+      return { passwordMismatch: true };
+    }
+
+    if (confirmPassword?.hasError('passwordMismatch')) {
+      delete confirmPassword.errors!['passwordMismatch'];
+      if (Object.keys(confirmPassword.errors!).length === 0) {
+        confirmPassword.setErrors(null);
+      }
+    }
+
+    return null;
+  }
+
+  togglePasswordVisibility(): void {
+    this.showPassword = !this.showPassword;
+  }
+
+  toggleContactMethod(): void {
+    this.usePhone = !this.usePhone;
+    this.updateValidators();
+  }
+
+  getPasswordStrength(): number {
+    const password = this.registerForm.get('password')?.value || '';
+    let strength = 0;
+
+    if (password.length >= 8) strength += 25;
+    if (/[a-z]/.test(password)) strength += 25;
+    if (/[A-Z]/.test(password)) strength += 25;
+    if (/\d/.test(password)) strength += 25;
+    if (/[^\w\s]/.test(password)) strength += 25;
+
+    return Math.min(100, strength);
+  }
+
+  getPasswordStrengthClass(): string {
+    const strength = this.getPasswordStrength();
+    if (strength < 50) return 'bg-danger';
+    if (strength < 75) return 'bg-warning';
+    return 'bg-success';
+  }
+
+  getPasswordStrengthText(): string {
+    const strength = this.getPasswordStrength();
+    if (strength < 50) return 'Weak';
+    if (strength < 75) return 'Medium';
+    return 'Strong';
+  }
+
+  onSubmit(): void {
+    this.updateValidators();
+
+    if (this.registerForm.valid) {
+      this.loading = true;
+      const formValue = this.registerForm.value;
+
+      const registerData = {
+        email: this.usePhone ? undefined : formValue.email,
+        phone: this.usePhone
+          ? {
+              countryCode: formValue.countryCode,
+              number: formValue.phoneNumber,
+            }
+          : undefined,
+        password: formValue.password,
+      };
+
+      this.authService
+        .register(registerData)
+        .pipe(finalize(() => (this.loading = false)))
+        .subscribe({
+          next: () => {
+            this.toastService.success(
+              'Account created successfully! Please sign in.'
+            );
+            this.router.navigate(['/login']);
+          },
+          error: (error) => {
+            this.toastService.error(
+              error.message || 'Registration failed. Please try again.'
+            );
+          },
+        });
+    } else {
+      Object.keys(this.registerForm.controls).forEach((key) => {
+        this.registerForm.get(key)?.markAsTouched();
+      });
+    }
   }
 }

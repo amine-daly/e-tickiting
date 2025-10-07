@@ -1,116 +1,124 @@
-import { Component, inject } from '@angular/core';
-import { Router } from '@angular/router';
+﻿import { Component, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
+import {
+  ReactiveFormsModule,
+  FormBuilder,
+  FormGroup,
+  Validators,
+} from '@angular/forms';
+import { FormsModule } from '@angular/forms';
+import { RouterLink, Router } from '@angular/router';
+import { finalize } from 'rxjs';
+
 import { AuthService } from '../../core/services/auth.service';
+import { ToastService } from '../../core/ui/toast.service';
 
 @Component({
   selector: 'app-login',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule],
-  template: `
-    <div class="row justify-content-center">
-      <div class="col-12 col-md-6 col-lg-5">
-        <h2 class="mb-4">Login</h2>
-        <div *ngIf="error" class="alert alert-danger">{{ error }}</div>
-        <form [formGroup]="form" (ngSubmit)="onSubmit()" novalidate>
-          <div class="mb-3">
-            <label class="form-label">Email</label>
-            <input
-              type="email"
-              class="form-control"
-              formControlName="email"
-              placeholder="you@example.com"
-            />
-          </div>
-          <div class="text-center text-muted my-2">or</div>
-          <div class="row g-2 align-items-end">
-            <div class="col-4">
-              <label class="form-label">Country code</label>
-              <input
-                type="text"
-                class="form-control"
-                formControlName="countryCode"
-                placeholder="+1"
-              />
-            </div>
-            <div class="col-8">
-              <label class="form-label">Phone number</label>
-              <input
-                type="tel"
-                class="form-control"
-                formControlName="phoneNumber"
-                placeholder="555123456"
-              />
-            </div>
-          </div>
-          <div class="form-text" [class.text-danger]="xorInvalid">
-            Provide either email or phone, not both.
-          </div>
-
-          <div class="mb-3 mt-3">
-            <label class="form-label">Password</label>
-            <input
-              type="password"
-              class="form-control"
-              formControlName="password"
-              required
-            />
-          </div>
-
-          <button
-            class="btn btn-primary w-100"
-            [disabled]="submitting || xorInvalid || form.invalid"
-          >
-            {{ submitting ? 'Signing in…' : 'Login' }}
-          </button>
-        </form>
-      </div>
-    </div>
-  `,
+  imports: [CommonModule, ReactiveFormsModule, FormsModule, RouterLink],
+  templateUrl: './login.component.html',
+  styleUrl: './login.component.scss',
 })
 export class LoginComponent {
-  private router = inject(Router);
+  loginForm: FormGroup;
+  loading = false;
+  showPassword = false;
+  usePhone = false;
+
   private fb = inject(FormBuilder);
-  private auth = inject(AuthService);
+  private authService = inject(AuthService);
+  private router = inject(Router);
+  private toastService = inject(ToastService);
 
-  error: string | null = null;
-  submitting = false;
+  constructor() {
+    this.loginForm = this.fb.group({
+      email: ['', [Validators.email]],
+      countryCode: ['+1'],
+      phoneNumber: [''],
+      password: ['', Validators.required],
+      rememberMe: [false],
+    });
 
-  form = this.fb.group({
-    email: [''],
-    countryCode: [''],
-    phoneNumber: [''],
-    password: ['', Validators.required],
-  });
-
-  get xorInvalid() {
-    const email = this.form.value.email?.trim();
-    const cc = this.form.value.countryCode?.trim();
-    const pn = this.form.value.phoneNumber?.trim();
-    const hasEmail = !!email;
-    const hasPhone = !!cc && !!pn;
-    return !(hasEmail !== hasPhone); // invalid if both or none
+    this.updateValidators();
   }
 
-  onSubmit() {
-    this.error = null;
-    if (this.form.invalid || this.xorInvalid) return;
-    this.submitting = true;
-    const { email, countryCode, phoneNumber, password } =
-      this.form.getRawValue();
-    const payload: any = { password };
-    if (email) payload.email = email;
-    else payload.phone = { countryCode, number: phoneNumber };
-    this.auth.login(payload).subscribe({
-      next: () => {
-        this.submitting = false;
-        this.router.navigateByUrl('/');
-      },
-      error: (e) => {
-        this.submitting = false;
-        this.error = e?.error?.message || 'Login failed';
-      },
-    });
+  updateValidators(): void {
+    const emailControl = this.loginForm.get('email');
+    const phoneControl = this.loginForm.get('phoneNumber');
+
+    if (this.usePhone) {
+      emailControl?.clearValidators();
+      emailControl?.setValue('');
+      phoneControl?.setValidators([
+        Validators.required,
+        Validators.pattern(/^\d{9,15}$/),
+      ]);
+    } else {
+      emailControl?.setValidators([Validators.required, Validators.email]);
+      phoneControl?.clearValidators();
+      phoneControl?.setValue('');
+    }
+
+    emailControl?.updateValueAndValidity();
+    phoneControl?.updateValueAndValidity();
+  }
+
+  togglePasswordVisibility(): void {
+    this.showPassword = !this.showPassword;
+  }
+
+  toggleContactMethod(): void {
+    this.usePhone = !this.usePhone;
+    this.updateValidators();
+  }
+
+  setEmailMode(): void {
+    this.usePhone = false;
+    this.updateValidators();
+  }
+
+  setPhoneMode(): void {
+    this.usePhone = true;
+    this.updateValidators();
+  }
+
+  onSubmit(): void {
+    this.updateValidators();
+
+    if (this.loginForm.valid) {
+      this.loading = true;
+      const formValue = this.loginForm.value;
+
+      const loginData = {
+        email: this.usePhone ? undefined : formValue.email,
+        phone: this.usePhone
+          ? {
+              countryCode: formValue.countryCode,
+              number: formValue.phoneNumber,
+            }
+          : undefined,
+        password: formValue.password,
+      };
+
+      this.authService
+        .login(loginData)
+        .pipe(finalize(() => (this.loading = false)))
+        .subscribe({
+          next: () => {
+            this.toastService.success('Welcome back!');
+            this.router.navigate(['/']);
+          },
+          error: (error) => {
+            this.toastService.error(
+              error.message || 'Login failed. Please try again.'
+            );
+          },
+        });
+    } else {
+      Object.keys(this.loginForm.controls).forEach((key) => {
+        this.loginForm.get(key)?.markAsTouched();
+      });
+    }
   }
 }

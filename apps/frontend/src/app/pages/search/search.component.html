@@ -1,0 +1,145 @@
+<div class="search-container">
+  <div class="container">
+    <div class="search-hero">
+      <div class="hero-content">
+        <h1 class="hero-title">
+          <i class="bi bi-geo-alt-fill text-primary me-2"></i>
+          Find Your Perfect Trip
+        </h1>
+        <p class="hero-subtitle">Discover amazing destinations and book your journey with ease</p>
+      </div>
+    </div>
+
+    <div class="search-card">
+      <div class="card-header">
+        <h2 class="card-title">
+          <i class="bi bi-search me-2"></i>
+          Search Trips
+        </h2>
+        <p class="card-subtitle">Enter your travel details to find available trips</p>
+      </div>
+
+      <form (submit)="go($event)" class="search-form">
+        <div class="form-row">
+          <div class="col-md-6">
+            <div class="form-floating location-field">
+              <input type="text" class="form-control" id="source" name="source" placeholder="From" required>
+              <label for="source">
+                <i class="bi bi-geo-alt me-2"></i>From
+              </label>
+              <div class="field-icon">
+                <i class="bi bi-geo-alt-fill"></i>
+              </div>
+            </div>
+          </div>
+
+          <div class="col-md-6">
+            <div class="form-floating location-field">
+              <input type="text" class="form-control" id="destination" name="destination" placeholder="To" required>
+              <label for="destination">
+                <i class="bi bi-geo-alt me-2"></i>To
+              </label>
+              <div class="field-icon">
+                <i class="bi bi-geo-alt-fill"></i>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="col-md-6">
+            <div class="form-floating">
+              <input type="date" class="form-control" id="date" name="date" [min]="getTodayDate()" required>
+              <label for="date">
+                <i class="bi bi-calendar-event me-2"></i>Travel Date
+              </label>
+            </div>
+          </div>
+
+          <div class="col-md-6">
+            <div class="form-floating">
+              <select class="form-control" id="passengers" name="passengers">
+                <option value="1">1 Passenger</option>
+                <option value="2">2 Passengers</option>
+                <option value="3">3 Passengers</option>
+                <option value="4">4 Passengers</option>
+                <option value="5">5+ Passengers</option>
+              </select>
+              <label for="passengers">
+                <i class="bi bi-people me-2"></i>Passengers
+              </label>
+            </div>
+          </div>
+        </div>
+
+        <div class="search-actions">
+          <button type="submit" class="search-btn">
+            <i class="bi bi-search me-2"></i>
+            Search Trips
+            <div class="btn-shine"></div>
+          </button>
+        </div>
+      </form>
+    </div>
+
+    <!-- Popular Destinations -->
+    <div class="popular-destinations">
+      <h3 class="section-title">
+        <i class="bi bi-star-fill me-2"></i>
+        Popular Destinations
+      </h3>
+      <div class="destinations-grid">
+        <div class="destination-card" *ngFor="let destination of popularDestinations">
+          <div class="destination-image">
+            <img [src]="destination.image" [alt]="destination.name">
+            <div class="destination-overlay">
+              <span class="price">From ${{destination.price}}</span>
+            </div>
+          </div>
+          <div class="destination-info">
+            <h4>{{destination.name}}</h4>
+            <p>{{destination.description}}</p>
+            <div class="destination-meta">
+              <span class="rating">
+                <i class="bi bi-star-fill"></i>
+                {{destination.rating}}
+              </span>
+              <span class="trips">{{destination.trips}} trips</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Search Tips -->
+    <div class="search-tips">
+      <h3 class="section-title">
+        <i class="bi bi-lightbulb me-2"></i>
+        Search Tips
+      </h3>
+      <div class="tips-grid">
+        <div class="tip-card">
+          <div class="tip-icon">
+            <i class="bi bi-calendar-check"></i>
+          </div>
+          <h4>Book in Advance</h4>
+          <p>Get better prices and more options by booking your trip early</p>
+        </div>
+        <div class="tip-card">
+          <div class="tip-icon">
+            <i class="bi bi-clock"></i>
+          </div>
+          <h4>Flexible Dates</h4>
+          <p>Consider traveling on weekdays for better deals and less crowded trips</p>
+        </div>
+        <div class="tip-card">
+          <div class="tip-icon">
+            <i class="bi bi-shield-check"></i>
+          </div>
+          <h4>Travel Insurance</h4>
+          <p>Protect your journey with comprehensive travel insurance options</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

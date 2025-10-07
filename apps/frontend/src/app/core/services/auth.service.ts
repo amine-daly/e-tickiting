@@ -43,6 +43,10 @@ export class AuthService {
       .pipe(tap((u) => this.user.set(u)));
   }
 
+  currentUser() {
+    return this.user();
+  }
+
   logout() {
     this.user.set(null);
     this.token.set(null);

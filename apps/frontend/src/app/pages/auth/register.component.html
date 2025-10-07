@@ -1,0 +1,91 @@
+﻿<div class="auth-container">
+  <div class="auth-card">
+    <div class="auth-header">
+      <div class="auth-icon">
+        <i class="bi bi-person-plus"></i>
+      </div>
+      <h1 class="auth-title">Create Account</h1>
+      <p class="auth-subtitle">Join eTicketing and start your journey</p>
+    </div>
+
+    <form [formGroup]="registerForm" (ngSubmit)="onSubmit()" class="auth-form">
+      <!-- Email/Phone Toggle -->
+      <div class="contact-toggle">
+        <div class="btn-group w-100" role="group">
+          <input type="radio" class="btn-check" name="contactType" id="emailType" [value]="false" [(ngModel)]="usePhone"
+            [ngModelOptions]="{standalone: true}">
+          <label class="btn btn-outline-primary" for="emailType">
+            <i class="bi bi-envelope me-2"></i>Email
+          </label>
+
+          <input type="radio" class="btn-check" name="contactType" id="phoneType" [value]="true" [(ngModel)]="usePhone"
+            [ngModelOptions]="{standalone: true}">
+          <label class="btn btn-outline-primary" for="phoneType">
+            <i class="bi bi-telephone me-2"></i>Phone
+          </label>
+        </div>
+      </div>
+
+      <!-- Email Input -->
+      <div class="form-floating" *ngIf="!usePhone">
+        <input type="email" class="form-control" id="email" placeholder="Enter your email address"
+          formControlName="email">
+        <label for="email">
+          <i class="bi bi-envelope me-2"></i>Email Address
+        </label>
+      </div>
+
+      <!-- Password -->
+      <div class="form-floating password-field">
+        <input [type]="showPassword ? 'text' : 'password'" class="form-control" id="password"
+          placeholder="Create a secure password" formControlName="password">
+        <label for="password">
+          <i class="bi bi-lock me-2"></i>Password
+        </label>
+        <button type="button" class="password-toggle" (click)="togglePasswordVisibility()">
+          <i [class]="showPassword ? 'bi bi-eye-slash' : 'bi bi-eye'"></i>
+        </button>
+      </div>
+
+      <!-- Confirm Password -->
+      <div class="form-floating">
+        <input type="password" class="form-control" id="confirmPassword" placeholder="Confirm your password"
+          formControlName="confirmPassword">
+        <label for="confirmPassword">
+          <i class="bi bi-lock me-2"></i>Confirm Password
+        </label>
+      </div>
+
+      <!-- Terms Agreement -->
+      <div class="form-check terms-check">
+        <input class="form-check-input" type="checkbox" id="acceptTerms" formControlName="acceptTerms">
+        <label class="form-check-label" for="acceptTerms">
+          I agree to the <a href="#" class="terms-link">Terms & Conditions</a> and
+          <a href="#" class="privacy-link">Privacy Policy</a>
+        </label>
+      </div>
+
+      <!-- Create Account Button -->
+      <button type="submit" class="auth-button" [disabled]="registerForm.invalid || loading">
+        <span *ngIf="loading" class="spinner-border spinner-border-sm me-2"></span>
+        <i *ngIf="!loading" class="bi bi-person-plus me-2"></i>
+        {{ loading ? 'Creating Account...' : 'Create Account' }}
+      </button>
+    </form>
+
+    <div class="auth-footer">
+      <p>Already have an account?</p>
+      <a routerLink="/login" class="sign-in-btn">
+        <i class="bi bi-box-arrow-in-right me-2"></i>
+        Sign In Instead
+      </a>
+    </div>
+  </div>
+
+  <div class="back-to-home">
+    <a routerLink="/">
+      <i class="bi bi-arrow-left me-2"></i>
+      Back to Home
+    </a>
+  </div>
+</div>

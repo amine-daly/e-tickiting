@@ -1,31 +1,208 @@
-<nav class="navbar navbar-expand-lg bg-body-tertiary shadow-sm">
+<!-- Modern Navigation -->
+<nav class="navbar navbar-expand-lg navbar-dark bg-primary shadow-lg sticky-top">
   <div class="container">
-    <a class="navbar-brand fw-bold" routerLink="/">e‑Ticketing</a>
-    <button class="navbar-toggler" type="button" (click)="isNavCollapsed = !isNavCollapsed"
-      [attr.aria-expanded]="!isNavCollapsed" aria-controls="navContent" aria-label="Toggle navigation">
+    <a class="navbar-brand fw-bold fs-3 text-decoration-none" routerLink="/">
+      <i class="bi bi-ticket-perforated me-2"></i>
+      eTicketing
+    </a>
+
+    <button class="navbar-toggler border-0" type="button" (click)="isNavCollapsed = !isNavCollapsed"
+      [attr.aria-expanded]="!isNavCollapsed" aria-controls="navContent">
       <span class="navbar-toggler-icon"></span>
     </button>
-    <div id="navContent" class="collapse navbar-collapse" [ngbCollapse]="isNavCollapsed">
-      <ul class="navbar-nav ms-auto mb-2 mb-lg-0">
-        <li class="nav-item"><a class="nav-link" routerLink="/search" routerLinkActive="active">Search</a></li>
-        <li class="nav-item"><a class="nav-link" routerLink="/login" routerLinkActive="active">Login</a></li>
-        <li class="nav-item"><a class="nav-link" routerLink="/register" routerLinkActive="active">Register</a></li>
+
+    <div id="navContent" class="navbar-collapse" [ngbCollapse]="isNavCollapsed">
+      <ul class="navbar-nav ms-auto align-items-center">
+        <li class="nav-item">
+          <a class="nav-link px-3 rounded-pill" routerLink="/search" routerLinkActive="active">
+            <i class="bi bi-search me-1"></i>Search Trips
+          </a>
+        </li>
+
+        <!-- User Menu when authenticated -->
+        <ng-container *ngIf="authService.currentUser() as user">
+          <li class="nav-item dropdown">
+            <a class="nav-link dropdown-toggle px-3 d-flex align-items-center" href="#" role="button"
+              data-bs-toggle="dropdown">
+              <div class="bg-light rounded-circle p-2 me-2">
+                <i class="bi bi-person-fill text-primary"></i>
+              </div>
+              <span class="d-none d-md-inline">{{ user.email || user.phone?.number }}</span>
+            </a>
+            <ul class="dropdown-menu dropdown-menu-end shadow border-0 mt-2">
+              <li><a class="dropdown-item py-2" href="#"><i class="bi bi-person me-2"></i>Profile</a></li>
+              <li><a class="dropdown-item py-2" href="#"><i class="bi bi-clock-history me-2"></i>My Bookings</a></li>
+              <li>
+                <hr class="dropdown-divider">
+              </li>
+              <li>
+                <button class="dropdown-item py-2 text-danger" (click)="logout()">
+                  <i class="bi bi-box-arrow-right me-2"></i>Logout
+                </button>
+              </li>
+            </ul>
+          </li>
+        </ng-container>
+
+        <!-- Auth buttons when not authenticated -->
+        <ng-container *ngIf="!authService.currentUser()">
+          <li class="nav-item">
+            <a class="nav-link px-3" routerLink="/login" routerLinkActive="active">Login</a>
+          </li>
+          <li class="nav-item">
+            <a class="btn btn-outline-light rounded-pill px-4 ms-2" routerLink="/register">Sign Up</a>
+          </li>
+        </ng-container>
       </ul>
     </div>
   </div>
 </nav>
 
-<section class="py-5 bg-light border-bottom">
-  <div class="container container-narrow text-center">
-    <h1 class="display-5 fw-bold mb-3">Find and book your trip</h1>
-    <p class="text-secondary mb-4">Search by city, pick your seats, and pay securely. Powered by Angular 19 +
-      ng‑bootstrap.</p>
-    <a routerLink="/search" class="btn btn-primary btn-lg">Search trips</a>
+<!-- Hero Section with Gradient -->
+<section class="hero-gradient py-5 text-white position-relative overflow-hidden" *ngIf="shouldShowHero()">
+  <div class="hero-pattern position-absolute top-0 start-0 w-100 h-100 opacity-10"></div>
+  <div class="container position-relative">
+    <div class="row align-items-center min-vh-50">
+      <div class="col-lg-6">
+        <h1 class="display-4 fw-bold mb-4 animate-fade-in">Your Journey Starts Here</h1>
+        <p class="lead mb-4 text-white-50">Discover seamless travel experiences with our modern booking platform. Find
+          the best routes, compare prices, and secure your perfect trip.</p>
+        <div class="d-flex gap-3 flex-wrap">
+          <a routerLink="/search" class="btn btn-light btn-lg rounded-pill px-4 shadow-sm">
+            <i class="bi bi-search me-2"></i>Find Your Trip
+          </a>
+          <a href="#features" class="btn btn-outline-light btn-lg rounded-pill px-4">
+            Learn More
+          </a>
+        </div>
+      </div>
+      <div class="col-lg-6 text-center d-none d-lg-block">
+        <div class="hero-illustration">
+          <i class="bi bi-airplane display-1 text-white-50 animate-float"></i>
+        </div>
+      </div>
+    </div>
   </div>
 </section>
 
-<div class="container my-4">
-  <router-outlet></router-outlet>
-</div>
+<!-- Features Section -->
+<section id="features" class="py-5 bg-light" *ngIf="shouldShowHero()">
+  <div class="container">
+    <div class="row text-center mb-5">
+      <div class="col-lg-8 mx-auto">
+        <h2 class="display-6 fw-bold mb-3">Why Choose eTicketing?</h2>
+        <p class="text-muted">Experience the future of travel booking with our cutting-edge platform</p>
+      </div>
+    </div>
+    <div class="row g-4">
+      <div class="col-md-4">
+        <div class="text-center p-4 h-100">
+          <div class="bg-primary rounded-circle d-inline-flex align-items-center justify-content-center mb-3"
+            style="width: 80px; height: 80px;">
+            <i class="bi bi-lightning-charge text-white fs-2"></i>
+          </div>
+          <h4 class="mb-3">Lightning Fast</h4>
+          <p class="text-muted">Book your tickets in seconds with our optimized booking flow</p>
+        </div>
+      </div>
+      <div class="col-md-4">
+        <div class="text-center p-4 h-100">
+          <div class="bg-success rounded-circle d-inline-flex align-items-center justify-content-center mb-3"
+            style="width: 80px; height: 80px;">
+            <i class="bi bi-shield-check text-white fs-2"></i>
+          </div>
+          <h4 class="mb-3">Secure Payments</h4>
+          <p class="text-muted">Your transactions are protected with bank-level security</p>
+        </div>
+      </div>
+      <div class="col-md-4">
+        <div class="text-center p-4 h-100">
+          <div class="bg-info rounded-circle d-inline-flex align-items-center justify-content-center mb-3"
+            style="width: 80px; height: 80px;">
+            <i class="bi bi-headset text-white fs-2"></i>
+          </div>
+          <h4 class="mb-3">24/7 Support</h4>
+          <p class="text-muted">Get help whenever you need it with our dedicated support team</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
 
+<!-- Main Content Area -->
+<main class="flex-grow-1">
+  <div class="container my-5" [class.my-3]="!shouldShowHero()">
+    <router-outlet></router-outlet>
+  </div>
+</main>
+
+<!-- Modern Footer -->
+<footer class="bg-dark text-light py-5 mt-auto">
+  <div class="container">
+    <div class="row g-4">
+      <div class="col-lg-4">
+        <h5 class="text-primary mb-3">
+          <i class="bi bi-ticket-perforated me-2"></i>
+          eTicketing
+        </h5>
+        <p class="text-muted">Your trusted travel companion for seamless journey planning and booking experiences.</p>
+        <div class="d-flex gap-3 mt-3">
+          <a href="#" class="text-light text-decoration-none fs-5" title="Facebook">
+            <i class="bi bi-facebook"></i>
+          </a>
+          <a href="#" class="text-light text-decoration-none fs-5" title="Twitter">
+            <i class="bi bi-twitter"></i>
+          </a>
+          <a href="#" class="text-light text-decoration-none fs-5" title="Instagram">
+            <i class="bi bi-instagram"></i>
+          </a>
+          <a href="#" class="text-light text-decoration-none fs-5" title="LinkedIn">
+            <i class="bi bi-linkedin"></i>
+          </a>
+        </div>
+      </div>
+      <div class="col-lg-2 col-md-3">
+        <h6 class="text-uppercase fw-bold mb-3">Quick Links</h6>
+        <ul class="list-unstyled">
+          <li><a href="#" class="text-muted text-decoration-none">About Us</a></li>
+          <li><a href="#" class="text-muted text-decoration-none">Help Center</a></li>
+          <li><a href="#" class="text-muted text-decoration-none">Contact</a></li>
+          <li><a href="#" class="text-muted text-decoration-none">Careers</a></li>
+        </ul>
+      </div>
+      <div class="col-lg-2 col-md-3">
+        <h6 class="text-uppercase fw-bold mb-3">Services</h6>
+        <ul class="list-unstyled">
+          <li><a href="#" class="text-muted text-decoration-none">Bus Tickets</a></li>
+          <li><a href="#" class="text-muted text-decoration-none">Train Tickets</a></li>
+          <li><a href="#" class="text-muted text-decoration-none">Flight Booking</a></li>
+          <li><a href="#" class="text-muted text-decoration-none">Travel Insurance</a></li>
+        </ul>
+      </div>
+      <div class="col-lg-4 col-md-6">
+        <h6 class="text-uppercase fw-bold mb-3">Stay Updated</h6>
+        <p class="text-muted small">Subscribe to get the latest offers and travel tips</p>
+        <div class="input-group mb-3">
+          <input type="email" class="form-control" placeholder="Enter your email">
+          <button class="btn btn-primary" type="button">
+            <i class="bi bi-envelope"></i>
+          </button>
+        </div>
+      </div>
+    </div>
+    <hr class="my-4 text-muted">
+    <div class="row align-items-center">
+      <div class="col-md-6">
+        <p class="text-muted small mb-0">&copy; 2025 eTicketing. All rights reserved.</p>
+      </div>
+      <div class="col-md-6 text-md-end">
+        <a href="#" class="text-muted text-decoration-none small me-3">Privacy Policy</a>
+        <a href="#" class="text-muted text-decoration-none small me-3">Terms of Service</a>
+        <a href="#" class="text-muted text-decoration-none small">Cookie Policy</a>
+      </div>
+    </div>
+  </div>
+</footer>
+
+<!-- Toast Notifications -->
 <app-toasts></app-toasts>

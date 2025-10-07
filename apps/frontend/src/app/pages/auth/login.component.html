@@ -1,0 +1,119 @@
+<div class="auth-container">
+  <div class="auth-card">
+    <div class="auth-header">
+      <div class="auth-icon">
+        <i class="bi bi-person-circle"></i>
+      </div>
+      <h1 class="auth-title">Welcome Back</h1>
+      <p class="auth-subtitle">Sign in to your account to continue</p>
+    </div>
+
+    <form [formGroup]="loginForm" (ngSubmit)="onSubmit()" class="auth-form">
+      <!-- Email/Phone Toggle -->
+      <div class="contact-toggle">
+        <div class="btn-group w-100" role="group">
+          <input type="radio" class="btn-check" name="loginType" id="emailLoginType" 
+                 [checked]="!usePhone" (change)="setEmailMode()">
+          <label class="btn btn-outline-primary" for="emailLoginType">
+            <i class="bi bi-envelope me-2"></i>Email
+          </label>
+
+          <input type="radio" class="btn-check" name="loginType" id="phoneLoginType" 
+                 [checked]="usePhone" (change)="setPhoneMode()">
+          <label class="btn btn-outline-primary" for="phoneLoginType">
+            <i class="bi bi-telephone me-2"></i>Phone
+          </label>
+        </div>
+      </div>
+
+      <!-- Email Input -->
+      <div class="form-floating" *ngIf="!usePhone">
+        <input type="email" class="form-control" id="email" placeholder="Enter your email address"
+          formControlName="email"
+          [class.is-invalid]="loginForm.get('email')?.invalid && loginForm.get('email')?.touched"
+          [class.is-valid]="loginForm.get('email')?.valid && loginForm.get('email')?.touched">
+        <label for="email">
+          <i class="bi bi-envelope me-2"></i>Email Address
+        </label>
+        <div class="invalid-feedback" *ngIf="loginForm.get('email')?.invalid && loginForm.get('email')?.touched">
+          Please enter a valid email address
+        </div>
+      </div>
+
+      <!-- Phone Input -->
+      <div class="phone-input-group" *ngIf="usePhone">
+        <div class="form-floating phone-country">
+          <select class="form-control" id="countryCode" formControlName="countryCode">
+            <option value="+1">+1 (US)</option>
+            <option value="+33">+33 (FR)</option>
+            <option value="+44">+44 (UK)</option>
+            <option value="+49">+49 (DE)</option>
+          </select>
+          <label for="countryCode">Country</label>
+        </div>
+        <div class="form-floating phone-number">
+          <input type="tel" class="form-control" id="phoneNumber" placeholder="Phone number"
+            formControlName="phoneNumber"
+            [class.is-invalid]="loginForm.get('phoneNumber')?.invalid && loginForm.get('phoneNumber')?.touched">
+          <label for="phoneNumber">
+            <i class="bi bi-telephone me-2"></i>Phone Number
+          </label>
+          <div class="invalid-feedback"
+            *ngIf="loginForm.get('phoneNumber')?.invalid && loginForm.get('phoneNumber')?.touched">
+            Please enter a valid phone number
+          </div>
+        </div>
+      </div>
+
+      <!-- Password -->
+      <div class="form-floating password-field">
+        <input [type]="showPassword ? 'text' : 'password'" class="form-control" id="password"
+          placeholder="Enter your password" formControlName="password"
+          [class.is-invalid]="loginForm.get('password')?.invalid && loginForm.get('password')?.touched"
+          [class.is-valid]="loginForm.get('password')?.valid && loginForm.get('password')?.touched">
+        <label for="password">
+          <i class="bi bi-lock me-2"></i>Password
+        </label>
+        <button type="button" class="password-toggle" (click)="togglePasswordVisibility()">
+          <i [class]="showPassword ? 'bi bi-eye-slash' : 'bi bi-eye'"></i>
+        </button>
+        <div class="invalid-feedback" *ngIf="loginForm.get('password')?.invalid && loginForm.get('password')?.touched">
+          Password is required
+        </div>
+      </div>
+
+      <!-- Remember Me & Forgot Password -->
+      <div class="form-options">
+        <div class="form-check">
+          <input class="form-check-input" type="checkbox" id="rememberMe" formControlName="rememberMe">
+          <label class="form-check-label" for="rememberMe">
+            Remember me
+          </label>
+        </div>
+        <a href="#" class="forgot-password">Forgot password?</a>
+      </div>
+
+      <!-- Sign In Button -->
+      <button type="submit" class="auth-button" [disabled]="loginForm.invalid || loading">
+        <span *ngIf="loading" class="spinner-border spinner-border-sm me-2"></span>
+        <i *ngIf="!loading" class="bi bi-box-arrow-in-right me-2"></i>
+        {{ loading ? 'Signing In...' : 'Sign In' }}
+      </button>
+    </form>
+
+    <div class="auth-footer">
+      <p>Don't have an account?</p>
+      <a routerLink="/register" class="create-account-btn">
+        <i class="bi bi-person-plus me-2"></i>
+        Create New Account
+      </a>
+    </div>
+  </div>
+
+  <div class="back-to-home">
+    <a routerLink="/">
+      <i class="bi bi-arrow-left me-2"></i>
+      Back to Home
+    </a>
+  </div>
+</div>
