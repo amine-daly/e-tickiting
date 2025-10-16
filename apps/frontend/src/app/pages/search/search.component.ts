@@ -1,6 +1,13 @@
-import { Component } from '@angular/core';
+import { Component, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router } from '@angular/router';
+import {
+  ReactiveFormsModule,
+  FormBuilder,
+  FormGroup,
+  Validators,
+} from '@angular/forms';
+import { PlaceService, Place } from '../../core/services/place.service';
 
 interface PopularDestination {
   name: string;
@@ -14,11 +21,13 @@ interface PopularDestination {
 @Component({
   selector: 'app-search',
   standalone: true,
-  imports: [CommonModule],
+  imports: [CommonModule, ReactiveFormsModule],
   templateUrl: './search.component.html',
   styleUrl: './search.component.scss',
 })
 export class SearchComponent {
+  form: FormGroup;
+  places: Place[] = [];
   popularDestinations: PopularDestination[] = [
     {
       name: 'Paris, France',
@@ -50,17 +59,39 @@ export class SearchComponent {
     },
   ];
 
-  constructor(private router: Router) {}
+  private router = inject(Router);
+  private fb = inject(FormBuilder);
+  private placeService = inject(PlaceService);
+
+  constructor() {
+    this.form = this.fb.group({
+      sourceId: ['', Validators.required],
+      destinationId: ['', Validators.required],
+      date: ['', Validators.required],
+      passengers: [1, Validators.required],
+    });
+
+    this.placeService.list('', 0, 200).subscribe((res) => {
+      this.places = res.objects;
+    });
+  }
 
   getTodayDate(): string {
     return new Date().toISOString().split('T')[0];
   }
 
-  go(e: Event) {
-    e.preventDefault();
-    const form = e.target as HTMLFormElement;
-    const data = new FormData(form);
-    const q = new URLSearchParams(data as any).toString();
-    this.router.navigateByUrl('/results?' + q);
+  submit() {
+    if (this.form.invalid) {
+      this.form.markAllAsTouched();
+      return;
+    }
+    const v = this.form.value;
+    const params = new URLSearchParams({
+      sourceId: v.sourceId,
+      destinationId: v.destinationId,
+      date: v.date,
+      passengers: String(v.passengers),
+    });
+    this.router.navigateByUrl('/results?' + params.toString());
   }
 }

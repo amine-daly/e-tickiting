@@ -1,0 +1,20 @@
+{
+  "compileOnSave": false,
+  "extends": "@diktup/tsconfig",
+  "compilerOptions": {
+    "module": "es2020",
+    "rootDir": ".",
+    "baseUrl": ".",
+    "useDefineForClassFields": false,
+    "paths": {
+      "@sifca-monorepo/api-interfaces": ["libs/api-interfaces/src/index.ts"],
+      "@sifca-monorepo/clients": ["libs/clients/src/index.ts"],
+      "@sifca-monorepo/ecommerce-generator": ["libs/generator/angular/ecommerce/src/index.ts"],
+      "@sifca-monorepo/sport-generator": ["libs/generator/angular/sport/src/index.ts"],
+      "@sifca-monorepo/widget-generator": ["libs/generator/angular/widget/src/index.ts"],
+      "@sifca-monorepo/terminal-generator": ["libs/generator/angular/terminal/src/index.ts"],
+      "@sifca-monorepo/widget-react-generator": ["libs/generator/react/widget/src/index.ts"]
+    }
+  },
+  "exclude": ["node_modules", "tmp"]
+}

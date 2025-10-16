@@ -1,0 +1,29 @@
+{
+  "compilerOptions": {
+    "baseUrl": ".",
+    "module": "ES2022",
+    "target": "ES2022",
+    "lib": ["dom", "ES2022"],
+    "moduleResolution": "node",
+    "emitDecoratorMetadata": true,
+    "experimentalDecorators": true,
+    "skipLibCheck": true,
+    "strictPropertyInitialization": false,
+    "noImplicitReturns": false,
+    "noImplicitAny": false,
+    "strictNullChecks": false,
+    "allowUnreachableCode": false,
+    "noUnusedParameters": false,
+    "noUnusedLocals": false,
+    "noFallthroughCasesInSwitch": false,
+    "importHelpers": true,
+    "inlineSourceMap": true,
+    "inlineSources": true,
+    "pretty": false,
+    "types": ["jest"],
+    "paths": {
+      "@diktup/*": ["packages/*/index.ts"]
+    }
+  },
+  "exclude": ["tools", "**/node_modules", "**/dist", "node_modules"]
+}

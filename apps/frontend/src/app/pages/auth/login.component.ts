@@ -34,7 +34,7 @@ export class LoginComponent {
   constructor() {
     this.loginForm = this.fb.group({
       email: ['', [Validators.email]],
-      countryCode: ['+1'],
+      countryCode: ['216'],
       phoneNumber: [''],
       password: ['', Validators.required],
       rememberMe: [false],
@@ -52,7 +52,7 @@ export class LoginComponent {
       emailControl?.setValue('');
       phoneControl?.setValidators([
         Validators.required,
-        Validators.pattern(/^\d{9,15}$/),
+        Validators.pattern(/^\d{8}$/),
       ]);
     } else {
       emailControl?.setValidators([Validators.required, Validators.email]);

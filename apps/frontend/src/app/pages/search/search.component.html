@@ -19,29 +19,25 @@
         <p class="card-subtitle">Enter your travel details to find available trips</p>
       </div>
 
-      <form (submit)="go($event)" class="search-form">
+      <form [formGroup]="form" (ngSubmit)="submit()" class="search-form">
         <div class="form-row">
           <div class="col-md-6">
             <div class="form-floating location-field">
-              <input type="text" class="form-control" id="source" name="source" placeholder="From" required>
-              <label for="source">
-                <i class="bi bi-geo-alt me-2"></i>From
-              </label>
-              <div class="field-icon">
-                <i class="bi bi-geo-alt-fill"></i>
-              </div>
+              <select class="form-select" id="source" formControlName="sourceId" required>
+                <option value="" disabled selected>Select source</option>
+                <option *ngFor="let p of places" [value]="p.id">{{ p.city }}</option>
+              </select>
+              <label for="source"><i class="bi bi-geo-alt me-2"></i>From</label>
             </div>
           </div>
 
           <div class="col-md-6">
             <div class="form-floating location-field">
-              <input type="text" class="form-control" id="destination" name="destination" placeholder="To" required>
-              <label for="destination">
-                <i class="bi bi-geo-alt me-2"></i>To
-              </label>
-              <div class="field-icon">
-                <i class="bi bi-geo-alt-fill"></i>
-              </div>
+              <select class="form-select" id="destination" formControlName="destinationId" required>
+                <option value="" disabled selected>Select destination</option>
+                <option *ngFor="let p of places" [value]="p.id">{{ p.city }}</option>
+              </select>
+              <label for="destination"><i class="bi bi-geo-alt me-2"></i>To</label>
             </div>
           </div>
         </div>
@@ -49,31 +45,27 @@
         <div class="form-row">
           <div class="col-md-6">
             <div class="form-floating">
-              <input type="date" class="form-control" id="date" name="date" [min]="getTodayDate()" required>
-              <label for="date">
-                <i class="bi bi-calendar-event me-2"></i>Travel Date
-              </label>
+              <input type="date" class="form-control" id="date" formControlName="date" [min]="getTodayDate()" required>
+              <label for="date"><i class="bi bi-calendar-event me-2"></i>Travel Date</label>
             </div>
           </div>
 
           <div class="col-md-6">
             <div class="form-floating">
-              <select class="form-control" id="passengers" name="passengers">
+              <select class="form-control" id="passengers" formControlName="passengers">
                 <option value="1">1 Passenger</option>
                 <option value="2">2 Passengers</option>
                 <option value="3">3 Passengers</option>
                 <option value="4">4 Passengers</option>
                 <option value="5">5+ Passengers</option>
               </select>
-              <label for="passengers">
-                <i class="bi bi-people me-2"></i>Passengers
-              </label>
+              <label for="passengers"><i class="bi bi-people me-2"></i>Passengers</label>
             </div>
           </div>
         </div>
 
         <div class="search-actions">
-          <button type="submit" class="search-btn">
+          <button type="submit" class="search-btn" [disabled]="form.invalid">
             <i class="bi bi-search me-2"></i>
             Search Trips
             <div class="btn-shine"></div>

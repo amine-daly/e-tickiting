@@ -1,0 +1,26 @@
+{
+    "extends": "./tsconfig.base.json",
+    "include": [],
+    "compilerOptions": {
+        "noUnusedLocals": false,
+        "noUnusedParameters": false,
+        "outDir": "./dist/out-tsc",
+        "target": "ES2022",
+        "module": "ES2022",
+        "forceConsistentCasingInFileNames": true,
+        "strict": false,
+        "noImplicitReturns": true,
+        "noFallthroughCasesInSwitch": true
+    },
+    "angularCompilerOptions": {
+        "strict": false,
+        "strictTemplates": false,
+        "fullTemplateTypeCheck": false,
+        "strictInjectionParameters": true,
+        "strictInputAccessModifiers": true,
+    },
+    "files": [
+        "apps/widget/angular/src/main.ts",
+        "apps/widget/angular/src/polyfills.ts"
+    ]
+}

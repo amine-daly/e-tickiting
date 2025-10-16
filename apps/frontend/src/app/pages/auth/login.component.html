@@ -12,14 +12,14 @@
       <!-- Email/Phone Toggle -->
       <div class="contact-toggle">
         <div class="btn-group w-100" role="group">
-          <input type="radio" class="btn-check" name="loginType" id="emailLoginType" 
-                 [checked]="!usePhone" (change)="setEmailMode()">
+          <input type="radio" class="btn-check" name="loginType" id="emailLoginType" [checked]="!usePhone"
+            (change)="setEmailMode()">
           <label class="btn btn-outline-primary" for="emailLoginType">
             <i class="bi bi-envelope me-2"></i>Email
           </label>
 
-          <input type="radio" class="btn-check" name="loginType" id="phoneLoginType" 
-                 [checked]="usePhone" (change)="setPhoneMode()">
+          <input type="radio" class="btn-check" name="loginType" id="phoneLoginType" [checked]="usePhone"
+            (change)="setPhoneMode()">
           <label class="btn btn-outline-primary" for="phoneLoginType">
             <i class="bi bi-telephone me-2"></i>Phone
           </label>
@@ -43,12 +43,7 @@
       <!-- Phone Input -->
       <div class="phone-input-group" *ngIf="usePhone">
         <div class="form-floating phone-country">
-          <select class="form-control" id="countryCode" formControlName="countryCode">
-            <option value="+1">+1 (US)</option>
-            <option value="+33">+33 (FR)</option>
-            <option value="+44">+44 (UK)</option>
-            <option value="+49">+49 (DE)</option>
-          </select>
+          <input type="text" class="form-control" id="countryCode" value="+216" readonly formControlName="countryCode">
           <label for="countryCode">Country</label>
         </div>
         <div class="form-floating phone-number">

@@ -8,7 +8,7 @@ import { catchError, take, tap } from 'rxjs/operators';
 export class AuthService {
   private http = inject(HttpClient);
   user = signal<User | null>(null);
-  token = signal<string | null>(localStorage.getItem('token'));
+  token = signal<string | null>(localStorage.getItem('accessToken'));
 
   constructor() {
     const t = this.token();
