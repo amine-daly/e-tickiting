@@ -4,7 +4,24 @@ const Routing: Routes = [
   {
     path: 'dashboard',
     loadComponent: () =>
-      import('./dashboard/dashboard.component').then((m) => m.DashboardComponent),
+      import('./dashboard/dashboard.component').then(
+        (m) => m.DashboardComponent
+      ),
+  },
+  {
+    path: 'places',
+    loadChildren: () =>
+      import('./places/places.routes').then((m) => m.placesRoutes),
+  },
+  {
+    path: 'trips',
+    loadChildren: () =>
+      import('./trip/trip-list.routes').then((m) => m.tripRoutes),
+  },
+  {
+    path: 'customers',
+    loadChildren: () =>
+      import('./customers/customers.routes').then((m) => m.customersRoutes),
   },
   {
     path: 'crafted/pages/profile',

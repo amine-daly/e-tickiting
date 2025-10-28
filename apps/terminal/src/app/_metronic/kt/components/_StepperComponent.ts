@@ -1,4 +1,12 @@
-import {DataUtil, DOMEventHandlerUtil, ElementAnimateUtil, ElementStyleUtil, EventHandlerUtil, getElementIndex, getUniqueIdWithPrefix,} from '../_utils/index';
+import {
+  DataUtil,
+  DOMEventHandlerUtil,
+  ElementAnimateUtil,
+  ElementStyleUtil,
+  EventHandlerUtil,
+  getElementIndex,
+  getUniqueIdWithPrefix,
+} from '../_utils/index';
 
 export interface IStepperOptions {
   startIndex: number;
@@ -318,6 +326,7 @@ class StepperComponent {
         return data as StepperComponent;
       }
     }
+    return undefined;
   }
 
   // Create Instances
@@ -351,4 +360,4 @@ class StepperComponent {
   }
 }
 
-export {StepperComponent, defaultStepperOptions};
+export { StepperComponent, defaultStepperOptions };

@@ -10,6 +10,7 @@ export interface UserType {
   email: string | null;
   phone: PhoneType | null;
   role: string; // RoleType enum string from backend
+  createdAt?: string; // ISO date string
 }
 
 // Minimal auth response mapping convenience

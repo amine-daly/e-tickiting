@@ -75,10 +75,10 @@ public class AuthController {
         }
     )
     public ResponseEntity<AuthResponse> register(@Valid @org.springframework.web.bind.annotation.RequestBody RegisterRequest request) {
-    boolean hasEmail = request.email() != null && !request.email().isBlank();
-    boolean hasPhone = request.phone() != null
-        && request.phone().countryCode() != null && !request.phone().countryCode().isBlank()
-        && request.phone().number() != null && !request.phone().number().isBlank();
+        boolean hasEmail = request.email() != null && !request.email().isBlank();
+        boolean hasPhone = request.phone() != null
+            && request.phone().countryCode() != null && !request.phone().countryCode().isBlank()
+            && request.phone().number() != null && !request.phone().number().isBlank();
         if (hasEmail == hasPhone) {
             throw new BadRequestException("Provide either email or phone (countryCode + number), not both");
         }
@@ -92,13 +92,15 @@ public class AuthController {
 
         com.eticketing.app.user.PhoneType phone = hasPhone ? new com.eticketing.app.user.PhoneType(request.phone().countryCode(), request.phone().number()) : null;
         String email = hasEmail ? request.email() : null;
-    UserType u = new UserType(request.firstName(), request.lastName(), email, phone, encoder.encode(request.password()), request.role());
+    // If role is ADMIN, save as ADMIN; else default to CUSTOMER
+    RoleType role = (request.role() == RoleType.ADMIN) ? RoleType.ADMIN : RoleType.CUSTOMER;
+    UserType u = new UserType(request.firstName(), request.lastName(), email, phone, encoder.encode(request.password()), role);
         users.save(u);
         String token = jwt.generateToken(u.getId(), u.getRole().name(), 3600 * 24);
-    UserView userView = new UserView(
-        u.getId(), u.getFirstName(), u.getLastName(), u.getEmail(), u.getRole().name(),
-        u.getPhone() != null ? new PhonePayload(u.getPhone().getCountryCode(), u.getPhone().getNumber()) : null
-    );
+        UserView userView = new UserView(
+            u.getId(), u.getFirstName(), u.getLastName(), u.getEmail(), u.getRole().name(),
+            u.getPhone() != null ? new PhonePayload(u.getPhone().getCountryCode(), u.getPhone().getNumber()) : null
+        );
         return ResponseEntity.created(URI.create("/api/users/me")).body(new AuthResponse(token, userView));
     }
 

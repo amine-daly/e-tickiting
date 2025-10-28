@@ -1,0 +1,102 @@
+<div>
+    <div class="container py-5">
+        <div class="card">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center mb-4">
+                    <h2 class="mb-0">Places</h2>
+                    <div>
+                        <button class="btn btn-primary me-2" (click)="openCreate(placeModal)">Add Place</button>
+                    </div>
+                </div>
+
+                <div *ngIf="loading" class="text-center my-5">
+                    <span class="spinner-border spinner-border-lg"></span>
+                    <div>Loading places...</div>
+                </div>
+                <div *ngIf="error" class="alert alert-danger">{{ error }}</div>
+                <div *ngIf="!loading && !places?.length && !error" class="alert alert-info">No places found.</div>
+
+                <div *ngIf="!loading && places?.length" class="table-responsive">
+                    <!-- begin::Table -->
+                    <table class="table table-row-dashed table-row-gray-300 align-middle gs-0 gy-4">
+                        <!-- begin::Table head -->
+                        <thead>
+                            <tr class="fw-bolder text-muted">
+                                <th></th>
+                                <th class="min-w-150px">City</th>
+                                <th class="min-w-140px">Latitude</th>
+                                <th class="min-w-120px">Longitude</th>
+                                <th class="min-w-100px text-end">Actions</th>
+                            </tr>
+                        </thead>
+                        <!-- end::Table head -->
+                        <!-- begin::Table body -->
+                        <tbody>
+                            <tr *ngFor="let p of places; let i = index">
+                                <td>
+                                    <div class="form-check form-check-sm form-check-custom form-check-solid">
+                                        <input class="form-check-input widget-9-check" type="checkbox" [value]="p.id" />
+                                    </div>
+                                </td>
+                                <td>
+                                    <span class="text-dark fw-bolder text-hover-primary fs-6">{{ p.city }}</span>
+                                </td>
+                                <td>{{ p.location ? p.location.coordinates[1] : '-' }}</td>
+                                <td>{{ p.location ? p.location.coordinates[0] : '-' }}</td>
+                                <td>
+                                    <div class="d-flex justify-content-end flex-shrink-0">
+                                        <button class="btn btn-icon btn-bg-light btn-active-color-primary btn-sm me-1"
+                                            (click)="openEdit(placeModal, p)">
+                                            <app-keenicon name="pencil" class="fs-3"></app-keenicon>
+                                        </button>
+                                        <button class="btn btn-icon btn-bg-light btn-active-color-primary btn-sm"
+                                            (click)="deletePlace(p)">
+                                            <app-keenicon name="trash" class="fs-3"></app-keenicon>
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
+                        </tbody>
+                        <!-- end::Table body -->
+                    </table>
+                    <!-- end::Table -->
+                </div>
+            </div>
+        </div>
+    </div>
+    <ng-template #placeModal let-modal>
+        <div class="modal-header">
+            <h5 class="modal-title">{{ editing ? 'Edit Place' : 'Add Place' }}</h5>
+            <button type="button" class="btn-close" aria-label="Close" (click)="modal.dismiss('Cross click')"></button>
+        </div>
+        <form (ngSubmit)="submit(modal)">
+            <div class="modal-body">
+                <div class="mb-3">
+                    <label>City</label>
+                    <input class="form-control" [(ngModel)]="form.city" name="city" required />
+                </div>
+                <div class="mb-3">
+                    <label>Location</label>
+                    <div *ngIf="form.location">
+                        Lat: {{ form.location.coordinates[1] }}, Lng: {{ form.location.coordinates[0] }}
+                    </div>
+                    <div *ngIf="!form.location" class="text-danger">
+                        Click on the map below to set location
+                    </div>
+                    <google-map class="place-map" [center]="position || { lat: 33.886917, lng: 9.537499 }"
+                        [zoom]="position ? 12 : 4" (mapClick)="pickAddress($event)">
+                        <map-marker *ngIf="position" [position]="position"></map-marker>
+                    </google-map>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="submit" class="btn btn-primary" [disabled]="!form.city || !form.location">
+                    Save
+                </button>
+                <button type="button" class="btn btn-secondary" (click)="modal.dismiss('Cross click')">
+                    Cancel
+                </button>
+            </div>
+        </form>
+    </ng-template>
+</div>

@@ -1,14 +1,6 @@
 import { Component, HostBinding, OnDestroy, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router, RouterOutlet } from '@angular/router';
-import {
-  DrawerComponent,
-  MenuComponent,
-  ScrollComponent,
-  ScrollTopComponent,
-  StickyComponent,
-  ToggleComponent,
-} from '../../_metronic/kt/components';
 
 const BODY_CLASSES = ['bgi-size-cover', 'bgi-position-center', 'bgi-no-repeat'];
 
@@ -33,13 +25,5 @@ export class ErrorsComponent implements OnInit, OnDestroy {
 
   routeToDashboard() {
     this.router.navigate(['dashboard']);
-    setTimeout(() => {
-      ToggleComponent.bootstrap();
-      ScrollTopComponent.bootstrap();
-      DrawerComponent.bootstrap();
-      StickyComponent.bootstrap();
-      MenuComponent.bootstrap();
-      ScrollComponent.bootstrap();
-    }, 200);
   }
 }

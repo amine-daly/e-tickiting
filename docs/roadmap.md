@@ -4,7 +4,6 @@ This roadmap covers 10 epics across 6 months for a production-grade e-ticketing 
 
 - Epic 1: Project Setup & Env (W1–W2)
   - Monorepo scaffolding, CI, Docker, envs, lint/format
-  - Angular app (SSR, NgRx, Material, Tailwind), Spring Boot service, MongoDB
   - OpenAPI contract baseline + generator configs
 - Epic 2: Auth & Users (W2–W4)
   - JWT auth; RBAC (admin, customer, operator); profile mgmt

@@ -42,14 +42,14 @@ public class JwtService {
     }
 
     public String generateToken(String subject, String role, long ttlSeconds) {
-        Instant now = Instant.now();
-        return Jwts.builder()
-                .setSubject(subject)
-                .setIssuedAt(Date.from(now))
-                .setExpiration(Date.from(now.plusSeconds(ttlSeconds)))
-                .addClaims(Map.of("role", role))
-                .signWith(key, SignatureAlgorithm.HS256)
-                .compact();
+    Instant now = Instant.now();
+    return Jwts.builder()
+        .setSubject(subject)
+        .setIssuedAt(Date.from(now))
+        // .setExpiration(Date.from(now.plusSeconds(ttlSeconds))) // Disabled for dev, enable for production
+        .addClaims(Map.of("role", role))
+        .signWith(key, SignatureAlgorithm.HS256)
+        .compact();
     }
 
     public String validateAndGetSubject(String token) {

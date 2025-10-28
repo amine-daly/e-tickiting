@@ -1,4 +1,10 @@
+
 package com.eticketing.app.web;
+
+import org.springframework.util.ReflectionUtils;
+import java.lang.reflect.Field;
+import java.util.Map;
+import org.springframework.beans.BeanUtils;
 
 import com.eticketing.app.user.UserTypeRepository;
 import com.eticketing.app.user.UserType;
@@ -18,12 +24,87 @@ import com.eticketing.app.web.error.ApiExceptions.*;
 @RequestMapping("/api/users")
 @Tag(name = "Users")
 public class UserController {
+    @PostMapping("")
+    @Operation(summary = "Create a new user")
+    public ResponseEntity<?> createUser(@RequestBody Map<String, Object> data) {
+        var user = new UserType();
+        if (data.get("firstName") != null) user.setFirstName(data.get("firstName").toString());
+        if (data.get("lastName") != null) user.setLastName(data.get("lastName").toString());
+        if (data.get("email") != null) user.setEmail(data.get("email").toString());
+        // Set default role to CUSTOMER if not provided
+        if (data.get("role") != null) {
+            user.setRole(com.eticketing.app.user.RoleType.valueOf(data.get("role").toString()));
+        } else {
+            user.setRole(com.eticketing.app.user.RoleType.CUSTOMER);
+        }
+        // Set createdAt to now if not provided
+        if (data.get("createdAt") != null) {
+            if (data.get("createdAt") instanceof java.time.Instant) {
+                user.setCreatedAt((java.time.Instant) data.get("createdAt"));
+            } else {
+                user.setCreatedAt(java.time.Instant.parse(data.get("createdAt").toString()));
+            }
+        } else {
+            user.setCreatedAt(java.time.Instant.now());
+        }
+        if (data.get("phone") instanceof Map) {
+            Map<String, Object> phoneMap = (Map<String, Object>) data.get("phone");
+            var phone = new com.eticketing.app.user.PhoneType();
+            if (phoneMap.get("countryCode") != null) phone.setCountryCode(phoneMap.get("countryCode").toString());
+            if (phoneMap.get("number") != null) phone.setNumber(phoneMap.get("number").toString());
+            user.setPhone(phone);
+        }
+        users.save(user);
+        return ResponseEntity.ok(user);
+    }
+    @PutMapping("/{id}")
+    @Operation(summary = "Fully update a user by id (ADMIN or self)")
+    public ResponseEntity<?> putById(@PathVariable @Parameter(description = "User id") String id,
+                                     @RequestBody Map<String, Object> updates,
+                                     @AuthenticationPrincipal User principal) {
+        if (principal == null) throw new UnauthorizedException("Authentication required");
+        var authUserOpt = users.findById(principal.getUsername());
+        if (authUserOpt.isEmpty()) throw new UnauthorizedException("Authentication subject not found");
+        boolean isAdmin = authUserOpt.get().getRole().name().equals("ADMIN");
+        boolean isSelf = authUserOpt.get().getId() != null && authUserOpt.get().getId().equals(id);
+        if (!isAdmin && !isSelf) throw new ForbiddenException("Not allowed to update this user");
+        var userOpt = users.findById(id);
+        if (userOpt.isEmpty()) throw new NotFoundException("User not found");
+        var user = userOpt.get();
+        // Overwrite all fields provided in updates (full update)
+        updates.forEach((key, value) -> {
+            Field field = ReflectionUtils.findField(user.getClass(), key);
+            if (field != null) {
+                field.setAccessible(true);
+                if (value != null && field.getType().isEnum()) {
+                    Object enumValue = Enum.valueOf((Class<Enum>) field.getType(), value.toString());
+                    ReflectionUtils.setField(field, user, enumValue);
+                } else if (value != null && field.getType().getName().equals("com.eticketing.app.user.PhoneType")) {
+                    Map<String, Object> phoneMap = (Map<String, Object>) value;
+                    var phone = user.getPhone();
+                    if (phone == null) {
+                        try {
+                            phone = (com.eticketing.app.user.PhoneType) field.getType().getDeclaredConstructor().newInstance();
+                        } catch (Exception e) { throw new RuntimeException(e); }
+                    }
+                    if (phoneMap.get("countryCode") != null) phone.setCountryCode(phoneMap.get("countryCode").toString());
+                    if (phoneMap.get("number") != null) phone.setNumber(phoneMap.get("number").toString());
+                    ReflectionUtils.setField(field, user, phone);
+                } else {
+                    ReflectionUtils.setField(field, user, value);
+                }
+            }
+        });
+    users.save(user);
+    return ResponseEntity.ok(user);
+    }
 
     private final UserTypeRepository users;
 
     public UserController(UserTypeRepository users) {
         this.users = users;
     }
+
 
     @GetMapping
     @Operation(summary = "List users (ADMIN)")
@@ -47,6 +128,7 @@ public class UserController {
             m.put("lastName", u.getLastName());
             m.put("email", u.getEmail());
             m.put("role", u.getRole().name());
+            m.put("createdAt", u.getCreatedAt());
             if (u.getPhone() != null) {
                 java.util.Map<String, Object> phone = new java.util.LinkedHashMap<>();
                 phone.put("countryCode", u.getPhone().getCountryCode());
@@ -74,6 +156,7 @@ public class UserController {
                     body.put("lastName", u.getLastName());
                     body.put("email", u.getEmail());
                     body.put("role", u.getRole().name());
+                    body.put("createdAt", u.getCreatedAt());
                     if (u.getPhone() != null) {
                         var phone = new java.util.LinkedHashMap<String, Object>();
                         phone.put("countryCode", u.getPhone().getCountryCode());

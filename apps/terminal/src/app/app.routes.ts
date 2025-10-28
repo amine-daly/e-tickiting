@@ -1,6 +1,7 @@
 import { Routes } from '@angular/router';
-import { authGuard, guestGuard } from './modules/auth/guards/auth.guard';
+import { guestGuard } from './modules/auth/guards/auth.guard';
 import { Routing as childRoutes } from './pages/routing';
+import { AuthGuard } from './modules/auth/services/auth.guard';
 
 export const routes: Routes = [
   {
@@ -21,7 +22,7 @@ export const routes: Routes = [
         (c) => c.LayoutComponent
       ),
     children: [...childRoutes],
-    canActivate: [authGuard],
+    canActivate: [AuthGuard],
   },
   { path: '**', redirectTo: 'error/404' },
 ];

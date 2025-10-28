@@ -10,6 +10,8 @@ import org.springframework.data.mongodb.core.index.Indexed;
 import org.springframework.data.mongodb.core.index.CompoundIndex;
 import org.springframework.data.mongodb.core.index.CompoundIndexes;
 import org.springframework.data.mongodb.core.mapping.Document;
+import org.springframework.data.annotation.CreatedDate;
+import java.time.Instant;
 
 @Document("users")
 @CompoundIndexes({
@@ -26,6 +28,7 @@ import org.springframework.data.mongodb.core.mapping.Document;
         partialFilter = "{ 'email': { $exists: true } }"
     )
 })
+
 public class UserType {
     @Id
     private String id;
@@ -43,6 +46,10 @@ public class UserType {
     @NotNull
     private RoleType role;
 
+
+    @CreatedDate
+    private Instant createdAt;
+
     public UserType() {}
 
     public UserType(String firstName, String lastName, String email, PhoneType phone, String passwordHash, RoleType role) {
@@ -52,6 +59,7 @@ public class UserType {
         this.phone = phone;
         this.passwordHash = passwordHash;
         this.role = role;
+        this.createdAt = Instant.now();
     }
 
     public String getId() { return id; }
@@ -68,4 +76,6 @@ public class UserType {
     public void setPasswordHash(String passwordHash) { this.passwordHash = passwordHash; }
     public RoleType getRole() { return role; }
     public void setRole(RoleType role) { this.role = role; }
+    public Instant getCreatedAt() { return createdAt; }
+    public void setCreatedAt(Instant createdAt) { this.createdAt = createdAt; }
 }

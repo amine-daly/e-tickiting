@@ -1,7 +1,8 @@
 package com.eticketing.app.web;
 
 import com.eticketing.app.trip.TripType;
-import com.eticketing.app.trip.PlaceType;
+import com.eticketing.app.place.PlaceRepository;
+import com.eticketing.app.place.PlaceDocument;
 import com.eticketing.app.trip.LonLatType;
 import com.eticketing.app.trip.ZoneTypesEnum;
 import com.eticketing.app.trip.SeatStateEnum;
@@ -9,6 +10,8 @@ import com.eticketing.app.trip.SeatUnit;
 import com.eticketing.app.trip.TripTypeRepository;
 import com.eticketing.app.user.RoleType;
 import com.eticketing.app.user.UserTypeRepository;
+import com.eticketing.app.agency.AgencyRepository;
+import com.eticketing.app.agency.Agency;
 import com.eticketing.app.web.error.ApiExceptions.*;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -44,194 +47,105 @@ import org.springframework.dao.OptimisticLockingFailureException;
 @Tag(name = "Trips", description = "Trip management APIs")
 public class TripController {
 
+    @Operation(
+        summary = "Create a new trip",
+        requestBody = @RequestBody(content = @Content(mediaType = "application/json",
+            examples = @ExampleObject(value = "{\n  \"agencyId\": \"...\",\n  \"originId\": \"...\",\n  \"destinationId\": \"...\",\n  \"departureDate\": \"2025-11-20\",\n  \"price\": 25.0,\n  \"availableSeats\": 54\n}"))),
+        responses = {
+            @ApiResponse(responseCode = "200", description = "Trip created"),
+            @ApiResponse(responseCode = "400", description = "Invalid input")
+        }
+    )
+    @PostMapping
+    public ResponseEntity<Map<String, Object>> createTrip(@RequestBody TripType trip) {
+        // Debug: print incoming TripType fields
+        System.out.println("DEBUG TripType: agencyId=" + trip.getAgencyId());
+        System.out.println("DEBUG TripType: originId=" + trip.getOriginId());
+        System.out.println("DEBUG TripType: destinationId=" + trip.getDestinationId());
+        System.out.println("DEBUG TripType: departureDate=" + trip.getDepartureDate());
+        System.out.println("DEBUG TripType: price=" + trip.getPrice());
+        System.out.println("DEBUG TripType: availableSeats=" + trip.getAvailableSeats());
+        // Optionally: validate referenced IDs exist (agency, origin, destination)
+        // Save trip
+        TripType saved = trips.save(trip);
+        // Return mapped view
+        return ResponseEntity.ok(toView(saved));
+    }
+
+    @Operation(
+        summary = "Search trips with filters and pagination",
+        parameters = {
+            @Parameter(name = "originId", description = "Origin place ID"),
+            @Parameter(name = "destinationId", description = "Destination place ID"),
+            @Parameter(name = "date", description = "Departure date (yyyy-MM-dd)", example = "2025-11-01"),
+            @Parameter(name = "agencyId", description = "Agency ID"),
+            @Parameter(name = "page", description = "Page index (0-based)", example = "0"),
+            @Parameter(name = "limit", description = "Page size", example = "10")
+        },
+        responses = {
+            @ApiResponse(responseCode = "200", description = "Trips found"),
+            @ApiResponse(responseCode = "400", description = "Invalid parameters")
+        }
+    )
+    @GetMapping("/search")
+    public ResponseEntity<PaginateResponseType<Map<String, Object>>> searchTrips(
+            @RequestParam(required = false) String originId,
+            @RequestParam(required = false) String destinationId,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date,
+            @RequestParam(required = false) String agencyId,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int limit) {
+        if (page < 0) page = 0;
+        if (limit < 1 || limit > 100) limit = 10;
+        Pageable pageable = PageRequest.of(page, limit, Sort.by(Sort.Direction.ASC, "departureDate"));
+
+        // Use TripFilterInput for clean filter handling
+        TripFilterInput filter = new TripFilterInput(originId, destinationId, date, agencyId);
+
+        // Build dynamic query
+        var q = new org.springframework.data.mongodb.core.query.Query();
+        if (filter.originId() != null && !filter.originId().isBlank())
+            q.addCriteria(org.springframework.data.mongodb.core.query.Criteria.where("originId").is(filter.originId()));
+        if (filter.destinationId() != null && !filter.destinationId().isBlank())
+            q.addCriteria(org.springframework.data.mongodb.core.query.Criteria.where("destinationId").is(filter.destinationId()));
+        if (filter.date() != null)
+            q.addCriteria(org.springframework.data.mongodb.core.query.Criteria.where("departureDate").is(filter.date()));
+        if (filter.agencyId() != null && !filter.agencyId().isBlank())
+            q.addCriteria(org.springframework.data.mongodb.core.query.Criteria.where("agencyId").is(filter.agencyId()));
+        q.with(pageable);
+
+        List<TripType> found = mongoTemplate.find(q, TripType.class);
+        long count = mongoTemplate.count(q.skip(-1).limit(-1), TripType.class);
+
+        // Map to view objects
+        List<Map<String, Object>> tripsView = found.stream().map(this::toView).toList();
+        boolean isLast = (page * limit + found.size()) >= count;
+        return ResponseEntity.ok(new PaginateResponseType<>(tripsView, count, isLast));
+    }
+
+    /**
+     * Clean filter input for searching trips.
+     */
+    public record TripFilterInput(
+        String originId,
+        String destinationId,
+        LocalDate date,
+        String agencyId
+    ) {}
+
     private final TripTypeRepository trips;
     private final UserTypeRepository users;
+    private final AgencyRepository agencies;
+    private final PlaceRepository places;
+    private final org.springframework.data.mongodb.core.MongoTemplate mongoTemplate;
 
-    public TripController(TripTypeRepository trips, UserTypeRepository users) {
+    public TripController(TripTypeRepository trips, UserTypeRepository users, AgencyRepository agencies, PlaceRepository places, org.springframework.data.mongodb.core.MongoTemplate mongoTemplate) {
+        System.out.println("TripController instance loaded: " + this.getClass().getName());
         this.trips = trips;
         this.users = users;
-    }
-
-    @Schema(name = "TripPayload")
-    public record TripPayload(
-        @NotNull PlacePayload source,
-        @NotNull PlacePayload destination,
-            @NotNull @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate departureDate,
-            @NotNull BigDecimal price,
-            @Min(0) int availableSeats
-    ) {}
-
-    @Schema(name = "PlacePayload")
-    public record PlacePayload(
-        @NotBlank String city,
-        @NotNull LocationPayload location
-    ) {}
-
-    @Schema(name = "LocationPayload")
-    public record LocationPayload(
-        @NotNull ZoneTypesEnum type,
-        @NotNull List<Double> coordinates
-    ) {}
-
-    @Operation(summary = "Create a trip (ADMIN or MANAGER)",
-        requestBody = @RequestBody(content = @Content(mediaType = "application/json",
-        examples = @ExampleObject(value = "{\n  \"source\": {\n    \"city\": \"Tunis\",\n    \"location\": {\n      \"type\": \"POINT\",\n      \"coordinates\": [10.1815, 36.8065]\n    }\n  },\n  \"destination\": {\n    \"city\": \"Sfax\",\n    \"location\": {\n      \"type\": \"POINT\",\n      \"coordinates\": [10.7603, 34.739]\n    }\n  },\n  \"departureDate\": \"2025-10-10\",\n  \"price\": 19.9,\n  \"availableSeats\": 30\n}"))),
-        responses = {@ApiResponse(responseCode = "201", description = "Created"), @ApiResponse(responseCode = "403", description = "Forbidden")} )
-    @PostMapping
-    public ResponseEntity<Map<String, Object>> create(@Valid @org.springframework.web.bind.annotation.RequestBody TripPayload payload,
-                                                      @AuthenticationPrincipal User principal) {
-    var me = ensureAdminOrManager(principal);
-    var trip = new TripType(
-        new PlaceType(payload.source().city(), new LonLatType(payload.source().location().type(), payload.source().location().coordinates())),
-        new PlaceType(payload.destination().city(), new LonLatType(payload.destination().location().type(), payload.destination().location().coordinates())),
-        payload.departureDate(), payload.price(), payload.availableSeats());
-        trips.save(trip);
-        return ResponseEntity.status(201).body(toView(trip));
-    }
-
-    @Operation(summary = "Get trip by id")
-    @GetMapping("/{id}")
-    public ResponseEntity<Map<String, Object>> getById(@Parameter(description = "Trip id") @PathVariable String id) {
-        var t = trips.findById(id).orElseThrow(() -> new NotFoundException("Trip not found"));
-        return ResponseEntity.ok(toView(t));
-    }
-
-    @Operation(summary = "Delete a trip (ADMIN or MANAGER)")
-    @DeleteMapping("/{id}")
-    public ResponseEntity<Void> delete(@Parameter(description = "Trip id") @PathVariable String id, @AuthenticationPrincipal User principal) {
-        ensureAdminOrManager(principal);
-        if (trips.existsById(id)) {
-            trips.deleteById(id);
-        }
-        return ResponseEntity.noContent().build();
-    }
-
-    @Operation(summary = "List trips (ADMIN or MANAGER)")
-    @GetMapping
-    public ResponseEntity<PaginateResponseType<Map<String, Object>>> list(
-            @Parameter(description = "0-based page index", example = "0") @RequestParam(defaultValue = "0") int page,
-            @Parameter(description = "Page size (items per page)", example = "10") @RequestParam(defaultValue = "10") int limit,
-            @AuthenticationPrincipal User principal) {
-        ensureAdminOrManager(principal);
-        if (page < 0) page = 0;
-        if (limit < 1) limit = 10;
-        Pageable pageable = PageRequest.of(page, limit, Sort.by("departureDate").descending());
-        var p = trips.findAll(pageable);
-        List<Map<String, Object>> objects = p.getContent().stream().map(this::toView).toList();
-        return ResponseEntity.ok(new PaginateResponseType<>(objects, p.getTotalElements(), p.isLast()));
-    }
-
-    private Map<String, Object> toView(TripType t) {
-        Map<String, Object> m = new LinkedHashMap<>();
-        m.put("id", t.getId());
-    m.put("source", Map.of(
-        "city", t.getSource().getCity(),
-        "location", Map.of(
-            "type", t.getSource().getLocation().getType().name(),
-            "coordinates", t.getSource().getLocation().getCoordinates()
-        )
-    ));
-    m.put("destination", Map.of(
-        "city", t.getDestination().getCity(),
-        "location", Map.of(
-            "type", t.getDestination().getLocation().getType().name(),
-            "coordinates", t.getDestination().getLocation().getCoordinates()
-        )
-    ));
-        m.put("date", t.getDepartureDate());
-        m.put("price", t.getPrice());
-        m.put("availableSeats", t.getAvailableSeats());
-    if (t.getSeats() != null) {
-        m.put("seats", t.getSeats().stream().map(s -> Map.of(
-            "row", s.getRow(),
-            "col", s.getCol(),
-            "state", s.getState().name()
-        )).toList());
-    }
-        return m;
-    }
-
-    @Operation(summary = "Get seat map for a trip",
-        responses = {
-            @ApiResponse(responseCode = "200", description = "Seat map returned"),
-            @ApiResponse(responseCode = "404", description = "Trip not found")
-        }
-    )
-    @GetMapping("/{id}/seats")
-    public ResponseEntity<Map<String, Object>> seatMap(@PathVariable String id) {
-    var t = trips.findById(id).orElseThrow(() -> new NotFoundException("Trip not found"));
-    Map<String, Object> resp = new LinkedHashMap<>();
-    resp.put("tripId", t.getId());
-    resp.put("seats", t.getSeats() == null ? List.of() : t.getSeats().stream().map(s -> Map.of(
-        "row", s.getRow(),
-        "col", s.getCol(),
-        "state", s.getState().name()
-    )).toList());
-    return ResponseEntity.ok(resp);
-    }
-
-    @Schema(name = "ReserveSeatPayload")
-    public record ReserveSeatPayload(
-        @NotNull List<SeatCoord> seats
-    ) {}
-
-    public record SeatCoord(@Min(1) int row, @Min(1) int col) {}
-
-    @Operation(summary = "Reserve seats for a trip",
-        requestBody = @RequestBody(content = @Content(mediaType = "application/json",
-            examples = @ExampleObject(value = "{\n  \"seats\": [ { \"row\": 3, \"col\": 1 }, { \"row\": 3, \"col\": 2 } ]\n}"))),
-        responses = {
-            @ApiResponse(responseCode = "200", description = "Seats reserved"),
-            @ApiResponse(responseCode = "400", description = "Seat map not available"),
-            @ApiResponse(responseCode = "401", description = "Authentication required"),
-            @ApiResponse(responseCode = "404", description = "Trip or seat not found"),
-            @ApiResponse(responseCode = "409", description = "Seat not available or concurrent update")
-        }
-    )
-    @PostMapping("/{id}/seats:reserve")
-    public ResponseEntity<Map<String, Object>> reserveSeats(@PathVariable String id,
-                                @Valid @org.springframework.web.bind.annotation.RequestBody ReserveSeatPayload payload,
-                                @AuthenticationPrincipal User principal) {
-    if (principal == null) throw new UnauthorizedException("Authentication required");
-    var trip = trips.findById(id).orElseThrow(() -> new NotFoundException("Trip not found"));
-
-    if (trip.getSeats() == null || trip.getSeats().isEmpty()) {
-        throw new BadRequestException("Seat map not available for this trip");
-    }
-
-    var wanted = payload.seats().stream().collect(Collectors.toSet());
-
-    // Reserve only AVAILABLE seats; reject if any requested is not AVAILABLE
-    for (var sc : payload.seats()) {
-        var seat = trip.getSeats().stream()
-            .filter(s -> s.getRow() == sc.row() && s.getCol() == sc.col())
-            .findFirst()
-            .orElseThrow(() -> new NotFoundException("Seat " + sc.row() + "-" + sc.col() + " not found"));
-        if (seat.getState() != SeatStateEnum.AVAILABLE) {
-        throw new ConflictException("Seat " + sc.row() + "-" + sc.col() + " is not available");
-        }
-    }
-
-    // All ok, mark as RESERVED
-    for (var sc : payload.seats()) {
-        trip.getSeats().stream()
-            .filter(s -> s.getRow() == sc.row() && s.getCol() == sc.col())
-            .findFirst()
-            .ifPresent(s -> s.setState(SeatStateEnum.RESERVED));
-    }
-
-    // Decrease availableSeats accordingly
-    trip.setAvailableSeats(Math.max(0, trip.getAvailableSeats() - payload.seats().size()));
-    try {
-        trips.save(trip);
-    } catch (OptimisticLockingFailureException e) {
-        throw new ConflictException("Seat map changed, please refresh and try again");
-    }
-
-    Map<String, Object> resp = new LinkedHashMap<>();
-    resp.put("tripId", trip.getId());
-    resp.put("reserved", payload.seats());
-    return ResponseEntity.ok(resp);
+        this.agencies = agencies;
+        this.places = places;
+        this.mongoTemplate = mongoTemplate;
     }
 
     @Schema(name = "SeatUnitPayload")
@@ -239,6 +153,27 @@ public class TripController {
 
     @Schema(name = "UpdateSeatsPayload")
     public record UpdateSeatsPayload(@NotNull List<@Valid SeatUnitPayload> seats) {}
+
+
+    @Operation(
+        summary = "Get seat map for a trip",
+        responses = {
+            @ApiResponse(responseCode = "200", description = "Seat map returned"),
+            @ApiResponse(responseCode = "404", description = "Trip not found")
+        }
+    )
+    @GetMapping("/{id}/seats")
+    public ResponseEntity<Map<String, Object>> seatMap(@PathVariable String id) {
+        var t = trips.findById(id).orElseThrow(() -> new NotFoundException("Trip not found"));
+        Map<String, Object> resp = new LinkedHashMap<>();
+        resp.put("tripId", t.getId());
+        resp.put("seats", t.getSeats() == null ? List.of() : t.getSeats().stream().map(s -> Map.of(
+            "row", s.getRow(),
+            "col", s.getCol(),
+            "state", s.getState().name()
+        )).toList());
+        return ResponseEntity.ok(resp);
+    }
 
     @Operation(
         summary = "Initialize or update seat map (ADMIN or MANAGER)",
@@ -270,7 +205,7 @@ public class TripController {
         try {
             trips.save(trip);
         } catch (OptimisticLockingFailureException e) {
-            throw new ConflictException("Seat map changed, please refresh and try again");
+            throw new ConflictException("This trip was updated by another user. Please reload the page to see the latest seat map and try again.");
         }
 
         Map<String, Object> resp = new LinkedHashMap<>();
@@ -283,6 +218,7 @@ public class TripController {
         return ResponseEntity.ok(resp);
     }
 
+
     private com.eticketing.app.user.UserType ensureAdminOrManager(User principal) {
         if (principal == null) throw new UnauthorizedException("Authentication required");
         var me = users.findById(principal.getUsername()).orElseThrow(() -> new UnauthorizedException("Authentication subject not found"));
@@ -290,5 +226,18 @@ public class TripController {
             throw new ForbiddenException("ADMIN or MANAGER only");
         }
         return me;
+    }
+
+    private Map<String, Object> toView(TripType trip) {
+    Map<String, Object> map = new LinkedHashMap<>();
+    map.put("id", trip.getId());
+    map.put("departureDate", trip.getDepartureDate());
+    map.put("availableSeats", trip.getAvailableSeats());
+    // Fetch and embed full origin, destination, and agency objects
+    map.put("origin", trip.getOriginId() != null ? places.findById(trip.getOriginId()).orElse(null) : null);
+    map.put("destination", trip.getDestinationId() != null ? places.findById(trip.getDestinationId()).orElse(null) : null);
+    map.put("agency", trip.getAgencyId() != null ? agencies.findById(trip.getAgencyId()).orElse(null) : null);
+    // Add more fields as needed
+    return map;
     }
 }

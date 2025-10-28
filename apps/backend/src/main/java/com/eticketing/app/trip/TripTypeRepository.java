@@ -7,5 +7,5 @@ import org.springframework.data.mongodb.repository.MongoRepository;
 import java.time.LocalDate;
 
 public interface TripTypeRepository extends MongoRepository<TripType, String> {
-    Page<TripType> findBySource_CityIgnoreCaseAndDestination_CityIgnoreCaseAndDepartureDate(String sourceCity, String destinationCity, LocalDate departureDate, Pageable pageable);
+    Page<TripType> findByOriginIdAndDestinationIdAndDepartureDate(String originId, String destinationId, LocalDate departureDate, Pageable pageable);
 }

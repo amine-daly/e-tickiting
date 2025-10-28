@@ -10,3 +10,10 @@
 @import "./assets/plugins/keenicons/duotone/style.css";
 @import "./assets/plugins/keenicons/outline/style.css";
 @import "./assets/plugins/keenicons/solid/style.css";
+
+.place-map {
+    .map-container {
+        height: 340px !important;
+        width: 100% !important;
+    }
+}

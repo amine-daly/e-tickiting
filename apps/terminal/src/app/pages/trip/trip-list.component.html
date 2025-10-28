@@ -1,0 +1,119 @@
+<div>
+    <div class="container py-5">
+        <div class="card">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center mb-4">
+                    <h2 class="mb-0">Trips</h2>
+                    <div>
+                        <button class="btn btn-primary me-2" (click)="openCreate(tripModal)">Add Trip</button>
+                    </div>
+                </div>
+
+                <div *ngIf="(loading$ | async)" class="text-center my-5">
+                    <span class="spinner-border spinner-border-lg"></span>
+                    <div>Loading trips...</div>
+                </div>
+                <div *ngIf="!(loading$ | async) && !(trips$ | async)?.length" class="alert alert-info">No
+                    trips found.</div>
+
+                <div *ngIf="!(loading$ | async) && (trips$ | async)?.length" class="table-responsive">
+                    <!-- begin::Table -->
+                    <table class="table table-row-dashed table-row-gray-300 align-middle gs-0 gy-4">
+                        <!-- begin::Table head -->
+                        <thead>
+                            <tr class="fw-bolder text-muted">
+                                <th></th>
+                                <th class="min-w-150px">Origin</th>
+                                <th class="min-w-150px">Destination</th>
+                                <th class="min-w-120px">Date</th>
+                                <th class="min-w-120px">Agency</th>
+                                <th class="min-w-100px">Price</th>
+                                <th class="min-w-100px">Available Seats</th>
+                                <th class="min-w-100px text-end">Actions</th>
+                            </tr>
+                        </thead>
+                        <!-- end::Table head -->
+                        <!-- begin::Table body -->
+                        <tbody>
+                            <tr *ngFor="let t of trips$ | async; let i = index">
+                                <td>
+                                    <div class="form-check form-check-sm form-check-custom form-check-solid">
+                                        <input class="form-check-input widget-9-check" type="checkbox" [value]="t.id" />
+                                    </div>
+                                </td>
+                                <td>
+                                    <span class="text-dark fw-bolder text-hover-primary fs-6">{{ t.origin?.city ||
+                                        t.origin.name }}</span>
+                                </td>
+                                <td>
+                                    <span class="text-dark fw-bolder text-hover-primary fs-6">{{ t.destination?.city ||
+                                        t.destination.name }}</span>
+                                </td>
+                                <td>{{ t.departureDate | date:'yyyy-MM-dd' }}</td>
+                                <td>{{ t.agency.name }}</td>
+                                <td>{{ t.price | number:'1.2-2' }}</td>
+                                <td>{{ t.availableSeats }}</td>
+                                <td>
+                                    <div class="d-flex justify-content-end flex-shrink-0">
+                                        <button class="btn btn-icon btn-bg-light btn-active-color-primary btn-sm me-1"
+                                            (click)="openEdit(tripModal, t)">
+                                            <app-keenicon name="pencil" class="fs-3"></app-keenicon>
+                                        </button>
+                                        <button class="btn btn-icon btn-bg-light btn-active-color-primary btn-sm"
+                                            (click)="deleteTrip(t)">
+                                            <app-keenicon name="trash" class="fs-3"></app-keenicon>
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
+                        </tbody>
+                        <!-- end::Table body -->
+                    </table>
+                    <!-- end::Table -->
+                </div>
+            </div>
+        </div>
+    </div>
+    <ng-template #tripModal let-modal>
+        <div class="modal-header">
+            <h5 class="modal-title">{{ editing ? 'Edit Trip' : 'Add Trip' }}</h5>
+            <button type="button" class="btn-close" aria-label="Close" (click)="modal.dismiss('Cross click')"></button>
+        </div>
+        <form (ngSubmit)="submit(modal)">
+            <div class="modal-body">
+                <!-- Trip form fields go here -->
+                <div class="mb-3">
+                    <label>Origin</label>
+                    <input class="form-control" [(ngModel)]="form.originId" name="originId" required />
+                </div>
+                <div class="mb-3">
+                    <label>Destination</label>
+                    <input class="form-control" [(ngModel)]="form.destinationId" name="destinationId" required />
+                </div>
+                <div class="mb-3">
+                    <label>Date</label>
+                    <input class="form-control" type="date" [(ngModel)]="form.departureDate" name="departureDate"
+                        required />
+                </div>
+                <div class="mb-3">
+                    <label>Price</label>
+                    <input class="form-control" type="number" [(ngModel)]="form.price" name="price" required />
+                </div>
+                <div class="mb-3">
+                    <label>Available Seats</label>
+                    <input class="form-control" type="number" [(ngModel)]="form.availableSeats" name="availableSeats"
+                        required />
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="submit" class="btn btn-primary"
+                    [disabled]="!form.originId || !form.destinationId || !form.departureDate || !form.price || !form.availableSeats">
+                    Save
+                </button>
+                <button type="button" class="btn btn-secondary" (click)="modal.dismiss('Cross click')">
+                    Cancel
+                </button>
+            </div>
+        </form>
+    </ng-template>
+</div>

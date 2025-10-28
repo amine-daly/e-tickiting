@@ -1,9 +1,10 @@
 import { Injectable } from '@angular/core';
-import { Observable, map } from 'rxjs';
+import { BehaviorSubject, Observable, map, of } from 'rxjs';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { UserType } from '../../models/user-type';
 import { environment } from '../../../../../environments/environment';
 import { AuthResponse } from '../../models/auth.model';
+import { AuthUtils } from '../../utils/auth.utils';
 
 const API_AUTH_URL = `${environment.apiBase}/auth`;
 const API_USERS_URL = `${environment.apiBase}/users`;
@@ -27,13 +28,9 @@ export class AuthHTTPService {
       .post<{ token: string; user: any }>(`${API_AUTH_URL}/login`, payload)
       .pipe(
         map((res) => {
-          const auth = new AuthResponse();
-          auth.authToken = res.token;
-          // backend currently single token (no refresh); map placeholders
-          auth.refreshToken = res.token;
-          auth.expiresIn = new Date(Date.now() + 24 * 3600 * 1000);
+          console.log('🚀 ~ AuthHTTPService ~ login ~ res:', res);
           localStorage.setItem('accessToken', res.token);
-          return auth;
+          return res;
         })
       );
   }
@@ -45,9 +42,6 @@ export class AuthHTTPService {
       .pipe(
         map((res) => {
           const auth = new AuthResponse();
-          auth.authToken = res.token;
-          auth.refreshToken = res.token;
-          auth.expiresIn = new Date(Date.now() + 24 * 3600 * 1000);
           auth.user = res.user;
           localStorage.setItem('accessToken', res.token);
           return auth;

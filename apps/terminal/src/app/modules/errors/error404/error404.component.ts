@@ -2,14 +2,6 @@ import { Component, OnDestroy, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router } from '@angular/router';
 import { Subscription } from 'rxjs';
-import {
-  DrawerComponent,
-  MenuComponent,
-  ScrollComponent,
-  ScrollTopComponent,
-  StickyComponent,
-  ToggleComponent,
-} from '../../../_metronic/kt/components';
 import { ThemeModeService } from '../../../_metronic/partials/layout/theme-mode-switcher/theme-mode.service';
 
 @Component({
@@ -36,14 +28,6 @@ export class Error404Component implements OnInit, OnDestroy {
 
   routeToDashboard() {
     this.router.navigate(['dashboard']);
-    setTimeout(() => {
-      ToggleComponent.reinitialization();
-      ScrollTopComponent.reinitialization();
-      DrawerComponent.reinitialization();
-      StickyComponent.bootstrap();
-      MenuComponent.reinitialization();
-      ScrollComponent.reinitialization();
-    }, 200);
   }
 
   ngOnDestroy() {

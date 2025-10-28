@@ -67,7 +67,7 @@ export class PageInfoService {
   public calculateTitleInMenu(menuId: string): string | undefined {
     const menu = document.getElementById(menuId);
     if (!menu) {
-      return;
+      return undefined;
     }
 
     const allActiveMenuLinks = Array.from<HTMLLinkElement>(
@@ -75,14 +75,14 @@ export class PageInfoService {
     ).filter((link) => link.classList.contains('active'));
 
     if (!allActiveMenuLinks || allActiveMenuLinks.length === 0) {
-      return;
+      return undefined;
     }
 
     const titleSpan = allActiveMenuLinks[0].querySelector(
       'span.menu-title'
     ) as HTMLSpanElement | null;
     if (!titleSpan) {
-      return;
+      return undefined;
     }
 
     return titleSpan.innerText;
@@ -95,7 +95,7 @@ export class PageInfoService {
 
     if (!bc) {
       this.setBreadcrumbs([]);
-      return;
+      return undefined;
     }
     this.setBreadcrumbs(bc);
   }
@@ -106,7 +106,7 @@ export class PageInfoService {
     const result: Array<PageLink> = [];
     const menu = document.getElementById(menuId);
     if (!menu) {
-      return;
+      return undefined;
     }
 
     const allActiveParents = Array.from<HTMLDivElement>(
@@ -114,7 +114,7 @@ export class PageInfoService {
     ).filter((link) => link.classList.contains('here'));
 
     if (!allActiveParents || allActiveParents.length === 0) {
-      return;
+      return undefined;
     }
 
     allActiveParents.forEach((parent) => {
@@ -122,13 +122,13 @@ export class PageInfoService {
         'span.menu-title'
       ) as HTMLSpanElement | null;
       if (!titleSpan) {
-        return;
+        return undefined;
       }
 
       const title = titleSpan.innerText;
       const path = titleSpan.getAttribute('data-link');
       if (!path) {
-        return;
+        return undefined;
       }
 
       result.push({

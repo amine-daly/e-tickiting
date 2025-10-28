@@ -19,7 +19,7 @@ export class LoginComponent implements OnInit, OnDestroy {
   loginForm: FormGroup;
   hasError: boolean;
   returnUrl: string;
-  isLoading$: Observable<boolean>;
+  isLoading$: Observable<boolean> = this.authService.isLoading$;
 
   // private fields
   private unsubscribe: Subscription[] = []; // Read more: => https://brianflove.com/2016/12/11/anguar-2-unsubscribe-observables/
@@ -31,9 +31,8 @@ export class LoginComponent implements OnInit, OnDestroy {
     private router: Router,
     private alert: AlertService
   ) {
-    this.isLoading$ = this.authService.isLoading$;
     // redirect to home if already logged in
-    if (this.authService.currentUserValue) {
+    if (this.authService.currentUser$) {
       this.router.navigate(['/']);
     }
   }

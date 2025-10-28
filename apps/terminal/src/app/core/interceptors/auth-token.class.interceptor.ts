@@ -18,7 +18,7 @@ export class AuthTokenClassInterceptor implements HttpInterceptor {
     req: HttpRequest<any>,
     next: HttpHandler
   ): Observable<HttpEvent<any>> {
-    const token = this.readToken();
+    const token = localStorage.getItem('accessToken');
     const authReq = token
       ? req.clone({ setHeaders: { Authorization: `Bearer ${token}` } })
       : req;
@@ -31,21 +31,5 @@ export class AuthTokenClassInterceptor implements HttpInterceptor {
         return throwError(() => err);
       })
     );
-  }
-
-  private readToken(): string | undefined {
-    // Terminal app stores JSON under v1-auth with { authToken }
-    const v1 = localStorage.getItem(
-      `${environment.appVersion}-${environment.USERDATA_KEY}`
-    );
-    if (v1) {
-      try {
-        const parsed = JSON.parse(v1);
-        if (parsed?.authToken) return parsed.authToken;
-      } catch {}
-    }
-    // Fallback to simple 'token' for other app
-    const simple = localStorage.getItem('accessToken');
-    return simple || undefined;
   }
 }
