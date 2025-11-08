@@ -1,6 +1,6 @@
 package com.eticketing.app.place;
 
-import com.eticketing.app.trip.LonLatType;
+import com.eticketing.app.place.LonLatType;
 import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.mapping.Document;
 

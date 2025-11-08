@@ -1,10 +1,8 @@
-
-package com.eticketing.app.web;
+package com.eticketing.app.user;
 
 import org.springframework.util.ReflectionUtils;
 import java.lang.reflect.Field;
 import java.util.Map;
-import org.springframework.beans.BeanUtils;
 
 import com.eticketing.app.user.UserTypeRepository;
 import com.eticketing.app.user.UserType;
@@ -19,6 +17,7 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.userdetails.User;
 import org.springframework.web.bind.annotation.*;
 import com.eticketing.app.web.error.ApiExceptions.*;
+import com.eticketing.app.web.PaginateResponseType;
 
 @RestController
 @RequestMapping("/api/users")

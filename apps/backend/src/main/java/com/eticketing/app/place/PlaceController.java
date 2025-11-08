@@ -1,6 +1,6 @@
 package com.eticketing.app.place;
 
-import com.eticketing.app.trip.LonLatType;
+import com.eticketing.app.place.LonLatType;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.web.bind.annotation.*;

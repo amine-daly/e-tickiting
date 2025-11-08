@@ -1,4 +1,4 @@
-package com.eticketing.app.trip;
+package com.eticketing.app.place;
 
 import jakarta.validation.constraints.NotNull;
 import java.util.List;
