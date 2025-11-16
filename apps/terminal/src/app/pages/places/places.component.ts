@@ -26,9 +26,7 @@ export class PlacesComponent implements OnInit {
   loading = true;
   error: string | null = null;
 
-  get places() {
-    return this.placesService.places();
-  }
+  places$ = this.placesService.places$;
 
   constructor(
     private placesService: PlacesService,
@@ -40,7 +38,7 @@ export class PlacesComponent implements OnInit {
   ngOnInit(): void {
     this.loading = true;
     this.error = null;
-    this.placesService.getAll().subscribe({
+    this.placesService.getPlaces().subscribe({
       next: () => {
         this.loading = false;
         this.cdr.detectChanges();

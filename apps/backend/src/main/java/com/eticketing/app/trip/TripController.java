@@ -16,7 +16,7 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
 
 import com.eticketing.app.agency.AgencyRepository;
-import com.eticketing.app.agency.Agency;
+import com.eticketing.app.agency.AgencyType;
 import com.eticketing.app.place.PlaceRepository;
 import com.eticketing.app.place.PlaceDocument;
 
@@ -84,10 +84,11 @@ public class TripController {
         }
         toSave.setPrice(payload.price());
         toSave.setAvailableSeats(payload.availableSeats());
+        toSave.setStatus(payload.status() == null ? TripStatusEnum.SCHEDULED : payload.status());
 
         TripType saved = tripTypeRepository.save(toSave);
         // Fetch referenced objects
-        Agency agency = null;
+        AgencyType agency = null;
         if (saved.getAgencyId() != null) {
             agency = agencyRepository.findById(saved.getAgencyId()).orElse(null);
         }
@@ -113,6 +114,7 @@ public class TripController {
         );
         response.put("price", saved.getPrice());
         response.put("availableSeats", saved.getAvailableSeats());
+        response.put("status", saved.getStatus());
         return ResponseEntity.ok(response);
     }
 
@@ -123,7 +125,8 @@ public class TripController {
             String destinationId,
             OffsetDateTime departureDate,
             java.math.BigDecimal price,
-            int availableSeats
+            int availableSeats,
+            TripStatusEnum status
             ) {
 
     }
@@ -201,6 +204,7 @@ public class TripController {
             map.put("price", trip.getPrice());
             map.put("availableSeats", trip.getAvailableSeats());
             map.put("seats", trip.getSeats());
+            map.put("status", trip.getStatus());
             return map;
         }).toList();
         boolean isLast = (page * limit + found.size()) >= count;
@@ -264,6 +268,16 @@ public class TripController {
                 trip.setAvailableSeats(n.intValue());
             } else if (val instanceof String s) {
                 trip.setAvailableSeats(Integer.parseInt(s));
+            }
+        }
+        if (updates.containsKey("status")) {
+            Object val = updates.get("status");
+            if (val != null) {
+                try {
+                    trip.setStatus(TripStatusEnum.valueOf(val.toString().trim().toUpperCase()));
+                } catch (IllegalArgumentException ex) {
+                    throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid trip status");
+                }
             }
         }
         // Optionally handle seats update if needed
@@ -407,7 +421,7 @@ public class TripController {
     }
 
     private Map<String, Object> buildTripResponse(TripType trip) {
-        Agency agency = trip.getAgencyId() != null ? agencyRepository.findById(trip.getAgencyId()).orElse(null) : null;
+        AgencyType agency = trip.getAgencyId() != null ? agencyRepository.findById(trip.getAgencyId()).orElse(null) : null;
         PlaceDocument origin = trip.getOriginId() != null ? placeRepository.findById(trip.getOriginId()).orElse(null) : null;
         PlaceDocument destination = trip.getDestinationId() != null ? placeRepository.findById(trip.getDestinationId()).orElse(null) : null;
 
@@ -426,6 +440,7 @@ public class TripController {
         response.put("price", trip.getPrice());
         response.put("availableSeats", trip.getAvailableSeats());
         response.put("seats", trip.getSeats());
+        response.put("status", trip.getStatus());
         return response;
     }
 

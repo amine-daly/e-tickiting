@@ -421,6 +421,64 @@
                     }
                 }
             ]
+        },
+        {
+            "name": "Tickets",
+            "item": [
+                {
+                    "name": "Book ticket",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{token}}"
+                            },
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{baseUrl}}/api/tickets",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "api",
+                                "tickets"
+                            ]
+                        },
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"tripId\": \"{{tripId}}\",\n  \"seats\": [\n    { \"label\": \"A1\" },\n    { \"row\": 3, \"col\": 2 }\n  ],\n  \"payment\": {\n    \"amount\": 39.8,\n    \"currency\": \"TND\",\n    \"method\": \"CARD\",\n    \"provider\": \"STRIPE\",\n    \"reference\": \"PAYMENT_REF\"\n  }\n}"
+                        }
+                    }
+                },
+                {
+                    "name": "Cancel ticket",
+                    "request": {
+                        "method": "DELETE",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{token}}"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{baseUrl}}/api/tickets/{{ticketId}}",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "api",
+                                "tickets",
+                                "{{ticketId}}"
+                            ]
+                        }
+                    }
+                }
+            ]
         }
     ],
     "variable": [
@@ -434,6 +492,10 @@
         },
         {
             "key": "tripId",
+            "value": ""
+        },
+        {
+            "key": "ticketId",
             "value": ""
         }
     ]

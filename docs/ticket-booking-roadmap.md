@@ -26,9 +26,14 @@
    ```json
    {
      "tripId": "TRIP_ID",
-     "userId": "USER_ID",
-     "seatNumbers": [1, 2],
-     "paymentInfo": {}
+     "seats": [{ "label": "A1" }, { "row": 3, "col": 2 }],
+     "payment": {
+       "amount": 39.8,
+       "currency": "TND",
+       "method": "CARD",
+       "provider": "STRIPE",
+       "reference": "PAYMENT_REF"
+     }
    }
    ```
 
@@ -40,7 +45,7 @@
    - (Optional) Is payment valid?
 9. If all checks pass:
    - Creates a new `TicketType` document
-   - Marks the selected seats as reserved/booked in the `TripType`
+   - Marks the selected seats as reserved in the `TripType`
    - Decrements `availableSeats` in the `TripType`
 10. Returns the ticket info (and payment status if applicable)
 

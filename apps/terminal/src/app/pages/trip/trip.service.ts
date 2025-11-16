@@ -1,20 +1,39 @@
 import { Injectable } from '@angular/core';
-import { HttpClient, HttpParams } from '@angular/common/http';
-import { BehaviorSubject, map, Observable } from 'rxjs';
-import { Trip } from '../../core/models/trip.model';
+import { HttpClient } from '@angular/common/http';
+import { BehaviorSubject, Observable, throwError } from 'rxjs';
+import { catchError, finalize, map, tap } from 'rxjs/operators';
+
+import { Trip as TripType, TripStatus } from '../../core/models/trip.model';
 import { PaginateResponse } from '../../core/models/paginate-response.model';
 import { TripFilterInput } from 'src/app/modules/auth/models/trip-filter-input.model';
 
+export interface TripCreatePayload {
+  agencyId?: string | null;
+  originId: string;
+  destinationId: string;
+  departureDate: string;
+  price: number;
+  availableSeats: number;
+  status?: TripStatus | null;
+}
+
+export interface TripUpdatePayload {
+  agencyId?: string | null;
+  originId?: string | null;
+  destinationId?: string | null;
+  departureDate?: string | null;
+  price?: number | null;
+  availableSeats?: number | null;
+  status?: TripStatus | null;
+}
+
 @Injectable({ providedIn: 'root' })
 export class TripService {
-  private loading: BehaviorSubject<boolean> = new BehaviorSubject<boolean>(
-    true
-  );
-  private trips: BehaviorSubject<PaginateResponse<Trip[]>> =
-    new BehaviorSubject<PaginateResponse<Trip[]>>(null);
+  private loading = new BehaviorSubject<boolean>(false);
+  private trips = new BehaviorSubject<TripType[]>([]);
   private baseUrl = '/api/trips';
 
-  get trips$(): Observable<PaginateResponse<Trip[]>> {
+  get trips$(): Observable<TripType[]> {
     return this.trips.asObservable();
   }
 
@@ -24,35 +43,71 @@ export class TripService {
 
   constructor(private http: HttpClient) {}
 
-  getTrips(filter: TripFilterInput): Observable<PaginateResponse<Trip>> {
+  getTrips(filter: TripFilterInput): Observable<PaginateResponse<TripType>> {
     this.loading.next(true);
+    const params: Record<string, any> = {
+      ...filter,
+      page: 0,
+      limit: 200,
+    };
+    Object.keys(params).forEach((key) => {
+      if (
+        params[key] === undefined ||
+        params[key] === null ||
+        params[key] === ''
+      ) {
+        delete params[key];
+      }
+    });
+
     return this.http
-      .get<PaginateResponse<Trip>>(`${this.baseUrl}/search`, {
-        params: {
-          ...filter,
-          page: 0,
-          limit: 200,
-        },
-      })
+      .get<PaginateResponse<TripType>>(`${this.baseUrl}/search`, { params })
       .pipe(
-        map((data: any) => {
-          this.loading.next(false);
-          console.log('🚀 ~ TripService ~ getTrips ~ data:', data);
-          this.trips.next(data.objects);
+        map((data) => {
+          const objects = Array.isArray(data?.objects) ? data.objects : [];
+          this.trips.next(objects);
           return data;
+        }),
+        catchError((error) => {
+          this.trips.next([]);
+          return throwError(() => error);
+        }),
+        finalize(() => this.loading.next(false))
+      );
+  }
+
+  createTrip(payload: TripCreatePayload): Observable<TripType> {
+    return this.http.post<TripType>(`${this.baseUrl}/create`, payload).pipe(
+      map((created: TripType) => {
+        const current = this.trips.value ?? [];
+        this.trips.next([...current, created]);
+        return created;
+      })
+    );
+  }
+
+  updateTrip(id: string, changes: TripUpdatePayload): Observable<TripType> {
+    return this.http
+      .post<TripType>(`${this.baseUrl}/update/${id}`, changes)
+      .pipe(
+        map((updated: TripType) => {
+          const updatedList = (this.trips.value ?? []).map((trip) =>
+            trip.id === id ? { ...trip, ...updated } : trip
+          );
+          this.trips.next(updatedList);
+          return updated;
         })
       );
   }
 
-  createTrip(trip: Partial<Trip>): Observable<Trip> {
-    return this.http.post<Trip>(this.baseUrl, trip);
-  }
-
-  updateTrip(trip: Partial<Trip>): Observable<Trip> {
-    return this.http.put<Trip>(`${this.baseUrl}/${trip.id}`, trip);
-  }
-
   deleteTrip(id: string): Observable<void> {
-    return this.http.delete<void>(`${this.baseUrl}/${id}`);
+    return this.http.delete<void>(`${this.baseUrl}/delete/${id}`).pipe(
+      tap(() => {
+        const filtered = (this.trips.value ?? []).filter(
+          (trip) => trip.id !== id
+        );
+        this.trips.next(filtered);
+      })
+    );
   }
 }

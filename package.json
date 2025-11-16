@@ -8,9 +8,9 @@
         "format": "echo format placeholder",
         "lint": "echo lint placeholder",
         "test": "echo test placeholder",
-        "start:terminal": "npm --prefix apps/terminal start --open",
+        "start:terminal": "npm --prefix apps/terminal start --o",
+        "start": "npm --prefix apps/terminal start --o",
         "start:backend": "cd apps/backend && mvnw.cmd spring-boot:run",
-        "start:backend:8081": "cd apps/backend && mvnw.cmd -Dspring-boot.run.arguments=\"--server.port=8081\" spring-boot:run",
         "build:backend": "cd apps/backend && mvnw.cmd -DskipTests clean package"
     }
 }

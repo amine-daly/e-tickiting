@@ -3,18 +3,19 @@
         <div class="card">
             <div class="card-body">
                 <div class="d-flex justify-content-between align-items-center mb-4">
-                    <h2 class="mb-0">Trips</h2>
+                    <h2 class="mb-0">Voyages</h2>
                     <div>
-                        <button class="btn btn-primary me-2" (click)="openCreate(tripModal)">Add Trip</button>
+                        <button class="btn btn-primary me-2" (click)="openTripModal(tripModal, null)">Ajouter un
+                            voyage</button>
                     </div>
                 </div>
 
                 <div *ngIf="(loading$ | async)" class="text-center my-5">
                     <span class="spinner-border spinner-border-lg"></span>
-                    <div>Loading trips...</div>
+                    <div>Chargement des voyages...</div>
                 </div>
-                <div *ngIf="!(loading$ | async) && !(trips$ | async)?.length" class="alert alert-info">No
-                    trips found.</div>
+                <div *ngIf="!(loading$ | async) && !(trips$ | async)?.length" class="alert alert-info">Aucun
+                    voyage trouvé.</div>
 
                 <div *ngIf="!(loading$ | async) && (trips$ | async)?.length" class="table-responsive">
                     <!-- begin::Table -->
@@ -23,44 +24,55 @@
                         <thead>
                             <tr class="fw-bolder text-muted">
                                 <th></th>
-                                <th class="min-w-150px">Origin</th>
+                                <th class="min-w-150px">Origine</th>
                                 <th class="min-w-150px">Destination</th>
                                 <th class="min-w-120px">Date</th>
-                                <th class="min-w-120px">Agency</th>
-                                <th class="min-w-100px">Price</th>
-                                <th class="min-w-100px">Available Seats</th>
+                                <th class="min-w-120px">Statut</th>
+                                <th class="min-w-120px">Agence</th>
+                                <th class="min-w-100px">Prix</th>
+                                <th class="min-w-100px">Places disponibles</th>
                                 <th class="min-w-100px text-end">Actions</th>
                             </tr>
                         </thead>
                         <!-- end::Table head -->
                         <!-- begin::Table body -->
                         <tbody>
-                            <tr *ngFor="let t of trips$ | async; let i = index">
+                            <tr *ngFor="let data of trips$ | async; let i = index">
                                 <td>
                                     <div class="form-check form-check-sm form-check-custom form-check-solid">
-                                        <input class="form-check-input widget-9-check" type="checkbox" [value]="t.id" />
+                                        <input class="form-check-input widget-9-check" type="checkbox"
+                                            [value]="data?.id" />
                                     </div>
                                 </td>
                                 <td>
-                                    <span class="text-dark fw-bolder text-hover-primary fs-6">{{ t.origin?.city ||
-                                        t.origin.name }}</span>
+                                    <span class="text-dark fw-bolder text-hover-primary fs-6">{{ data?.origin?.city
+                                        }}</span>
                                 </td>
                                 <td>
-                                    <span class="text-dark fw-bolder text-hover-primary fs-6">{{ t.destination?.city ||
-                                        t.destination.name }}</span>
+                                    <span class="text-dark fw-bolder text-hover-primary fs-6">{{ data?.destination?.city
+                                        }}</span>
                                 </td>
-                                <td>{{ t.departureDate | date:'yyyy-MM-dd' }}</td>
-                                <td>{{ t.agency.name }}</td>
-                                <td>{{ t.price | number:'1.2-2' }}</td>
-                                <td>{{ t.availableSeats }}</td>
+                                <td>{{ data?.departureDate | date:'yyyy-MM-dd HH:mm' }}</td>
+                                <td>
+                                    <span class="badge" [ngClass]="{
+                                            'bg-info': data?.status === 'SCHEDULED',
+                                            'bg-success': data?.status === 'COMPLETED',
+                                            'bg-danger': data?.status === 'CANCELLED'
+                                        }">
+                                        {{ statusLabelMap[data?.status] }}
+                                    </span>
+                                </td>
+                                <td>{{ data?.agency?.name }}</td>
+                                <td>{{ data?.price | number:'1.3-3' }} DT </td>
+                                <td>{{ data?.availableSeats }}</td>
                                 <td>
                                     <div class="d-flex justify-content-end flex-shrink-0">
                                         <button class="btn btn-icon btn-bg-light btn-active-color-primary btn-sm me-1"
-                                            (click)="openEdit(tripModal, t)">
+                                            (click)="openTripModal(tripModal, data)">
                                             <app-keenicon name="pencil" class="fs-3"></app-keenicon>
                                         </button>
                                         <button class="btn btn-icon btn-bg-light btn-active-color-primary btn-sm"
-                                            (click)="deleteTrip(t)">
+                                            (click)="deleteTrip(data)">
                                             <app-keenicon name="trash" class="fs-3"></app-keenicon>
                                         </button>
                                     </div>
@@ -76,42 +88,80 @@
     </div>
     <ng-template #tripModal let-modal>
         <div class="modal-header">
-            <h5 class="modal-title">{{ editing ? 'Edit Trip' : 'Add Trip' }}</h5>
-            <button type="button" class="btn-close" aria-label="Close" (click)="modal.dismiss('Cross click')"></button>
+            <h5 class="modal-title">{{ editing ? 'Modifier un voyage' : 'Ajouter un voyage' }}</h5>
+            <button type="button" class="btn-close" aria-label="Fermer" (click)="modal.dismiss('Cross click')"></button>
         </div>
-        <form (ngSubmit)="submit(modal)">
+        <form [formGroup]="form">
             <div class="modal-body">
-                <!-- Trip form fields go here -->
                 <div class="mb-3">
-                    <label>Origin</label>
-                    <input class="form-control" [(ngModel)]="form.originId" name="originId" required />
+                    <label>Agence</label>
+                    <ng-select required [items]="agencies$ | async" bindLabel="name" bindValue="id"
+                        formControlName="agencyId" placeholder="Sélectionner une agence" [clearable]="true">
+                        <ng-template ng-label-tmp let-item="item">{{ item.name }}</ng-template>
+                        <ng-template ng-option-tmp let-item="item">{{ item.name }}</ng-template>
+                    </ng-select>
                 </div>
                 <div class="mb-3">
-                    <label>Destination</label>
-                    <input class="form-control" [(ngModel)]="form.destinationId" name="destinationId" required />
+                    <label>Origine <span class="text-danger">*</span></label>
+                    <ng-select [items]="places$ | async" bindLabel="city" bindValue="id" formControlName="originId"
+                        placeholder="Sélectionner l'origine" [clearable]="true">
+                        <ng-template ng-label-tmp let-item="item">{{ item.city }}</ng-template>
+                        <ng-template ng-option-tmp let-item="item">{{ item.city }}</ng-template>
+                    </ng-select>
+                    <div *ngIf="isInvalid('originId')" class="text-danger small">L'origine est requise.</div>
                 </div>
                 <div class="mb-3">
-                    <label>Date</label>
-                    <input class="form-control" type="date" [(ngModel)]="form.departureDate" name="departureDate"
-                        required />
+                    <label>Destination <span class="text-danger">*</span></label>
+                    <ng-select [items]="places$ | async" bindLabel="city" bindValue="id" formControlName="destinationId"
+                        placeholder="Sélectionner la destination" [clearable]="true">
+                        <ng-template ng-label-tmp let-item="item">{{ item.city }}</ng-template>
+                        <ng-template ng-option-tmp let-item="item">{{ item.city }}</ng-template>
+                    </ng-select>
+                    <div *ngIf="isInvalid('destinationId')" class="text-danger small">La destination est requise.</div>
                 </div>
                 <div class="mb-3">
-                    <label>Price</label>
-                    <input class="form-control" type="number" [(ngModel)]="form.price" name="price" required />
+                    <label>Statut <span class="text-danger">*</span></label>
+                    <ng-select [items]="statusOptions" bindLabel="label" bindValue="value" formControlName="status"
+                        placeholder="Sélectionner le statut" [clearable]="false">
+                        <ng-template ng-label-tmp let-item="item">{{ item.label }}</ng-template>
+                        <ng-template ng-option-tmp let-item="item">{{ item.label }}</ng-template>
+                    </ng-select>
                 </div>
                 <div class="mb-3">
-                    <label>Available Seats</label>
-                    <input class="form-control" type="number" [(ngModel)]="form.availableSeats" name="availableSeats"
-                        required />
+                    <label>Date de départ <span class="text-danger">*</span></label>
+                    <div class="input-group d-flex align-items-center">
+                        <input class="form-control flatpickr-input" type="text"
+                            placeholder="Sélectionner la date de départ" mwlFlatpickr [altInput]="true"
+                            [convertModelValue]="true" [enableTime]="true" [altFormat]="'F j, Y h:i K'"
+                            [dateFormat]="'Y-m-d H:i'" formControlName="departureDate">
+                        <a *ngIf="form.get('departureDate').value" (click)="form.get('departureDate').setValue('')"
+                            class="ms-2" title="Effacer la date">
+                            <app-keenicon name="close" class="fs-3"></app-keenicon>
+                        </a>
+                    </div>
+                    <div *ngIf="isInvalid('departureDate')" class="text-danger small">La date de départ est requise.
+                    </div>
+                </div>
+                <div class="mb-3">
+                    <label>Prix <span class="text-danger">*</span></label>
+                    <input class="form-control" type="number" step="0.01" formControlName="price" />
+                    <div *ngIf="isInvalid('price')" class="text-danger small">Le prix doit être un nombre positif.
+                    </div>
+                </div>
+                <div class="mb-3">
+                    <label>Places disponibles <span class="text-danger">*</span></label>
+                    <input class="form-control" type="number" min="0" formControlName="availableSeats" />
+                    <div *ngIf="isInvalid('availableSeats')" class="text-danger small">Veuillez indiquer le nombre de
+                        places disponibles.</div>
                 </div>
             </div>
             <div class="modal-footer">
-                <button type="submit" class="btn btn-primary"
-                    [disabled]="!form.originId || !form.destinationId || !form.departureDate || !form.price || !form.availableSeats">
-                    Save
+                <button type="button" (click)="submit(modal)" class="btn btn-primary"
+                    [disabled]="form.invalid || isButtonDisabled">
+                    Enregistrer
                 </button>
                 <button type="button" class="btn btn-secondary" (click)="modal.dismiss('Cross click')">
-                    Cancel
+                    Annuler
                 </button>
             </div>
         </form>

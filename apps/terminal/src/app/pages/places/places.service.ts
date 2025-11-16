@@ -1,20 +1,24 @@
 import { Injectable, signal } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { environment } from 'src/environments/environment';
-import { map, Observable } from 'rxjs';
+import { BehaviorSubject, map, Observable } from 'rxjs';
 import { PlaceType } from '../../modules/auth/models/place-type';
 
 @Injectable({ providedIn: 'root' })
 export class PlacesService {
   private baseUrl = `${environment.apiBase}/places`;
-  places = signal<PlaceType[]>([]);
+  private places = new BehaviorSubject<PlaceType[]>([]);
+
+  get places$(): Observable<PlaceType[]> {
+    return this.places.asObservable();
+  }
 
   constructor(private http: HttpClient) {}
 
-  getAll(): Observable<PlaceType[]> {
+  getPlaces(): Observable<PlaceType[]> {
     return this.http.get<any>(this.baseUrl).pipe(
       map((data: any) => {
-        this.places.set(data.objects);
+        this.places.next(data.objects);
         return data.objects;
       })
     );
@@ -23,7 +27,7 @@ export class PlacesService {
   create(place: PlaceType): Observable<PlaceType> {
     return this.http.post<PlaceType>(this.baseUrl, place).pipe(
       map((created: PlaceType) => {
-        this.places.set([...this.places(), created]);
+        this.places.next([...this.places.value, created]);
         return created;
       })
     );
@@ -32,10 +36,10 @@ export class PlacesService {
   update(id: string, place: PlaceType): Observable<PlaceType> {
     return this.http.put<PlaceType>(`${this.baseUrl}/${id}`, place).pipe(
       map((updated: PlaceType) => {
-        const updatedList = this.places().map((p) =>
+        const updatedList = this.places.value.map((p) =>
           p.id === id ? updated : p
         );
-        this.places.set(updatedList);
+        this.places.next(updatedList);
         return updated;
       })
     );
@@ -44,7 +48,7 @@ export class PlacesService {
   delete(id: string): Observable<void> {
     return this.http.delete<void>(`${this.baseUrl}/${id}`).pipe(
       map(() => {
-        this.places.set(this.places().filter((p) => p.id !== id));
+        this.places.next(this.places.value.filter((p) => p.id !== id));
       })
     );
   }

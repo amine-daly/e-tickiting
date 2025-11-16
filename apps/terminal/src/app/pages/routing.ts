@@ -14,6 +14,11 @@ const Routing: Routes = [
       import('./places/places.routes').then((m) => m.placesRoutes),
   },
   {
+    path: 'agencies',
+    loadChildren: () =>
+      import('./agencies/agencies.routes').then((m) => m.agenciesRoutes),
+  },
+  {
     path: 'trips',
     loadChildren: () =>
       import('./trip/trip-list.routes').then((m) => m.tripRoutes),

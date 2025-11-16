@@ -6,10 +6,12 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 import java.util.Optional;
 import java.util.Map;
+import jakarta.validation.Valid;
 
 @RestController
 @RequestMapping("/api/agencies")
 public class AgencyController {
+
     private final AgencyRepository agencyRepository;
 
     @Autowired
@@ -18,33 +20,39 @@ public class AgencyController {
     }
 
     @PostMapping
-    public ResponseEntity<Agency> createAgency(@RequestBody Agency agency) {
-        Agency saved = agencyRepository.save(agency);
+    public ResponseEntity<AgencyType> createAgency(@Valid @RequestBody AgencyType agency) {
+        AgencyType saved = agencyRepository.save(agency);
         return ResponseEntity.ok(saved);
     }
 
     @GetMapping
-    public ResponseEntity<List<Agency>> getAllAgencies() {
+    public ResponseEntity<List<AgencyType>> getAllAgencies() {
         return ResponseEntity.ok(agencyRepository.findAll());
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<Agency> getAgencyById(@PathVariable String id) {
-        Optional<Agency> agency = agencyRepository.findById(id);
+    public ResponseEntity<AgencyType> getAgencyById(@PathVariable String id) {
+        Optional<AgencyType> agency = agencyRepository.findById(id);
         return agency.map(ResponseEntity::ok).orElseGet(() -> ResponseEntity.notFound().build());
     }
 
     @PatchMapping("/{id}")
     public ResponseEntity<?> updateAgency(@PathVariable String id, @RequestBody java.util.Map<String, Object> updates) {
-        Optional<Agency> agencyOpt = agencyRepository.findById(id);
+        Optional<AgencyType> agencyOpt = agencyRepository.findById(id);
         if (agencyOpt.isEmpty()) {
             return ResponseEntity.status(404).body("Agency not found");
         }
-        Agency agency = agencyOpt.get();
+        AgencyType agency = agencyOpt.get();
         try {
-            if (updates.containsKey("name")) agency.setName((String) updates.get("name"));
-            if (updates.containsKey("address")) agency.setAddress((String) updates.get("address"));
-            if (updates.containsKey("email")) agency.setEmail((String) updates.get("email"));
+            if (updates.containsKey("name")) {
+                agency.setName((String) updates.get("name"));
+            }
+            if (updates.containsKey("address")) {
+                agency.setAddress((String) updates.get("address"));
+            }
+            if (updates.containsKey("email")) {
+                agency.setEmail((String) updates.get("email"));
+            }
             if (updates.containsKey("phone")) {
                 Object phoneObj = updates.get("phone");
                 if (phoneObj instanceof Map<?, ?> phoneMap) {
@@ -58,7 +66,7 @@ public class AgencyController {
         } catch (Exception e) {
             return ResponseEntity.badRequest().body("Invalid input: " + e.getMessage());
         }
-        Agency updated = agencyRepository.save(agency);
+        AgencyType updated = agencyRepository.save(agency);
         return ResponseEntity.ok(updated);
     }
 

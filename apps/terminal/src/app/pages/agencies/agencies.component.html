@@ -1,0 +1,116 @@
+<div>
+    <div class="container py-5">
+        <div class="card">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center mb-4">
+                    <h2 class="mb-0">Agences</h2>
+                    <div>
+                        <button class="btn btn-primary me-2" (click)="openCreate(agencyModal)">Ajouter une
+                            agence</button>
+                    </div>
+                </div>
+
+                <div *ngIf="(loadingAgencies$ | async)" class="text-center my-5">
+                    <span class="spinner-border spinner-border-lg"></span>
+                    <div>Chargement des agences...</div>
+                </div>
+                <div *ngIf="!(loadingAgencies$ | async) && !(agencies$ | async)?.length && !(error$ | async)"
+                    class="alert alert-info">Aucune agence trouvée.</div>
+                <div *ngIf="(error$ | async)" class="alert alert-danger">{{ error$ | async }}</div>
+
+                <div *ngIf="!(loadingAgencies$ | async) && (agencies$ | async)?.length" class="table-responsive">
+                    <!-- begin::Table -->
+                    <table class="table table-row-dashed table-row-gray-300 align-middle gs-0 gy-4">
+                        <!-- begin::Table head -->
+                        <thead>
+                            <tr class="fw-bolder text-muted">
+                                <th></th>
+                                <th class="min-w-200px">Nom</th>
+                                <th class="min-w-200px">Adresse</th>
+                                <th class="min-w-200px">Email</th>
+                                <th class="min-w-160px">Téléphone</th>
+                                <th class="min-w-100px text-end">Actions</th>
+                            </tr>
+                        </thead>
+                        <!-- end::Table head -->
+                        <!-- begin::Table body -->
+                        <tbody>
+                            <tr *ngFor="let agency of agencies$ | async; let i = index">
+                                <td>
+                                    <div class="form-check form-check-sm form-check-custom form-check-solid">
+                                        <input class="form-check-input widget-9-check" type="checkbox"
+                                            [value]="agency.id" />
+                                    </div>
+                                </td>
+                                <td>
+                                    <span class="text-dark fw-bolder text-hover-primary fs-6">{{ agency.name }}</span>
+                                </td>
+                                <td>{{ agency.address || '-' }}</td>
+                                <td>{{ agency.email || '-' }}</td>
+                                <td>{{ formatPhone(agency.phone) }}</td>
+                                <td>
+                                    <div class="d-flex justify-content-end flex-shrink-0">
+                                        <button class="btn btn-icon btn-bg-light btn-active-color-primary btn-sm me-1"
+                                            (click)="openEdit(agencyModal, agency)">
+                                            <app-keenicon name="pencil" class="fs-3"></app-keenicon>
+                                        </button>
+                                        <button class="btn btn-icon btn-bg-light btn-active-color-primary btn-sm"
+                                            (click)="deleteAgency(agency)">
+                                            <app-keenicon name="trash" class="fs-3"></app-keenicon>
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
+                        </tbody>
+                        <!-- end::Table body -->
+                    </table>
+                    <!-- end::Table -->
+                </div>
+            </div>
+        </div>
+    </div>
+    <ng-template #agencyModal let-modal>
+        <div class="modal-header">
+            <h5 class="modal-title">{{ editing ? 'Modifier une agence' : 'Ajouter une agence' }}</h5>
+            <button type="button" class="btn-close" aria-label="Close" (click)="modal.dismiss('Cross click')"></button>
+        </div>
+        <form [formGroup]="form" (ngSubmit)="submit(modal)">
+            <div class="modal-body">
+                <div class="mb-3">
+                    <label>Nom<span class="text-danger">*</span></label>
+                    <input class="form-control" formControlName="name" />
+                    <div *ngIf="isInvalid('name')" class="text-danger small">Le nom est requis.</div>
+                </div>
+                <div class="mb-3">
+                    <label>Adresse<span class="text-danger">*</span></label>
+                    <input class="form-control" formControlName="address" />
+                    <div *ngIf="isInvalid('address')" class="text-danger small">L'adresse est requise.</div>
+                </div>
+                <div class="mb-3">
+                    <label>Email</label>
+                    <input class="form-control" type="email" formControlName="email" />
+                    <div *ngIf="isInvalid('email')" class="text-danger small">Veuillez saisir un email valide.</div>
+                </div>
+                <div class="mb-3">
+                    <label>Téléphone<span class="text-danger">*</span></label>
+                    <div class="input-group">
+                        <span class="input-group-text">+</span>
+                        <input class="form-control" formControlName="phoneCountryCode" placeholder="Indicatif" />
+                        <input class="form-control" formControlName="phoneNumber" placeholder="Numéro de téléphone" />
+                    </div>
+                    <div *ngIf="isInvalid('phoneCountryCode') || isInvalid('phoneNumber')" class="text-danger small">
+                        L'indicatif et le numéro sont requis.
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="submit" class="btn btn-primary" [disabled]="form.invalid">
+                    Enregistrer
+                </button>
+                <button type="button" class="btn btn-secondary" (click)="modal.dismiss('Cross click')">
+                    Annuler
+                </button>
+            </div>
+        </form>
+    </ng-template>
+</div>

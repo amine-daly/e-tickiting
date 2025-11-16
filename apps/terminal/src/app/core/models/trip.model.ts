@@ -1,11 +1,23 @@
+import { PlaceType } from 'src/app/modules/auth/models/place-type';
+
+export interface AgencyPhone {
+  countryCode: string;
+  number: string;
+}
+
 export interface AgencyType {
-  id: string;
+  id?: string;
   name: string;
   address: string;
-  email: string;
-  phone: string;
+  email?: string;
+  phone: AgencyPhone;
 }
-import { PlaceType } from 'src/app/modules/auth/models/place-type';
+
+export enum TripStatus {
+  SCHEDULED = 'SCHEDULED',
+  COMPLETED = 'COMPLETED',
+  CANCELLED = 'CANCELLED',
+}
 
 export interface Trip {
   id: string;
@@ -17,4 +29,5 @@ export interface Trip {
   availableSeats: number;
   seats?: any[];
   version?: number;
+  status: TripStatus;
 }

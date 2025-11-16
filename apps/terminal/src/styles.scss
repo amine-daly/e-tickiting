@@ -6,10 +6,53 @@
 // @import "./assets/css/style.rtl.css";
 @import "./assets/sass/style.angular.scss";
 
-// Keenicons - High quality and pixel perfect font icons available in 3 styles, duotone, outline and solid for Metronic elements
+@import "~@ng-select/ng-select/themes/default.theme.css";
+
 @import "./assets/plugins/keenicons/duotone/style.css";
 @import "./assets/plugins/keenicons/outline/style.css";
 @import "./assets/plugins/keenicons/solid/style.css";
+
+// Custom dark mode styles for ng-select
+[data-bs-theme=dark] .ng-select {
+    background: #1e1e2d !important;
+    color: #92929F !important;
+}
+
+[data-bs-theme=dark] .ng-select .ng-select-container {
+    background: #1e1e2d !important;
+    border-color: #444 !important;
+    color: #92929F !important;
+}
+
+[data-bs-theme=dark] .ng-select .ng-dropdown-panel {
+    background: #1e1e2d !important;
+    color: #92929F !important;
+    border-color: #444 !important;
+}
+
+[data-bs-theme=dark] .ng-select .ng-option {
+    background: #1e1e2d !important;
+    color: #92929F !important;
+}
+
+[data-bs-theme=dark] .ng-select .ng-option-selected,
+[data-bs-theme=dark] .ng-select .ng-option-marked {
+    background: #2b2e3e !important;
+    color: #fff !important;
+}
+
+[data-bs-theme=dark] .ng-select .ng-select-clear {
+    color: #bbb !important;
+}
+
+label {
+    margin-bottom: 0.75rem;
+}
+
+// Input text color for dark mode
+[data-bs-theme=dark] .ng-select .ng-input>input {
+    color: #fff !important;
+}
 
 .place-map {
     .map-container {

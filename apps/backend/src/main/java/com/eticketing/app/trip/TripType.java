@@ -55,6 +55,9 @@ public class TripType {
     private int availableSeats;
     @JsonProperty("seats")
     private List<SeatUnit> seats;
+    @NotNull
+    @JsonProperty("status")
+    private TripStatusEnum status = TripStatusEnum.SCHEDULED;
 
     public TripType() {
     }
@@ -145,5 +148,14 @@ public class TripType {
     @JsonProperty("seats")
     public void setSeats(List<SeatUnit> seats) {
         this.seats = seats;
+    }
+
+    public TripStatusEnum getStatus() {
+        return status == null ? TripStatusEnum.SCHEDULED : status;
+    }
+
+    @JsonProperty("status")
+    public void setStatus(TripStatusEnum status) {
+        this.status = status;
     }
 }

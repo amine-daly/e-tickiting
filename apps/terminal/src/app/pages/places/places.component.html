@@ -14,9 +14,10 @@
                     <div>Loading places...</div>
                 </div>
                 <div *ngIf="error" class="alert alert-danger">{{ error }}</div>
-                <div *ngIf="!loading && !places?.length && !error" class="alert alert-info">No places found.</div>
+                <div *ngIf="!loading && !(places$ | async)?.length && !error" class="alert alert-info">No places found.
+                </div>
 
-                <div *ngIf="!loading && places?.length" class="table-responsive">
+                <div *ngIf="!loading && (places$ | async)?.length" class="table-responsive">
                     <!-- begin::Table -->
                     <table class="table table-row-dashed table-row-gray-300 align-middle gs-0 gy-4">
                         <!-- begin::Table head -->
@@ -32,7 +33,7 @@
                         <!-- end::Table head -->
                         <!-- begin::Table body -->
                         <tbody>
-                            <tr *ngFor="let p of places; let i = index">
+                            <tr *ngFor="let p of places$ | async; let i = index">
                                 <td>
                                     <div class="form-check form-check-sm form-check-custom form-check-solid">
                                         <input class="form-check-input widget-9-check" type="checkbox" [value]="p.id" />
