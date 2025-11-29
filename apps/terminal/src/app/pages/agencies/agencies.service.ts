@@ -4,7 +4,23 @@ import { map, Observable, BehaviorSubject, throwError } from 'rxjs';
 import { catchError, finalize, tap } from 'rxjs/operators';
 
 import { environment } from 'src/environments/environment';
-import { AgencyType } from 'src/app/core/models/trip.model';
+import { AgencyPhone, AgencyType } from 'src/app/core/models/trip.model';
+
+export interface AgencyCreatePayload {
+  name: string;
+  address: string;
+  email?: string;
+  phone: AgencyPhone;
+  template?: string;
+}
+
+export interface AgencyUpdatePayload {
+  name?: string;
+  address?: string;
+  email?: string;
+  phone?: AgencyPhone;
+  template?: string;
+}
 
 @Injectable({ providedIn: 'root' })
 export class AgenciesService {
@@ -53,8 +69,8 @@ export class AgenciesService {
       );
   }
 
-  create(agency: AgencyType): Observable<AgencyType> {
-    return this.http.post<AgencyType>(this.baseUrl, agency).pipe(
+  createAgency(payload: AgencyCreatePayload): Observable<AgencyType> {
+    return this.http.post<AgencyType>(this.baseUrl, payload).pipe(
       map((created: AgencyType) => {
         this.error.next(null);
         const current = this.agencies.value ?? [];
@@ -64,7 +80,10 @@ export class AgenciesService {
     );
   }
 
-  update(id: string, changes: Partial<AgencyType>): Observable<AgencyType> {
+  updateAgency(
+    id: string,
+    changes: AgencyUpdatePayload
+  ): Observable<AgencyType> {
     return this.http.patch<AgencyType>(`${this.baseUrl}/${id}`, changes).pipe(
       map((updated: AgencyType) => {
         this.error.next(null);
@@ -77,7 +96,7 @@ export class AgenciesService {
     );
   }
 
-  delete(id: string): Observable<void> {
+  deleteAgency(id: string): Observable<void> {
     return this.http.delete<void>(`${this.baseUrl}/${id}`).pipe(
       map(() => {
         this.error.next(null);
@@ -85,5 +104,11 @@ export class AgenciesService {
         this.agencies.next(filtered);
       })
     );
+  }
+
+  getDefaultTemplate(): Observable<string> {
+    return this.http
+      .get<{ template?: string }>(`${this.baseUrl}/default-template`)
+      .pipe(map((response) => response?.template ?? ''));
   }
 }

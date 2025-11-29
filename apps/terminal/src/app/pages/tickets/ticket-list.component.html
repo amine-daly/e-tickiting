@@ -1,0 +1,163 @@
+<div class="container py-5">
+    <div class="card">
+        <div class="card-body">
+            <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-3">
+                <h2 class="mb-0">Tickets</h2>
+            </div>
+
+            <div *ngIf="loading$ | async" class="text-center my-5">
+                <span class="spinner-border spinner-border-lg"></span>
+                <div>Chargement des tickets...</div>
+            </div>
+
+            <ng-container *ngIf="!(loading$ | async) && (tickets$ | async)?.length">
+                <div class="table-responsive">
+                    <table style="margin-bottom: 9rem;"
+                        class="table table-row-dashed table-row-gray-300 align-middle gs-0 gy-4">
+                        <thead>
+                            <tr class="fw-bolder text-muted">
+                                <th class="min-w-150px">Référence</th>
+                                <th class="min-w-200px">Passager</th>
+                                <th class="min-w-120px">Agence</th>
+                                <th class="min-w-120px">Statut</th>
+                                <th class="min-w-180px">Places</th>
+                                <th class="min-w-120px">Montant</th>
+                                <th class="min-w-150px">Créé le</th>
+                                <th class="min-w-150px text-end">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr *ngFor="let ticket of tickets$ | async; trackBy: trackTicket">
+                                <td>
+                                    <div class="fw-bold text-dark">{{ ticket?.reference }}
+                                    </div>
+                                </td>
+                                <td>
+                                    <div class="fw-semibold text-dark">{{ getPassengerName(ticket) }}</div>
+                                    <div class="text-muted small">{{ ticket?.user?.email || '—' }}</div>
+                                </td>
+                                <td>
+                                    <div class="fw-semibold text-dark">{{ ticket?.agency?.name || '—' }}</div>
+                                </td>
+                                <td>
+                                    <span class="badge"
+                                        [ngClass]="badgeClass[ticket?.status] || 'badge-light-secondary'">
+                                        {{ statusLabelMap[ticket?.status] || ticket?.status }}
+                                    </span>
+                                </td>
+                                <td>
+                                    <div class="fw-semibold">{{ ticket?.seats?.length || 0 }} sièges</div>
+                                    <div class="text-muted small text-truncate seats-column">
+                                        {{ seatList(ticket) }}
+                                    </div>
+                                </td>
+                                <td>
+                                    <div class="fw-semibold">
+                                        {{ ticket?.totalAmount || ticket?.unitPrice || 0 | number: '1.2-2' }}
+                                        {{ ticket?.currency || 'TND' }}
+                                    </div>
+                                </td>
+                                <td>
+                                    {{ ticket?.createdAt | date: 'dd-MM-yyyy hh:mm' }}
+                                </td>
+                                <td class="text-end">
+                                    <div class="d-inline-flex align-items-center">
+                                        <div ngbDropdown class="me-2">
+                                            <button ngbDropdownToggle
+                                                class="btn btn-icon btn-active-light-success w-30px h-30px me-3"
+                                                [class.dropdown-toggle]="false">
+                                                <i class="ki-duotone ki-abstract-14 fs-2">
+                                                    <span class="path1"></span>
+                                                    <span class="path2"></span>
+                                                </i>
+                                            </button>
+
+                                            <div ngbDropdownMenu>
+                                                <button type="button"
+                                                    class="dropdown-item d-flex justify-content-between align-items-center"
+                                                    *ngFor="let option of statusOptions"
+                                                    [disabled]="ticket.status === option.value"
+                                                    (click)="changeStatus(ticket, option.value)">
+                                                    <span>{{ option.label }}</span>
+                                                    <i *ngIf="ticket.status === option.value"
+                                                        class="ki-duotone ki-check fs-4 text-success">
+                                                        <span class="path1"></span>
+                                                        <span class="path2"></span>
+                                                    </i>
+                                                </button>
+                                            </div>
+                                        </div>
+
+                                        <button (click)="sendEmail(ticket)" [disabled]="emailSending[ticket.id]"
+                                            ngbTooltip="Envoyer par email"
+                                            class="btn btn-icon btn-active-light-warning w-30px h-30px me-3"
+                                            data-action="edit" data-id="605">
+                                            <span *ngIf="emailSending[ticket.id]"
+                                                class="spinner-border spinner-border-sm"></span>
+                                            <i class="ki-duotone ki-sms fs-2"><span class="path1"></span><span
+                                                    class="path2"></span></i>
+                                        </button>
+
+                                        <button class="btn btn-icon btn-active-light-primary w-30px h-30px me-3"
+                                            (click)="openTicketModal(ticketDetails, ticket)"
+                                            ngbTooltip="Voir les détails">
+                                            <i class="ki-duotone ki-information fs-2"><span class="path1"></span><span
+                                                    class="path2"></span></i>
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </ng-container>
+            <div *ngIf="!(tickets$ | async)?.length" class="alert alert-info mb-0">
+                Aucun ticket disponible.
+            </div>
+        </div>
+    </div>
+
+    <ng-template #ticketDetails let-modal>
+        <div class="modal-header">
+            <h5 class="modal-title">Ticket {{ selectedTicket?.reference }}</h5>
+            <button type="button" class="btn-close" aria-label="Fermer" (click)="modal.dismiss('close')"></button>
+        </div>
+        <div class="modal-body" *ngIf="selectedTicket as ticket">
+            <div class="row g-4">
+                <div class="col-md-6">
+                    <h6 class="text-muted text-uppercase">Passager</h6>
+                    <p class="mb-1 fw-semibold">{{ getPassengerName(ticket) }}</p>
+                    <p class="mb-0 text-muted small">{{ ticket.user?.email || '—' }}</p>
+                </div>
+                <div class="col-md-6">
+                    <h6 class="text-muted text-uppercase">Statut</h6>
+                    <span class="badge" [ngClass]="badgeClass[ticket.status]">
+                        {{ statusLabelMap[ticket.status] || ticket.status }}
+                    </span>
+                </div>
+                <div class="col-md-6">
+                    <h6 class="text-muted text-uppercase">Montant</h6>
+                    <p class="mb-0 fw-semibold">
+                        {{ ticket.totalAmount || ticket.unitPrice || 0 | number: '1.2-2' }}
+                        {{ ticket.currency || 'TND' }}
+                    </p>
+                </div>
+                <div class="col-md-6">
+                    <h6 class="text-muted text-uppercase">Créé le</h6>
+                    <p class="mb-0">{{ ticket.createdAt | date: 'long' }}</p>
+                </div>
+                <div class="col-md-6">
+                    <h6 class="text-muted text-uppercase">Places</h6>
+                    <p class="mb-0">{{ seatList(ticket) }}</p>
+                </div>
+                <div class="col-md-6">
+                    <h6 class="text-muted text-uppercase">Agence</h6>
+                    <p class="mb-0">{{ ticket?.agency?.name || '—' }}</p>
+                </div>
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" (click)="modal.close()">Fermer</button>
+        </div>
+    </ng-template>
+</div>

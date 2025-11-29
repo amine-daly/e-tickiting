@@ -1,8 +1,18 @@
-import { Injectable, signal } from '@angular/core';
+import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { environment } from 'src/environments/environment';
 import { BehaviorSubject, map, Observable } from 'rxjs';
 import { PlaceType } from '../../modules/auth/models/place-type';
+
+export interface PlaceCreatePayload {
+  city: string;
+  location: PlaceType['location'];
+}
+
+export interface PlaceUpdatePayload {
+  city?: string;
+  location?: PlaceType['location'];
+}
 
 @Injectable({ providedIn: 'root' })
 export class PlacesService {
@@ -24,8 +34,8 @@ export class PlacesService {
     );
   }
 
-  create(place: PlaceType): Observable<PlaceType> {
-    return this.http.post<PlaceType>(this.baseUrl, place).pipe(
+  createPlace(payload: PlaceCreatePayload): Observable<PlaceType> {
+    return this.http.post<PlaceType>(this.baseUrl, payload).pipe(
       map((created: PlaceType) => {
         this.places.next([...this.places.value, created]);
         return created;
@@ -33,8 +43,8 @@ export class PlacesService {
     );
   }
 
-  update(id: string, place: PlaceType): Observable<PlaceType> {
-    return this.http.put<PlaceType>(`${this.baseUrl}/${id}`, place).pipe(
+  updatePlace(id: string, changes: PlaceUpdatePayload): Observable<PlaceType> {
+    return this.http.put<PlaceType>(`${this.baseUrl}/${id}`, changes).pipe(
       map((updated: PlaceType) => {
         const updatedList = this.places.value.map((p) =>
           p.id === id ? updated : p
@@ -45,7 +55,7 @@ export class PlacesService {
     );
   }
 
-  delete(id: string): Observable<void> {
+  deletePlace(id: string): Observable<void> {
     return this.http.delete<void>(`${this.baseUrl}/${id}`).pipe(
       map(() => {
         this.places.next(this.places.value.filter((p) => p.id !== id));

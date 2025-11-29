@@ -86,6 +86,16 @@ export class TripService {
     );
   }
 
+  generateSeats(id: string): Observable<TripType> {
+    return this.http
+      .post<TripType>(`${this.baseUrl}/${id}/seats/generate`, {})
+      .pipe(
+        map((updated: TripType) => {
+          return updated;
+        })
+      );
+  }
+
   updateTrip(id: string, changes: TripUpdatePayload): Observable<TripType> {
     return this.http
       .post<TripType>(`${this.baseUrl}/update/${id}`, changes)

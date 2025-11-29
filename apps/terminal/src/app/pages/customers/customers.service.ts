@@ -1,9 +1,25 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { BehaviorSubject, map, Observable } from 'rxjs';
-import { UserType } from 'src/app/modules/auth/models/user-type';
+import { PhoneType, UserType } from 'src/app/modules/auth/models/user-type';
 
 const API_USERS_URL = '/api/users';
+
+export interface CustomerCreatePayload {
+  firstName: string;
+  lastName: string;
+  email: string;
+  role: string;
+  phone: PhoneType;
+}
+
+export interface CustomerUpdatePayload {
+  firstName?: string;
+  lastName?: string;
+  email?: string;
+  role?: string;
+  phone?: PhoneType;
+}
 
 @Injectable({ providedIn: 'root' })
 export class CustomersService {
@@ -27,7 +43,7 @@ export class CustomersService {
 
   constructor(private http: HttpClient) {}
 
-  getAll(): Observable<any> {
+  getCustomers(): Observable<UserType[]> {
     this.loading.next(true);
     return this.http.get<any>(API_USERS_URL).pipe(
       map((data: any) => {
@@ -38,19 +54,21 @@ export class CustomersService {
     );
   }
 
-  create(data: any): Observable<any> {
-    return this.http.post<any>(API_USERS_URL, data).pipe(
-      map((created: any) => {
+  createCustomer(data: CustomerCreatePayload): Observable<UserType> {
+    return this.http.post<UserType>(API_USERS_URL, data).pipe(
+      map((created: UserType) => {
         this.users.next([...this.users.value, created]);
         return created;
       })
     );
   }
 
-  update(id: string, data: any): Observable<any> {
-    return this.http.put<any>(`${API_USERS_URL}/${id}`, data).pipe(
-      map((updated: any) => {
-        console.log('🚀 ~ CustomersService ~ update ~ updated:', updated);
+  updateCustomer(
+    id: string,
+    data: CustomerUpdatePayload
+  ): Observable<UserType> {
+    return this.http.put<UserType>(`${API_USERS_URL}/${id}`, data).pipe(
+      map((updated: UserType) => {
         const updatedList = this.users.value.map((u) =>
           u.id === id ? updated : u
         );
@@ -60,8 +78,8 @@ export class CustomersService {
     );
   }
 
-  delete(id: string): Observable<any> {
-    return this.http.delete<any>(`${API_USERS_URL}/${id}`).pipe(
+  deleteCustomer(id: string): Observable<void> {
+    return this.http.delete<void>(`${API_USERS_URL}/${id}`).pipe(
       map(() => {
         const updatedList = this.users.value.filter((u) => u.id !== id);
         this.users.next(updatedList);

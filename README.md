@@ -40,6 +40,21 @@ docker compose -f infra/docker-compose.yml up -d mongo
 
 Configuration: see `apps/backend/src/main/resources/application.properties`.
 
+### Email configuration
+
+The backend can send emails through SMTP, Resend, or automatically fall back from SMTP to Resend.
+
+| Variable                                                      | Default                    | Notes                                                        |
+| ------------------------------------------------------------- | -------------------------- | ------------------------------------------------------------ |
+| `MAIL_PROVIDER`                                               | `auto`                     | `smtp`, `resend`, or `auto` (tries SMTP then Resend)         |
+| `MAIL_HOST` / `MAIL_PORT` / `MAIL_USERNAME` / `MAIL_PASSWORD` | `localhost:1025`           | Standard Spring mail settings for SMTP                       |
+| `MAIL_SMTP_AUTH` / `MAIL_SMTP_STARTTLS`                       | `false`                    | Enable if your SMTP requires auth/TLS                        |
+| `MAIL_FROM`                                                   | `noreply@eticketing.local` | Sender address shown to recipients                           |
+| `RESEND_API_KEY`                                              | _(empty)_                  | Required when `MAIL_PROVIDER` is `resend` or `auto` fallback |
+| `RESEND_BASE_URL`                                             | `https://api.resend.com`   | Override only for testing/self-hosting                       |
+
+For local testing without a real SMTP server you can use [MailHog](https://github.com/mailhog/MailHog) or smtp4dev, or set `MAIL_PROVIDER=resend` with a valid API key.
+
 ## API overview
 
 - Auth: `/api/auth/register`, `/api/auth/login`

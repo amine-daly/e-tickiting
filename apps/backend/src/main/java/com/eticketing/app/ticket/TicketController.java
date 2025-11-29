@@ -20,6 +20,8 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.NotNull;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.dao.OptimisticLockingFailureException;
 import org.springframework.http.HttpStatus;
@@ -37,6 +39,8 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.server.ResponseStatusException;
 
+import com.eticketing.app.agency.AgencyRepository;
+import com.eticketing.app.agency.AgencyType;
 import com.eticketing.app.trip.SeatStateEnum;
 import com.eticketing.app.trip.SeatUnit;
 import com.eticketing.app.trip.TripType;
@@ -49,12 +53,20 @@ import com.eticketing.app.user.UserTypeRepository;
 @RequestMapping("/api/tickets")
 public class TicketController {
 
+    private static final Logger LOGGER = LoggerFactory.getLogger(TicketController.class);
+
     @Autowired
     private TicketRepository ticketRepository;
     @Autowired
     private TripTypeRepository tripRepository;
     @Autowired
     private UserTypeRepository userRepository;
+    @Autowired
+    private AgencyRepository agencyRepository;
+    @Autowired
+    private TicketDocumentService ticketDocumentService;
+    @Autowired
+    private TicketEmailService ticketEmailService;
 
     public static class BookTicketRequest {
 
@@ -88,6 +100,11 @@ public class TicketController {
 
         @NotNull
         public TicketType.TicketStatusEnum status;
+    }
+
+    public static class SendTicketEmailRequest {
+
+        public String email;
     }
 
     @PostMapping
@@ -164,6 +181,11 @@ public class TicketController {
         TicketType ticket = new TicketType();
         ticket.setTripId(trip.getId());
         ticket.setUserId(user.getId());
+        ticket.setUser(new TicketType.TicketUserSnapshot(
+                user.getId(),
+                user.getFirstName(),
+                user.getLastName(),
+                user.getEmail()));
         ticket.setSeats(seatsToReserve.stream()
                 .map(seat -> new TicketType.SeatAssignment(seat.getRow(), seat.getCol(), seat.getLabel()))
                 .collect(Collectors.toList()));
@@ -174,7 +196,9 @@ public class TicketController {
         ticket.setCreatedAt(Instant.now());
         ticket.setUpdatedAt(ticket.getCreatedAt());
         ticket.setExpiresAt(resolveExpiry(req, ticket.getCreatedAt()));
-        ticket.setBookingReference(generateBookingReference());
+        String reference = generateTicketReference();
+        ticket.setReference(reference);
+        ticket.setBookingReference(reference);
 
         if (req.payment != null) {
             TicketType.PaymentSnapshot snapshot = new TicketType.PaymentSnapshot();
@@ -187,14 +211,54 @@ public class TicketController {
         }
 
         TicketType saved = ticketRepository.save(ticket);
+        TicketDocumentView documentView = ticketDocumentService.buildDocument(saved);
+        responseEmailDelivery(documentView, user.getEmail());
 
         Map<String, Object> response = buildTicketResponse(saved, trip, user);
+        response.put("document", documentView);
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 
+    @GetMapping("/{id}/document")
+    public ResponseEntity<?> getTicketDocument(@PathVariable String id, @AuthenticationPrincipal User principal) {
+        TicketType ticket = ticketRepository.findById(id)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Ticket not found"));
+        if (!canViewTicket(ticket, principal)) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(Map.of("error", "Access denied"));
+        }
+        TicketDocumentView document = ticketDocumentService.buildDocument(ticket);
+        return ResponseEntity.ok(document);
+    }
+
+    @PostMapping("/{id}/send-email")
+    public ResponseEntity<?> sendTicketEmail(@PathVariable String id,
+            @AuthenticationPrincipal User principal,
+            @RequestBody(required = false) SendTicketEmailRequest payload) {
+        TicketType ticket = ticketRepository.findById(id)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Ticket not found"));
+        if (!canViewTicket(ticket, principal)) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(Map.of("error", "Access denied"));
+        }
+        TicketDocumentView document = ticketDocumentService.buildDocument(ticket);
+        String requestedEmail = payload != null ? payload.email : null;
+        String fallback = document.getPassengerEmail();
+        String recipient = resolveRecipientEmail(requestedEmail, fallback);
+        if (recipient == null || recipient.isBlank()) {
+            return ResponseEntity.badRequest().body(Map.of("error", "No email available for ticket"));
+        }
+        boolean sent = ticketEmailService.sendTicket(document, recipient);
+        if (!sent) {
+            return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE)
+                    .body(Map.of("status", "email_not_sent"));
+        }
+        return ResponseEntity.ok(Map.of("status", "sent", "email", recipient));
+    }
+
     @GetMapping
-    public List<TicketType> getAllTickets() {
-        return ticketRepository.findAll();
+    public List<Map<String, Object>> getAllTickets() {
+        return ticketRepository.findAll().stream()
+                .map(ticket -> buildTicketResponse(ticket, null, null))
+                .toList();
     }
 
     @GetMapping("/{id}")
@@ -207,7 +271,7 @@ public class TicketController {
         if (!canViewTicket(ticket, principal)) {
             return ResponseEntity.status(HttpStatus.FORBIDDEN).body(Map.of("error", "Access denied"));
         }
-        return ResponseEntity.ok(ticket);
+        return ResponseEntity.ok(buildTicketResponse(ticket, null, null));
     }
 
     @PutMapping("/{id}")
@@ -234,7 +298,12 @@ public class TicketController {
         }
 
         TicketType saved = ticketRepository.save(ticket);
-        return ResponseEntity.ok(saved);
+        if (payload.status == TicketType.TicketStatusEnum.PAID) {
+            UserType ticketOwner = userRepository.findById(saved.getUserId()).orElse(null);
+            TicketDocumentView documentView = ticketDocumentService.buildDocument(saved);
+            responseEmailDelivery(documentView, ticketOwner != null ? ticketOwner.getEmail() : null);
+        }
+        return ResponseEntity.ok(buildTicketResponse(saved, null, null));
     }
 
     @DeleteMapping("/{id}")
@@ -259,7 +328,7 @@ public class TicketController {
         }
 
         TicketType saved = ticketRepository.save(ticket);
-        return ResponseEntity.ok(saved);
+        return ResponseEntity.ok(buildTicketResponse(saved, null, null));
     }
 
     private SeatUnit resolveSeat(RequestedSeat requested, Map<String, SeatUnit> byLabel, Map<String, SeatUnit> byPos) {
@@ -306,39 +375,58 @@ public class TicketController {
         return base.plus(Duration.ofMinutes(15));
     }
 
-    private String generateBookingReference() {
+    private String generateTicketReference() {
         String raw = java.util.UUID.randomUUID().toString().replace("-", "").toUpperCase(Locale.ROOT);
         return raw.substring(0, Math.min(10, raw.length()));
     }
 
     private Map<String, Object> buildTicketResponse(TicketType ticket, TripType trip, UserType user) {
+        TripType resolvedTrip = trip != null ? trip : tripRepository.findById(ticket.getTripId()).orElse(null);
+        UserType resolvedUser = user != null ? user : userRepository.findById(ticket.getUserId()).orElse(null);
+        AgencyType agency = null;
+        if (resolvedTrip != null && resolvedTrip.getAgencyId() != null) {
+            agency = agencyRepository.findById(resolvedTrip.getAgencyId()).orElse(null);
+        }
+
         Map<String, Object> payload = new LinkedHashMap<>();
-        payload.put("ticketId", ticket.getId());
-        payload.put("bookingReference", ticket.getBookingReference());
-        payload.put("tripId", ticket.getTripId());
-        payload.put("userId", ticket.getUserId());
+        payload.put("id", ticket.getId());
+        payload.put("version", ticket.getVersion());
+        payload.put("reference", ticket.getReference());
+        payload.put("trip", resolvedTrip);
+        payload.put("agency", agency);
+        payload.put("user", resolvedUser != null ? resolvedUser : ticket.getUser());
         payload.put("status", ticket.getStatus());
         payload.put("seats", ticket.getSeats());
         payload.put("unitPrice", ticket.getUnitPrice());
         payload.put("totalAmount", ticket.getTotalAmount());
         payload.put("currency", ticket.getCurrency());
-        payload.put("createdAt", ticket.getCreatedAt());
-        payload.put("expiresAt", ticket.getExpiresAt());
+        payload.put("createdAt", ticket.getCreatedAt() != null ? java.time.format.DateTimeFormatter.ISO_OFFSET_DATE_TIME.format(ticket.getCreatedAt().atOffset(java.time.ZoneOffset.UTC)) : null);
+        payload.put("updatedAt", ticket.getUpdatedAt() != null ? java.time.format.DateTimeFormatter.ISO_OFFSET_DATE_TIME.format(ticket.getUpdatedAt().atOffset(java.time.ZoneOffset.UTC)) : null);
+        payload.put("expiresAt", ticket.getExpiresAt() != null ? java.time.format.DateTimeFormatter.ISO_OFFSET_DATE_TIME.format(ticket.getExpiresAt().atOffset(java.time.ZoneOffset.UTC)) : null);
+        payload.put("cancelledAt", ticket.getCancelledAt() != null ? java.time.format.DateTimeFormatter.ISO_OFFSET_DATE_TIME.format(ticket.getCancelledAt().atOffset(java.time.ZoneOffset.UTC)) : null);
+        payload.put("paidAt", ticket.getPaidAt() != null ? java.time.format.DateTimeFormatter.ISO_OFFSET_DATE_TIME.format(ticket.getPaidAt().atOffset(java.time.ZoneOffset.UTC)) : null);
         payload.put("payment", ticket.getPayment());
-        payload.put("user", Map.of(
-                "id", user.getId(),
-                "firstName", user.getFirstName(),
-                "lastName", user.getLastName(),
-                "email", user.getEmail()
-        ));
-        payload.put("trip", Map.of(
-                "id", trip.getId(),
-                "departureDate", trip.getDepartureDate(),
-                "departureDateTime", trip.getDepartureDateTime(),
-                "price", trip.getPrice(),
-                "availableSeats", trip.getAvailableSeats()
-        ));
         return payload;
+    }
+
+    private void responseEmailDelivery(TicketDocumentView documentView, String fallbackEmail) {
+        String recipient = resolveRecipientEmail(documentView != null ? documentView.getPassengerEmail() : null, fallbackEmail);
+        if (documentView == null || recipient == null || recipient.isBlank()) {
+            return;
+        }
+        if (!ticketEmailService.sendTicket(documentView, recipient)) {
+            LOGGER.warn("Ticket email could not be delivered for ticket {}", documentView.getReference());
+        }
+    }
+
+    private String resolveRecipientEmail(String preferred, String fallback) {
+        if (preferred != null && !preferred.isBlank()) {
+            return preferred;
+        }
+        if (fallback != null && !fallback.isBlank()) {
+            return fallback;
+        }
+        return null;
     }
 
     private void releaseSeatsForTicket(TicketType ticket) {

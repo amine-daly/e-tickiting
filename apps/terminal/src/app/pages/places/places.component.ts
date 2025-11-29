@@ -1,122 +1,188 @@
+import { CommonModule } from '@angular/common';
 import {
   ChangeDetectorRef,
   Component,
+  OnDestroy,
   OnInit,
-  computed,
-  signal,
-  WritableSignal,
+  TemplateRef,
 } from '@angular/core';
-import { NgbModal } from '@ng-bootstrap/ng-bootstrap';
-import { CommonModule } from '@angular/common';
-import { FormsModule } from '@angular/forms';
+import {
+  FormBuilder,
+  FormGroup,
+  ReactiveFormsModule,
+  Validators,
+} from '@angular/forms';
 import { GoogleMapsModule } from '@angular/google-maps';
-import { PlacesService } from './places.service';
+import { NgbModal } from '@ng-bootstrap/ng-bootstrap';
+import { Subscription } from 'rxjs';
+
 import { AlertService } from '../../core/services/alert.service';
+import { FormHelper } from '../../core/helpers/form-helper';
 import { PlaceType } from '../../modules/auth/models/place-type';
 import { KeeniconComponent } from 'src/app/_metronic/shared/keenicon/keenicon.component';
+import {
+  PlaceCreatePayload,
+  PlaceUpdatePayload,
+  PlacesService,
+} from './places.service';
+import { isEqual } from 'lodash';
+import Swal from 'sweetalert2';
 
 @Component({
   selector: 'app-places',
   standalone: true,
-  imports: [CommonModule, FormsModule, GoogleMapsModule, KeeniconComponent],
+  imports: [CommonModule, GoogleMapsModule, ReactiveFormsModule],
   templateUrl: './places.component.html',
   styleUrls: ['./places.component.scss'],
 })
-export class PlacesComponent implements OnInit {
-  loading = true;
-  error: string | null = null;
+export class PlacesComponent implements OnInit, OnDestroy {
+  private formChangesSub?: Subscription;
+  private subscriptions = new Subscription();
+  private selectedPlace: PlaceType | null = null;
+  private initialValues: PlaceCreatePayload | PlaceUpdatePayload | null = null;
 
+  loading = true;
+  form: FormGroup;
+  editing = false;
+  isButtonDisabled = true;
+  error: string | null = null;
   places$ = this.placesService.places$;
+  position: google.maps.LatLngLiteral | null = null;
 
   constructor(
     private placesService: PlacesService,
     private alert: AlertService,
     private modalService: NgbModal,
-    private cdr: ChangeDetectorRef
+    private fb: FormBuilder,
+    private cd: ChangeDetectorRef
   ) {}
 
   ngOnInit(): void {
-    this.loading = true;
-    this.error = null;
-    this.placesService.getPlaces().subscribe({
-      next: () => {
-        this.loading = false;
-        this.cdr.detectChanges();
-      },
-      error: (err) => {
-        this.error = 'Failed to load places';
-        this.loading = false;
-        this.cdr.detectChanges();
-      },
-    });
+    this.loadPlaces();
   }
 
-  // No global map on page, only in modal
+  loadPlaces(): void {
+    this.loading = true;
+    this.error = null;
+    const sub = this.placesService.getPlaces().subscribe({
+      next: () => {
+        this.loading = false;
+        this.cd.detectChanges();
+      },
+      error: () => {
+        this.error = 'Failed to load places';
+        this.loading = false;
+        this.cd.detectChanges();
+      },
+    });
+    this.subscriptions.add(sub);
+  }
 
-  form: any = { city: '', location: null };
-  editing = false;
-  position: any = null;
+  openPlaceModal(placeModal: TemplateRef<any>, place?: PlaceType): void {
+    this.selectedPlace = place ?? null;
+    this.editing = !!place;
+    this.position = place?.location?.coordinates
+      ? {
+          lat: place.location.coordinates[1],
+          lng: place.location.coordinates[0],
+        }
+      : null;
 
-  openCreate(placeModal: any) {
-    this.form = { city: '', location: null };
-    this.editing = false;
-    this.position = null;
+    this.form = this.buildForm(place);
+    this.initialValues = this.form.value;
+    this.isButtonDisabled = true;
+    this.subscribeToFormChanges();
     this.modalService.open(placeModal, { size: 'lg' });
   }
 
-  pickAddress(event: any) {
+  submit(modal?: any): void {
+    if (this.form.invalid) {
+      this.form.markAllAsTouched();
+      return;
+    }
+    const initial = this.initialValues ?? this.form.value;
+    const changes = FormHelper.getChangedValues(this.form.value, initial);
+
+    const isEdit = !!this.selectedPlace?.id;
+    const request$ = isEdit
+      ? this.placesService.updatePlace(
+          this.selectedPlace!.id!,
+          changes as PlaceUpdatePayload
+        )
+      : this.placesService.createPlace(changes as PlaceCreatePayload);
+
+    this.isButtonDisabled = true;
+
+    const sub = request$.subscribe({
+      next: () => {
+        this.alert.success(isEdit ? 'Place updated' : 'Place created');
+        modal?.close();
+      },
+      error: () => {
+        this.alert.error(
+          isEdit ? 'Failed to update place' : 'Failed to create place'
+        );
+        this.isButtonDisabled = false;
+      },
+    });
+    this.subscriptions.add(sub);
+  }
+
+  deletePlace(place: PlaceType): void {
+    if (!place.id) {
+      return;
+    }
+    Swal.fire({
+      title: 'Êtes-vous sûr ?',
+      text: 'Cette action est irréversible !',
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonText: 'Oui, supprimer !',
+      cancelButtonText: 'Annuler',
+    }).then((result) => {
+      if (result.isConfirmed) {
+        const sub = this.placesService.deletePlace(place.id).subscribe({
+          next: () => this.alert.success('Place supprimée avec succès'),
+          error: () => this.alert.error('Échec de la suppression du lieu'),
+        });
+        this.subscriptions.add(sub);
+      }
+    });
+  }
+
+  pickAddress(event: google.maps.MapMouseEvent): void {
+    if (!event.latLng) {
+      return;
+    }
     const coords = event.latLng;
     this.position = { lat: coords.lat(), lng: coords.lng() };
-    this.form.location = { coordinates: [coords.lng(), coords.lat()] };
+    const control = this.form.get('location');
+    control?.setValue({ coordinates: [coords.lng(), coords.lat()] });
+    control?.markAsDirty();
+    control?.markAsTouched();
   }
 
-  submit(modal?: any) {
-    if (!this.form.city || !this.form.location) return;
-    this.placesService.create(this.form).subscribe({
-      next: () => {
-        this.alert.success('Place created');
-        this.modalService.dismissAll();
-      },
-      error: () => this.alert.error('Failed to create place'),
+  isInvalid(controlName: string): boolean {
+    const control = this.form.get(controlName);
+    return !!control && control.invalid && (control.dirty || control.touched);
+  }
+
+  private subscribeToFormChanges(): void {
+    this.formChangesSub?.unsubscribe();
+    this.formChangesSub = this.form.valueChanges.subscribe((values) => {
+      this.isButtonDisabled = isEqual(this.initialValues, values);
     });
   }
 
-  deletePlace(place: PlaceType) {
-    if (!place.id) return;
-    this.placesService.delete(place.id).subscribe({
-      next: () => {
-        this.alert.success('Place deleted');
-      },
-      error: () => this.alert.error('Failed to delete place'),
+  private buildForm(place?: PlaceType): FormGroup {
+    return this.fb.group({
+      city: [place?.city || '', Validators.required],
+      location: [place?.location || null, Validators.required],
     });
   }
 
-  openEdit(placeModal: any, place: any) {
-    this.form = {
-      city: place.city,
-      location: { ...place.location },
-      id: place.id,
-    };
-    this.editing = true;
-    this.position = {
-      lat: place.location.coordinates[1],
-      lng: place.location.coordinates[0],
-    };
-    // Open modal using template ref
-    const modalRef = this.modalService.open(placeModal, {
-      size: 'lg',
-    });
-    modalRef.result
-      .then((result: any) => {
-        if (result && place.id) {
-          this.placesService.update(place.id, result).subscribe({
-            next: () => {
-              this.alert.success('Place updated');
-            },
-            error: () => this.alert.error('Failed to update place'),
-          });
-        }
-      })
-      .catch(() => {});
+  ngOnDestroy(): void {
+    this.subscriptions.unsubscribe();
+    this.formChangesSub?.unsubscribe();
   }
 }

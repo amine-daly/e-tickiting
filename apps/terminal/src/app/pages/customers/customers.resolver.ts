@@ -8,6 +8,6 @@ export class CustomersResolver implements Resolve<any> {
   constructor(private customersService: CustomersService) {}
 
   resolve(): Observable<any> {
-    return this.customersService.getAll();
+    return this.customersService.getCustomers();
   }
 }

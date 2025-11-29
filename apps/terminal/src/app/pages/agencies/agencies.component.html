@@ -5,7 +5,7 @@
                 <div class="d-flex justify-content-between align-items-center mb-4">
                     <h2 class="mb-0">Agences</h2>
                     <div>
-                        <button class="btn btn-primary me-2" (click)="openCreate(agencyModal)">Ajouter une
+                        <button class="btn btn-primary me-2" (click)="openAgencyModal(agencyModal)">Ajouter une
                             agence</button>
                     </div>
                 </div>
@@ -50,13 +50,27 @@
                                 <td>{{ formatPhone(agency.phone) }}</td>
                                 <td>
                                     <div class="d-flex justify-content-end flex-shrink-0">
-                                        <button class="btn btn-icon btn-bg-light btn-active-color-primary btn-sm me-1"
-                                            (click)="openEdit(agencyModal, agency)">
-                                            <app-keenicon name="pencil" class="fs-3"></app-keenicon>
+                                        <button class="
+                                        btn btn-icon btn-active-light-primary w-30px h-30px me-3"
+                                            (click)="openAgencyModal(agencyModal, agency)">
+                                            <i class="ki-duotone ki-pencil fs-2">
+                                                <span class="path1"></span>
+                                                <span class="path2"></span>
+                                            </i>
                                         </button>
-                                        <button class="btn btn-icon btn-bg-light btn-active-color-primary btn-sm"
+                                        <button class="btn btn-icon btn-active-light-success w-30px h-30px me-3"
+                                            (click)="openTemplateModal(templateModal, agency)">
+                                            <i class="ki-duotone ki-code fs-2">
+                                                <span class="path1"></span>
+                                                <span class="path2"></span>
+                                            </i>
+                                        </button>
+                                        <button class="btn btn-icon btn-active-light-danger w-30px h-30px"
                                             (click)="deleteAgency(agency)">
-                                            <app-keenicon name="trash" class="fs-3"></app-keenicon>
+                                            <i class="ki-duotone ki-trash fs-2">
+                                                <span class="path1"></span>
+                                                <span class="path2"></span>
+                                            </i>
                                         </button>
                                     </div>
                                 </td>
@@ -69,48 +83,95 @@
             </div>
         </div>
     </div>
-    <ng-template #agencyModal let-modal>
-        <div class="modal-header">
-            <h5 class="modal-title">{{ editing ? 'Modifier une agence' : 'Ajouter une agence' }}</h5>
-            <button type="button" class="btn-close" aria-label="Close" (click)="modal.dismiss('Cross click')"></button>
-        </div>
-        <form [formGroup]="form" (ngSubmit)="submit(modal)">
-            <div class="modal-body">
-                <div class="mb-3">
-                    <label>Nom<span class="text-danger">*</span></label>
-                    <input class="form-control" formControlName="name" />
-                    <div *ngIf="isInvalid('name')" class="text-danger small">Le nom est requis.</div>
-                </div>
-                <div class="mb-3">
-                    <label>Adresse<span class="text-danger">*</span></label>
-                    <input class="form-control" formControlName="address" />
-                    <div *ngIf="isInvalid('address')" class="text-danger small">L'adresse est requise.</div>
-                </div>
-                <div class="mb-3">
-                    <label>Email</label>
-                    <input class="form-control" type="email" formControlName="email" />
-                    <div *ngIf="isInvalid('email')" class="text-danger small">Veuillez saisir un email valide.</div>
-                </div>
-                <div class="mb-3">
-                    <label>Téléphone<span class="text-danger">*</span></label>
-                    <div class="input-group">
-                        <span class="input-group-text">+</span>
-                        <input class="form-control" formControlName="phoneCountryCode" placeholder="Indicatif" />
-                        <input class="form-control" formControlName="phoneNumber" placeholder="Numéro de téléphone" />
-                    </div>
-                    <div *ngIf="isInvalid('phoneCountryCode') || isInvalid('phoneNumber')" class="text-danger small">
-                        L'indicatif et le numéro sont requis.
-                    </div>
-                </div>
-            </div>
-            <div class="modal-footer">
-                <button type="submit" class="btn btn-primary" [disabled]="form.invalid">
-                    Enregistrer
-                </button>
-                <button type="button" class="btn btn-secondary" (click)="modal.dismiss('Cross click')">
-                    Annuler
-                </button>
-            </div>
-        </form>
-    </ng-template>
 </div>
+<ng-template #agencyModal let-modal>
+    <div class="modal-header">
+        <h5 class="modal-title">{{ selectedAgency ? 'Modifier une agence' : 'Ajouter une agence' }}</h5>
+        <button type="button" class="btn-close" aria-label="Close" (click)="modal.dismiss('Cross click')"></button>
+    </div>
+    <form [formGroup]="form" (ngSubmit)="submit(modal)">
+        <div class="modal-body">
+            <div class="mb-3">
+                <label>Nom<span class="text-danger">*</span></label>
+                <input class="form-control" formControlName="name" />
+                <div *ngIf="isInvalid('name')" class="text-danger small">Le nom est requis.</div>
+            </div>
+            <div class="mb-3">
+                <label>Adresse<span class="text-danger">*</span></label>
+                <input class="form-control" formControlName="address" />
+                <div *ngIf="isInvalid('address')" class="text-danger small">L'adresse est requise.</div>
+            </div>
+            <div class="mb-3">
+                <label>Email</label>
+                <input class="form-control" type="email" formControlName="email" />
+                <div *ngIf="isInvalid('email')" class="text-danger small">Veuillez saisir un email valide.</div>
+            </div>
+            <div class="mb-3">
+                <label>Téléphone<span class="text-danger">*</span></label>
+                <div class="input-group">
+                    <span class="input-group-text">+</span>
+                    <input class="form-control" formControlName="phoneCountryCode" placeholder="Indicatif" />
+                    <input class="form-control" formControlName="phoneNumber" placeholder="Numéro de téléphone" />
+                </div>
+                <div *ngIf="isInvalid('phoneCountryCode') || isInvalid('phoneNumber')" class="text-danger small">
+                    L'indicatif et le numéro sont requis.
+                </div>
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button type="submit" class="btn btn-primary" [disabled]="form.invalid || isButtonDisabled">
+                Enregistrer
+            </button>
+            <button type="button" class="btn btn-secondary" (click)="modal.dismiss('Cross click')">
+                Annuler
+            </button>
+        </div>
+    </form>
+</ng-template>
+
+<!-- Template editing moved to separate modal -->
+<ng-template #templateModal let-modal let-agency="agency">
+    <div class="modal-header">
+        <h5 class="modal-title">Modèle de ticket – {{ agency?.name }}</h5>
+        <button type="button" class="btn-close" aria-label="Close" (click)="modal.dismiss('Cross click')"></button>
+    </div>
+    <form *ngIf="templateForm" [formGroup]="templateForm">
+        <div class="modal-body">
+            <div class="mb-3">
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                    <label>Modèle de ticket</label>
+                    <div class="form-check form-check-custom form-check-solid form-check-success form-switch">
+                        <input type="checkbox" class="form-check-input" [checked]="showPreview"
+                            (change)="showPreview = $event.target.checked" />
+                        <label class="form-check-label ms-2 m-0">Prévisualiser l'email</label>
+                    </div>
+                </div>
+                <ng-container *ngIf="!showPreview">
+                    <textarea class="form-control font-monospace" rows="12" formControlName="template"
+                        placeholder="HTML du ticket" spellcheck="false"></textarea>
+                </ng-container>
+                <ng-container *ngIf="showPreview">
+                    <div class="border rounded p-3 bg-light" style="min-height: 300px;">
+                        <div [innerHTML]="templateForm?.value?.template"></div>
+                    </div>
+                </ng-container>
+                <div class="d-flex flex-wrap align-items-center gap-2 mt-2">
+                    <button type="button" class="btn btn-secondary btn-sm" (click)="applyDefaultTemplateToForm()"
+                        [disabled]="defaultTemplateLoading">
+                        <span *ngIf="defaultTemplateLoading" class="spinner-border spinner-border-sm me-2"></span>
+                        Utiliser le modèle par défaut
+                    </button>
+                </div>
+            </div>
+        </div>
+        <div *ngIf="templateForm" class="modal-footer">
+            <button (click)="submitTemplate(modal, agency)" type="button" class="btn btn-primary"
+                [disabled]="templateForm.invalid || isTemplateButtonDisabled">
+                Enregistrer
+            </button>
+            <button type="button" class="btn btn-secondary" (click)="modal.dismiss('Cross click')">
+                Annuler
+            </button>
+        </div>
+    </form>
+</ng-template>

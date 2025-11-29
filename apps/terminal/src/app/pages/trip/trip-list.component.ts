@@ -1,6 +1,10 @@
 import { isEqual } from 'lodash';
 import { Component, OnDestroy, OnInit, TemplateRef } from '@angular/core';
-import { NgbModal } from '@ng-bootstrap/ng-bootstrap';
+import {
+  NgbDropdownModule,
+  NgbModal,
+  NgbModule,
+} from '@ng-bootstrap/ng-bootstrap';
 import Swal from 'sweetalert2';
 import { CommonModule } from '@angular/common';
 import {
@@ -9,7 +13,13 @@ import {
   ReactiveFormsModule,
   Validators,
 } from '@angular/forms';
-import { combineLatest, Subject, Subscription, takeUntil } from 'rxjs';
+import {
+  combineLatest,
+  finalize,
+  Subject,
+  Subscription,
+  takeUntil,
+} from 'rxjs';
 
 import { Trip as TripType, TripStatus } from '../../core/models/trip.model';
 import {
@@ -36,6 +46,8 @@ import {
     KeeniconComponent,
     NgSelectComponent,
     FlatpickrDirective,
+    NgbDropdownModule,
+    NgbModule,
   ],
   providers: [provideFlatpickrDefaults()],
   selector: 'app-trip-list',
@@ -48,6 +60,7 @@ export class TripListComponent implements OnInit, OnDestroy {
   form: FormGroup;
   filter: any = {};
   isButtonDisabled: boolean = true;
+  statusUpdating: Record<string, boolean> = {};
   trips$ = this.tripService.trips$;
   loading$ = this.tripService.loading$;
   places$ = this.placesService.places$;
@@ -78,6 +91,33 @@ export class TripListComponent implements OnInit, OnDestroy {
 
   ngOnInit(): void {
     this.loadTrips();
+  }
+
+  async changeStatus(trip: TripType, nextStatus: TripStatus): Promise<void> {
+    if (!trip || trip.status === nextStatus) {
+      return;
+    }
+    const result = await this.alert.confirm(
+      'Confirmer le changement de statut',
+      `Voulez-vous vraiment changer le statut du ticket à « ${
+        this.statusLabelMap[nextStatus] || nextStatus
+      } » ?`,
+      'Oui, changer',
+      'Annuler'
+    );
+    if (!result.isConfirmed) {
+      return;
+    }
+    this.statusUpdating[trip.id] = true;
+
+    const sub = this.tripService
+      .updateTrip(trip.id, { status: nextStatus })
+      .pipe(finalize(() => (this.statusUpdating[trip.id] = false)))
+      .subscribe({
+        next: () => this.alert.success('Statut mis à jour'),
+        error: () => this.alert.error('Impossible de mettre à jour le statut'),
+      });
+    this.subscriptions.add(sub);
   }
 
   loadTrips(): void {
@@ -111,7 +151,6 @@ export class TripListComponent implements OnInit, OnDestroy {
         trip?.availableSeats || '',
         [Validators.required, Validators.min(0)],
       ],
-      status: [trip?.status, Validators.required],
     });
     this.initialValues = this.form.value;
     this.form.valueChanges
@@ -129,22 +168,17 @@ export class TripListComponent implements OnInit, OnDestroy {
       this.form.value,
       this.initialValues
     );
-    console.log(
-      '🚀 ~ TripListComponent ~ submit ~ this.initialValues:',
-      this.initialValues
-    );
-    console.log(
-      '🚀 ~ TripListComponent ~ submit ~ this.form.value:',
-      this.form.value
-    );
-    console.log('🚀 ~ TripListComponent ~ submit ~ changes:', changes);
     const args = this.selectedTrip
       ? [this.selectedTrip.id, changes]
       : [changes];
     this.tripService[field](...args).subscribe({
-      next: () => {
+      next: (res) => {
+        console.log('🚀 ~ TripListComponent ~ submit ~ res:', res);
         this.alert.success('Opération réussie');
         modal?.close();
+        if (!this.selectedTrip) {
+          this.tripService.generateSeats(res.id).subscribe();
+        }
       },
       error: () => this.alert.error('Une erreur est survenue'),
     });

@@ -10,7 +10,7 @@
                     <span class="path2"></span>
                 </i>
                 <input type="text" data-kt-user-table-filter="search"
-                    class="form-control form-control-solid w-250px ps-13" placeholder="Search user" />
+                    class="form-control form-control-solid w-250px ps-13" placeholder="Rechercher un client" />
             </div>
             <!--end::Search-->
         </div>
@@ -25,12 +25,12 @@
                     <i class="ki-duotone ki-filter fs-2">
                         <span class="path1"></span>
                         <span class="path2"></span>
-                    </i>Filter</button>
+                    </i>Filtrer</button>
                 <!--begin::Menu 1-->
                 <div class="menu menu-sub menu-sub-dropdown w-300px w-md-325px" data-kt-menu="true">
                     <!--begin::Header-->
                     <div class="px-7 py-5">
-                        <div class="fs-5 text-dark fw-bold">Filter Options</div>
+                        <div class="fs-5 text-dark fw-bold">Options de filtrage</div>
                     </div>
                     <!--end::Header-->
                     <!--begin::Separator-->
@@ -40,7 +40,7 @@
                     <div class="px-7 py-5" data-kt-user-table-filter="form">
                         <!--begin::Input group-->
                         <div class="mb-10">
-                            <label class="form-label fs-6 fw-semibold">Role:</label>
+                            <label class="form-label fs-6 fw-semibold">Rôle :</label>
                             <select class="form-select form-select-solid fw-bold" data-kt-select2="true"
                                 data-placeholder="Select option" data-allow-clear="true"
                                 data-kt-user-table-filter="role" data-hide-search="true">
@@ -55,7 +55,7 @@
                         <!--end::Input group-->
                         <!--begin::Input group-->
                         <div class="mb-10">
-                            <label class="form-label fs-6 fw-semibold">Two Step Verification:</label>
+                            <label class="form-label fs-6 fw-semibold">Double authentification :</label>
                             <select class="form-select form-select-solid fw-bold" data-kt-select2="true"
                                 data-placeholder="Select option" data-allow-clear="true"
                                 data-kt-user-table-filter="two-step" data-hide-search="true">
@@ -67,9 +67,9 @@
                         <!--begin::Actions-->
                         <div class="d-flex justify-content-end">
                             <button type="reset" class="btn btn-light btn-active-light-primary fw-semibold me-2 px-6"
-                                data-kt-menu-dismiss="true" data-kt-user-table-filter="reset">Reset</button>
+                                data-kt-menu-dismiss="true" data-kt-user-table-filter="reset">Réinitialiser</button>
                             <button type="submit" class="btn btn-primary fw-semibold px-6" data-kt-menu-dismiss="true"
-                                data-kt-user-table-filter="filter">Apply</button>
+                                data-kt-user-table-filter="filter">Appliquer</button>
                         </div>
                         <!--end::Actions-->
                     </div>
@@ -86,9 +86,9 @@
                     </i>Export</button>
                 <!--end::Export-->
                 <!--begin::Add user-->
-                <button (click)="openUserModal(customerModal, null)" type="button" class="btn btn-primary"
+                <button (click)="openCustomerModal(customerModal)" type="button" class="btn btn-primary"
                     data-bs-toggle="modal" data-bs-target="#kt_modal_add_user">
-                    <i class="ki-duotone ki-plus fs-2"></i>Add User</button>
+                    <i class="ki-duotone ki-plus fs-2"></i>Ajouter un client</button>
                 <!--end::Add user-->
             </div>
             <!--end::Toolbar-->
@@ -109,7 +109,7 @@
         <!-- Loading indicator -->
         <div *ngIf="loading$ | async" class="d-flex flex-column align-items-center justify-content-center py-10">
             <div class="spinner-border text-primary mb-6" style="width: 3rem; height: 3rem;"></div>
-            <div class="fw-bold fs-5">Loading users...</div>
+            <div class="fw-bold fs-5">Chargement des clients...</div>
         </div>
 
         <!-- Empty state -->
@@ -118,7 +118,7 @@
             <div *ngIf="!users?.length && !(loading$ | async)"
                 class="d-flex flex-column align-items-center justify-content-center py-10">
                 <i class="ki-duotone ki-user fs-1 mb-6"></i>
-                <div class="fw-bold fs-5">No users found.</div>
+                <div class="fw-bold fs-5">Aucun client trouvé.</div>
             </div>
 
             <!-- Users table -->
@@ -133,10 +133,10 @@
                                         data-kt-check-target="#kt_table_users .form-check-input" value="1" />
                                 </div>
                             </th>
-                            <th class="min-w-125px">User</th>
-                            <th class="min-w-125px">Phone</th>
-                            <th class="min-w-125px">Role</th>
-                            <th class="min-w-125px">Joined Date</th>
+                            <th class="min-w-125px">Client</th>
+                            <th class="min-w-125px">Téléphone</th>
+                            <th class="min-w-125px">Rôle</th>
+                            <th class="min-w-125px">Date d'inscription</th>
                             <th class="min-w-100px">Actions</th>
                         </tr>
                     </thead>
@@ -193,12 +193,13 @@
                                     data-kt-menu="true">
                                     <!--begin::Menu item-->
                                     <div class="menu-item px-3">
-                                        <a class="menu-link px-3" (click)="openUserModal(customerModal, user)">Edit</a>
+                                        <a class="menu-link px-3"
+                                            (click)="openCustomerModal(customerModal, user)">Modifier</a>
                                     </div>
                                     <!--end::Menu item-->
                                     <!--begin::Menu item-->
                                     <div class="menu-item px-3">
-                                        <a class="menu-link px-3" (click)="deleteCustomer(user)">Delete</a>
+                                        <a class="menu-link px-3" (click)="deleteCustomer(user)">Supprimer</a>
                                     </div>
                                     <!--end::Menu item-->
                                 </div>
@@ -214,51 +215,57 @@
 
 <ng-template #customerModal let-modal>
     <div class="modal-header">
-        <h2 class="modal-title">{{ editing ? 'Edit Customer' : 'Add Customer' }}</h2>
+        <h2 class="modal-title">{{ editing ? 'Modifier un client' : 'Ajouter un client' }}</h2>
         <button type="button" class="btn-close" aria-label="Close" (click)="modal.dismiss('Cross click')"></button>
     </div>
-    <form [formGroup]="userForm" (ngSubmit)="submit(modal)">
+    <form [formGroup]="form" (ngSubmit)="submit(modal)">
         <div class="modal-body">
             <div class="mb-6">
-                <label>First Name</label>
-                <input class="form-control form-control-solid" formControlName="firstName" required />
+                <label>Prénom <span class="text-danger">*</span></label>
+                <input class="form-control form-control-solid" formControlName="firstName" />
+                <div *ngIf="isInvalid('firstName')" class="text-danger small">Le prénom est requis.</div>
             </div>
             <div class="mb-6">
-                <label>Last Name</label>
-                <input class="form-control form-control-solid" formControlName="lastName" required />
+                <label>Nom <span class="text-danger">*</span></label>
+                <input class="form-control form-control-solid" formControlName="lastName" />
+                <div *ngIf="isInvalid('lastName')" class="text-danger small">Le nom est requis.</div>
             </div>
             <div class="mb-6">
-                <label>Email</label>
-                <input class="form-control form-control-solid" formControlName="email" required type="email" />
+                <label>Email <span class="text-danger">*</span></label>
+                <input class="form-control form-control-solid" formControlName="email" type="email" />
+                <div *ngIf="isInvalid('email')" class="text-danger small">Veuillez saisir un email valide.</div>
             </div>
             <ng-container formGroupName="phone">
                 <div class="row">
                     <div class="col-md-4 mb-6">
-                        <label>Country Code</label>
+                        <label>Indicatif <span class="text-danger">*</span></label>
                         <input class="form-control form-control-solid" formControlName="countryCode" />
+                        <div *ngIf="isInvalid('phone.countryCode')" class="text-danger small">L'indicatif est requis.
+                        </div>
                     </div>
                     <div class="col-md-8 mb-6">
-                        <label>Number</label>
+                        <label>Numéro <span class="text-danger">*</span></label>
                         <input class="form-control form-control-solid" formControlName="number" />
+                        <div *ngIf="isInvalid('phone.number')" class="text-danger small">Le numéro est requis.</div>
                     </div>
                 </div>
             </ng-container>
             <div class="mb-6">
-                <label>Role</label>
-                <select class="form-select" formControlName="role" required>
-                    <option value="CUSTOMER">Customer</option>
-                    <option value="ADMIN">Admin</option>
+                <label>Rôle <span class="text-danger">*</span></label>
+                <select class="form-select" formControlName="role">
+                    <option value="CUSTOMER">Client</option>
+                    <option value="ADMIN">Administrateur</option>
                     <option value="MANAGER">Manager</option>
-                    <option value="DRIVER">Driver</option>
+                    <option value="DRIVER">Chauffeur</option>
                 </select>
             </div>
         </div>
         <div class="modal-footer">
-            <button type="submit" class="btn btn-primary" [disabled]="userForm.invalid">
-                Save
+            <button type="submit" class="btn btn-primary" [disabled]="form.invalid || isButtonDisabled">
+                Enregistrer
             </button>
             <button type="button" class="btn btn-secondary" (click)="modal.dismiss('Cross click')">
-                Cancel
+                Annuler
             </button>
         </div>
     </form>

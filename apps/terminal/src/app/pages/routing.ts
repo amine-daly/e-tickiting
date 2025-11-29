@@ -24,6 +24,11 @@ const Routing: Routes = [
       import('./trip/trip-list.routes').then((m) => m.tripRoutes),
   },
   {
+    path: 'tickets',
+    loadChildren: () =>
+      import('./tickets/ticket-list.routes').then((m) => m.ticketsRoutes),
+  },
+  {
     path: 'customers',
     loadChildren: () =>
       import('./customers/customers.routes').then((m) => m.customersRoutes),

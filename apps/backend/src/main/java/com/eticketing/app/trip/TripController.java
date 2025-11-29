@@ -417,7 +417,9 @@ public class TripController {
         trip.setAvailableSeats((int) seats.stream().filter(s -> s.getState() == SeatStateEnum.AVAILABLE).count());
 
         TripType saved = tripTypeRepository.save(trip);
-        return ResponseEntity.ok(buildTripResponse(saved));
+        Map<String, Object> response = new LinkedHashMap<>();
+        response.put("message", "Seats generated successfully");
+        return ResponseEntity.ok(response);
     }
 
     private Map<String, Object> buildTripResponse(TripType trip) {

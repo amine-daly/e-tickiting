@@ -1,5 +1,5 @@
 import Swal from 'sweetalert2';
-import { Component, OnDestroy, OnInit } from '@angular/core';
+import { Component, OnDestroy, OnInit, TemplateRef } from '@angular/core';
 import { NgbModal } from '@ng-bootstrap/ng-bootstrap';
 import { CommonModule } from '@angular/common';
 import {
@@ -8,29 +8,55 @@ import {
   ReactiveFormsModule,
   Validators,
 } from '@angular/forms';
-import { Subscription } from 'rxjs';
-import { AgenciesService } from './agencies.service';
+import { Subject, Subscription, takeUntil } from 'rxjs';
+import { FormHelper } from '../../core/helpers/form-helper';
+import {
+  AgenciesService,
+  AgencyCreatePayload,
+  AgencyUpdatePayload,
+} from './agencies.service';
 import { AlertService } from '../../core/services/alert.service';
-import { KeeniconComponent } from 'src/app/_metronic/shared/keenicon/keenicon.component';
 import { AgencyPhone, AgencyType } from 'src/app/core/models/trip.model';
+import { isEqual } from 'lodash';
+
+type NormalizedAgencyValue = {
+  name: string;
+  address: string;
+  email: string;
+  phone: AgencyPhone;
+  template: string;
+};
 
 @Component({
   selector: 'app-agencies',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule, KeeniconComponent],
+  imports: [CommonModule, ReactiveFormsModule],
   templateUrl: './agencies.component.html',
   styleUrls: ['./agencies.component.scss'],
 })
 export class AgenciesComponent implements OnInit, OnDestroy {
+  private destroy$ = new Subject<void>();
+
+  error$ = this.agenciesService.error$;
   agencies$ = this.agenciesService.agencies$;
   loadingAgencies$ = this.agenciesService.loadingAgencies$;
-  error$ = this.agenciesService.error$;
 
   form: FormGroup;
-  editing = false;
+  isButtonDisabled = true;
+  defaultTemplate: string | null = null;
+  defaultTemplateLoading = false;
 
   private subscriptions = new Subscription();
-  private currentAgency: AgencyType | null = null;
+  private formChangesSub?: Subscription;
+  private selectedAgency: AgencyType | null = null;
+  private initialValues: NormalizedAgencyValue | null = null;
+  private defaultTemplateCallbacks: Array<() => void> = [];
+
+  templateForm: FormGroup | undefined;
+  templateModalAgency: AgencyType | null = null;
+  showPreview: boolean = false;
+  initialTemplateValues: any;
+  isTemplateButtonDisabled = true;
 
   constructor(
     private alert: AlertService,
@@ -38,17 +64,7 @@ export class AgenciesComponent implements OnInit, OnDestroy {
     private agenciesService: AgenciesService,
     private fb: FormBuilder
   ) {
-    this.form = this.fb.group({
-      id: [null],
-      name: ['', [Validators.required, Validators.pattern(/\S+/)]],
-      address: ['', [Validators.required, Validators.pattern(/\S+/)]],
-      email: ['', [Validators.email]],
-      phoneCountryCode: [
-        '216',
-        [Validators.required, Validators.pattern(/^[0-9]+$/)],
-      ],
-      phoneNumber: ['', [Validators.required, Validators.pattern(/^[0-9]+$/)]],
-    });
+    this.form = this.buildForm();
   }
 
   ngOnInit(): void {
@@ -61,24 +77,68 @@ export class AgenciesComponent implements OnInit, OnDestroy {
     this.subscriptions.add(loadSub);
   }
 
-  ngOnDestroy(): void {
-    this.subscriptions.unsubscribe();
+  openTemplateModal(templateModal: TemplateRef<any>, agency: AgencyType): void {
+    this.isTemplateButtonDisabled = true;
+    this.templateModalAgency = agency;
+    this.ensureDefaultTemplateLoaded(() => {
+      this.templateForm = this.fb.group({
+        template: [agency?.template ?? '', [Validators.required]],
+      });
+      this.initialTemplateValues = this.templateForm?.value;
+      this.templateForm.valueChanges
+        .pipe(takeUntil(this.destroy$))
+        .subscribe((values) => {
+          this.isTemplateButtonDisabled = isEqual(
+            values,
+            this.initialTemplateValues
+          );
+        });
+      this.showPreview = false;
+    });
+    this.modalService.open(templateModal, { size: 'lg' });
   }
 
-  openCreate(agencyModal: any) {
-    this.editing = false;
-    this.currentAgency = null;
-    this.form.reset({
-      id: null,
-      name: '',
-      address: '',
-      email: '',
-      phoneCountryCode: '216',
-      phoneNumber: '',
-    });
-    this.form.markAsPristine();
-    this.form.markAsUntouched();
+  applyDefaultTemplateToForm(): void {
+    if (this.defaultTemplate && this.templateForm) {
+      this.templateForm.patchValue({ template: this.defaultTemplate });
+      this.templateForm.markAsDirty();
+    }
+  }
+
+  submitTemplate(modal: any): void {
+    const newTemplate = FormHelper.getChangedValues(
+      this.templateForm.value,
+      this.initialTemplateValues
+    );
+    console.log(22);
+    this.agenciesService
+      .updateAgency(this.templateModalAgency.id, { template: newTemplate })
+      .subscribe({
+        next: () => {
+          this.alert.success('Modèle mis à jour avec succès');
+          modal?.close();
+        },
+        error: () => this.alert.error('Échec de la mise à jour du modèle'),
+      });
+  }
+
+  openAgencyModal(agencyModal: TemplateRef<any>, agency?: AgencyType): void {
+    this.prepareFormForModal(agency);
     this.modalService.open(agencyModal, { size: 'lg' });
+  }
+
+  applyDefaultTemplate(): void {
+    if (this.defaultTemplate) {
+      this.form.patchValue({ template: this.defaultTemplate });
+      this.form.markAsDirty();
+      return;
+    }
+    this.ensureDefaultTemplateLoaded(() => {
+      if (this.defaultTemplate) {
+        this.form.patchValue({ template: this.defaultTemplate });
+        this.form.markAsDirty();
+      }
+    });
   }
 
   submit(modal?: any) {
@@ -88,90 +148,43 @@ export class AgenciesComponent implements OnInit, OnDestroy {
       return;
     }
 
-    const { id, name, address, email, phoneCountryCode, phoneNumber } =
-      this.form.value;
+    const normalized = this.normalizeFormValues(this.form.value);
+    const initial = this.initialValues ?? normalized;
+    const isEdit = !!this.selectedAgency?.id;
 
-    const trimmedName = (name ?? '').trim();
-    const trimmedAddress = (address ?? '').trim();
-    const trimmedEmail = (email ?? '').trim();
-    const phone = this.buildPhonePayload(phoneCountryCode, phoneNumber);
-
-    if (this.editing && id) {
-      const changes: Partial<AgencyType> = {};
-
-      if (trimmedName !== (this.currentAgency?.name ?? '')) {
-        changes.name = trimmedName;
-      }
-      if (trimmedAddress !== (this.currentAgency?.address ?? '')) {
-        changes.address = trimmedAddress;
-      }
-      const currentEmail = this.currentAgency?.email ?? '';
-      if (trimmedEmail !== currentEmail) {
-        changes.email = trimmedEmail || '';
-      }
-
-      const currentPhone = this.currentAgency?.phone;
-      if (
-        !currentPhone ||
-        currentPhone.countryCode !== phone.countryCode ||
-        currentPhone.number !== phone.number
-      ) {
-        changes.phone = phone;
-      }
-
+    if (isEdit) {
+      const changes = FormHelper.getChangedValues(normalized, initial);
       if (Object.keys(changes).length === 0) {
         this.alert.info('Aucune modification détectée');
+        this.isButtonDisabled = true;
         return;
       }
 
-      this.agenciesService.update(id, changes).subscribe({
-        next: () => {
-          this.alert.success('Agence modifiée avec succès');
-          this.editing = false;
-          this.currentAgency = null;
-          this.form.reset({
-            id: null,
-            name: '',
-            address: '',
-            email: '',
-            phoneCountryCode: '216',
-            phoneNumber: '',
-          });
-          this.form.markAsPristine();
-          this.form.markAsUntouched();
-          modal?.close();
-        },
-        error: () => this.alert.error("Échec de la modification de l'agence"),
-      });
+      const sub = this.agenciesService
+        .updateAgency(this.selectedAgency!.id!, changes as AgencyUpdatePayload)
+        .subscribe({
+          next: () => {
+            this.alert.success('Agence modifiée avec succès');
+            this.resetFormState();
+            modal?.close();
+          },
+          error: () => this.alert.error("Échec de la modification de l'agence"),
+        });
+      this.subscriptions.add(sub);
       return;
     }
 
-    const payload: AgencyType = {
-      name: trimmedName,
-      address: trimmedAddress,
-      email: trimmedEmail || '',
-      phone,
-    };
-
-    this.agenciesService.create(payload).subscribe({
-      next: () => {
-        this.alert.success('Agence créée avec succès');
-        this.editing = false;
-        this.currentAgency = null;
-        this.form.reset({
-          id: null,
-          name: '',
-          address: '',
-          email: '',
-          phoneCountryCode: '216',
-          phoneNumber: '',
-        });
-        this.form.markAsPristine();
-        this.form.markAsUntouched();
-        modal?.close();
-      },
-      error: () => this.alert.error("Échec de la création de l'agence"),
-    });
+    const sub = this.agenciesService
+      .createAgency(normalized as AgencyCreatePayload)
+      .subscribe({
+        next: () => {
+          this.alert.success('Agence créée avec succès');
+          this.resetFormState();
+          modal?.close();
+        },
+        error: () => this.alert.error("Échec de la création de l'agence"),
+      });
+    this.subscriptions.add(sub);
   }
 
   deleteAgency(agency: AgencyType) {
@@ -185,34 +198,15 @@ export class AgenciesComponent implements OnInit, OnDestroy {
       cancelButtonText: 'Annuler',
     }).then((result) => {
       if (result.isConfirmed) {
-        this.agenciesService.delete(agency.id).subscribe({
+        const sub = this.agenciesService.deleteAgency(agency.id).subscribe({
           next: () => {
             this.alert.success('Agence supprimée avec succès');
           },
           error: () => this.alert.error("Échec de la suppression de l'agence"),
         });
+        this.subscriptions.add(sub);
       }
     });
-  }
-
-  openEdit(agencyModal: any, agency: AgencyType) {
-    this.editing = true;
-    this.currentAgency = agency;
-    const normalizedCode = (agency.phone?.countryCode ?? '216')
-      .replace(/^\+/, '')
-      .replace(/\s+/g, '');
-    const normalizedNumber = (agency.phone?.number ?? '').replace(/\s+/g, '');
-    this.form.reset({
-      id: agency.id ?? null,
-      name: agency.name,
-      address: agency.address,
-      email: agency.email ?? '',
-      phoneCountryCode: normalizedCode || '216',
-      phoneNumber: normalizedNumber,
-    });
-    this.form.markAsPristine();
-    this.form.markAsUntouched();
-    this.modalService.open(agencyModal, { size: 'lg' });
   }
 
   formatPhone(phone?: AgencyPhone | null): string {
@@ -239,8 +233,118 @@ export class AgenciesComponent implements OnInit, OnDestroy {
     };
   }
 
+  private buildForm(): FormGroup {
+    return this.fb.group({
+      id: [null],
+      name: ['', [Validators.required, Validators.pattern(/\S+/)]],
+      address: ['', [Validators.required, Validators.pattern(/\S+/)]],
+      email: ['', [Validators.email]],
+      phoneCountryCode: [
+        '216',
+        [Validators.required, Validators.pattern(/^[0-9]+$/)],
+      ],
+      phoneNumber: ['', [Validators.required, Validators.pattern(/^[0-9]+$/)]],
+      template: [''],
+    });
+  }
+
+  private prepareFormForModal(agency?: AgencyType): void {
+    this.selectedAgency = agency ?? null;
+    this.form.reset(this.getFormResetValue(agency));
+    this.form.markAsPristine();
+    this.form.markAsUntouched();
+    this.initialValues = this.normalizeFormValues(this.form.value);
+    this.isButtonDisabled = true;
+    this.subscribeToFormChanges();
+  }
+
+  private getFormResetValue(agency?: AgencyType) {
+    const normalizedCode = (agency?.phone?.countryCode ?? '216')
+      .replace(/^\+/, '')
+      .replace(/\s+/g, '');
+    const normalizedNumber = (agency?.phone?.number ?? '').replace(/\s+/g, '');
+    return {
+      id: agency?.id ?? null,
+      name: agency?.name ?? '',
+      address: agency?.address ?? '',
+      email: agency?.email ?? '',
+      phoneCountryCode: normalizedCode || '216',
+      phoneNumber: normalizedNumber,
+      template: agency?.template ?? '',
+    };
+  }
+
+  private normalizeFormValues(value: any): NormalizedAgencyValue {
+    const name = (value?.name ?? '').trim();
+    const address = (value?.address ?? '').trim();
+    const email = (value?.email ?? '').trim();
+    const phone = this.buildPhonePayload(
+      value?.phoneCountryCode,
+      value?.phoneNumber
+    );
+    const template = typeof value?.template === 'string' ? value.template : '';
+    return { name, address, email, phone, template };
+  }
+
+  private subscribeToFormChanges(): void {
+    this.formChangesSub?.unsubscribe();
+    this.formChangesSub = this.form.valueChanges.subscribe((values) => {
+      const normalized = this.normalizeFormValues(values);
+      this.isButtonDisabled = isEqual(normalized, this.initialValues);
+    });
+  }
+
+  private resetFormState(): void {
+    this.selectedAgency = null;
+    this.form.reset(this.getFormResetValue());
+    this.form.markAsPristine();
+    this.form.markAsUntouched();
+    this.formChangesSub?.unsubscribe();
+    this.initialValues = this.normalizeFormValues(this.form.value);
+    this.isButtonDisabled = true;
+  }
+
+  private ensureDefaultTemplateLoaded(onReady?: () => void): void {
+    if (this.defaultTemplate) {
+      onReady?.();
+      return;
+    }
+    if (this.defaultTemplateLoading) {
+      if (onReady) {
+        this.defaultTemplateCallbacks.push(onReady);
+      }
+      return;
+    }
+    if (onReady) {
+      this.defaultTemplateCallbacks.push(onReady);
+    }
+    this.defaultTemplateLoading = true;
+    const sub = this.agenciesService.getDefaultTemplate().subscribe({
+      next: (template) => {
+        this.defaultTemplate = template;
+        this.defaultTemplateLoading = false;
+        const callbacks = [...this.defaultTemplateCallbacks];
+        this.defaultTemplateCallbacks = [];
+        callbacks.forEach((cb) => cb());
+      },
+      error: () => {
+        this.defaultTemplateLoading = false;
+        this.alert.error('Impossible de charger le modèle par défaut');
+        this.defaultTemplateCallbacks = [];
+      },
+    });
+    this.subscriptions.add(sub);
+  }
+
   isInvalid(controlName: string): boolean {
     const control = this.form.get(controlName);
     return !!control && control.invalid && (control.dirty || control.touched);
+  }
+
+  ngOnDestroy(): void {
+    this.destroy$.next();
+    this.destroy$.complete();
+    this.subscriptions.unsubscribe();
+    this.formChangesSub?.unsubscribe();
   }
 }

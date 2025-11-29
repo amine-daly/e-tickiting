@@ -19,7 +19,8 @@
 
                 <div *ngIf="!(loading$ | async) && (trips$ | async)?.length" class="table-responsive">
                     <!-- begin::Table -->
-                    <table class="table table-row-dashed table-row-gray-300 align-middle gs-0 gy-4">
+                    <table style="margin-bottom: 9rem;"
+                        class="table table-row-dashed table-row-gray-300 align-middle gs-0 gy-4">
                         <!-- begin::Table head -->
                         <thead>
                             <tr class="fw-bolder text-muted">
@@ -55,9 +56,9 @@
                                 <td>{{ data?.departureDate | date:'yyyy-MM-dd HH:mm' }}</td>
                                 <td>
                                     <span class="badge" [ngClass]="{
-                                            'bg-info': data?.status === 'SCHEDULED',
-                                            'bg-success': data?.status === 'COMPLETED',
-                                            'bg-danger': data?.status === 'CANCELLED'
+                                            'badge-light-primary': data?.status === 'SCHEDULED',
+                                            'badge-light-success': data?.status === 'COMPLETED',
+                                            'badge-light-danger': data?.status === 'CANCELLED'
                                         }">
                                         {{ statusLabelMap[data?.status] }}
                                     </span>
@@ -67,13 +68,43 @@
                                 <td>{{ data?.availableSeats }}</td>
                                 <td>
                                     <div class="d-flex justify-content-end flex-shrink-0">
-                                        <button class="btn btn-icon btn-bg-light btn-active-color-primary btn-sm me-1"
+                                        <div ngbDropdown class="me-2">
+                                            <button ngbDropdownToggle
+                                                class="btn btn-icon btn-active-light-success w-30px h-30px me-3"
+                                                [class.dropdown-toggle]="false">
+                                                <i class="ki-duotone ki-abstract-14 fs-2">
+                                                    <span class="path1"></span>
+                                                    <span class="path2"></span>
+                                                </i>
+                                            </button>
+                                            <div ngbDropdownMenu>
+                                                <button type="button"
+                                                    class="dropdown-item d-flex justify-content-between align-items-center"
+                                                    *ngFor="let option of statusOptions"
+                                                    [disabled]="data.status === option.value"
+                                                    (click)="changeStatus(data, option.value)">
+                                                    <span>{{ option.label }}</span>
+                                                    <i *ngIf="data.status === option.value"
+                                                        class="ki-duotone ki-check fs-2">
+                                                        <span class="path1"></span>
+                                                        <span class="path2"></span>
+                                                    </i>
+                                                </button>
+                                            </div>
+                                        </div>
+                                        <button class="btn btn-icon btn-active-light-primary w-30px h-30px me-3"
                                             (click)="openTripModal(tripModal, data)">
-                                            <app-keenicon name="pencil" class="fs-3"></app-keenicon>
+                                            <i class="ki-duotone ki-pencil fs-2">
+                                                <span class="path1"></span>
+                                                <span class="path2"></span>
+                                            </i>
                                         </button>
-                                        <button class="btn btn-icon btn-bg-light btn-active-color-primary btn-sm"
+                                        <button class="btn btn-icon btn-active-light-danger w-30px h-30px me-3"
                                             (click)="deleteTrip(data)">
-                                            <app-keenicon name="trash" class="fs-3"></app-keenicon>
+                                            <i class="ki-duotone ki-trash fs-2">
+                                                <span class="path1"></span>
+                                                <span class="path2"></span>
+                                            </i>
                                         </button>
                                     </div>
                                 </td>
@@ -119,14 +150,7 @@
                     </ng-select>
                     <div *ngIf="isInvalid('destinationId')" class="text-danger small">La destination est requise.</div>
                 </div>
-                <div class="mb-3">
-                    <label>Statut <span class="text-danger">*</span></label>
-                    <ng-select [items]="statusOptions" bindLabel="label" bindValue="value" formControlName="status"
-                        placeholder="Sélectionner le statut" [clearable]="false">
-                        <ng-template ng-label-tmp let-item="item">{{ item.label }}</ng-template>
-                        <ng-template ng-option-tmp let-item="item">{{ item.label }}</ng-template>
-                    </ng-select>
-                </div>
+
                 <div class="mb-3">
                     <label>Date de départ <span class="text-danger">*</span></label>
                     <div class="input-group d-flex align-items-center">

@@ -8,6 +8,8 @@ import java.util.Optional;
 import java.util.Map;
 import jakarta.validation.Valid;
 
+import com.eticketing.app.ticket.TicketTemplateDefaults;
+
 @RestController
 @RequestMapping("/api/agencies")
 public class AgencyController {
@@ -21,6 +23,9 @@ public class AgencyController {
 
     @PostMapping
     public ResponseEntity<AgencyType> createAgency(@Valid @RequestBody AgencyType agency) {
+        if (agency.getTemplate() == null || agency.getTemplate().isBlank()) {
+            agency.setTemplate(TicketTemplateDefaults.defaultTemplate());
+        }
         AgencyType saved = agencyRepository.save(agency);
         return ResponseEntity.ok(saved);
     }
@@ -28,6 +33,11 @@ public class AgencyController {
     @GetMapping
     public ResponseEntity<List<AgencyType>> getAllAgencies() {
         return ResponseEntity.ok(agencyRepository.findAll());
+    }
+
+    @GetMapping("/default-template")
+    public ResponseEntity<Map<String, String>> getDefaultTemplate() {
+        return ResponseEntity.ok(Map.of("template", TicketTemplateDefaults.defaultTemplate()));
     }
 
     @GetMapping("/{id}")
@@ -52,6 +62,14 @@ public class AgencyController {
             }
             if (updates.containsKey("email")) {
                 agency.setEmail((String) updates.get("email"));
+            }
+            if (updates.containsKey("template")) {
+                Object value = updates.get("template");
+                if (value == null || value.toString().isBlank()) {
+                    agency.setTemplate(TicketTemplateDefaults.defaultTemplate());
+                } else {
+                    agency.setTemplate(value.toString());
+                }
             }
             if (updates.containsKey("phone")) {
                 Object phoneObj = updates.get("phone");

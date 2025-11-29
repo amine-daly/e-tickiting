@@ -11,6 +11,7 @@ export interface AgencyType {
   address: string;
   email?: string;
   phone: AgencyPhone;
+  template?: string;
 }
 
 export enum TripStatus {

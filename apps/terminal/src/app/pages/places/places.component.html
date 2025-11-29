@@ -5,7 +5,7 @@
                 <div class="d-flex justify-content-between align-items-center mb-4">
                     <h2 class="mb-0">Places</h2>
                     <div>
-                        <button class="btn btn-primary me-2" (click)="openCreate(placeModal)">Add Place</button>
+                        <button class="btn btn-primary me-2" (click)="openPlaceModal(placeModal)">Add Place</button>
                     </div>
                 </div>
 
@@ -46,13 +46,19 @@
                                 <td>{{ p.location ? p.location.coordinates[0] : '-' }}</td>
                                 <td>
                                     <div class="d-flex justify-content-end flex-shrink-0">
-                                        <button class="btn btn-icon btn-bg-light btn-active-color-primary btn-sm me-1"
-                                            (click)="openEdit(placeModal, p)">
-                                            <app-keenicon name="pencil" class="fs-3"></app-keenicon>
+                                        <button class="btn btn-icon btn-active-light-primary w-30px h-30px me-3"
+                                            (click)="openPlaceModal(placeModal, p)">
+                                            <i class="ki-duotone ki-pencil fs-2">
+                                                <span class="path1"></span>
+                                                <span class="path2"></span>
+                                            </i>
                                         </button>
-                                        <button class="btn btn-icon btn-bg-light btn-active-color-primary btn-sm"
+                                        <button class="btn btn-icon btn-active-light-danger w-30px h-30px"
                                             (click)="deletePlace(p)">
-                                            <app-keenicon name="trash" class="fs-3"></app-keenicon>
+                                            <i class="ki-duotone ki-trash fs-2">
+                                                <span class="path1"></span>
+                                                <span class="path2"></span>
+                                            </i>
                                         </button>
                                     </div>
                                 </td>
@@ -70,20 +76,22 @@
             <h5 class="modal-title">{{ editing ? 'Edit Place' : 'Add Place' }}</h5>
             <button type="button" class="btn-close" aria-label="Close" (click)="modal.dismiss('Cross click')"></button>
         </div>
-        <form (ngSubmit)="submit(modal)">
+        <form [formGroup]="form">
             <div class="modal-body">
                 <div class="mb-3">
-                    <label>City</label>
-                    <input class="form-control" [(ngModel)]="form.city" name="city" required />
+                    <label>City <span class="text-danger">*</span></label>
+                    <input class="form-control" type="text" formControlName="city" />
+                    <div *ngIf="isInvalid('city')" class="text-danger small">City is required.</div>
                 </div>
                 <div class="mb-3">
-                    <label>Location</label>
-                    <div *ngIf="form.location">
-                        Lat: {{ form.location.coordinates[1] }}, Lng: {{ form.location.coordinates[0] }}
+                    <label>Location <span class="text-danger">*</span></label>
+                    <div *ngIf="form.get('location')?.value; else missingLocation">
+                        Lat: {{ form.get('location')?.value.coordinates[1] }}, Lng:
+                        {{ form.get('location')?.value.coordinates[0] }}
                     </div>
-                    <div *ngIf="!form.location" class="text-danger">
-                        Click on the map below to set location
-                    </div>
+                    <ng-template #missingLocation>
+                        <div class="text-danger small">Click on the map below to set location</div>
+                    </ng-template>
                     <google-map class="place-map" [center]="position || { lat: 33.886917, lng: 9.537499 }"
                         [zoom]="position ? 12 : 4" (mapClick)="pickAddress($event)">
                         <map-marker *ngIf="position" [position]="position"></map-marker>
@@ -91,8 +99,9 @@
                 </div>
             </div>
             <div class="modal-footer">
-                <button type="submit" class="btn btn-primary" [disabled]="!form.city || !form.location">
-                    Save
+                <button type="button" class="btn btn-primary" (click)="submit(modal)"
+                    [disabled]="form.invalid || isButtonDisabled">
+                    {{ editing ? 'Update' : 'Save' }}
                 </button>
                 <button type="button" class="btn btn-secondary" (click)="modal.dismiss('Cross click')">
                     Cancel

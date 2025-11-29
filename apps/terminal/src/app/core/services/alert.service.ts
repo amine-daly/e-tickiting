@@ -42,6 +42,8 @@ export class AlertService {
       showCancelButton: true,
       confirmButtonText,
       cancelButtonText,
+      confirmButtonColor: 'rgb(3, 142, 220)',
+      cancelButtonColor: 'rgb(243, 78, 78)',
     });
   }
 }

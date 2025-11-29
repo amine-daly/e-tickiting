@@ -22,6 +22,7 @@ public class AgencyType {
     @Valid
     @NotNull
     private PhoneType phone;
+    private String template;
 
     // Getters and setters
     public String getId() {
@@ -62,5 +63,13 @@ public class AgencyType {
 
     public void setPhone(PhoneType phone) {
         this.phone = phone;
+    }
+
+    public String getTemplate() {
+        return template;
+    }
+
+    public void setTemplate(String template) {
+        this.template = template;
     }
 }
