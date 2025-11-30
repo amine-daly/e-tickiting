@@ -1,0 +1,403 @@
+<!DOCTYPE html>
+<html lang="en">
+   <head>
+      <meta charset="UTF-8">
+      <meta http-equiv="X-UA-Compatible" content="IE=edge">
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <link rel="icon" href="img/logo.png" type="image/png">
+      <title>BusGo - Bus Booking Mobile App Template</title>
+      <!-- Bootstrap css -->
+      <link rel="stylesheet" href="vender/bootstrap/css/bootstrap.min.css">
+      <!-- Custom css -->
+      <link rel="stylesheet" href="css/style.css">
+   </head>
+   <body>
+      <!-- Status Bar -->
+      <div class="status-bar">
+         <div>9:41 AM</div>
+         <div>
+            <i class="bi bi-wifi"></i>
+            <i class="bi bi-battery-full ms-2"></i>
+         </div>
+      </div>
+      <!-- Sidebar -->
+      <div class="sidebar" id="sidebar">
+         <div class="sidebar-header">
+            <div class="d-flex align-items-center mb-3">
+               <div class="user-avatar me-3">
+                  <i class="bi bi-person"></i>
+               </div>
+               <div>
+                  <h6 class="mb-1">Alex Johnson</h6>
+                  <p class="mb-0 small">Premium Member</p>
+               </div>
+            </div>
+            <div class="d-flex justify-content-between align-items-center">
+               <div>
+                  <small>Travel Points</small>
+                  <div class="d-flex align-items-center">
+                     <i class="bi bi-star-fill me-1 points-icon"></i>
+                     <span>2,450</span>
+                  </div>
+               </div>
+               <a href="profile.html" class="btn btn-sm profile-edit-btn rounded-3">
+               Edit Profile
+               </a>
+            </div>
+         </div>
+         <div class="sidebar-menu">
+            <a href="index.html" class="sidebar-menu-item">
+            <i class="bi bi-house-door"></i>
+            <span>Home</span>
+            </a>
+            <a href="bus-listing.html" class="sidebar-menu-item">
+            <i class="bi bi-list"></i>
+            <span>Bus Listing</span>
+            </a>
+            <a href="bus-details.html" class="sidebar-menu-item">
+            <i class="bi bi-view-list"></i>
+            <span>Bus Details</span>
+            </a>
+            <a href="select-seat.html" class="sidebar-menu-item">
+            <i class="bi bi-ui-checks-grid"></i>
+            <span>Select Seat</span>
+            </a>
+            <a href="verification.html" class="sidebar-menu-item">
+            <i class="bi bi-person-check"></i>
+            <span>Verification</span>
+            </a>
+            <a href="checkout-payment.html" class="sidebar-menu-item">
+            <i class="bi bi-credit-card-2-front"></i>
+            <span>Checkout Payment</span>
+            </a>
+            <a href="payment-successful.html" class="sidebar-menu-item">
+            <i class="bi bi-calendar2-check"></i>
+            <span>Payment Successful</span>
+            </a>
+            <a href="my-tickets.html" class="sidebar-menu-item">
+            <i class="bi bi-ticket-detailed"></i>
+            <span>My Tickets</span>
+            </a>
+            <a href="profile.html" class="sidebar-menu-item">
+            <i class="bi bi-person"></i>
+            <span>Profile</span>
+            </a>
+            <a href="my-bookings.html" class="sidebar-menu-item">
+            <i class="bi bi-ticket-perforated"></i>
+            <span>My Bookings</span>
+            </a>
+            <a href="trip-history.html" class="sidebar-menu-item">
+            <i class="bi bi-clock-history"></i>
+            <span>Trip History</span>
+            </a>
+            <a href="saved-routes.html" class="sidebar-menu-item">
+            <i class="bi bi-heart"></i>
+            <span>Saved Routes</span>
+            </a>
+            <a href="offers-rewards.html" class="sidebar-menu-item">
+            <i class="bi bi-gift"></i>
+            <span>Offers & Rewards</span>
+            </a>
+            <a href="payment-methods.html" class="sidebar-menu-item">
+            <i class="bi bi-credit-card"></i>
+            <span>Payment Methods</span>
+            </a>
+            <a href="notifications.html" class="sidebar-menu-item">
+            <i class="bi bi-bell"></i>
+            <span>Notifications</span>
+            </a>
+            <a href="settings.html" class="sidebar-menu-item">
+            <i class="bi bi-gear"></i>
+            <span>Settings</span>
+            </a>
+            <a href="help-support.html" class="sidebar-menu-item">
+            <i class="bi bi-question-circle"></i>
+            <span>Help & Support</span>
+            </a>
+            <a href="search.html" class="sidebar-menu-item">
+            <i class="bi bi-search"></i>
+            <span>Search</span>
+            </a>
+            <a href="sign-in.html" class="sidebar-menu-item">
+            <i class="bi bi-box-arrow-in-right"></i>
+            <span>Sign In</span>
+            </a>
+            <a href="sign-up.html" class="sidebar-menu-item">
+            <i class="bi bi-box-arrow-in-left"></i>
+            <span>Sign Up</span>
+            </a>
+            <a href="forgot-password.html" class="sidebar-menu-item">
+            <i class="bi bi-key"></i>
+            <span>Forgot Password</span>
+            </a>
+            <a href="not-available.html" class="sidebar-menu-item">
+            <i class="bi bi-emoji-frown"></i>
+            <span>Not Available</span>
+            </a>
+         </div>
+         <div class="p-3 text-center">
+            <a href="sign-in.html" class="btn btn-outline-danger w-100 rounded-3">
+            <i class="bi bi-box-arrow-right me-2"></i> Sign Out
+            </a>
+         </div>
+      </div>
+      <!-- Overlay -->
+      <div class="overlay" id="overlay"></div>
+      <!-- App Header -->
+      <div class="app-header d-flex justify-content-between align-items-center">
+         <div class="d-flex align-items-center">
+            <button id="menuBtn" class="btn menu-btn">
+            <i class="bi bi-list menu-icon"></i>
+            </button>
+            <div class="d-flex align-items-center">
+               <i class="bi bi-bus-front me-2 app-header-icon"></i>
+               <span class="app-header-title">BusGo</span>
+            </div>
+         </div>
+         <div>
+            <a href="search.html" class="btn header-btn me-2">
+            <i class="bi bi-search icon-md"></i>
+            </a>
+            <a href="notifications.html" class="btn header-btn me-2">
+            <i class="bi bi-bell icon-md"></i>
+            </a>
+            <a href="settings.html" class="btn header-btn">
+            <i class="bi bi-person-circle icon-md"></i>
+            </a>
+         </div>
+      </div>
+      <!-- Content Container -->
+      <div class="p-3">
+         <!-- Bus Image with Back and Share Button -->
+         <div class="bus-header position-relative">
+            <img src="img/3.png" alt="Express Lines Bus" class="img-fluid w-100 rounded-3">
+            <div class="overlay"></div>
+            <div class="header-controls position-absolute top-0 w-100 p-3 d-flex justify-content-between">
+               <a href="bus-listing.html" class="btn btn-light btn-circle shadow-sm">
+               <i class="bi bi-arrow-left"></i>
+               </a>
+               <a href="#" class="btn btn-light btn-circle shadow-sm">
+               <i class="bi bi-share"></i>
+               </a>
+            </div>
+         </div>
+         <!-- Bus Details -->
+         <div class="bus-details mt-3">
+            <div class="d-flex justify-content-between align-items-start mb-3">
+               <div>
+                  <h5 class="fw-bold mb-1">Express Lines</h5>
+                  <div class="text-muted">Premium Sleeper</div>
+               </div>
+               <div class="rating-badge">
+                  <i class="bi bi-star-fill text-warning me-1"></i>
+                  <span>4.8</span>
+               </div>
+            </div>
+            <!-- Journey Details -->
+            <div class="journey-details bg-primary-light p-3 rounded-3 mb-3">
+               <div class="d-flex">
+                  <div class="journey-stops me-3">
+                     <div class="departure-stop"></div>
+                     <div class="journey-line"></div>
+                     <div class="arrival-stop"></div>
+                  </div>
+                  <div class="journey-info flex-grow-1">
+                     <div class="mb-3">
+                        <div class="fw-bold">New York Central Station</div>
+                        <div class="text-muted small">Jun 15, 07:00 AM</div>
+                     </div>
+                     <div>
+                        <div class="fw-bold">Boston South Station</div>
+                        <div class="text-muted small">Jun 15, 11:30 AM</div>
+                     </div>
+                  </div>
+                  <div class="journey-duration text-center">
+                     <div class="small text-muted">Duration</div>
+                     <div class="fw-bold">4h 30m</div>
+                  </div>
+               </div>
+            </div>
+            <!-- Amenities -->
+            <div class="mb-3">
+               <h6 class="fw-bold mb-2">Amenities</h6>
+               <div class="d-flex flex-wrap gap-2">
+                  <div class="amenity-item">
+                     <i class="bi bi-wifi"></i>
+                     <span>WiFi</span>
+                  </div>
+                  <div class="amenity-item">
+                     <i class="bi bi-plug"></i>
+                     <span>Power Outlet</span>
+                  </div>
+                  <div class="amenity-item">
+                     <i class="bi bi-tv"></i>
+                     <span>TV</span>
+                  </div>
+                  <div class="amenity-item">
+                     <i class="bi bi-cup-hot"></i>
+                     <span>Snacks</span>
+                  </div>
+                  <div class="amenity-item">
+                     <i class="bi bi-snow2"></i>
+                     <span>AC</span>
+                  </div>
+                  <div class="amenity-item">
+                     <i class="bi bi-water"></i>
+                     <span>Toilet</span>
+                  </div>
+                  <div class="amenity-item">
+                     <i class="bi bi-bag-check"></i>
+                     <span>Luggage</span>
+                  </div>
+                  <div class="amenity-item">
+                     <i class="bi bi-recycle"></i>
+                     <span>USB</span>
+                  </div>
+               </div>
+            </div>
+            <!-- Bus Photos -->
+            <div class="mb-3">
+               <h6 class="fw-bold mb-2">Bus Photos</h6>
+               <div class="bus-photos d-flex gap-2 overflow-auto pb-2">
+                  <img src="img/p1.png" class="bus-photo-thumb rounded-3" alt="Bus Interior">
+                  <img src="img/p2.png" class="bus-photo-thumb rounded-3" alt="Bus Seat">
+                  <img src="img/p3.png" class="bus-photo-thumb rounded-3" alt="Coach">
+                  <img src="img/p4.png" class="bus-photo-thumb rounded-3" alt="Luxury Bus">
+               </div>
+            </div>
+            <!-- Pickup Points -->
+            <div class="mb-3">
+               <h6 class="fw-bold mb-2">Pickup Points</h6>
+               <div class="pickup-points">
+                  <div class="pickup-point d-flex align-items-center mb-2">
+                     <div class="pickup-radio me-2">
+                        <input type="radio" class="form-check-input" name="pickupPoint" id="pickup1" checked>
+                     </div>
+                     <div class="flex-grow-1">
+                        <label for="pickup1" class="form-check-label fw-medium mb-0 d-block">New York Central Station</label>
+                        <div class="text-muted small">Gate 5, Platform B</div>
+                     </div>
+                     <div class="text-end">
+                        <div class="text-muted small">07:00 AM</div>
+                     </div>
+                  </div>
+                  <div class="pickup-point d-flex align-items-center">
+                     <div class="pickup-radio me-2">
+                        <input type="radio" class="form-check-input" name="pickupPoint" id="pickup2">
+                     </div>
+                     <div class="flex-grow-1">
+                        <label for="pickup2" class="form-check-label fw-medium mb-0 d-block">Grand Central Terminal</label>
+                        <div class="text-muted small">Bus Bay 3</div>
+                     </div>
+                     <div class="text-end">
+                        <div class="text-muted small">07:15 AM</div>
+                     </div>
+                  </div>
+               </div>
+            </div>
+            <!-- Drop-off Points -->
+            <div class="mb-3">
+               <h6 class="fw-bold mb-2">Drop-off Points</h6>
+               <div class="dropoff-points">
+                  <div class="dropoff-point d-flex align-items-center mb-2">
+                     <div class="dropoff-radio me-2">
+                        <input type="radio" class="form-check-input" name="dropoffPoint" id="dropoff1" checked>
+                     </div>
+                     <div class="flex-grow-1">
+                        <label for="dropoff1" class="form-check-label fw-medium mb-0 d-block">Boston South Station</label>
+                        <div class="text-muted small">Main Terminal</div>
+                     </div>
+                     <div class="text-end">
+                        <div class="text-muted small">11:30 AM</div>
+                     </div>
+                  </div>
+                  <div class="dropoff-point d-flex align-items-center">
+                     <div class="dropoff-radio me-2">
+                        <input type="radio" class="form-check-input" name="dropoffPoint" id="dropoff2">
+                     </div>
+                     <div class="flex-grow-1">
+                        <label for="dropoff2" class="form-check-label fw-medium mb-0 d-block">Boston Back Bay Station</label>
+                        <div class="text-muted small">Exit Gate 2</div>
+                     </div>
+                     <div class="text-end">
+                        <div class="text-muted small">11:45 AM</div>
+                     </div>
+                  </div>
+               </div>
+            </div>
+            <!-- Cancellation Policy -->
+            <div class="mb-3">
+               <h6 class="fw-bold mb-2">Cancellation Policy</h6>
+               <div class="cancellation-policy">
+                  <div class="d-flex align-items-center mb-2">
+                     <div class="cancellation-dot bg-success me-2"></div>
+                     <div class="text-muted small">Free cancellation until 24 hours before departure</div>
+                  </div>
+                  <div class="d-flex align-items-center mb-2">
+                     <div class="cancellation-dot bg-warning me-2"></div>
+                     <div class="text-muted small">50% refund between 24 and 12 hours before departure</div>
+                  </div>
+                  <div class="d-flex align-items-center">
+                     <div class="cancellation-dot bg-danger me-2"></div>
+                     <div class="text-muted small">No refund within 12 hours of departure</div>
+                  </div>
+               </div>
+            </div>
+            <!-- Reviews -->
+            <div class="mb-4">
+               <div class="d-flex justify-content-between align-items-center mb-2">
+                  <h6 class="fw-bold mb-0">Reviews</h6>
+               </div>
+               <div class="reviews">
+                  <div class="review-item p-3 bg-white rounded-3 mb-2">
+                     <div class="d-flex justify-content-between mb-2">
+                        <div class="d-flex align-items-center">
+                           <div class="avatar me-2 d-flex align-items-center justify-content-center bg-info-subtle text-info fw-bold fs-24">J</div>
+                           <div>
+                              <div class="fw-medium">John Smith</div>
+                              <div class="text-muted small">June 10, 2025</div>
+                           </div>
+                        </div>
+                        <div class="rating">
+                           <i class="bi bi-star-fill text-warning"></i>
+                           <span>4.5</span>
+                        </div>
+                     </div>
+                     <p class="mb-0 small">Very comfortable bus with excellent service. The staff was friendly and the bus was right on time. Would definitely travel again.</p>
+                  </div>
+                  <div class="review-item p-3 bg-white rounded-3">
+                     <div class="d-flex justify-content-between mb-2">
+                        <div class="d-flex align-items-center">
+                           <div class="avatar me-2 d-flex align-items-center justify-content-center bg-warning-subtle text-warning fw-bold fs-24">S</div>
+                           <div>
+                              <div class="fw-medium">Sarah Johnson</div>
+                              <div class="text-muted small">June 8, 2025</div>
+                           </div>
+                        </div>
+                        <div class="rating">
+                           <i class="bi bi-star-fill text-warning"></i>
+                           <span>5.0</span>
+                        </div>
+                     </div>
+                     <p class="mb-0 small">Amazing experience! The bus was clean, WiFi worked perfectly, and we arrived ahead of schedule. Highly recommended!</p>
+                  </div>
+               </div>
+            </div>
+         </div>
+      </div>
+      <!-- Bottom Fixed Bar for Price and Book -->
+      <div class="bottom-fixed-bar p-3">
+         <div class="d-flex justify-content-between align-items-center gap-3">
+            <div class="lh-sm">
+               <div class="fw-bold fs-5 text-primary-color">$45.00</div>
+               <div class="text-muted small">per person</div>
+            </div>
+            <a href="select-seat.html" class="btn btn-app py-2 fw-bold">Select Seats</a>
+         </div>
+      </div>
+      <!-- Bootstrap bundle js -->
+      <script src="vender/bootstrap/js/bootstrap.bundle.min.js"></script>
+      <!-- Script js -->
+      <script src="js/script.js"></script> 
+   </body>
+</html>

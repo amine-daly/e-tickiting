@@ -3,19 +3,19 @@
         <div class="card">
             <div class="card-body">
                 <div class="d-flex justify-content-between align-items-center mb-4">
-                    <h2 class="mb-0">Agences</h2>
+                    <h2 class="mb-0">{{ 'AGENCIES.TITLE' | translate }}</h2>
                     <div>
-                        <button class="btn btn-primary me-2" (click)="openAgencyModal(agencyModal)">Ajouter une
-                            agence</button>
+                        <button class="btn btn-primary me-2" (click)="openAgencyModal(agencyModal)">{{
+                            'AGENCIES.ADD_BUTTON' | translate }}</button>
                     </div>
                 </div>
 
                 <div *ngIf="(loadingAgencies$ | async)" class="text-center my-5">
                     <span class="spinner-border spinner-border-lg"></span>
-                    <div>Chargement des agences...</div>
+                    <div>{{ 'AGENCIES.LOADING' | translate }}</div>
                 </div>
                 <div *ngIf="!(loadingAgencies$ | async) && !(agencies$ | async)?.length && !(error$ | async)"
-                    class="alert alert-info">Aucune agence trouvée.</div>
+                    class="alert alert-info">{{ 'AGENCIES.EMPTY' | translate }}</div>
                 <div *ngIf="(error$ | async)" class="alert alert-danger">{{ error$ | async }}</div>
 
                 <div *ngIf="!(loadingAgencies$ | async) && (agencies$ | async)?.length" class="table-responsive">
@@ -25,11 +25,11 @@
                         <thead>
                             <tr class="fw-bolder text-muted">
                                 <th></th>
-                                <th class="min-w-200px">Nom</th>
-                                <th class="min-w-200px">Adresse</th>
-                                <th class="min-w-200px">Email</th>
-                                <th class="min-w-160px">Téléphone</th>
-                                <th class="min-w-100px text-end">Actions</th>
+                                <th class="min-w-200px">{{ 'COMMON.LABEL.NAME' | translate }}</th>
+                                <th class="min-w-200px">{{ 'COMMON.LABEL.ADDRESS' | translate }}</th>
+                                <th class="min-w-200px">{{ 'COMMON.LABEL.EMAIL' | translate }}</th>
+                                <th class="min-w-160px">{{ 'COMMON.LABEL.PHONE' | translate }}</th>
+                                <th class="min-w-100px text-end">{{ 'COMMON.LABEL.ACTIONS' | translate }}</th>
                             </tr>
                         </thead>
                         <!-- end::Table head -->
@@ -86,44 +86,50 @@
 </div>
 <ng-template #agencyModal let-modal>
     <div class="modal-header">
-        <h5 class="modal-title">{{ selectedAgency ? 'Modifier une agence' : 'Ajouter une agence' }}</h5>
+        <h5 class="modal-title">{{ (selectedAgency ? 'AGENCIES.MODAL.EDIT_TITLE' : 'AGENCIES.MODAL.ADD_TITLE') |
+            translate }}</h5>
         <button type="button" class="btn-close" aria-label="Close" (click)="modal.dismiss('Cross click')"></button>
     </div>
     <form [formGroup]="form" (ngSubmit)="submit(modal)">
         <div class="modal-body">
             <div class="mb-3">
-                <label>Nom<span class="text-danger">*</span></label>
+                <label>{{ 'COMMON.LABEL.NAME' | translate }}<span class="text-danger">*</span></label>
                 <input class="form-control" formControlName="name" />
-                <div *ngIf="isInvalid('name')" class="text-danger small">Le nom est requis.</div>
+                <div *ngIf="isInvalid('name')" class="text-danger small">{{ 'AGENCIES.MODAL.ERRORS.NAME_REQUIRED' |
+                    translate }}</div>
             </div>
             <div class="mb-3">
-                <label>Adresse<span class="text-danger">*</span></label>
+                <label>{{ 'COMMON.LABEL.ADDRESS' | translate }}<span class="text-danger">*</span></label>
                 <input class="form-control" formControlName="address" />
-                <div *ngIf="isInvalid('address')" class="text-danger small">L'adresse est requise.</div>
+                <div *ngIf="isInvalid('address')" class="text-danger small">{{ 'AGENCIES.MODAL.ERRORS.ADDRESS_REQUIRED'
+                    | translate }}</div>
             </div>
             <div class="mb-3">
-                <label>Email</label>
+                <label>{{ 'COMMON.LABEL.EMAIL' | translate }}</label>
                 <input class="form-control" type="email" formControlName="email" />
-                <div *ngIf="isInvalid('email')" class="text-danger small">Veuillez saisir un email valide.</div>
+                <div *ngIf="isInvalid('email')" class="text-danger small">{{ 'AGENCIES.MODAL.ERRORS.EMAIL_INVALID' |
+                    translate }}</div>
             </div>
             <div class="mb-3">
-                <label>Téléphone<span class="text-danger">*</span></label>
+                <label>{{ 'COMMON.LABEL.PHONE' | translate }}<span class="text-danger">*</span></label>
                 <div class="input-group">
                     <span class="input-group-text">+</span>
-                    <input class="form-control" formControlName="phoneCountryCode" placeholder="Indicatif" />
-                    <input class="form-control" formControlName="phoneNumber" placeholder="Numéro de téléphone" />
+                    <input class="form-control" formControlName="phoneCountryCode"
+                        [placeholder]="'AGENCIES.MODAL.PHONE_CODE_PLACEHOLDER' | translate" />
+                    <input class="form-control" formControlName="phoneNumber"
+                        [placeholder]="'AGENCIES.MODAL.PHONE_NUMBER_PLACEHOLDER' | translate" />
                 </div>
                 <div *ngIf="isInvalid('phoneCountryCode') || isInvalid('phoneNumber')" class="text-danger small">
-                    L'indicatif et le numéro sont requis.
+                    {{ 'AGENCIES.MODAL.ERRORS.PHONE_REQUIRED' | translate }}
                 </div>
             </div>
         </div>
         <div class="modal-footer">
             <button type="submit" class="btn btn-primary" [disabled]="form.invalid || isButtonDisabled">
-                Enregistrer
+                {{ 'COMMON.BUTTON.SAVE' | translate }}
             </button>
             <button type="button" class="btn btn-secondary" (click)="modal.dismiss('Cross click')">
-                Annuler
+                {{ 'COMMON.BUTTON.CANCEL' | translate }}
             </button>
         </div>
     </form>
@@ -132,23 +138,24 @@
 <!-- Template editing moved to separate modal -->
 <ng-template #templateModal let-modal let-agency="agency">
     <div class="modal-header">
-        <h5 class="modal-title">Modèle de ticket – {{ agency?.name }}</h5>
+        <h5 class="modal-title">{{ 'AGENCIES.TEMPLATE.TITLE' | translate:{ name: agency?.name || '' } }}</h5>
         <button type="button" class="btn-close" aria-label="Close" (click)="modal.dismiss('Cross click')"></button>
     </div>
     <form *ngIf="templateForm" [formGroup]="templateForm">
         <div class="modal-body">
             <div class="mb-3">
                 <div class="d-flex justify-content-between align-items-center mb-2">
-                    <label>Modèle de ticket</label>
+                    <label>{{ 'AGENCIES.TEMPLATE.LABEL' | translate }}</label>
                     <div class="form-check form-check-custom form-check-solid form-check-success form-switch">
                         <input type="checkbox" class="form-check-input" [checked]="showPreview"
                             (change)="showPreview = $event.target.checked" />
-                        <label class="form-check-label ms-2 m-0">Prévisualiser l'email</label>
+                        <label class="form-check-label ms-2 m-0">{{ 'AGENCIES.TEMPLATE.PREVIEW_TOGGLE' | translate
+                            }}</label>
                     </div>
                 </div>
                 <ng-container *ngIf="!showPreview">
                     <textarea class="form-control font-monospace" rows="12" formControlName="template"
-                        placeholder="HTML du ticket" spellcheck="false"></textarea>
+                        [placeholder]="'AGENCIES.TEMPLATE.PLACEHOLDER' | translate" spellcheck="false"></textarea>
                 </ng-container>
                 <ng-container *ngIf="showPreview">
                     <div class="border rounded p-3 bg-light" style="min-height: 300px;">
@@ -159,7 +166,7 @@
                     <button type="button" class="btn btn-secondary btn-sm" (click)="applyDefaultTemplateToForm()"
                         [disabled]="defaultTemplateLoading">
                         <span *ngIf="defaultTemplateLoading" class="spinner-border spinner-border-sm me-2"></span>
-                        Utiliser le modèle par défaut
+                        {{ 'AGENCIES.TEMPLATE.USE_DEFAULT' | translate }}
                     </button>
                 </div>
             </div>
@@ -167,10 +174,10 @@
         <div *ngIf="templateForm" class="modal-footer">
             <button (click)="submitTemplate(modal, agency)" type="button" class="btn btn-primary"
                 [disabled]="templateForm.invalid || isTemplateButtonDisabled">
-                Enregistrer
+                {{ 'COMMON.BUTTON.SAVE' | translate }}
             </button>
             <button type="button" class="btn btn-secondary" (click)="modal.dismiss('Cross click')">
-                Annuler
+                {{ 'COMMON.BUTTON.CANCEL' | translate }}
             </button>
         </div>
     </form>

@@ -8,6 +8,7 @@ import {
   ReactiveFormsModule,
   Validators,
 } from '@angular/forms';
+import { TranslateModule, TranslateService } from '@ngx-translate/core';
 import { Subject, Subscription, takeUntil } from 'rxjs';
 import { FormHelper } from '../../core/helpers/form-helper';
 import {
@@ -30,7 +31,7 @@ type NormalizedAgencyValue = {
 @Component({
   selector: 'app-agencies',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule],
+  imports: [CommonModule, ReactiveFormsModule, TranslateModule],
   templateUrl: './agencies.component.html',
   styleUrls: ['./agencies.component.scss'],
 })
@@ -62,17 +63,15 @@ export class AgenciesComponent implements OnInit, OnDestroy {
     private alert: AlertService,
     private modalService: NgbModal,
     private agenciesService: AgenciesService,
-    private fb: FormBuilder
+    private fb: FormBuilder,
+    private translate: TranslateService
   ) {
     this.form = this.buildForm();
   }
 
   ngOnInit(): void {
     const loadSub = this.agenciesService.getAgencies().subscribe({
-      error: () =>
-        this.alert.error(
-          'Impossible de charger les agences. Veuillez réessayer plus tard.'
-        ),
+      error: () => this.alert.error(this.t('AGENCIES.MESSAGES.LOAD_ERROR')),
     });
     this.subscriptions.add(loadSub);
   }
@@ -115,10 +114,13 @@ export class AgenciesComponent implements OnInit, OnDestroy {
       .updateAgency(this.templateModalAgency.id, { template: newTemplate })
       .subscribe({
         next: () => {
-          this.alert.success('Modèle mis à jour avec succès');
+          this.alert.success(
+            this.t('AGENCIES.MESSAGES.TEMPLATE_UPDATE_SUCCESS')
+          );
           modal?.close();
         },
-        error: () => this.alert.error('Échec de la mise à jour du modèle'),
+        error: () =>
+          this.alert.error(this.t('AGENCIES.MESSAGES.TEMPLATE_UPDATE_ERROR')),
       });
   }
 
@@ -144,7 +146,7 @@ export class AgenciesComponent implements OnInit, OnDestroy {
   submit(modal?: any) {
     if (this.form.invalid) {
       this.form.markAllAsTouched();
-      this.alert.error('Veuillez vérifier le formulaire avant de continuer');
+      this.alert.error(this.t('AGENCIES.MESSAGES.FORM_INVALID'));
       return;
     }
 
@@ -155,7 +157,7 @@ export class AgenciesComponent implements OnInit, OnDestroy {
     if (isEdit) {
       const changes = FormHelper.getChangedValues(normalized, initial);
       if (Object.keys(changes).length === 0) {
-        this.alert.info('Aucune modification détectée');
+        this.alert.info(this.t('AGENCIES.MESSAGES.NO_CHANGES'));
         this.isButtonDisabled = true;
         return;
       }
@@ -164,11 +166,12 @@ export class AgenciesComponent implements OnInit, OnDestroy {
         .updateAgency(this.selectedAgency!.id!, changes as AgencyUpdatePayload)
         .subscribe({
           next: () => {
-            this.alert.success('Agence modifiée avec succès');
+            this.alert.success(this.t('AGENCIES.MESSAGES.UPDATE_SUCCESS'));
             this.resetFormState();
             modal?.close();
           },
-          error: () => this.alert.error("Échec de la modification de l'agence"),
+          error: () =>
+            this.alert.error(this.t('AGENCIES.MESSAGES.UPDATE_ERROR')),
         });
       this.subscriptions.add(sub);
       return;
@@ -178,11 +181,11 @@ export class AgenciesComponent implements OnInit, OnDestroy {
       .createAgency(normalized as AgencyCreatePayload)
       .subscribe({
         next: () => {
-          this.alert.success('Agence créée avec succès');
+          this.alert.success(this.t('AGENCIES.MESSAGES.CREATE_SUCCESS'));
           this.resetFormState();
           modal?.close();
         },
-        error: () => this.alert.error("Échec de la création de l'agence"),
+        error: () => this.alert.error(this.t('AGENCIES.MESSAGES.CREATE_ERROR')),
       });
     this.subscriptions.add(sub);
   }
@@ -190,19 +193,20 @@ export class AgenciesComponent implements OnInit, OnDestroy {
   deleteAgency(agency: AgencyType) {
     if (!agency.id) return;
     Swal.fire({
-      title: 'Êtes-vous sûr ?',
-      text: 'Cette action est irréversible !',
+      title: this.t('COMMON.CONFIRM.DELETE_TITLE'),
+      text: this.t('COMMON.CONFIRM.DELETE_TEXT'),
       icon: 'warning',
       showCancelButton: true,
-      confirmButtonText: 'Oui, supprimer !',
-      cancelButtonText: 'Annuler',
+      confirmButtonText: this.t('COMMON.CONFIRM.DELETE_CONFIRM'),
+      cancelButtonText: this.t('COMMON.BUTTON.CANCEL'),
     }).then((result) => {
       if (result.isConfirmed) {
         const sub = this.agenciesService.deleteAgency(agency.id).subscribe({
           next: () => {
-            this.alert.success('Agence supprimée avec succès');
+            this.alert.success(this.t('AGENCIES.MESSAGES.DELETE_SUCCESS'));
           },
-          error: () => this.alert.error("Échec de la suppression de l'agence"),
+          error: () =>
+            this.alert.error(this.t('AGENCIES.MESSAGES.DELETE_ERROR')),
         });
         this.subscriptions.add(sub);
       }
@@ -329,7 +333,7 @@ export class AgenciesComponent implements OnInit, OnDestroy {
       },
       error: () => {
         this.defaultTemplateLoading = false;
-        this.alert.error('Impossible de charger le modèle par défaut');
+        this.alert.error(this.t('AGENCIES.MESSAGES.DEFAULT_TEMPLATE_ERROR'));
         this.defaultTemplateCallbacks = [];
       },
     });
@@ -346,5 +350,9 @@ export class AgenciesComponent implements OnInit, OnDestroy {
     this.destroy$.complete();
     this.subscriptions.unsubscribe();
     this.formChangesSub?.unsubscribe();
+  }
+
+  private t(key: string, params?: Record<string, unknown>): string {
+    return this.translate.instant(key, params);
   }
 }

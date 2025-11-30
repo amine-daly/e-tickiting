@@ -17,6 +17,7 @@
     "@angular/compiler": "^19.0.0",
     "@angular/core": "^19.0.0",
     "@angular/forms": "^19.0.0",
+    "ngx-cookie-service": "^19.0.0",
     "@angular/google-maps": "19.2.18",
     "@angular/localize": "^19.0.0",
     "@angular/material": "^19.0.0",

@@ -20,6 +20,7 @@ import { AlertService } from '../../core/services/alert.service';
 import { FormHelper } from '../../core/helpers/form-helper';
 import { PlaceType } from '../../modules/auth/models/place-type';
 import { KeeniconComponent } from 'src/app/_metronic/shared/keenicon/keenicon.component';
+import { TranslateModule, TranslateService } from '@ngx-translate/core';
 import {
   PlaceCreatePayload,
   PlaceUpdatePayload,
@@ -31,7 +32,12 @@ import Swal from 'sweetalert2';
 @Component({
   selector: 'app-places',
   standalone: true,
-  imports: [CommonModule, GoogleMapsModule, ReactiveFormsModule],
+  imports: [
+    CommonModule,
+    GoogleMapsModule,
+    ReactiveFormsModule,
+    TranslateModule,
+  ],
   templateUrl: './places.component.html',
   styleUrls: ['./places.component.scss'],
 })
@@ -54,7 +60,8 @@ export class PlacesComponent implements OnInit, OnDestroy {
     private alert: AlertService,
     private modalService: NgbModal,
     private fb: FormBuilder,
-    private cd: ChangeDetectorRef
+    private cd: ChangeDetectorRef,
+    private translate: TranslateService
   ) {}
 
   ngOnInit(): void {
@@ -70,7 +77,7 @@ export class PlacesComponent implements OnInit, OnDestroy {
         this.cd.detectChanges();
       },
       error: () => {
-        this.error = 'Failed to load places';
+        this.error = this.t('PLACES.ERROR.LOAD');
         this.loading = false;
         this.cd.detectChanges();
       },
@@ -115,12 +122,22 @@ export class PlacesComponent implements OnInit, OnDestroy {
 
     const sub = request$.subscribe({
       next: () => {
-        this.alert.success(isEdit ? 'Place updated' : 'Place created');
+        this.alert.success(
+          this.t(
+            isEdit
+              ? 'PLACES.MESSAGES.UPDATE_SUCCESS'
+              : 'PLACES.MESSAGES.CREATE_SUCCESS'
+          )
+        );
         modal?.close();
       },
       error: () => {
         this.alert.error(
-          isEdit ? 'Failed to update place' : 'Failed to create place'
+          this.t(
+            isEdit
+              ? 'PLACES.MESSAGES.UPDATE_ERROR'
+              : 'PLACES.MESSAGES.CREATE_ERROR'
+          )
         );
         this.isButtonDisabled = false;
       },
@@ -133,17 +150,18 @@ export class PlacesComponent implements OnInit, OnDestroy {
       return;
     }
     Swal.fire({
-      title: 'Êtes-vous sûr ?',
-      text: 'Cette action est irréversible !',
+      title: this.t('COMMON.CONFIRM.DELETE_TITLE'),
+      text: this.t('COMMON.CONFIRM.DELETE_TEXT'),
       icon: 'warning',
       showCancelButton: true,
-      confirmButtonText: 'Oui, supprimer !',
-      cancelButtonText: 'Annuler',
+      confirmButtonText: this.t('COMMON.CONFIRM.DELETE_CONFIRM'),
+      cancelButtonText: this.t('COMMON.BUTTON.CANCEL'),
     }).then((result) => {
       if (result.isConfirmed) {
         const sub = this.placesService.deletePlace(place.id).subscribe({
-          next: () => this.alert.success('Place supprimée avec succès'),
-          error: () => this.alert.error('Échec de la suppression du lieu'),
+          next: () =>
+            this.alert.success(this.t('PLACES.MESSAGES.DELETE_SUCCESS')),
+          error: () => this.alert.error(this.t('PLACES.MESSAGES.DELETE_ERROR')),
         });
         this.subscriptions.add(sub);
       }
@@ -184,5 +202,9 @@ export class PlacesComponent implements OnInit, OnDestroy {
   ngOnDestroy(): void {
     this.subscriptions.unsubscribe();
     this.formChangesSub?.unsubscribe();
+  }
+
+  private t(key: string, params?: Record<string, unknown>): string {
+    return this.translate.instant(key, params);
   }
 }

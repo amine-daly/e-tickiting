@@ -3,18 +3,20 @@
         <div class="card">
             <div class="card-body">
                 <div class="d-flex justify-content-between align-items-center mb-4">
-                    <h2 class="mb-0">Places</h2>
+                    <h2 class="mb-0">{{ 'PLACES.TITLE' | translate }}</h2>
                     <div>
-                        <button class="btn btn-primary me-2" (click)="openPlaceModal(placeModal)">Add Place</button>
+                        <button class="btn btn-primary me-2" (click)="openPlaceModal(placeModal)">{{ 'PLACES.ADD_BUTTON'
+                            | translate }}</button>
                     </div>
                 </div>
 
                 <div *ngIf="loading" class="text-center my-5">
                     <span class="spinner-border spinner-border-lg"></span>
-                    <div>Loading places...</div>
+                    <div>{{ 'PLACES.LOADING' | translate }}</div>
                 </div>
                 <div *ngIf="error" class="alert alert-danger">{{ error }}</div>
-                <div *ngIf="!loading && !(places$ | async)?.length && !error" class="alert alert-info">No places found.
+                <div *ngIf="!loading && !(places$ | async)?.length && !error" class="alert alert-info">{{ 'PLACES.EMPTY'
+                    | translate }}
                 </div>
 
                 <div *ngIf="!loading && (places$ | async)?.length" class="table-responsive">
@@ -24,10 +26,10 @@
                         <thead>
                             <tr class="fw-bolder text-muted">
                                 <th></th>
-                                <th class="min-w-150px">City</th>
-                                <th class="min-w-140px">Latitude</th>
-                                <th class="min-w-120px">Longitude</th>
-                                <th class="min-w-100px text-end">Actions</th>
+                                <th class="min-w-150px">{{ 'COMMON.LABEL.CITY' | translate }}</th>
+                                <th class="min-w-140px">{{ 'COMMON.LABEL.LATITUDE' | translate }}</th>
+                                <th class="min-w-120px">{{ 'COMMON.LABEL.LONGITUDE' | translate }}</th>
+                                <th class="min-w-100px text-end">{{ 'COMMON.LABEL.ACTIONS' | translate }}</th>
                             </tr>
                         </thead>
                         <!-- end::Table head -->
@@ -73,24 +75,26 @@
     </div>
     <ng-template #placeModal let-modal>
         <div class="modal-header">
-            <h5 class="modal-title">{{ editing ? 'Edit Place' : 'Add Place' }}</h5>
+            <h5 class="modal-title">{{ (editing ? 'PLACES.MODAL.EDIT_TITLE' : 'PLACES.MODAL.ADD_TITLE') | translate }}
+            </h5>
             <button type="button" class="btn-close" aria-label="Close" (click)="modal.dismiss('Cross click')"></button>
         </div>
         <form [formGroup]="form">
             <div class="modal-body">
                 <div class="mb-3">
-                    <label>City <span class="text-danger">*</span></label>
+                    <label>{{ 'COMMON.LABEL.CITY' | translate }} <span class="text-danger">*</span></label>
                     <input class="form-control" type="text" formControlName="city" />
-                    <div *ngIf="isInvalid('city')" class="text-danger small">City is required.</div>
+                    <div *ngIf="isInvalid('city')" class="text-danger small">{{ 'PLACES.MODAL.ERRORS.CITY_REQUIRED' |
+                        translate }}</div>
                 </div>
                 <div class="mb-3">
-                    <label>Location <span class="text-danger">*</span></label>
+                    <label>{{ 'PLACES.MODAL.LOCATION_LABEL' | translate }} <span class="text-danger">*</span></label>
                     <div *ngIf="form.get('location')?.value; else missingLocation">
                         Lat: {{ form.get('location')?.value.coordinates[1] }}, Lng:
                         {{ form.get('location')?.value.coordinates[0] }}
                     </div>
                     <ng-template #missingLocation>
-                        <div class="text-danger small">Click on the map below to set location</div>
+                        <div class="text-danger small">{{ 'PLACES.MODAL.LOCATION_HELP' | translate }}</div>
                     </ng-template>
                     <google-map class="place-map" [center]="position || { lat: 33.886917, lng: 9.537499 }"
                         [zoom]="position ? 12 : 4" (mapClick)="pickAddress($event)">
@@ -101,10 +105,10 @@
             <div class="modal-footer">
                 <button type="button" class="btn btn-primary" (click)="submit(modal)"
                     [disabled]="form.invalid || isButtonDisabled">
-                    {{ editing ? 'Update' : 'Save' }}
+                    {{ (editing ? 'COMMON.BUTTON.UPDATE' : 'COMMON.BUTTON.SAVE') | translate }}
                 </button>
                 <button type="button" class="btn btn-secondary" (click)="modal.dismiss('Cross click')">
-                    Cancel
+                    {{ 'COMMON.BUTTON.CANCEL' | translate }}
                 </button>
             </div>
         </form>

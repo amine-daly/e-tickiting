@@ -37,6 +37,7 @@ import {
   FlatpickrDirective,
   provideFlatpickrDefaults,
 } from 'angularx-flatpickr';
+import { TranslateModule, TranslateService } from '@ngx-translate/core';
 
 @Component({
   standalone: true,
@@ -48,6 +49,7 @@ import {
     FlatpickrDirective,
     NgbDropdownModule,
     NgbModule,
+    TranslateModule,
   ],
   providers: [provideFlatpickrDefaults()],
   selector: 'app-trip-list',
@@ -65,15 +67,15 @@ export class TripListComponent implements OnInit, OnDestroy {
   loading$ = this.tripService.loading$;
   places$ = this.placesService.places$;
   agencies$ = this.agenciesService.agencies$;
-  statusOptions: Array<{ value: TripStatus; label: string }> = [
-    { value: TripStatus.SCHEDULED, label: 'Planifié' },
-    { value: TripStatus.COMPLETED, label: 'Terminé' },
-    { value: TripStatus.CANCELLED, label: 'Annulé' },
+  statusOptions: Array<{ value: TripStatus; labelKey: string }> = [
+    { value: TripStatus.SCHEDULED, labelKey: 'TRIPS.STATUS.SCHEDULED' },
+    { value: TripStatus.COMPLETED, labelKey: 'TRIPS.STATUS.COMPLETED' },
+    { value: TripStatus.CANCELLED, labelKey: 'TRIPS.STATUS.CANCELLED' },
   ];
   statusLabelMap: Record<TripStatus, string> = {
-    [TripStatus.SCHEDULED]: 'Planifié',
-    [TripStatus.COMPLETED]: 'Terminé',
-    [TripStatus.CANCELLED]: 'Annulé',
+    [TripStatus.SCHEDULED]: 'TRIPS.STATUS.SCHEDULED',
+    [TripStatus.COMPLETED]: 'TRIPS.STATUS.COMPLETED',
+    [TripStatus.CANCELLED]: 'TRIPS.STATUS.CANCELLED',
   };
 
   private subscriptions = new Subscription();
@@ -86,7 +88,8 @@ export class TripListComponent implements OnInit, OnDestroy {
     private fb: FormBuilder,
     private alert: AlertService,
     private agenciesService: AgenciesService,
-    private placesService: PlacesService
+    private placesService: PlacesService,
+    private translate: TranslateService
   ) {}
 
   ngOnInit(): void {
@@ -97,13 +100,12 @@ export class TripListComponent implements OnInit, OnDestroy {
     if (!trip || trip.status === nextStatus) {
       return;
     }
+    const statusLabel = this.t(this.statusLabelMap[nextStatus] || nextStatus);
     const result = await this.alert.confirm(
-      'Confirmer le changement de statut',
-      `Voulez-vous vraiment changer le statut du ticket à « ${
-        this.statusLabelMap[nextStatus] || nextStatus
-      } » ?`,
-      'Oui, changer',
-      'Annuler'
+      this.t('TRIPS.MESSAGES.STATUS_CONFIRM_TITLE'),
+      this.t('TRIPS.MESSAGES.STATUS_CONFIRM_TEXT', { status: statusLabel }),
+      this.t('TRIPS.MESSAGES.STATUS_CONFIRM_OK'),
+      this.t('COMMON.BUTTON.CANCEL')
     );
     if (!result.isConfirmed) {
       return;
@@ -114,18 +116,17 @@ export class TripListComponent implements OnInit, OnDestroy {
       .updateTrip(trip.id, { status: nextStatus })
       .pipe(finalize(() => (this.statusUpdating[trip.id] = false)))
       .subscribe({
-        next: () => this.alert.success('Statut mis à jour'),
-        error: () => this.alert.error('Impossible de mettre à jour le statut'),
+        next: () =>
+          this.alert.success(this.t('TRIPS.MESSAGES.STATUS_UPDATE_SUCCESS')),
+        error: () =>
+          this.alert.error(this.t('TRIPS.MESSAGES.STATUS_UPDATE_ERROR')),
       });
     this.subscriptions.add(sub);
   }
 
   loadTrips(): void {
     const sub = this.tripService.getTrips(this.filter).subscribe({
-      error: () =>
-        this.alert.error(
-          'Impossible de charger les voyages. Veuillez réessayer plus tard.'
-        ),
+      error: () => this.alert.error(this.t('TRIPS.MESSAGES.LOAD_ERROR')),
     });
     this.subscriptions.add(sub);
   }
@@ -174,29 +175,30 @@ export class TripListComponent implements OnInit, OnDestroy {
     this.tripService[field](...args).subscribe({
       next: (res) => {
         console.log('🚀 ~ TripListComponent ~ submit ~ res:', res);
-        this.alert.success('Opération réussie');
+        this.alert.success(this.t('TRIPS.MESSAGES.SAVE_SUCCESS'));
         modal?.close();
         if (!this.selectedTrip) {
           this.tripService.generateSeats(res.id).subscribe();
         }
       },
-      error: () => this.alert.error('Une erreur est survenue'),
+      error: () => this.alert.error(this.t('COMMON.MESSAGES.GENERIC_ERROR')),
     });
   }
 
   deleteTrip(trip: TripType): void {
     Swal.fire({
-      title: 'Êtes-vous sûr ?',
-      text: 'Cette action est irréversible !',
+      title: this.t('COMMON.CONFIRM.DELETE_TITLE'),
+      text: this.t('COMMON.CONFIRM.DELETE_TEXT'),
       icon: 'warning',
       showCancelButton: true,
-      confirmButtonText: 'Oui, supprimer !',
-      cancelButtonText: 'Annuler',
+      confirmButtonText: this.t('COMMON.CONFIRM.DELETE_CONFIRM'),
+      cancelButtonText: this.t('COMMON.BUTTON.CANCEL'),
     }).then((result) => {
       if (result.isConfirmed) {
         const sub = this.tripService.deleteTrip(trip.id).subscribe({
-          next: () => this.alert.success('Voyage supprimé avec succès'),
-          error: () => this.alert.error('Échec de la suppression du voyage'),
+          next: () =>
+            this.alert.success(this.t('TRIPS.MESSAGES.DELETE_SUCCESS')),
+          error: () => this.alert.error(this.t('TRIPS.MESSAGES.DELETE_ERROR')),
         });
         this.subscriptions.add(sub);
       }
@@ -212,5 +214,9 @@ export class TripListComponent implements OnInit, OnDestroy {
     this.unsubscribeAll.next();
     this.unsubscribeAll.complete();
     this.subscriptions.unsubscribe();
+  }
+
+  private t(key: string, params?: Record<string, unknown>): string {
+    return this.translate.instant(key, params);
   }
 }

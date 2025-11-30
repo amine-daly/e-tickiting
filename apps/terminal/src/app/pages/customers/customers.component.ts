@@ -18,6 +18,7 @@ import {
   CustomerUpdatePayload,
   CustomersService,
 } from './customers.service';
+import { TranslateModule } from '@ngx-translate/core';
 
 type NormalizedCustomerValue = {
   firstName: string;
@@ -30,7 +31,7 @@ type NormalizedCustomerValue = {
 @Component({
   selector: 'app-customers',
   standalone: true,
-  imports: [CommonModule, NgbModalModule, ReactiveFormsModule],
+  imports: [CommonModule, NgbModalModule, ReactiveFormsModule, TranslateModule],
   templateUrl: './customers.component.html',
   styleUrls: ['./customers.component.scss'],
 })

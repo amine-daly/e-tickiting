@@ -1,14 +1,17 @@
-import { Component, HostBinding, OnDestroy, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Observable, Subscription } from 'rxjs';
+import { CookieService } from 'ngx-cookie-service';
+import { TranslateModule } from '@ngx-translate/core';
+import { Component, HostBinding, OnDestroy, OnInit } from '@angular/core';
+
+import { UserType } from 'src/app/modules/auth/models/user-type';
 import { TranslationService } from '../../../../../../modules/i18n';
 import { AuthService } from '../../../../../../modules/auth';
-import { UserType } from 'src/app/modules/auth/models/user-type';
 
 @Component({
   selector: 'app-user-inner',
   standalone: true,
-  imports: [CommonModule],
+  imports: [CommonModule, TranslateModule],
   templateUrl: './user-inner.component.html',
 })
 export class UserInnerComponent implements OnInit, OnDestroy {
@@ -23,12 +26,14 @@ export class UserInnerComponent implements OnInit, OnDestroy {
 
   constructor(
     private auth: AuthService,
+    private cookieService: CookieService,
     private translationService: TranslationService
   ) {}
 
   ngOnInit(): void {
     this.user$ = this.auth.currentUser.asObservable();
-    this.setLanguage(this.translationService.getSelectedLanguage());
+    const lang = this.cookieService.get('lang') || 'fr-fr';
+    this.setLanguage(lang);
   }
 
   logout() {
@@ -50,6 +55,7 @@ export class UserInnerComponent implements OnInit, OnDestroy {
         language.active = false;
       }
     });
+    this.translationService.setLanguage(lang);
   }
 
   ngOnDestroy() {
@@ -66,32 +72,12 @@ interface LanguageFlag {
 
 const languages = [
   {
-    lang: 'en',
+    lang: 'en-gb',
     name: 'English',
-    flag: './assets/media/flags/united-states.svg',
+    flag: './assets/media/flags/united-kingdom.svg',
   },
   {
-    lang: 'zh',
-    name: 'Mandarin',
-    flag: './assets/media/flags/china.svg',
-  },
-  {
-    lang: 'es',
-    name: 'Spanish',
-    flag: './assets/media/flags/spain.svg',
-  },
-  {
-    lang: 'ja',
-    name: 'Japanese',
-    flag: './assets/media/flags/japan.svg',
-  },
-  {
-    lang: 'de',
-    name: 'German',
-    flag: './assets/media/flags/germany.svg',
-  },
-  {
-    lang: 'fr',
+    lang: 'fr-fr',
     name: 'French',
     flag: './assets/media/flags/france.svg',
   },

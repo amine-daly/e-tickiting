@@ -1,0 +1,212 @@
+{
+  "COMMON": {
+    "LABEL": {
+      "NAME": "Nom",
+      "ADDRESS": "Adresse",
+      "EMAIL": "E-mail",
+      "PHONE": "Téléphone",
+      "ACTIONS": "Actions",
+      "CITY": "Ville",
+      "LATITUDE": "Latitude",
+      "LONGITUDE": "Longitude",
+      "ORIGIN": "Origine",
+      "DESTINATION": "Destination",
+      "DATE": "Date",
+      "STATUS": "Statut",
+      "AGENCY": "Agence",
+      "PRICE": "Prix",
+      "AVAILABLE_SEATS": "Places disponibles",
+      "REFERENCE": "Référence",
+      "FIRST_NAME": "Prénom",
+      "LAST_NAME": "Nom",
+      "ROLE": "Rôle"
+    },
+    "BUTTON": {
+      "SAVE": "Enregistrer",
+      "CANCEL": "Annuler",
+      "UPDATE": "Mettre à jour",
+      "RESET": "Réinitialiser",
+      "APPLY": "Appliquer",
+      "EXPORT": "Exporter",
+      "EDIT": "Modifier",
+      "DELETE": "Supprimer",
+      "CLOSE": "Fermer"
+    },
+    "CURRENCY": {
+      "TND": "TND"
+    },
+    "CONFIRM": {
+      "DELETE_TITLE": "Supprimer l'élément ?",
+      "DELETE_TEXT": "Cette action est irréversible. Voulez-vous continuer ?",
+      "DELETE_CONFIRM": "Oui, supprimer"
+    },
+    "MESSAGES": {
+      "GENERIC_ERROR": "Une erreur est survenue. Veuillez réessayer."
+    },
+    "LANGUAGE": "Langue"
+  },
+  "AGENCIES": {
+    "TITLE": "Agences",
+    "ADD_BUTTON": "Ajouter une agence",
+    "LOADING": "Chargement des agences...",
+    "EMPTY": "Aucune agence trouvée.",
+    "MODAL": {
+      "EDIT_TITLE": "Modifier l'agence",
+      "ADD_TITLE": "Ajouter une agence",
+      "PHONE_CODE_PLACEHOLDER": "Indicatif",
+      "PHONE_NUMBER_PLACEHOLDER": "Numéro de téléphone",
+      "ERRORS": {
+        "NAME_REQUIRED": "Le nom de l'agence est obligatoire.",
+        "ADDRESS_REQUIRED": "L'adresse de l'agence est obligatoire.",
+        "EMAIL_INVALID": "Veuillez saisir une adresse e-mail valide.",
+        "PHONE_REQUIRED": "L'indicatif et le numéro sont obligatoires."
+      }
+    },
+    "TEMPLATE": {
+      "TITLE": "Modèle pour {{name}}",
+      "LABEL": "Modèle d'e-mail de billet (HTML)",
+      "PREVIEW_TOGGLE": "Prévisualiser le modèle",
+      "PLACEHOLDER": "Collez ici le modèle HTML. Vous pouvez utiliser des variables comme {{customerName}} ou {{tripReference}}.",
+      "USE_DEFAULT": "Utiliser le modèle par défaut"
+    }
+  },
+  "PLACES": {
+    "TITLE": "Lieux",
+    "ADD_BUTTON": "Ajouter un lieu",
+    "LOADING": "Chargement des lieux...",
+    "EMPTY": "Aucun lieu disponible.",
+    "MODAL": {
+      "EDIT_TITLE": "Modifier le lieu",
+      "ADD_TITLE": "Ajouter un lieu",
+      "LOCATION_LABEL": "Position sur la carte",
+      "LOCATION_HELP": "Cliquez sur la carte pour définir la latitude et la longitude.",
+      "ERRORS": {
+        "CITY_REQUIRED": "La ville est obligatoire."
+      }
+    }
+  },
+  "TRIPS": {
+    "TITLE": "Voyages",
+    "ADD_BUTTON": "Ajouter un voyage",
+    "LOADING": "Chargement des voyages...",
+    "EMPTY": "Aucun voyage disponible.",
+    "STATUS": {
+      "SCHEDULED": "Prévu",
+      "COMPLETED": "Terminé",
+      "CANCELLED": "Annulé"
+    },
+    "MESSAGES": {
+      "STATUS_CONFIRM_TITLE": "Modifier le statut du voyage",
+      "STATUS_CONFIRM_TEXT": "Voulez-vous définir ce voyage sur {{status}} ?",
+      "STATUS_CONFIRM_OK": "Oui, modifier",
+      "STATUS_UPDATE_SUCCESS": "Statut du voyage mis à jour.",
+      "STATUS_UPDATE_ERROR": "Impossible de mettre à jour le statut du voyage.",
+      "LOAD_ERROR": "Impossible de charger les voyages. Réessayez plus tard.",
+      "SAVE_SUCCESS": "Voyage enregistré avec succès.",
+      "DELETE_SUCCESS": "Voyage supprimé avec succès.",
+      "DELETE_ERROR": "Impossible de supprimer le voyage."
+    },
+    "MODAL": {
+      "EDIT_TITLE": "Modifier le voyage",
+      "ADD_TITLE": "Ajouter un voyage",
+      "AGENCY_PLACEHOLDER": "Sélectionnez une agence",
+      "ORIGIN_PLACEHOLDER": "Sélectionnez l'origine",
+      "DESTINATION_PLACEHOLDER": "Sélectionnez la destination",
+      "DEPARTURE_DATE_LABEL": "Date de départ",
+      "DEPARTURE_DATE_PLACEHOLDER": "Choisissez une date de départ",
+      "CLEAR_DATE": "Effacer la date",
+      "ERRORS": {
+        "ORIGIN_REQUIRED": "L'origine est obligatoire.",
+        "DESTINATION_REQUIRED": "La destination est obligatoire.",
+        "DEPARTURE_REQUIRED": "La date de départ est obligatoire.",
+        "PRICE_INVALID": "Entrez un prix valide.",
+        "SEATS_REQUIRED": "Le nombre de places disponibles est obligatoire."
+      }
+    }
+  },
+  "TICKETS": {
+    "TITLE": "Billets",
+    "LOADING": "Chargement des billets...",
+    "EMPTY": "Aucun billet trouvé.",
+    "DEFAULT_PASSENGER": "Passager",
+    "LABEL": {
+      "PASSENGER": "Passager",
+      "AGENCY": "Agence",
+      "SEATS": "Places",
+      "AMOUNT": "Montant",
+      "CREATED_AT": "Créé le"
+    },
+    "ACTIONS": {
+      "SEND_EMAIL": "Envoyer le billet par e-mail",
+      "VIEW_DETAILS": "Voir les détails"
+    },
+    "MODAL": {
+      "TITLE": "Billet {{reference}}"
+    },
+    "STATUS": {
+      "BOOKED": "Réservé",
+      "PAID": "Payé",
+      "CANCELLED": "Annulé",
+      "EXPIRED": "Expiré"
+    },
+    "MESSAGES": {
+      "LOAD_ERROR_TITLE": "Impossible de charger les billets",
+      "LOAD_ERROR_TEXT": "Actualisez la page ou réessayez plus tard.",
+      "STATUS_CONFIRM_TITLE": "Modifier le statut du billet",
+      "STATUS_CONFIRM_TEXT": "Voulez-vous définir ce billet sur {{status}} ?",
+      "STATUS_CONFIRM_OK": "Oui, modifier",
+      "STATUS_SUCCESS": "Statut du billet mis à jour.",
+      "STATUS_ERROR": "Impossible de mettre à jour le statut du billet.",
+      "EMAIL_CONFIRM_TITLE": "Envoyer le billet par e-mail",
+      "EMAIL_CONFIRM_TEXT": "Envoyer le billet à {{email}} ?",
+      "EMAIL_CONFIRM_OK": "Oui, envoyer",
+      "EMAIL_SUCCESS_TITLE": "E-mail envoyé",
+      "EMAIL_SUCCESS_TEXT": "Le billet a été envoyé à {{email}}.",
+      "EMAIL_ERROR": "Impossible d'envoyer le billet."
+    }
+  },
+  "CUSTOMERS": {
+    "SEARCH_PLACEHOLDER": "Rechercher des clients",
+    "FILTER": {
+      "BUTTON": "Filtrer",
+      "TITLE": "Options de filtrage",
+      "TWO_FACTOR": "Authentification à deux facteurs",
+      "TWO_FACTOR_ENABLED": "Activée"
+    },
+    "ROLES": {
+      "ADMINISTRATOR": "Administrateur",
+      "ANALYST": "Analyste",
+      "DEVELOPER": "Développeur",
+      "SUPPORT": "Support",
+      "TRIAL": "Essai",
+      "CUSTOMER": "Client",
+      "ADMIN": "Administrateur",
+      "MANAGER": "Manager",
+      "DRIVER": "Chauffeur"
+    },
+    "ADD_BUTTON": "Ajouter un client",
+    "LOADING": "Chargement des clients...",
+    "EMPTY": "Aucun client trouvé.",
+    "SELECTION": {
+      "SELECTED": "sélectionné(s)",
+      "DELETE_SELECTED": "Supprimer la sélection"
+    },
+    "TABLE": {
+      "CUSTOMER": "Client",
+      "CREATED_AT": "Créé le"
+    },
+    "MODAL": {
+      "EDIT_TITLE": "Modifier le client",
+      "ADD_TITLE": "Ajouter un client",
+      "PHONE_CODE": "Indicatif",
+      "PHONE_NUMBER": "Numéro de téléphone",
+      "ERRORS": {
+        "FIRST_NAME": "Le prénom est obligatoire.",
+        "LAST_NAME": "Le nom est obligatoire.",
+        "EMAIL": "Veuillez saisir une adresse e-mail valide.",
+        "PHONE_CODE": "L'indicatif est obligatoire.",
+        "PHONE_NUMBER": "Le numéro de téléphone est obligatoire."
+      }
+    }
+  }
+}

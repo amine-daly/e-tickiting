@@ -1,8 +1,10 @@
 // Localization is based on '@ngx-translate/core';
 // Please be familiar with official documentations first => https://github.com/ngx-translate/core
 
-import { Injectable } from '@angular/core';
+import { isPlatformBrowser } from '@angular/common';
+import { Inject, Injectable, PLATFORM_ID } from '@angular/core';
 import { TranslateService } from '@ngx-translate/core';
+import { CookieService } from 'ngx-cookie-service';
 
 export interface Locale {
   lang: string;
@@ -18,44 +20,35 @@ export class TranslationService {
   // Private properties
   private langIds: any = [];
 
-  constructor(private translate: TranslateService) {
-    // add new langIds to the list
-    this.translate.addLangs(['en']);
+  constructor(
+    public translate: TranslateService,
+    private cookieService: CookieService,
+    @Inject(PLATFORM_ID) private platformId: Object
+  ) {
+    if (isPlatformBrowser(this.platformId)) {
+      let browserLang: any;
 
-    // this language will be used as a fallback when a translation isn't found in the current language
-    this.translate.setDefaultLang('en');
-  }
+      const allowedLanguages = ['fr-fr', 'ar-tn', 'en-gb', 'de'];
+      this.translate.addLangs(allowedLanguages);
 
-  loadTranslations(...args: Locale[]): void {
-    const locales = [...args];
+      if (this.cookieService.check('lang')) {
+        browserLang = this.cookieService.get('lang');
+      } else {
+        browserLang = translate.getBrowserLang();
+      }
 
-    locales.forEach((locale) => {
-      // use setTranslation() with the third argument set to true
-      // to append translations instead of replacing them
-      this.translate.setTranslation(locale.lang, locale.data, true);
-      this.langIds.push(locale.lang);
-    });
-
-    // add new languages to the list
-    this.translate.addLangs(this.langIds);
-    this.translate.use(this.getSelectedLanguage());
-  }
-
-  setLanguage(lang: string) {
-    if (lang) {
-      this.translate.use(this.translate.getDefaultLang());
-      this.translate.use(lang);
-      localStorage.setItem(LOCALIZATION_LOCAL_STORAGE_KEY, lang);
+      this.setLanguage(
+        allowedLanguages.includes(browserLang) ? browserLang : 'fr-fr'
+      );
     }
   }
 
-  /**
-   * Returns selected language
-   */
-  getSelectedLanguage(): any {
-    return (
-      localStorage.getItem(LOCALIZATION_LOCAL_STORAGE_KEY) ||
-      this.translate.getDefaultLang()
+  setLanguage(lang: string) {
+    this.translate.use(lang);
+    console.log(
+      '🚀 ~ TranslationService ~ setLanguage ~ this.translate:',
+      this.translate
     );
+    this.cookieService.set('lang', lang);
   }
 }

@@ -11,29 +11,30 @@ import { finalize } from 'rxjs/operators';
 import { AlertService } from '../../core/services/alert.service';
 import { Ticket, TicketStatus } from '../../core/models/ticket.model';
 import { TicketService } from './ticket.service';
+import { TranslateModule, TranslateService } from '@ngx-translate/core';
 
 @Component({
   standalone: true,
   selector: 'app-ticket-list',
   templateUrl: './ticket-list.component.html',
   styleUrls: ['./ticket-list.component.scss'],
-  imports: [CommonModule, NgbDropdownModule, NgbTooltipModule],
+  imports: [CommonModule, NgbDropdownModule, NgbTooltipModule, TranslateModule],
 })
 export class TicketListComponent implements OnInit, OnDestroy {
   tickets$ = this.ticketService.tickets$;
   loading$ = this.ticketService.loading$;
 
-  statusOptions: Array<{ value: TicketStatus; label: string }> = [
-    { value: TicketStatus.BOOKED, label: 'Booked' },
-    { value: TicketStatus.PAID, label: 'Paid' },
-    { value: TicketStatus.CANCELLED, label: 'Cancelled' },
+  statusOptions: Array<{ value: TicketStatus; labelKey: string }> = [
+    { value: TicketStatus.BOOKED, labelKey: 'TICKETS.STATUS.BOOKED' },
+    { value: TicketStatus.PAID, labelKey: 'TICKETS.STATUS.PAID' },
+    { value: TicketStatus.CANCELLED, labelKey: 'TICKETS.STATUS.CANCELLED' },
   ];
 
   statusLabelMap: Record<TicketStatus, string> = {
-    [TicketStatus.BOOKED]: 'Réservé',
-    [TicketStatus.PAID]: 'Payé',
-    [TicketStatus.CANCELLED]: 'Annulé',
-    [TicketStatus.EXPIRED]: 'Expiré',
+    [TicketStatus.BOOKED]: 'TICKETS.STATUS.BOOKED',
+    [TicketStatus.PAID]: 'TICKETS.STATUS.PAID',
+    [TicketStatus.CANCELLED]: 'TICKETS.STATUS.CANCELLED',
+    [TicketStatus.EXPIRED]: 'TICKETS.STATUS.EXPIRED',
   };
 
   badgeClass: Record<TicketStatus, string> = {
@@ -51,7 +52,8 @@ export class TicketListComponent implements OnInit, OnDestroy {
   constructor(
     private ticketService: TicketService,
     private modalService: NgbModal,
-    private alert: AlertService
+    private alert: AlertService,
+    private translate: TranslateService
   ) {}
 
   ngOnInit(): void {
@@ -62,8 +64,8 @@ export class TicketListComponent implements OnInit, OnDestroy {
     const sub = this.ticketService.fetchTickets().subscribe({
       error: () =>
         this.alert.error(
-          'Impossible de charger les tickets',
-          'Réessayez ultérieurement'
+          this.t('TICKETS.MESSAGES.LOAD_ERROR_TITLE'),
+          this.t('TICKETS.MESSAGES.LOAD_ERROR_TEXT')
         ),
     });
     this.subscriptions.add(sub);
@@ -78,13 +80,12 @@ export class TicketListComponent implements OnInit, OnDestroy {
     if (!ticket || ticket.status === nextStatus) {
       return;
     }
+    const statusLabel = this.t(this.statusLabelMap[nextStatus] || nextStatus);
     const result = await this.alert.confirm(
-      'Confirmer le changement de statut',
-      `Voulez-vous vraiment changer le statut du ticket à « ${
-        this.statusLabelMap[nextStatus] || nextStatus
-      } » ?`,
-      'Oui, changer',
-      'Annuler'
+      this.t('TICKETS.MESSAGES.STATUS_CONFIRM_TITLE'),
+      this.t('TICKETS.MESSAGES.STATUS_CONFIRM_TEXT', { status: statusLabel }),
+      this.t('TICKETS.MESSAGES.STATUS_CONFIRM_OK'),
+      this.t('COMMON.BUTTON.CANCEL')
     );
     if (!result.isConfirmed) {
       return;
@@ -94,8 +95,9 @@ export class TicketListComponent implements OnInit, OnDestroy {
       .updateStatus(ticket.id, nextStatus)
       .pipe(finalize(() => (this.statusUpdating[ticket.id] = false)))
       .subscribe({
-        next: () => this.alert.success('Statut mis à jour'),
-        error: () => this.alert.error('Impossible de mettre à jour le statut'),
+        next: () =>
+          this.alert.success(this.t('TICKETS.MESSAGES.STATUS_SUCCESS')),
+        error: () => this.alert.error(this.t('TICKETS.MESSAGES.STATUS_ERROR')),
       });
     this.subscriptions.add(sub);
   }
@@ -105,10 +107,12 @@ export class TicketListComponent implements OnInit, OnDestroy {
       return;
     }
     const result = await this.alert.confirm(
-      'Confirmer l’envoi',
-      `Voulez-vous envoyer le ticket à « ${ticket.user?.email || '—'} » ?`,
-      'Oui, envoyer',
-      'Annuler'
+      this.t('TICKETS.MESSAGES.EMAIL_CONFIRM_TITLE'),
+      this.t('TICKETS.MESSAGES.EMAIL_CONFIRM_TEXT', {
+        email: ticket.user?.email || '—',
+      }),
+      this.t('TICKETS.MESSAGES.EMAIL_CONFIRM_OK'),
+      this.t('COMMON.BUTTON.CANCEL')
     );
     if (!result.isConfirmed) {
       return;
@@ -121,11 +125,15 @@ export class TicketListComponent implements OnInit, OnDestroy {
         next: (response) => {
           this.emailSending[ticket.id] = false;
           this.alert.success(
-            'Email envoyé',
-            response?.email ? `Destinataire : ${response.email}` : undefined
+            this.t('TICKETS.MESSAGES.EMAIL_SUCCESS_TITLE'),
+            response?.email
+              ? this.t('TICKETS.MESSAGES.EMAIL_SUCCESS_TEXT', {
+                  email: response.email,
+                })
+              : undefined
           );
         },
-        error: () => this.alert.error("L'envoi de l'email a échoué"),
+        error: () => this.alert.error(this.t('TICKETS.MESSAGES.EMAIL_ERROR')),
       });
     this.subscriptions.add(sub);
   }
@@ -142,12 +150,16 @@ export class TicketListComponent implements OnInit, OnDestroy {
     const first = ticket?.user?.firstName?.trim() ?? '';
     const last = ticket?.user?.lastName?.trim() ?? '';
     const full = `${first} ${last}`.trim();
-    return full || 'Client';
+    return full || this.t('TICKETS.DEFAULT_PASSENGER');
   }
 
   seatList(ticket: Ticket): string {
     return (ticket?.seats || [])
       .map((seat) => seat.label || `${seat.row}-${seat.col}`)
       .join(', ');
+  }
+
+  private t(key: string, params?: Record<string, unknown>): string {
+    return this.translate.instant(key, params);
   }
 }

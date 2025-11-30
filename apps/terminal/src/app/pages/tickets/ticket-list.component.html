@@ -2,12 +2,12 @@
     <div class="card">
         <div class="card-body">
             <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-3">
-                <h2 class="mb-0">Tickets</h2>
+                <h2 class="mb-0">{{ 'TICKETS.TITLE' | translate }}</h2>
             </div>
 
             <div *ngIf="loading$ | async" class="text-center my-5">
                 <span class="spinner-border spinner-border-lg"></span>
-                <div>Chargement des tickets...</div>
+                <div>{{ 'TICKETS.LOADING' | translate }}</div>
             </div>
 
             <ng-container *ngIf="!(loading$ | async) && (tickets$ | async)?.length">
@@ -16,14 +16,14 @@
                         class="table table-row-dashed table-row-gray-300 align-middle gs-0 gy-4">
                         <thead>
                             <tr class="fw-bolder text-muted">
-                                <th class="min-w-150px">Référence</th>
-                                <th class="min-w-200px">Passager</th>
-                                <th class="min-w-120px">Agence</th>
-                                <th class="min-w-120px">Statut</th>
-                                <th class="min-w-180px">Places</th>
-                                <th class="min-w-120px">Montant</th>
-                                <th class="min-w-150px">Créé le</th>
-                                <th class="min-w-150px text-end">Actions</th>
+                                <th class="min-w-150px">{{ 'COMMON.LABEL.REFERENCE' | translate }}</th>
+                                <th class="min-w-200px">{{ 'TICKETS.LABEL.PASSENGER' | translate }}</th>
+                                <th class="min-w-120px">{{ 'TICKETS.LABEL.AGENCY' | translate }}</th>
+                                <th class="min-w-120px">{{ 'COMMON.LABEL.STATUS' | translate }}</th>
+                                <th class="min-w-180px">{{ 'TICKETS.LABEL.SEATS' | translate }}</th>
+                                <th class="min-w-120px">{{ 'TICKETS.LABEL.AMOUNT' | translate }}</th>
+                                <th class="min-w-150px">{{ 'TICKETS.LABEL.CREATED_AT' | translate }}</th>
+                                <th class="min-w-150px text-end">{{ 'COMMON.LABEL.ACTIONS' | translate }}</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -42,11 +42,12 @@
                                 <td>
                                     <span class="badge"
                                         [ngClass]="badgeClass[ticket?.status] || 'badge-light-secondary'">
-                                        {{ statusLabelMap[ticket?.status] || ticket?.status }}
+                                        {{ (statusLabelMap[ticket?.status] || ticket?.status) | translate }}
                                     </span>
                                 </td>
                                 <td>
-                                    <div class="fw-semibold">{{ ticket?.seats?.length || 0 }} sièges</div>
+                                    <div class="fw-semibold">{{ ticket?.seats?.length || 0 }} {{ 'TICKETS.LABEL.SEATS' |
+                                        translate }}</div>
                                     <div class="text-muted small text-truncate seats-column">
                                         {{ seatList(ticket) }}
                                     </div>
@@ -54,7 +55,7 @@
                                 <td>
                                     <div class="fw-semibold">
                                         {{ ticket?.totalAmount || ticket?.unitPrice || 0 | number: '1.2-2' }}
-                                        {{ ticket?.currency || 'TND' }}
+                                        {{ ticket?.currency || ('COMMON.CURRENCY.TND' | translate) }}
                                     </div>
                                 </td>
                                 <td>
@@ -78,7 +79,7 @@
                                                     *ngFor="let option of statusOptions"
                                                     [disabled]="ticket.status === option.value"
                                                     (click)="changeStatus(ticket, option.value)">
-                                                    <span>{{ option.label }}</span>
+                                                    <span>{{ option.labelKey | translate }}</span>
                                                     <i *ngIf="ticket.status === option.value"
                                                         class="ki-duotone ki-check fs-4 text-success">
                                                         <span class="path1"></span>
@@ -89,7 +90,7 @@
                                         </div>
 
                                         <button (click)="sendEmail(ticket)" [disabled]="emailSending[ticket.id]"
-                                            ngbTooltip="Envoyer par email"
+                                            [ngbTooltip]="'TICKETS.ACTIONS.SEND_EMAIL' | translate"
                                             class="btn btn-icon btn-active-light-warning w-30px h-30px me-3"
                                             data-action="edit" data-id="605">
                                             <span *ngIf="emailSending[ticket.id]"
@@ -100,7 +101,7 @@
 
                                         <button class="btn btn-icon btn-active-light-primary w-30px h-30px me-3"
                                             (click)="openTicketModal(ticketDetails, ticket)"
-                                            ngbTooltip="Voir les détails">
+                                            [ngbTooltip]="'TICKETS.ACTIONS.VIEW_DETAILS' | translate">
                                             <i class="ki-duotone ki-information fs-2"><span class="path1"></span><span
                                                     class="path2"></span></i>
                                         </button>
@@ -112,52 +113,55 @@
                 </div>
             </ng-container>
             <div *ngIf="!(tickets$ | async)?.length" class="alert alert-info mb-0">
-                Aucun ticket disponible.
+                {{ 'TICKETS.EMPTY' | translate }}
             </div>
         </div>
     </div>
 
     <ng-template #ticketDetails let-modal>
         <div class="modal-header">
-            <h5 class="modal-title">Ticket {{ selectedTicket?.reference }}</h5>
-            <button type="button" class="btn-close" aria-label="Fermer" (click)="modal.dismiss('close')"></button>
+            <h5 class="modal-title">{{ 'TICKETS.MODAL.TITLE' | translate:{ reference: selectedTicket?.reference } }}
+            </h5>
+            <button type="button" class="btn-close" [attr.aria-label]="'COMMON.BUTTON.CLOSE' | translate"
+                (click)="modal.dismiss('close')"></button>
         </div>
         <div class="modal-body" *ngIf="selectedTicket as ticket">
             <div class="row g-4">
                 <div class="col-md-6">
-                    <h6 class="text-muted text-uppercase">Passager</h6>
+                    <h6 class="text-muted text-uppercase">{{ 'TICKETS.LABEL.PASSENGER' | translate }}</h6>
                     <p class="mb-1 fw-semibold">{{ getPassengerName(ticket) }}</p>
                     <p class="mb-0 text-muted small">{{ ticket.user?.email || '—' }}</p>
                 </div>
                 <div class="col-md-6">
-                    <h6 class="text-muted text-uppercase">Statut</h6>
+                    <h6 class="text-muted text-uppercase">{{ 'COMMON.LABEL.STATUS' | translate }}</h6>
                     <span class="badge" [ngClass]="badgeClass[ticket.status]">
-                        {{ statusLabelMap[ticket.status] || ticket.status }}
+                        {{ (statusLabelMap[ticket.status] || ticket.status) | translate }}
                     </span>
                 </div>
                 <div class="col-md-6">
-                    <h6 class="text-muted text-uppercase">Montant</h6>
+                    <h6 class="text-muted text-uppercase">{{ 'TICKETS.LABEL.AMOUNT' | translate }}</h6>
                     <p class="mb-0 fw-semibold">
                         {{ ticket.totalAmount || ticket.unitPrice || 0 | number: '1.2-2' }}
-                        {{ ticket.currency || 'TND' }}
+                        {{ ticket.currency || ('COMMON.CURRENCY.TND' | translate) }}
                     </p>
                 </div>
                 <div class="col-md-6">
-                    <h6 class="text-muted text-uppercase">Créé le</h6>
+                    <h6 class="text-muted text-uppercase">{{ 'TICKETS.LABEL.CREATED_AT' | translate }}</h6>
                     <p class="mb-0">{{ ticket.createdAt | date: 'long' }}</p>
                 </div>
                 <div class="col-md-6">
-                    <h6 class="text-muted text-uppercase">Places</h6>
+                    <h6 class="text-muted text-uppercase">{{ 'TICKETS.LABEL.SEATS' | translate }}</h6>
                     <p class="mb-0">{{ seatList(ticket) }}</p>
                 </div>
                 <div class="col-md-6">
-                    <h6 class="text-muted text-uppercase">Agence</h6>
+                    <h6 class="text-muted text-uppercase">{{ 'TICKETS.LABEL.AGENCY' | translate }}</h6>
                     <p class="mb-0">{{ ticket?.agency?.name || '—' }}</p>
                 </div>
             </div>
         </div>
         <div class="modal-footer">
-            <button type="button" class="btn btn-secondary" (click)="modal.close()">Fermer</button>
+            <button type="button" class="btn btn-secondary" (click)="modal.close()">{{ 'COMMON.BUTTON.CLOSE' | translate
+                }}</button>
         </div>
     </ng-template>
 </div>

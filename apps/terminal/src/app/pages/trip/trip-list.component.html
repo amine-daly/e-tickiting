@@ -3,19 +3,19 @@
         <div class="card">
             <div class="card-body">
                 <div class="d-flex justify-content-between align-items-center mb-4">
-                    <h2 class="mb-0">Voyages</h2>
+                    <h2 class="mb-0">{{ 'TRIPS.TITLE' | translate }}</h2>
                     <div>
-                        <button class="btn btn-primary me-2" (click)="openTripModal(tripModal, null)">Ajouter un
-                            voyage</button>
+                        <button class="btn btn-primary me-2" (click)="openTripModal(tripModal, null)">{{
+                            'TRIPS.ADD_BUTTON' | translate }}</button>
                     </div>
                 </div>
 
                 <div *ngIf="(loading$ | async)" class="text-center my-5">
                     <span class="spinner-border spinner-border-lg"></span>
-                    <div>Chargement des voyages...</div>
+                    <div>{{ 'TRIPS.LOADING' | translate }}</div>
                 </div>
-                <div *ngIf="!(loading$ | async) && !(trips$ | async)?.length" class="alert alert-info">Aucun
-                    voyage trouvé.</div>
+                <div *ngIf="!(loading$ | async) && !(trips$ | async)?.length" class="alert alert-info">{{ 'TRIPS.EMPTY'
+                    | translate }}</div>
 
                 <div *ngIf="!(loading$ | async) && (trips$ | async)?.length" class="table-responsive">
                     <!-- begin::Table -->
@@ -25,14 +25,14 @@
                         <thead>
                             <tr class="fw-bolder text-muted">
                                 <th></th>
-                                <th class="min-w-150px">Origine</th>
-                                <th class="min-w-150px">Destination</th>
-                                <th class="min-w-120px">Date</th>
-                                <th class="min-w-120px">Statut</th>
-                                <th class="min-w-120px">Agence</th>
-                                <th class="min-w-100px">Prix</th>
-                                <th class="min-w-100px">Places disponibles</th>
-                                <th class="min-w-100px text-end">Actions</th>
+                                <th class="min-w-150px">{{ 'COMMON.LABEL.ORIGIN' | translate }}</th>
+                                <th class="min-w-150px">{{ 'COMMON.LABEL.DESTINATION' | translate }}</th>
+                                <th class="min-w-120px">{{ 'COMMON.LABEL.DATE' | translate }}</th>
+                                <th class="min-w-120px">{{ 'COMMON.LABEL.STATUS' | translate }}</th>
+                                <th class="min-w-120px">{{ 'COMMON.LABEL.AGENCY' | translate }}</th>
+                                <th class="min-w-100px">{{ 'COMMON.LABEL.PRICE' | translate }}</th>
+                                <th class="min-w-100px">{{ 'COMMON.LABEL.AVAILABLE_SEATS' | translate }}</th>
+                                <th class="min-w-100px text-end">{{ 'COMMON.LABEL.ACTIONS' | translate }}</th>
                             </tr>
                         </thead>
                         <!-- end::Table head -->
@@ -60,11 +60,11 @@
                                             'badge-light-success': data?.status === 'COMPLETED',
                                             'badge-light-danger': data?.status === 'CANCELLED'
                                         }">
-                                        {{ statusLabelMap[data?.status] }}
+                                        {{ statusLabelMap[data?.status] | translate }}
                                     </span>
                                 </td>
                                 <td>{{ data?.agency?.name }}</td>
-                                <td>{{ data?.price | number:'1.3-3' }} DT </td>
+                                <td>{{ data?.price | number:'1.3-3' }} {{ 'COMMON.CURRENCY.TND' | translate }} </td>
                                 <td>{{ data?.availableSeats }}</td>
                                 <td>
                                     <div class="d-flex justify-content-end flex-shrink-0">
@@ -83,7 +83,7 @@
                                                     *ngFor="let option of statusOptions"
                                                     [disabled]="data.status === option.value"
                                                     (click)="changeStatus(data, option.value)">
-                                                    <span>{{ option.label }}</span>
+                                                    <span>{{ option.labelKey | translate }}</span>
                                                     <i *ngIf="data.status === option.value"
                                                         class="ki-duotone ki-check fs-2">
                                                         <span class="path1"></span>
@@ -119,73 +119,80 @@
     </div>
     <ng-template #tripModal let-modal>
         <div class="modal-header">
-            <h5 class="modal-title">{{ editing ? 'Modifier un voyage' : 'Ajouter un voyage' }}</h5>
+            <h5 class="modal-title">{{ (editing ? 'TRIPS.MODAL.EDIT_TITLE' : 'TRIPS.MODAL.ADD_TITLE') | translate }}
+            </h5>
             <button type="button" class="btn-close" aria-label="Fermer" (click)="modal.dismiss('Cross click')"></button>
         </div>
         <form [formGroup]="form">
             <div class="modal-body">
                 <div class="mb-3">
-                    <label>Agence</label>
+                    <label>{{ 'COMMON.LABEL.AGENCY' | translate }}</label>
                     <ng-select required [items]="agencies$ | async" bindLabel="name" bindValue="id"
-                        formControlName="agencyId" placeholder="Sélectionner une agence" [clearable]="true">
+                        formControlName="agencyId" [placeholder]="'TRIPS.MODAL.AGENCY_PLACEHOLDER' | translate"
+                        [clearable]="true">
                         <ng-template ng-label-tmp let-item="item">{{ item.name }}</ng-template>
                         <ng-template ng-option-tmp let-item="item">{{ item.name }}</ng-template>
                     </ng-select>
                 </div>
                 <div class="mb-3">
-                    <label>Origine <span class="text-danger">*</span></label>
+                    <label>{{ 'COMMON.LABEL.ORIGIN' | translate }} <span class="text-danger">*</span></label>
                     <ng-select [items]="places$ | async" bindLabel="city" bindValue="id" formControlName="originId"
-                        placeholder="Sélectionner l'origine" [clearable]="true">
+                        [placeholder]="'TRIPS.MODAL.ORIGIN_PLACEHOLDER' | translate" [clearable]="true">
                         <ng-template ng-label-tmp let-item="item">{{ item.city }}</ng-template>
                         <ng-template ng-option-tmp let-item="item">{{ item.city }}</ng-template>
                     </ng-select>
-                    <div *ngIf="isInvalid('originId')" class="text-danger small">L'origine est requise.</div>
+                    <div *ngIf="isInvalid('originId')" class="text-danger small">{{ 'TRIPS.MODAL.ERRORS.ORIGIN_REQUIRED'
+                        | translate }}</div>
                 </div>
                 <div class="mb-3">
-                    <label>Destination <span class="text-danger">*</span></label>
+                    <label>{{ 'COMMON.LABEL.DESTINATION' | translate }} <span class="text-danger">*</span></label>
                     <ng-select [items]="places$ | async" bindLabel="city" bindValue="id" formControlName="destinationId"
-                        placeholder="Sélectionner la destination" [clearable]="true">
+                        [placeholder]="'TRIPS.MODAL.DESTINATION_PLACEHOLDER' | translate" [clearable]="true">
                         <ng-template ng-label-tmp let-item="item">{{ item.city }}</ng-template>
                         <ng-template ng-option-tmp let-item="item">{{ item.city }}</ng-template>
                     </ng-select>
-                    <div *ngIf="isInvalid('destinationId')" class="text-danger small">La destination est requise.</div>
+                    <div *ngIf="isInvalid('destinationId')" class="text-danger small">{{
+                        'TRIPS.MODAL.ERRORS.DESTINATION_REQUIRED' | translate }}</div>
                 </div>
 
                 <div class="mb-3">
-                    <label>Date de départ <span class="text-danger">*</span></label>
+                    <label>{{ 'TRIPS.MODAL.DEPARTURE_DATE_LABEL' | translate }} <span
+                            class="text-danger">*</span></label>
                     <div class="input-group d-flex align-items-center">
                         <input class="form-control flatpickr-input" type="text"
-                            placeholder="Sélectionner la date de départ" mwlFlatpickr [altInput]="true"
-                            [convertModelValue]="true" [enableTime]="true" [altFormat]="'F j, Y h:i K'"
-                            [dateFormat]="'Y-m-d H:i'" formControlName="departureDate">
+                            [placeholder]="'TRIPS.MODAL.DEPARTURE_DATE_PLACEHOLDER' | translate" mwlFlatpickr
+                            [altInput]="true" [convertModelValue]="true" [enableTime]="true"
+                            [altFormat]="'F j, Y h:i K'" [dateFormat]="'Y-m-d H:i'" formControlName="departureDate">
                         <a *ngIf="form.get('departureDate').value" (click)="form.get('departureDate').setValue('')"
-                            class="ms-2" title="Effacer la date">
+                            class="ms-2" [title]="'TRIPS.MODAL.CLEAR_DATE' | translate">
                             <app-keenicon name="close" class="fs-3"></app-keenicon>
                         </a>
                     </div>
-                    <div *ngIf="isInvalid('departureDate')" class="text-danger small">La date de départ est requise.
+                    <div *ngIf="isInvalid('departureDate')" class="text-danger small">{{
+                        'TRIPS.MODAL.ERRORS.DEPARTURE_REQUIRED' | translate }}
                     </div>
                 </div>
                 <div class="mb-3">
-                    <label>Prix <span class="text-danger">*</span></label>
+                    <label>{{ 'COMMON.LABEL.PRICE' | translate }} <span class="text-danger">*</span></label>
                     <input class="form-control" type="number" step="0.01" formControlName="price" />
-                    <div *ngIf="isInvalid('price')" class="text-danger small">Le prix doit être un nombre positif.
+                    <div *ngIf="isInvalid('price')" class="text-danger small">{{ 'TRIPS.MODAL.ERRORS.PRICE_INVALID' |
+                        translate }}
                     </div>
                 </div>
                 <div class="mb-3">
-                    <label>Places disponibles <span class="text-danger">*</span></label>
+                    <label>{{ 'COMMON.LABEL.AVAILABLE_SEATS' | translate }} <span class="text-danger">*</span></label>
                     <input class="form-control" type="number" min="0" formControlName="availableSeats" />
-                    <div *ngIf="isInvalid('availableSeats')" class="text-danger small">Veuillez indiquer le nombre de
-                        places disponibles.</div>
+                    <div *ngIf="isInvalid('availableSeats')" class="text-danger small">{{
+                        'TRIPS.MODAL.ERRORS.SEATS_REQUIRED' | translate }}</div>
                 </div>
             </div>
             <div class="modal-footer">
                 <button type="button" (click)="submit(modal)" class="btn btn-primary"
                     [disabled]="form.invalid || isButtonDisabled">
-                    Enregistrer
+                    {{ 'COMMON.BUTTON.SAVE' | translate }}
                 </button>
                 <button type="button" class="btn btn-secondary" (click)="modal.dismiss('Cross click')">
-                    Annuler
+                    {{ 'COMMON.BUTTON.CANCEL' | translate }}
                 </button>
             </div>
         </form>

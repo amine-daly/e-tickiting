@@ -1,0 +1,212 @@
+{
+  "COMMON": {
+    "LABEL": {
+      "NAME": "Name",
+      "ADDRESS": "Address",
+      "EMAIL": "Email",
+      "PHONE": "Phone",
+      "ACTIONS": "Actions",
+      "CITY": "City",
+      "LATITUDE": "Latitude",
+      "LONGITUDE": "Longitude",
+      "ORIGIN": "Origin",
+      "DESTINATION": "Destination",
+      "DATE": "Date",
+      "STATUS": "Status",
+      "AGENCY": "Agency",
+      "PRICE": "Price",
+      "AVAILABLE_SEATS": "Available seats",
+      "REFERENCE": "Reference",
+      "FIRST_NAME": "First name",
+      "LAST_NAME": "Last name",
+      "ROLE": "Role"
+    },
+    "BUTTON": {
+      "SAVE": "Save",
+      "CANCEL": "Cancel",
+      "UPDATE": "Update",
+      "RESET": "Reset",
+      "APPLY": "Apply",
+      "EXPORT": "Export",
+      "EDIT": "Edit",
+      "DELETE": "Delete",
+      "CLOSE": "Close"
+    },
+    "CURRENCY": {
+      "TND": "TND"
+    },
+    "CONFIRM": {
+      "DELETE_TITLE": "Delete item?",
+      "DELETE_TEXT": "This action cannot be undone. Do you want to continue?",
+      "DELETE_CONFIRM": "Yes, delete"
+    },
+    "MESSAGES": {
+      "GENERIC_ERROR": "Something went wrong. Please try again."
+    },
+    "LANGUAGE": "Language"
+  },
+  "AGENCIES": {
+    "TITLE": "Agencies",
+    "ADD_BUTTON": "Add agency",
+    "LOADING": "Loading agencies...",
+    "EMPTY": "No agencies found.",
+    "MODAL": {
+      "EDIT_TITLE": "Edit agency",
+      "ADD_TITLE": "Add agency",
+      "PHONE_CODE_PLACEHOLDER": "Country code",
+      "PHONE_NUMBER_PLACEHOLDER": "Phone number",
+      "ERRORS": {
+        "NAME_REQUIRED": "Agency name is required.",
+        "ADDRESS_REQUIRED": "Agency address is required.",
+        "EMAIL_INVALID": "Please enter a valid email address.",
+        "PHONE_REQUIRED": "Country code and phone number are required."
+      }
+    },
+    "TEMPLATE": {
+      "TITLE": "Template for {{name}}",
+      "LABEL": "Ticket email template (HTML)",
+      "PREVIEW_TOGGLE": "Preview template",
+      "PLACEHOLDER": "Paste the HTML template here. You can use placeholders such as {{customerName}} or {{tripReference}}.",
+      "USE_DEFAULT": "Use default template"
+    }
+  },
+  "PLACES": {
+    "TITLE": "Places",
+    "ADD_BUTTON": "Add place",
+    "LOADING": "Loading places...",
+    "EMPTY": "No places available.",
+    "MODAL": {
+      "EDIT_TITLE": "Edit place",
+      "ADD_TITLE": "Add place",
+      "LOCATION_LABEL": "Map location",
+      "LOCATION_HELP": "Click on the map to set the latitude and longitude.",
+      "ERRORS": {
+        "CITY_REQUIRED": "City is required."
+      }
+    }
+  },
+  "TRIPS": {
+    "TITLE": "Trips",
+    "ADD_BUTTON": "Add trip",
+    "LOADING": "Loading trips...",
+    "EMPTY": "No trips available.",
+    "STATUS": {
+      "SCHEDULED": "Scheduled",
+      "COMPLETED": "Completed",
+      "CANCELLED": "Cancelled"
+    },
+    "MESSAGES": {
+      "STATUS_CONFIRM_TITLE": "Change trip status",
+      "STATUS_CONFIRM_TEXT": "Do you want to set this trip to {{status}}?",
+      "STATUS_CONFIRM_OK": "Yes, change it",
+      "STATUS_UPDATE_SUCCESS": "Trip status updated successfully.",
+      "STATUS_UPDATE_ERROR": "Unable to update the trip status.",
+      "LOAD_ERROR": "Unable to load trips. Please try again later.",
+      "SAVE_SUCCESS": "Trip saved successfully.",
+      "DELETE_SUCCESS": "Trip deleted successfully.",
+      "DELETE_ERROR": "Unable to delete the trip."
+    },
+    "MODAL": {
+      "EDIT_TITLE": "Edit trip",
+      "ADD_TITLE": "Add trip",
+      "AGENCY_PLACEHOLDER": "Select an agency",
+      "ORIGIN_PLACEHOLDER": "Select origin",
+      "DESTINATION_PLACEHOLDER": "Select destination",
+      "DEPARTURE_DATE_LABEL": "Departure date",
+      "DEPARTURE_DATE_PLACEHOLDER": "Pick a departure date",
+      "CLEAR_DATE": "Clear date",
+      "ERRORS": {
+        "ORIGIN_REQUIRED": "Origin is required.",
+        "DESTINATION_REQUIRED": "Destination is required.",
+        "DEPARTURE_REQUIRED": "Departure date is required.",
+        "PRICE_INVALID": "Enter a valid price.",
+        "SEATS_REQUIRED": "Available seats are required."
+      }
+    }
+  },
+  "TICKETS": {
+    "TITLE": "Tickets",
+    "LOADING": "Loading tickets...",
+    "EMPTY": "No tickets found.",
+    "DEFAULT_PASSENGER": "Passenger",
+    "LABEL": {
+      "PASSENGER": "Passenger",
+      "AGENCY": "Agency",
+      "SEATS": "Seats",
+      "AMOUNT": "Amount",
+      "CREATED_AT": "Created at"
+    },
+    "ACTIONS": {
+      "SEND_EMAIL": "Send ticket email",
+      "VIEW_DETAILS": "View details"
+    },
+    "MODAL": {
+      "TITLE": "Ticket {{reference}}"
+    },
+    "STATUS": {
+      "BOOKED": "Booked",
+      "PAID": "Paid",
+      "CANCELLED": "Cancelled",
+      "EXPIRED": "Expired"
+    },
+    "MESSAGES": {
+      "LOAD_ERROR_TITLE": "Unable to load tickets",
+      "LOAD_ERROR_TEXT": "Please refresh the page or try again later.",
+      "STATUS_CONFIRM_TITLE": "Change ticket status",
+      "STATUS_CONFIRM_TEXT": "Do you want to set this ticket to {{status}}?",
+      "STATUS_CONFIRM_OK": "Yes, change it",
+      "STATUS_SUCCESS": "Ticket status updated successfully.",
+      "STATUS_ERROR": "Unable to update the ticket status.",
+      "EMAIL_CONFIRM_TITLE": "Send ticket email",
+      "EMAIL_CONFIRM_TEXT": "Send the ticket to {{email}}?",
+      "EMAIL_CONFIRM_OK": "Yes, send it",
+      "EMAIL_SUCCESS_TITLE": "Email sent",
+      "EMAIL_SUCCESS_TEXT": "The ticket email was sent to {{email}}.",
+      "EMAIL_ERROR": "Unable to send the ticket email."
+    }
+  },
+  "CUSTOMERS": {
+    "SEARCH_PLACEHOLDER": "Search customers",
+    "FILTER": {
+      "BUTTON": "Filter",
+      "TITLE": "Filter options",
+      "TWO_FACTOR": "Two-factor authentication",
+      "TWO_FACTOR_ENABLED": "Enabled"
+    },
+    "ROLES": {
+      "ADMINISTRATOR": "Administrator",
+      "ANALYST": "Analyst",
+      "DEVELOPER": "Developer",
+      "SUPPORT": "Support",
+      "TRIAL": "Trial",
+      "CUSTOMER": "Customer",
+      "ADMIN": "Administrator",
+      "MANAGER": "Manager",
+      "DRIVER": "Driver"
+    },
+    "ADD_BUTTON": "Add customer",
+    "LOADING": "Loading customers...",
+    "EMPTY": "No customers found.",
+    "SELECTION": {
+      "SELECTED": "selected",
+      "DELETE_SELECTED": "Delete selected"
+    },
+    "TABLE": {
+      "CUSTOMER": "Customer",
+      "CREATED_AT": "Created on"
+    },
+    "MODAL": {
+      "EDIT_TITLE": "Edit customer",
+      "ADD_TITLE": "Add customer",
+      "PHONE_CODE": "Phone code",
+      "PHONE_NUMBER": "Phone number",
+      "ERRORS": {
+        "FIRST_NAME": "First name is required.",
+        "LAST_NAME": "Last name is required.",
+        "EMAIL": "Please enter a valid email address.",
+        "PHONE_CODE": "Phone code is required.",
+        "PHONE_NUMBER": "Phone number is required."
+      }
+    }
+  }
+}
