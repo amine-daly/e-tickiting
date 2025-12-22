@@ -3,7 +3,7 @@ import { Observable, BehaviorSubject, of } from 'rxjs';
 import { map, catchError } from 'rxjs/operators';
 import { AuthHTTPService } from './auth-http';
 import { Router } from '@angular/router';
-import { UserType } from '../models/user-type';
+import { UserType } from '../../../core/models/user-type';
 import { AuthUtils } from '../utils/auth.utils';
 
 @Injectable({
@@ -47,7 +47,6 @@ export class AuthService {
     this.isLoading.next(true);
     return this.authHttpService.login(email, password).pipe(
       map((res) => {
-        console.log('🚀 ~ AuthService ~ login ~ res:', res);
         this.accessToken = res.token;
         const result = res.user;
         this.currentUser.next(result);

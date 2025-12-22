@@ -1,4 +1,4 @@
 // models
-export * from './models/auth.model';
+export * from '../../core/models/auth.model';
 // services
 export * from './services/auth.service';

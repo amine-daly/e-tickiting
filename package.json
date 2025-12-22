@@ -10,6 +10,7 @@
         "test": "echo test placeholder",
         "start:terminal": "npm --prefix apps/terminal start --o",
         "start": "npm --prefix apps/terminal start --o",
+        "start:frontend": "npm --prefix apps/frontend start --o",
         "start:backend": "cd apps/backend && mvnw.cmd spring-boot:run",
         "build:backend": "cd apps/backend && mvnw.cmd -DskipTests clean package"
     },

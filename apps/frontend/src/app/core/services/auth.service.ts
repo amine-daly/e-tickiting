@@ -1,16 +1,25 @@
 import { inject, Injectable, signal } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { AuthResponse, User } from '../models/api';
-import { EMPTY, Observable } from 'rxjs';
+import { BehaviorSubject, EMPTY, Observable } from 'rxjs';
 import { catchError, take, tap } from 'rxjs/operators';
+import { AppsEnum, UserType } from '../models/user-type';
+import { AuthResponse } from '../models/auth.model';
 
 @Injectable({ providedIn: 'root' })
 export class AuthService {
-  private http = inject(HttpClient);
-  user = signal<User | null>(null);
   token = signal<string | null>(localStorage.getItem('accessToken'));
 
-  constructor() {
+  private authenticated = new BehaviorSubject<boolean>(null);
+  private currentUser = new BehaviorSubject<UserType>(null);
+
+  get authenticated$(): Observable<boolean> {
+    return this.authenticated.asObservable();
+  }
+  get currentUser$(): Observable<UserType> {
+    return this.currentUser.asObservable();
+  }
+
+  constructor(private http: HttpClient) {
     const t = this.token();
     if (t) {
       this.me()
@@ -22,40 +31,48 @@ export class AuthService {
           })
         )
         .subscribe();
+      this.authenticated.next(true);
+    } else {
+      this.currentUser.next(null);
+      this.authenticated.next(false);
     }
   }
 
   register(payload: any): Observable<AuthResponse> {
     return this.http
-      .post<AuthResponse>('/api/auth/register', payload)
+      .post<AuthResponse>('/api/auth/register', {
+        ...payload,
+        app: AppsEnum.FRONT,
+      })
       .pipe(tap((res) => this.persist(res)));
   }
 
   login(payload: any): Observable<AuthResponse> {
     return this.http
-      .post<AuthResponse>('/api/auth/login', payload)
+      .post<AuthResponse>('/api/auth/login', {
+        ...payload,
+        app: AppsEnum.FRONT,
+      })
       .pipe(tap((res) => this.persist(res)));
   }
 
-  me(): Observable<User> {
+  me(): Observable<UserType> {
     return this.http
-      .get<User>('/api/users/me')
-      .pipe(tap((u) => this.user.set(u)));
-  }
-
-  currentUser() {
-    return this.user();
+      .get<UserType>('/api/users/me')
+      .pipe(tap((u) => this.currentUser.next(u)));
   }
 
   logout() {
-    this.user.set(null);
+    this.currentUser.next(null);
     this.token.set(null);
-    localStorage.removeItem('token');
+    this.authenticated.next(false);
+    localStorage.removeItem('accessToken');
   }
 
   private persist(res: AuthResponse) {
-    localStorage.setItem('token', res.token);
+    localStorage.setItem('accessToken', res.token);
     this.token.set(res.token);
-    this.user.set(res.user);
+    this.currentUser.next(res.user);
+    this.authenticated.next(true);
   }
 }

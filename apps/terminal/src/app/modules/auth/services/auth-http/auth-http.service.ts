@@ -1,9 +1,9 @@
 import { Injectable } from '@angular/core';
 import { BehaviorSubject, Observable, map, of } from 'rxjs';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
-import { UserType } from '../../models/user-type';
+import { AppsEnum, UserType } from '../../../../core/models/user-type';
 import { environment } from '../../../../../environments/environment';
-import { AuthResponse } from '../../models/auth.model';
+import { AuthResponse } from '../../../../core/models/auth.model';
 import { AuthUtils } from '../../utils/auth.utils';
 
 const API_AUTH_URL = `${environment.apiBase}/auth`;
@@ -25,10 +25,12 @@ export class AuthHTTPService {
     if (email) payload.email = email;
     if (!email && phone) payload.phone = phone;
     return this.http
-      .post<{ token: string; user: any }>(`${API_AUTH_URL}/login`, payload)
+      .post<{ token: string; user: any }>(`${API_AUTH_URL}/login`, {
+        ...payload,
+        app: AppsEnum.TERMINAL,
+      })
       .pipe(
         map((res) => {
-          console.log('🚀 ~ AuthHTTPService ~ login ~ res:', res);
           localStorage.setItem('accessToken', res.token);
           return res;
         })
@@ -38,7 +40,10 @@ export class AuthHTTPService {
   // Registration hitting backend /api/auth/register
   createUser(input: any): Observable<AuthResponse> {
     return this.http
-      .post<{ token: string; user: any }>(`${API_AUTH_URL}/register`, input)
+      .post<{ token: string; user: any }>(`${API_AUTH_URL}/register`, {
+        ...input,
+        app: AppsEnum.TERMINAL,
+      })
       .pipe(
         map((res) => {
           const auth = new AuthResponse();

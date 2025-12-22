@@ -30,9 +30,15 @@
               "src/assets"
             ],
             "styles": [
-              "src/styles.scss"
+              "src/styles.scss",
+              "node_modules/@ng-select/ng-select/themes/default.theme.css",
+              "src/assets/vender/bootstrap/css/bootstrap.min.css",
+              "src/assets/css/style.css"
             ],
-            "scripts": [],
+            "scripts": [
+              "src/assets/vender/bootstrap/js/bootstrap.bundle.min.js",
+              "src/assets/js/script.js"
+            ],
             "outputMode": "static"
           },
           "configurations": {
@@ -45,8 +51,8 @@
                 },
                 {
                   "type": "anyComponentStyle",
-                  "maximumWarning": "2kb",
-                  "maximumError": "4kb"
+                  "maximumWarning": "12kb",
+                  "maximumError": "18kb"
                 }
               ],
               "outputHashing": "all"

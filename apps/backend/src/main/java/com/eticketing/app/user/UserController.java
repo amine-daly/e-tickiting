@@ -23,18 +23,25 @@ import com.eticketing.app.web.PaginateResponseType;
 @RequestMapping("/api/users")
 @Tag(name = "Users")
 public class UserController {
+
     @PostMapping("")
     @Operation(summary = "Create a new user")
     public ResponseEntity<?> createUser(@RequestBody Map<String, Object> data) {
         var user = new UserType();
-        if (data.get("firstName") != null) user.setFirstName(data.get("firstName").toString());
-        if (data.get("lastName") != null) user.setLastName(data.get("lastName").toString());
-        if (data.get("email") != null) user.setEmail(data.get("email").toString());
+        if (data.get("firstName") != null) {
+            user.setFirstName(data.get("firstName").toString());
+        }
+        if (data.get("lastName") != null) {
+            user.setLastName(data.get("lastName").toString());
+        }
+        if (data.get("email") != null) {
+            user.setEmail(data.get("email").toString());
+        }
         // Set default role to CUSTOMER if not provided
         if (data.get("role") != null) {
-            user.setRole(com.eticketing.app.user.RoleType.valueOf(data.get("role").toString()));
+            user.setRole(com.eticketing.app.user.RoleEnum.valueOf(data.get("role").toString()));
         } else {
-            user.setRole(com.eticketing.app.user.RoleType.CUSTOMER);
+            user.setRole(com.eticketing.app.user.RoleEnum.CUSTOMER);
         }
         // Set createdAt to now if not provided
         if (data.get("createdAt") != null) {
@@ -49,26 +56,39 @@ public class UserController {
         if (data.get("phone") instanceof Map) {
             Map<String, Object> phoneMap = (Map<String, Object>) data.get("phone");
             var phone = new com.eticketing.app.user.PhoneType();
-            if (phoneMap.get("countryCode") != null) phone.setCountryCode(phoneMap.get("countryCode").toString());
-            if (phoneMap.get("number") != null) phone.setNumber(phoneMap.get("number").toString());
+            if (phoneMap.get("countryCode") != null) {
+                phone.setCountryCode(phoneMap.get("countryCode").toString());
+            }
+            if (phoneMap.get("number") != null) {
+                phone.setNumber(phoneMap.get("number").toString());
+            }
             user.setPhone(phone);
         }
         users.save(user);
         return ResponseEntity.ok(user);
     }
+
     @PutMapping("/{id}")
     @Operation(summary = "Fully update a user by id (ADMIN or self)")
     public ResponseEntity<?> putById(@PathVariable @Parameter(description = "User id") String id,
-                                     @RequestBody Map<String, Object> updates,
-                                     @AuthenticationPrincipal User principal) {
-        if (principal == null) throw new UnauthorizedException("Authentication required");
+            @RequestBody Map<String, Object> updates,
+            @AuthenticationPrincipal User principal) {
+        if (principal == null) {
+            throw new UnauthorizedException("Authentication required");
+        }
         var authUserOpt = users.findById(principal.getUsername());
-        if (authUserOpt.isEmpty()) throw new UnauthorizedException("Authentication subject not found");
+        if (authUserOpt.isEmpty()) {
+            throw new UnauthorizedException("Authentication subject not found");
+        }
         boolean isAdmin = authUserOpt.get().getRole().name().equals("ADMIN");
         boolean isSelf = authUserOpt.get().getId() != null && authUserOpt.get().getId().equals(id);
-        if (!isAdmin && !isSelf) throw new ForbiddenException("Not allowed to update this user");
+        if (!isAdmin && !isSelf) {
+            throw new ForbiddenException("Not allowed to update this user");
+        }
         var userOpt = users.findById(id);
-        if (userOpt.isEmpty()) throw new NotFoundException("User not found");
+        if (userOpt.isEmpty()) {
+            throw new NotFoundException("User not found");
+        }
         var user = userOpt.get();
         // Overwrite all fields provided in updates (full update)
         updates.forEach((key, value) -> {
@@ -84,18 +104,24 @@ public class UserController {
                     if (phone == null) {
                         try {
                             phone = (com.eticketing.app.user.PhoneType) field.getType().getDeclaredConstructor().newInstance();
-                        } catch (Exception e) { throw new RuntimeException(e); }
+                        } catch (Exception e) {
+                            throw new RuntimeException(e);
+                        }
                     }
-                    if (phoneMap.get("countryCode") != null) phone.setCountryCode(phoneMap.get("countryCode").toString());
-                    if (phoneMap.get("number") != null) phone.setNumber(phoneMap.get("number").toString());
+                    if (phoneMap.get("countryCode") != null) {
+                        phone.setCountryCode(phoneMap.get("countryCode").toString());
+                    }
+                    if (phoneMap.get("number") != null) {
+                        phone.setNumber(phoneMap.get("number").toString());
+                    }
                     ReflectionUtils.setField(field, user, phone);
                 } else {
                     ReflectionUtils.setField(field, user, value);
                 }
             }
         });
-    users.save(user);
-    return ResponseEntity.ok(user);
+        users.save(user);
+        return ResponseEntity.ok(user);
     }
 
     private final UserTypeRepository users;
@@ -104,20 +130,27 @@ public class UserController {
         this.users = users;
     }
 
-
     @GetMapping
     @Operation(summary = "List users (ADMIN)")
     public ResponseEntity<PaginateResponseType<java.util.Map<String, Object>>> list(
-        @RequestParam(defaultValue = "0") int page,
-        @RequestParam(defaultValue = "10") int limit,
-        @AuthenticationPrincipal org.springframework.security.core.userdetails.User principal) {
-        if (principal == null) throw new UnauthorizedException("Authentication required");
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int limit,
+            @AuthenticationPrincipal org.springframework.security.core.userdetails.User principal) {
+        if (principal == null) {
+            throw new UnauthorizedException("Authentication required");
+        }
         var me = users.findById(principal.getUsername()).orElseThrow(() -> new UnauthorizedException("Authentication subject not found"));
-        if (me.getRole() != com.eticketing.app.user.RoleType.ADMIN) throw new ForbiddenException("ADMIN only");
+        if (me.getRole() != com.eticketing.app.user.RoleEnum.ADMIN) {
+            throw new ForbiddenException("ADMIN only");
+        }
 
-    if (page < 0) page = 0;
-        if (limit < 1) limit = 10;
-    Pageable pageable = PageRequest.of(page, limit, Sort.by("lastName").ascending().and(Sort.by("firstName").ascending()));
+        if (page < 0) {
+            page = 0;
+        }
+        if (limit < 1) {
+            limit = 10;
+        }
+        Pageable pageable = PageRequest.of(page, limit, Sort.by("lastName").ascending().and(Sort.by("firstName").ascending()));
         var pageResult = users.findAll(pageable);
 
         java.util.List<java.util.Map<String, Object>> items = pageResult.getContent().stream().map(u -> {
@@ -146,7 +179,9 @@ public class UserController {
     @GetMapping("/me")
     @Operation(summary = "Get current user profile")
     public ResponseEntity<?> me(@AuthenticationPrincipal User user) {
-    if (user == null) throw new UnauthorizedException("Authentication required");
+        if (user == null) {
+            throw new UnauthorizedException("Authentication required");
+        }
         return users.findById(user.getUsername())
                 .map(u -> {
                     var body = new java.util.LinkedHashMap<String, Object>();
@@ -166,34 +201,42 @@ public class UserController {
                     }
                     return ResponseEntity.ok(body);
                 })
-        .orElseThrow(() -> new NotFoundException("User not found"));
+                .orElseThrow(() -> new NotFoundException("User not found"));
     }
 
     @DeleteMapping("/me")
     @Operation(summary = "Delete current user account")
     public ResponseEntity<?> deleteMe(@AuthenticationPrincipal User user) {
-    if (user == null) throw new UnauthorizedException("Authentication required");
+        if (user == null) {
+            throw new UnauthorizedException("Authentication required");
+        }
         return users.findById(user.getUsername())
                 .map(u -> {
                     users.deleteById(u.getId());
                     return ResponseEntity.noContent().build();
                 })
-        .orElseThrow(() -> new NotFoundException("User not found"));
+                .orElseThrow(() -> new NotFoundException("User not found"));
     }
 
     @DeleteMapping("/{id}")
     @Operation(summary = "Delete a user by id (ADMIN or self)")
     public ResponseEntity<?> deleteById(@PathVariable @Parameter(description = "User id") String id,
-                                        @AuthenticationPrincipal User principal) {
-    if (principal == null) throw new UnauthorizedException("Authentication required");
+            @AuthenticationPrincipal User principal) {
+        if (principal == null) {
+            throw new UnauthorizedException("Authentication required");
+        }
 
-    var authUserOpt = users.findById(principal.getUsername());
-    if (authUserOpt.isEmpty()) throw new UnauthorizedException("Authentication subject not found");
+        var authUserOpt = users.findById(principal.getUsername());
+        if (authUserOpt.isEmpty()) {
+            throw new UnauthorizedException("Authentication subject not found");
+        }
 
         boolean isAdmin = authUserOpt.get().getRole().name().equals("ADMIN");
         boolean isSelf = authUserOpt.get().getId() != null && authUserOpt.get().getId().equals(id);
 
-    if (!isAdmin && !isSelf) throw new ForbiddenException("Not allowed to delete this user");
+        if (!isAdmin && !isSelf) {
+            throw new ForbiddenException("Not allowed to delete this user");
+        }
 
         // Idempotent delete: return 204 even if user does not exist
         if (users.existsById(id)) {

@@ -19,6 +19,17 @@ import java.util.Map;
 @Service
 public class JwtService {
 
+    public String generateTokenWithApp(String subject, String role, String app, long ttlSeconds) {
+        Instant now = Instant.now();
+        return Jwts.builder()
+                .setSubject(subject)
+                .setIssuedAt(Date.from(now))
+                // .setExpiration(Date.from(now.plusSeconds(ttlSeconds))) // Enable for production
+                .addClaims(Map.of("role", role, "app", app))
+                .signWith(key, SignatureAlgorithm.HS256)
+                .compact();
+    }
+
     private final Key key;
 
     public JwtService(@Value("${JWT_SECRET:change_me}") String secret) {
@@ -42,14 +53,14 @@ public class JwtService {
     }
 
     public String generateToken(String subject, String role, long ttlSeconds) {
-    Instant now = Instant.now();
-    return Jwts.builder()
-        .setSubject(subject)
-        .setIssuedAt(Date.from(now))
-        // .setExpiration(Date.from(now.plusSeconds(ttlSeconds))) // Disabled for dev, enable for production
-        .addClaims(Map.of("role", role))
-        .signWith(key, SignatureAlgorithm.HS256)
-        .compact();
+        Instant now = Instant.now();
+        return Jwts.builder()
+                .setSubject(subject)
+                .setIssuedAt(Date.from(now))
+                // .setExpiration(Date.from(now.plusSeconds(ttlSeconds))) // Disabled for dev, enable for production
+                .addClaims(Map.of("role", role))
+                .signWith(key, SignatureAlgorithm.HS256)
+                .compact();
     }
 
     public String validateAndGetSubject(String token) {

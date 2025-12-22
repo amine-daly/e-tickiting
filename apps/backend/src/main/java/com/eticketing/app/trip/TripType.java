@@ -7,69 +7,99 @@ import jakarta.validation.constraints.NotNull;
 
 import org.springframework.data.annotation.Id;
 import org.springframework.data.annotation.Version;
+import org.springframework.data.annotation.CreatedDate;
+import org.springframework.data.annotation.LastModifiedDate;
 import org.springframework.data.mongodb.core.index.CompoundIndex;
 import org.springframework.data.mongodb.core.index.CompoundIndexes;
 import org.springframework.data.mongodb.core.mapping.Document;
 
 import java.math.BigDecimal;
-import java.time.LocalDate;
 import java.time.OffsetDateTime;
 import java.util.List;
 
 @Document("trips")
 @CompoundIndexes({
-    @CompoundIndex(name = "search_idx_v2", def = "{ 'source.city': 1, 'destination.city': 1, 'departureDate': 1 }", unique = false)
+    @CompoundIndex(name = "search_idx_v3", def = "{ 'routes.originId': 1, 'routes.destinationId': 1, 'departureDate': 1 }", unique = false)
 })
 public class TripType {
 
-    @NotNull
-    @JsonProperty("agencyId")
-    private String agencyId; // Reference to the agency providing the bus
     @Id
     @JsonProperty("id")
     private String id;
+
     @Version
     @JsonProperty("version")
     private Long version;
+
+    /**
+     * Reference to agency ID (stored); full agency object returned in
+     * responses.
+     */
+    @NotNull
+    @JsonProperty("agencyId")
+    private String agencyId;
+
+    /**
+     * Origin place ID (admin-entered)
+     */
     @NotNull
     @JsonProperty("originId")
-    private String originId; // Place ID for origin
+    private String originId;
+
+    /**
+     * Destination place ID (admin-entered)
+     */
     @NotNull
     @JsonProperty("destinationId")
-    private String destinationId; // Place ID for destination
+    private String destinationId;
+
+    /**
+     * Ordered list of intermediate stops (route snapshots) for this trip. Each
+     * stop has id, originId, destinationId, rank, and fare (BigDecimal).
+     */
+    @JsonProperty("stops")
+    private List<TripRouteSnapshot> stops;
+
+    /**
+     * Departure datetime (ISO 8601)
+     */
     @NotNull
     @JsonProperty("departureDate")
-    @com.fasterxml.jackson.annotation.JsonFormat(shape = com.fasterxml.jackson.annotation.JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd")
-    private LocalDate departureDate;
-    // Store full datetime (with offset) for responses/search when needed
-    @org.springframework.data.mongodb.core.mapping.Field("departureDateTime")
-    @JsonProperty("departureDateTime")
     @com.fasterxml.jackson.annotation.JsonFormat(shape = com.fasterxml.jackson.annotation.JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd'T'HH:mm:ssXXX")
-    private OffsetDateTime departureDateTime;
-    @NotNull
-    @JsonProperty("price")
-    @com.fasterxml.jackson.databind.annotation.JsonDeserialize(using = com.fasterxml.jackson.databind.deser.std.NumberDeserializers.BigDecimalDeserializer.class)
-    private BigDecimal price;
+    private OffsetDateTime departureDate;
+
     @Min(0)
     @JsonProperty("availableSeats")
     private int availableSeats;
+
     @JsonProperty("seats")
     private List<SeatUnit> seats;
+
+    /**
+     * Total price for the trip (admin-entered, BigDecimal).
+     */
+    @NotNull
+    @JsonProperty("totalPrice")
+    private BigDecimal totalPrice;
+
     @NotNull
     @JsonProperty("status")
     private TripStatusEnum status = TripStatusEnum.SCHEDULED;
 
+    @CreatedDate
+    @JsonProperty("createdAt")
+    @com.fasterxml.jackson.annotation.JsonFormat(shape = com.fasterxml.jackson.annotation.JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd'T'HH:mm:ssXXX")
+    private OffsetDateTime createdAt;
+
+    @LastModifiedDate
+    @JsonProperty("updatedAt")
+    @com.fasterxml.jackson.annotation.JsonFormat(shape = com.fasterxml.jackson.annotation.JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd'T'HH:mm:ssXXX")
+    private OffsetDateTime updatedAt;
+
     public TripType() {
     }
 
-    public String getAgencyId() {
-        return agencyId;
-    }
-
-    public void setAgencyId(String agencyId) {
-        this.agencyId = agencyId;
-    }
-
+    // ========== Getters and Setters ==========
     public String getId() {
         return id;
     }
@@ -87,11 +117,18 @@ public class TripType {
         this.version = version;
     }
 
+    public String getAgencyId() {
+        return agencyId;
+    }
+
+    public void setAgencyId(String agencyId) {
+        this.agencyId = agencyId;
+    }
+
     public String getOriginId() {
         return originId;
     }
 
-    @JsonProperty("originId")
     public void setOriginId(String originId) {
         this.originId = originId;
     }
@@ -100,36 +137,25 @@ public class TripType {
         return destinationId;
     }
 
-    @JsonProperty("destinationId")
     public void setDestinationId(String destinationId) {
         this.destinationId = destinationId;
     }
 
-    public LocalDate getDepartureDate() {
+    public List<TripRouteSnapshot> getStops() {
+        return stops;
+    }
+
+    public void setStops(List<TripRouteSnapshot> stops) {
+        this.stops = stops;
+    }
+
+    public OffsetDateTime getDepartureDate() {
         return departureDate;
     }
 
     @JsonProperty("departureDate")
-    public void setDepartureDate(LocalDate departureDate) {
+    public void setDepartureDate(OffsetDateTime departureDate) {
         this.departureDate = departureDate;
-    }
-
-    public OffsetDateTime getDepartureDateTime() {
-        return departureDateTime;
-    }
-
-    @JsonProperty("departureDateTime")
-    public void setDepartureDateTime(OffsetDateTime departureDateTime) {
-        this.departureDateTime = departureDateTime;
-    }
-
-    public BigDecimal getPrice() {
-        return price;
-    }
-
-    @JsonProperty("price")
-    public void setPrice(BigDecimal price) {
-        this.price = price;
     }
 
     public int getAvailableSeats() {
@@ -150,6 +176,15 @@ public class TripType {
         this.seats = seats;
     }
 
+    public BigDecimal getTotalPrice() {
+        return totalPrice;
+    }
+
+    @JsonProperty("totalPrice")
+    public void setTotalPrice(BigDecimal totalPrice) {
+        this.totalPrice = totalPrice;
+    }
+
     public TripStatusEnum getStatus() {
         return status == null ? TripStatusEnum.SCHEDULED : status;
     }
@@ -157,5 +192,21 @@ public class TripType {
     @JsonProperty("status")
     public void setStatus(TripStatusEnum status) {
         this.status = status;
+    }
+
+    public OffsetDateTime getCreatedAt() {
+        return createdAt;
+    }
+
+    public void setCreatedAt(OffsetDateTime createdAt) {
+        this.createdAt = createdAt;
+    }
+
+    public OffsetDateTime getUpdatedAt() {
+        return updatedAt;
+    }
+
+    public void setUpdatedAt(OffsetDateTime updatedAt) {
+        this.updatedAt = updatedAt;
     }
 }

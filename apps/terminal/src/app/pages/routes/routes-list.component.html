@@ -1,0 +1,549 @@
+<div>
+  <div class="container py-5">
+    <div class="card">
+      <div class="card-body">
+        <!-- Header with tabs -->
+        <div class="d-flex justify-content-between align-items-center mb-4">
+          <h2 class="mb-0">{{ "ROUTES.TITLE" | translate }}</h2>
+        </div>
+
+        <!-- Tabs -->
+        <ul ngbNav #nav="ngbNav" [(activeId)]="activeTab" class="nav-tabs mb-4">
+          <li [ngbNavItem]="'routes'">
+            <button ngbNavLink>{{ "ROUTES.TAB_ROUTES" | translate }}</button>
+            <ng-template ngbNavContent>
+              <!-- Routes Tab Content -->
+              <div class="d-flex justify-content-end mb-3">
+                <button
+                  class="btn btn-primary"
+                  (click)="openRouteModal(routeModal)"
+                >
+                  {{ "ROUTES.ADD_ROUTE_BUTTON" | translate }}
+                </button>
+              </div>
+
+              <div *ngIf="loading$ | async" class="text-center my-5">
+                <span class="spinner-border spinner-border-lg"></span>
+                <div>{{ "ROUTES.LOADING" | translate }}</div>
+              </div>
+
+              <div
+                *ngIf="!(loading$ | async) && !(routes$ | async)?.length"
+                class="alert alert-primary"
+              >
+                {{ "ROUTES.EMPTY" | translate }}
+              </div>
+
+              <div
+                *ngIf="!(loading$ | async) && (routes$ | async)?.length"
+                class="table-responsive"
+              >
+                <table
+                  class="table table-row-dashed table-row-gray-300 align-middle gs-0 gy-4"
+                >
+                  <thead>
+                    <tr class="fw-bolder text-muted">
+                      <th class="min-w-150px">
+                        {{ "COMMON.LABEL.ORIGIN" | translate }}
+                      </th>
+                      <th class="min-w-150px">
+                        {{ "COMMON.LABEL.DESTINATION" | translate }}
+                      </th>
+                      <th class="min-w-100px">
+                        {{ "ROUTES.LABEL.FARE" | translate }}
+                      </th>
+                      <th class="min-w-80px">
+                        {{ "COMMON.LABEL.STATUS" | translate }}
+                      </th>
+                      <th class="min-w-100px text-end">
+                        {{ "COMMON.LABEL.ACTIONS" | translate }}
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr *ngFor="let route of routes$ | async">
+                      <td>
+                        <span
+                          class="text-dark fw-bolder text-hover-primary fs-6"
+                        >
+                          {{ route.origin?.city || "-" }}
+                        </span>
+                      </td>
+                      <td>
+                        <span
+                          class="text-dark fw-bolder text-hover-primary fs-6"
+                        >
+                          {{ route.destination?.city || "-" }}
+                        </span>
+                      </td>
+                      <td>{{ formatFare(route.fare) }}</td>
+                      <td>
+                        <span
+                          class="badge"
+                          [ngClass]="{
+                            'badge-light-success': route.active,
+                            'badge-light-danger': !route.active
+                          }"
+                        >
+                          {{
+                            (route.active
+                              ? "COMMON.STATUS.ACTIVE"
+                              : "COMMON.STATUS.INACTIVE"
+                            ) | translate
+                          }}
+                        </span>
+                      </td>
+                      <td>
+                        <div class="d-flex justify-content-end flex-shrink-0">
+                          <button
+                            class="btn btn-icon btn-active-light-primary w-30px h-30px me-3"
+                            (click)="openRouteModal(routeModal, route)"
+                          >
+                            <i class="ki-duotone ki-pencil fs-2">
+                              <span class="path1"></span>
+                              <span class="path2"></span>
+                            </i>
+                          </button>
+                          <button
+                            class="btn btn-icon btn-active-light-danger w-30px h-30px"
+                            (click)="deleteRoute(route)"
+                          >
+                            <i class="ki-duotone ki-trash fs-2">
+                              <span class="path1"></span>
+                              <span class="path2"></span>
+                            </i>
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </ng-template>
+          </li>
+
+          <li [ngbNavItem]="'coefficients'">
+            <button ngbNavLink>
+              {{ "ROUTES.TAB_COEFFICIENTS" | translate }}
+            </button>
+            <ng-template ngbNavContent>
+              <!-- Coefficients Tab Content -->
+              <div class="d-flex justify-content-end mb-3">
+                <button
+                  class="btn btn-primary"
+                  (click)="openCoeffModal(coeffModal)"
+                >
+                  {{ "ROUTES.ADD_COEFF_BUTTON" | translate }}
+                </button>
+              </div>
+
+              <div class="alert alert-primary mb-4">
+                <strong>{{ "ROUTES.COEFF_INFO_TITLE" | translate }}</strong>
+                <p class="mb-0">{{ "ROUTES.COEFF_INFO_TEXT" | translate }}</p>
+              </div>
+
+              <div
+                *ngIf="!(coefficients$ | async)?.length"
+                class="alert alert-warning"
+              >
+                {{ "ROUTES.COEFF_EMPTY" | translate }}
+              </div>
+
+              <div
+                *ngIf="(coefficients$ | async)?.length"
+                class="table-responsive"
+              >
+                <table
+                  class="table table-row-dashed table-row-gray-300 align-middle gs-0 gy-4"
+                >
+                  <thead>
+                    <tr class="fw-bolder text-muted">
+                      <th class="min-w-150px">
+                        {{ "ROUTES.LABEL.COEFF_NAME" | translate }}
+                      </th>
+                      <th class="min-w-120px">
+                        {{ "ROUTES.LABEL.START_DATE" | translate }}
+                      </th>
+                      <th class="min-w-120px">
+                        {{ "ROUTES.LABEL.END_DATE" | translate }}
+                      </th>
+                      <th class="min-w-100px">
+                        {{ "ROUTES.LABEL.COEFFICIENT" | translate }}
+                      </th>
+                      <th class="min-w-80px">
+                        {{ "ROUTES.LABEL.PRIORITY" | translate }}
+                      </th>
+                      <th class="min-w-80px">
+                        {{ "COMMON.LABEL.STATUS" | translate }}
+                      </th>
+                      <th class="min-w-100px text-end">
+                        {{ "COMMON.LABEL.ACTIONS" | translate }}
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr *ngFor="let coeff of coefficients$ | async">
+                      <td>
+                        <span
+                          class="text-dark fw-bolder text-hover-primary fs-6"
+                        >
+                          {{
+                            coeff.name || ("ROUTES.LABEL.GLOBAL" | translate)
+                          }}
+                        </span>
+                        <span
+                          *ngIf="!coeff.routeId"
+                          class="badge badge-light-primary ms-2"
+                        >
+                          {{ "ROUTES.LABEL.GLOBAL" | translate }}
+                        </span>
+                      </td>
+                      <td>{{ coeff.startDate | date : "yyyy-MM-dd" }}</td>
+                      <td>{{ coeff.endDate | date : "yyyy-MM-dd" }}</td>
+                      <td>{{ formatCoefficient(coeff.coefficient) }}</td>
+                      <td>{{ coeff.priority }}</td>
+                      <td>
+                        <span
+                          class="badge"
+                          [ngClass]="{
+                            'badge-light-success': coeff.active,
+                            'badge-light-danger': !coeff.active
+                          }"
+                        >
+                          {{
+                            (coeff.active
+                              ? "COMMON.STATUS.ACTIVE"
+                              : "COMMON.STATUS.INACTIVE"
+                            ) | translate
+                          }}
+                        </span>
+                      </td>
+                      <td>
+                        <div class="d-flex justify-content-end flex-shrink-0">
+                          <button
+                            class="btn btn-icon btn-active-light-primary w-30px h-30px me-3"
+                            (click)="openCoeffModal(coeffModal, coeff)"
+                          >
+                            <i class="ki-duotone ki-pencil fs-2">
+                              <span class="path1"></span>
+                              <span class="path2"></span>
+                            </i>
+                          </button>
+                          <button
+                            class="btn btn-icon btn-active-light-danger w-30px h-30px"
+                            (click)="deleteCoeff(coeff)"
+                          >
+                            <i class="ki-duotone ki-trash fs-2">
+                              <span class="path1"></span>
+                              <span class="path2"></span>
+                            </i>
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </ng-template>
+          </li>
+        </ul>
+
+        <div [ngbNavOutlet]="nav"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Route Modal -->
+  <ng-template #routeModal let-modal>
+    <div class="modal-header">
+      <h5 class="modal-title">
+        {{
+          (editingRoute
+            ? "ROUTES.MODAL.EDIT_ROUTE_TITLE"
+            : "ROUTES.MODAL.ADD_ROUTE_TITLE"
+          ) | translate
+        }}
+      </h5>
+      <button
+        type="button"
+        class="btn-close"
+        aria-label="Close"
+        (click)="modal.dismiss('Cross click')"
+      ></button>
+    </div>
+    <form [formGroup]="routeForm">
+      <div class="modal-body">
+        <div class="row">
+          <div class="col-md-6 mb-3">
+            <label
+              >{{ "COMMON.LABEL.ORIGIN" | translate }}
+              <span class="text-danger">*</span></label
+            >
+            <ng-select
+              [items]="originPlaceOptions"
+              bindLabel="city"
+              bindValue="id"
+              formControlName="originId"
+              [placeholder]="'ROUTES.MODAL.ORIGIN_PLACEHOLDER' | translate"
+              [clearable]="true"
+              [disabled]="editingRoute"
+            >
+              <ng-template ng-label-tmp let-item="item">{{
+                item.city
+              }}</ng-template>
+              <ng-template ng-option-tmp let-item="item">{{
+                item.city
+              }}</ng-template>
+            </ng-select>
+            <div *ngIf="isRouteInvalid('originId')" class="text-danger small">
+              {{ "ROUTES.MODAL.ERRORS.ORIGIN_REQUIRED" | translate }}
+            </div>
+          </div>
+          <div class="col-md-6 mb-3">
+            <label
+              >{{ "COMMON.LABEL.DESTINATION" | translate }}
+              <span class="text-danger">*</span></label
+            >
+            <ng-select
+              [items]="destinationPlaceOptions"
+              bindLabel="city"
+              bindValue="id"
+              formControlName="destinationId"
+              [placeholder]="'ROUTES.MODAL.DESTINATION_PLACEHOLDER' | translate"
+              [clearable]="true"
+              [disabled]="editingRoute"
+            >
+              <ng-template ng-label-tmp let-item="item">{{
+                item.city
+              }}</ng-template>
+              <ng-template ng-option-tmp let-item="item">{{
+                item.city
+              }}</ng-template>
+            </ng-select>
+            <div
+              *ngIf="isRouteInvalid('destinationId')"
+              class="text-danger small"
+            >
+              {{ "ROUTES.MODAL.ERRORS.DESTINATION_REQUIRED" | translate }}
+            </div>
+          </div>
+        </div>
+
+        <div class="row">
+          <div class="col-md-6 mb-3">
+            <label
+              >{{ "ROUTES.LABEL.FARE" | translate }}
+              <span class="text-danger">*</span></label
+            >
+            <div class="input-group">
+              <input
+                class="form-control"
+                type="number"
+                step="0.001"
+                min="0.001"
+                formControlName="fare"
+              />
+              <span class="input-group-text">TND</span>
+            </div>
+            <div *ngIf="isRouteInvalid('fare')" class="text-danger small">
+              {{ "ROUTES.MODAL.ERRORS.FARE_REQUIRED" | translate }}
+            </div>
+          </div>
+          <div class="col-md-3 mb-3">
+            <label>{{ "ROUTES.LABEL.RANK" | translate }}</label>
+            <input
+              class="form-control"
+              type="number"
+              min="0"
+              formControlName="rank"
+            />
+          </div>
+          <div class="col-md-3 mb-3 d-flex align-items-end">
+            <div class="form-check form-switch">
+              <input
+                class="form-check-input"
+                type="checkbox"
+                formControlName="active"
+                id="routeActive"
+              />
+              <label class="form-check-label" for="routeActive">{{
+                "ROUTES.LABEL.ACTIVE" | translate
+              }}</label>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button
+          type="button"
+          class="btn btn-primary"
+          (click)="submitRoute(modal)"
+          [disabled]="routeForm.invalid || isRouteButtonDisabled"
+        >
+          {{
+            (editingRoute ? "COMMON.BUTTON.UPDATE" : "COMMON.BUTTON.SAVE")
+              | translate
+          }}
+        </button>
+        <button
+          type="button"
+          class="btn btn-secondary"
+          (click)="modal.dismiss('Cross click')"
+        >
+          {{ "COMMON.BUTTON.CANCEL" | translate }}
+        </button>
+      </div>
+    </form>
+  </ng-template>
+
+  <!-- Coefficient Modal -->
+  <ng-template #coeffModal let-modal>
+    <div class="modal-header">
+      <h5 class="modal-title">
+        {{
+          (editingCoeff
+            ? "ROUTES.MODAL.EDIT_COEFF_TITLE"
+            : "ROUTES.MODAL.ADD_COEFF_TITLE"
+          ) | translate
+        }}
+      </h5>
+      <button
+        type="button"
+        class="btn-close"
+        aria-label="Close"
+        (click)="modal.dismiss('Cross click')"
+      ></button>
+    </div>
+    <form [formGroup]="coeffForm">
+      <div class="modal-body">
+        <div class="mb-3">
+          <label>{{ "ROUTES.LABEL.COEFF_NAME" | translate }}</label>
+          <input
+            class="form-control"
+            type="text"
+            formControlName="name"
+            [placeholder]="'ROUTES.MODAL.COEFF_NAME_PLACEHOLDER' | translate"
+          />
+          <small class="text-muted">{{
+            "ROUTES.MODAL.COEFF_NAME_HELP" | translate
+          }}</small>
+        </div>
+
+        <div class="row">
+          <div class="col-md-6 mb-3">
+            <label
+              >{{ "ROUTES.LABEL.START_DATE" | translate }}
+              <span class="text-danger">*</span></label
+            >
+            <input
+              class="form-control flatpickr-input"
+              type="text"
+              mwlFlatpickr
+              [altInput]="true"
+              [convertModelValue]="true"
+              [altFormat]="'F j, Y'"
+              [dateFormat]="'Y-m-d'"
+              formControlName="startDate"
+            />
+            <div *ngIf="isCoeffInvalid('startDate')" class="text-danger small">
+              {{ "ROUTES.MODAL.ERRORS.START_DATE_REQUIRED" | translate }}
+            </div>
+          </div>
+          <div class="col-md-6 mb-3">
+            <label
+              >{{ "ROUTES.LABEL.END_DATE" | translate }}
+              <span class="text-danger">*</span></label
+            >
+            <input
+              class="form-control flatpickr-input"
+              type="text"
+              mwlFlatpickr
+              [altInput]="true"
+              [convertModelValue]="true"
+              [altFormat]="'F j, Y'"
+              [dateFormat]="'Y-m-d'"
+              formControlName="endDate"
+            />
+            <div *ngIf="isCoeffInvalid('endDate')" class="text-danger small">
+              {{ "ROUTES.MODAL.ERRORS.END_DATE_REQUIRED" | translate }}
+            </div>
+          </div>
+        </div>
+
+        <div class="row">
+          <div class="col-md-6 mb-3">
+            <label
+              >{{ "ROUTES.LABEL.COEFFICIENT" | translate }}
+              <span class="text-danger">*</span></label
+            >
+            <div class="input-group">
+              <span class="input-group-text">x</span>
+              <input
+                class="form-control"
+                type="number"
+                step="0.1"
+                min="0.1"
+                formControlName="coefficient"
+              />
+            </div>
+            <small class="text-muted">{{
+              "ROUTES.MODAL.COEFF_HELP" | translate
+            }}</small>
+            <div
+              *ngIf="isCoeffInvalid('coefficient')"
+              class="text-danger small"
+            >
+              {{ "ROUTES.MODAL.ERRORS.COEFF_REQUIRED" | translate }}
+            </div>
+          </div>
+          <div class="col-md-6 mb-3">
+            <label>{{ "ROUTES.LABEL.PRIORITY" | translate }}</label>
+            <input
+              class="form-control"
+              type="number"
+              min="0"
+              formControlName="priority"
+            />
+            <small class="text-muted">{{
+              "ROUTES.MODAL.PRIORITY_HELP" | translate
+            }}</small>
+          </div>
+        </div>
+
+        <div class="mb-3 d-flex align-items-center">
+          <div class="form-check form-switch">
+            <input
+              class="form-check-input"
+              type="checkbox"
+              formControlName="active"
+              id="coeffActive"
+            />
+            <label class="form-check-label" for="coeffActive">{{
+              "ROUTES.LABEL.ACTIVE" | translate
+            }}</label>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button
+          type="button"
+          class="btn btn-primary"
+          (click)="submitCoeff(modal)"
+          [disabled]="coeffForm.invalid || isCoeffButtonDisabled"
+        >
+          {{
+            (editingCoeff ? "COMMON.BUTTON.UPDATE" : "COMMON.BUTTON.SAVE")
+              | translate
+          }}
+        </button>
+        <button
+          type="button"
+          class="btn btn-secondary"
+          (click)="modal.dismiss('Cross click')"
+        >
+          {{ "COMMON.BUTTON.CANCEL" | translate }}
+        </button>
+      </div>
+    </form>
+  </ng-template>
+</div>

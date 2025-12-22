@@ -1,5 +1,9 @@
 {
   "COMMON": {
+    "STATUS": {
+      "ACTIVE": "Actif",
+      "INACTIVE": "Inactif"
+    },
     "LABEL": {
       "NAME": "Nom",
       "ADDRESS": "Adresse",
@@ -15,6 +19,7 @@
       "STATUS": "Statut",
       "AGENCY": "Agence",
       "PRICE": "Prix",
+      "TOTAL_PRICE": "Prix total",
       "AVAILABLE_SEATS": "Places disponibles",
       "REFERENCE": "Référence",
       "FIRST_NAME": "Prénom",
@@ -90,6 +95,9 @@
     "ADD_BUTTON": "Ajouter un voyage",
     "LOADING": "Chargement des voyages...",
     "EMPTY": "Aucun voyage disponible.",
+    "LABEL": {
+      "ROUTE": "Trajet"
+    },
     "STATUS": {
       "SCHEDULED": "Prévu",
       "COMPLETED": "Terminé",
@@ -110,18 +118,46 @@
       "EDIT_TITLE": "Modifier le voyage",
       "ADD_TITLE": "Ajouter un voyage",
       "AGENCY_PLACEHOLDER": "Sélectionnez une agence",
+      "ORIGIN": "Origine",
       "ORIGIN_PLACEHOLDER": "Sélectionnez l'origine",
+      "DESTINATION": "Destination",
       "DESTINATION_PLACEHOLDER": "Sélectionnez la destination",
+      "TOTAL_PRICE": "Prix total",
+      "STOPS": "Arrêts intermédiaires (optionnel)",
+      "STOP_PLACEHOLDER": "Sélectionnez un arrêt",
+      "ADD_STOP": "Ajouter un arrêt",
+      "STOPS_HINT": "Ajoutez des arrêts intermédiaires si le trajet comporte plusieurs étapes. Faites glisser pour réorganiser.",
       "DEPARTURE_DATE_LABEL": "Date de départ",
       "DEPARTURE_DATE_PLACEHOLDER": "Choisissez une date de départ",
       "CLEAR_DATE": "Effacer la date",
       "ERRORS": {
         "ORIGIN_REQUIRED": "L'origine est obligatoire.",
         "DESTINATION_REQUIRED": "La destination est obligatoire.",
+        "PRICE_REQUIRED": "Le prix total est obligatoire.",
         "DEPARTURE_REQUIRED": "La date de départ est obligatoire.",
         "PRICE_INVALID": "Entrez un prix valide.",
         "SEATS_REQUIRED": "Le nombre de places disponibles est obligatoire."
       }
+    },
+    "FARES": {
+      "TITLE": "Tarifs",
+      "LOADING": "Chargement des tarifs...",
+      "EMPTY": "Aucun tarif trouvé pour ce voyage.",
+      "FROM": "De",
+      "TO": "À",
+      "TYPE": "Type",
+      "AUTO": "Auto",
+      "MANUAL": "Manuel",
+      "REGENERATE": "Régénérer les tarifs",
+      "REGENERATE_CONFIRM_TITLE": "Régénérer les tarifs",
+      "REGENERATE_CONFIRM_TEXT": "Cela recalculera les tarifs de ce voyage. Les modifications manuelles seront conservées.",
+      "REGENERATE_CONFIRM_OK": "Oui, régénérer",
+      "REGENERATE_SUCCESS": "Tarifs régénérés avec succès.",
+      "REGENERATE_ERROR": "Impossible de régénérer les tarifs.",
+      "LOAD_ERROR": "Impossible de charger les tarifs.",
+      "SAVE_SUCCESS": "Tarif mis à jour avec succès.",
+      "SAVE_ERROR": "Impossible de mettre à jour le tarif.",
+      "PRICE_INVALID": "Entrez un tarif valide."
     }
   },
   "TICKETS": {
@@ -207,6 +243,71 @@
         "PHONE_CODE": "L'indicatif est obligatoire.",
         "PHONE_NUMBER": "Le numéro de téléphone est obligatoire."
       }
+    }
+  },
+  "ROUTES": {
+    "TITLE": "Tarification des routes",
+    "TAB_ROUTES": "Routes",
+    "TAB_COEFFICIENTS": "Tarification saisonnière",
+    "ADD_ROUTE_BUTTON": "Ajouter une route",
+    "ADD_COEFF_BUTTON": "Ajouter un coefficient",
+    "LOADING": "Chargement des routes...",
+    "EMPTY": "Aucune route trouvée. Ajoutez une route pour activer le calcul automatique des tarifs.",
+    "COEFF_EMPTY": "Aucun coefficient saisonnier configuré. Ajoutez des coefficients pour appliquer une tarification saisonnière.",
+    "COEFF_INFO_TITLE": "À propos de la tarification saisonnière",
+    "COEFF_INFO_TEXT": "Les coefficients modifient le calcul des tarifs pour des périodes spécifiques. Les coefficients de priorité plus élevée remplacent ceux de priorité inférieure. Un coefficient de 1,5 augmente les tarifs de 50 %.",
+    "LABEL": {
+      "KILOMETERS": "Distance",
+      "RATE": "Tarif",
+      "COEFFICIENT": "Coefficient",
+      "DEFAULT_FARE": "Tarif par défaut",
+      "MILLIMES_KM": "millimes/km",
+      "COEFF_NAME": "Nom",
+      "START_DATE": "Date de début",
+      "END_DATE": "Date de fin",
+      "PRIORITY": "Priorité",
+      "RANK": "Rang d'affichage",
+      "ACTIVE": "Actif",
+      "GLOBAL": "Global"
+    },
+    "MODAL": {
+      "ADD_ROUTE_TITLE": "Ajouter une route",
+      "EDIT_ROUTE_TITLE": "Modifier la route",
+      "ADD_COEFF_TITLE": "Ajouter un coefficient saisonnier",
+      "EDIT_COEFF_TITLE": "Modifier le coefficient saisonnier",
+      "ORIGIN_PLACEHOLDER": "Sélectionnez la ville d'origine",
+      "DESTINATION_PLACEHOLDER": "Sélectionnez la ville de destination",
+      "COEFF_NAME_PLACEHOLDER": "ex. Pic estival, Ramadan, etc.",
+      "COEFF_NAME_HELP": "Facultatif. Aide à identifier ce coefficient.",
+      "COEFF_HELP": "ex. 1,0 = normal, 1,5 = +50 %, 0,8 = -20 %",
+      "PRIORITY_HELP": "La priorité la plus élevée l'emporte. Par défaut 0.",
+      "FARE_PREVIEW": "Tarif estimé",
+      "ERRORS": {
+        "ORIGIN_REQUIRED": "L'origine est obligatoire.",
+        "DESTINATION_REQUIRED": "La destination est obligatoire.",
+        "KILOMETERS_REQUIRED": "La distance en kilomètres est obligatoire.",
+        "RATE_REQUIRED": "Le tarif au kilomètre est obligatoire.",
+        "COEFF_REQUIRED": "Le coefficient est obligatoire.",
+        "START_DATE_REQUIRED": "La date de début est obligatoire.",
+        "END_DATE_REQUIRED": "La date de fin est obligatoire."
+      }
+    },
+    "MESSAGES": {
+      "LOAD_ERROR": "Impossible de charger les routes. Réessayez plus tard.",
+      "SAVE_SUCCESS": "Route enregistrée avec succès.",
+      "CREATE_SUCCESS": "Route créée avec succès.",
+      "UPDATE_SUCCESS": "Route mise à jour avec succès.",
+      "CREATE_ERROR": "Impossible de créer la route.",
+      "UPDATE_ERROR": "Impossible de mettre à jour la route.",
+      "DELETE_SUCCESS": "Route supprimée avec succès.",
+      "DELETE_ERROR": "Impossible de supprimer la route.",
+      "COEFF_SAVE_SUCCESS": "Coefficient enregistré avec succès.",
+      "COEFF_CREATE_SUCCESS": "Coefficient créé avec succès.",
+      "COEFF_UPDATE_SUCCESS": "Coefficient mis à jour avec succès.",
+      "COEFF_CREATE_ERROR": "Impossible de créer le coefficient.",
+      "COEFF_UPDATE_ERROR": "Impossible de mettre à jour le coefficient.",
+      "COEFF_DELETE_SUCCESS": "Coefficient supprimé avec succès.",
+      "COEFF_DELETE_ERROR": "Impossible de supprimer le coefficient."
     }
   }
 }

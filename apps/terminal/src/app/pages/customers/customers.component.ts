@@ -12,7 +12,7 @@ import Swal, { SweetAlertIcon } from 'sweetalert2';
 import { isEqual } from 'lodash';
 
 import { FormHelper } from 'src/app/core/helpers/form-helper';
-import { PhoneType, UserType } from 'src/app/modules/auth/models/user-type';
+import { PhoneType, UserType } from 'src/app/core/models/user-type';
 import {
   CustomerCreatePayload,
   CustomerUpdatePayload,

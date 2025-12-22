@@ -1,9 +1,10 @@
 package com.eticketing.app.config;
 
 import com.eticketing.app.user.PhoneType;
-import com.eticketing.app.user.RoleType;
+import com.eticketing.app.user.RoleEnum;
 import com.eticketing.app.user.UserType;
 import com.eticketing.app.user.UserTypeRepository;
+
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.ApplicationRunner;
@@ -24,10 +25,12 @@ public class DataInitializer implements ApplicationRunner {
 
     @Override
     public void run(ApplicationArguments args) {
-        if (!seedAdmin) return;
+        if (!seedAdmin) {
+            return;
+        }
 
         // Seed an admin if none exists
-        boolean hasAdmin = users.findAll().stream().anyMatch(u -> u.getRole() == RoleType.ADMIN);
+        boolean hasAdmin = users.findAll().stream().anyMatch(u -> u.getRole() == RoleEnum.ADMIN);
         if (!hasAdmin) {
             var encoder = new BCryptPasswordEncoder();
             var admin = new UserType(
@@ -36,7 +39,7 @@ public class DataInitializer implements ApplicationRunner {
                     "admin@eticketing.local",
                     new PhoneType("+212", "600000000"),
                     encoder.encode("Admin@123"),
-                    RoleType.ADMIN
+                    RoleEnum.ADMIN
             );
             try {
                 users.save(admin);

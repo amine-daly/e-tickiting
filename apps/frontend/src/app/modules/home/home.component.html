@@ -1,0 +1,113 @@
+<div class="content-area">
+  <!-- Search Section -->
+  <search-card></search-card>
+  <!-- Popular Routes (Horizontal Scrollable) -->
+  <h6 class="section-header">Popular Routes</h6>
+  <div class="scroll-container ms-3">
+    <a
+      *ngFor="let trip of allTrips$ | async"
+      routerLink="/bus-listing"
+      class="scroll-item"
+    >
+      <div class="route-visual">
+        <div class="route-point start"></div>
+        <div class="route-line"></div>
+        <div class="route-point end"></div>
+        <div class="route-cities">
+          <div class="fw-semibold">
+            {{ trip.origin?.city || trip.originId }}
+          </div>
+          <div class="fw-semibold">
+            {{ trip.destination?.city || trip.destinationId }}
+          </div>
+        </div>
+      </div>
+      <div class="mt-3">
+        <div class="fw-bold text-primary-color">
+          {{ trip.price | number : "1.3-3" }} DT
+        </div>
+        <div class="d-flex align-items-center mt-1">
+          <i class="bi bi-clock me-1 fs-12 text-secondary-color"></i>
+          <span class="text-muted small">
+            {{ trip.departureDate | date : "mediumDate" }}
+            {{ trip.departureDate | date : "hh:mm a" }}
+          </span>
+        </div>
+      </div>
+    </a>
+  </div>
+  <!-- Recent Searches -->
+  <h6 class="section-header">Recent Searches</h6>
+  <a routerLink="/bus-listing" class="route-card d-block">
+    <div class="d-flex justify-content-between align-items-center">
+      <div>
+        <div class="d-flex align-items-center">
+          <span class="fw-semibold text-primary-color">NYC</span>
+          <i class="bi bi-arrow-right mx-2 text-secondary-color"></i>
+          <span class="fw-semibold text-primary-color">Boston</span>
+        </div>
+        <div class="d-flex align-items-center mt-2">
+          <i class="bi bi-calendar3 me-2 fs-12 text-secondary-color"></i>
+          <span class="text-muted small">Apr 15, 2025</span>
+        </div>
+      </div>
+      <div class="btn btn-light-2">
+        <i class="bi bi-search"></i>
+      </div>
+    </div>
+  </a>
+  <a routerLink="/bus-listing" class="route-card d-block">
+    <div class="d-flex justify-content-between align-items-center">
+      <div>
+        <div class="d-flex align-items-center">
+          <span class="fw-semibold text-primary-color">DC</span>
+          <i class="bi bi-arrow-right mx-2 text-secondary-color"></i>
+          <span class="fw-semibold text-primary-color">Philly</span>
+        </div>
+        <div class="d-flex align-items-center mt-2">
+          <i class="bi bi-calendar3 me-2 fs-12 text-secondary-color"></i>
+          <span class="text-muted small">Apr 10, 2025</span>
+        </div>
+      </div>
+      <div class="btn btn-light-2">
+        <i class="bi bi-search"></i>
+      </div>
+    </div>
+  </a>
+  <!-- Special Offers -->
+  <h6 class="section-header">Special Offers</h6>
+  <a href="offers-rewards.html" class="offer-card d-block">
+    <span class="offer-badge">20% OFF</span>
+    <div class="d-flex align-items-center">
+      <div
+        class="icon-50 d-flex align-items-center justify-content-center rounded-3 gradient-1"
+      >
+        <i class="bi bi-ticket-perforated text-white fs-24"></i>
+      </div>
+      <div class="ms-3">
+        <div class="fw-semibold text-primary-color">Weekend Special</div>
+        <div class="text-muted small">20% off on all weekend trips</div>
+        <div class="mt-1 text-accent-color fs-11">
+          <i class="bi bi-clock-history me-1"></i>Valid until Apr 30
+        </div>
+      </div>
+    </div>
+  </a>
+  <a href="offers-rewards.html" class="offer-card d-block mb-4">
+    <span class="offer-badge">$10 OFF</span>
+    <div class="d-flex align-items-center">
+      <div
+        class="icon-50 d-flex align-items-center justify-content-center rounded-3 gradient-2"
+      >
+        <i class="bi bi-gift text-white fs-24"></i>
+      </div>
+      <div class="ms-3">
+        <div class="fw-semibold text-primary-color">First Trip Discount</div>
+        <div class="text-muted small">$10 off on your first booking</div>
+        <div class="mt-1 text-accent-color fs-11">
+          <i class="bi bi-person-plus me-1"></i>New users only
+        </div>
+      </div>
+    </div>
+  </a>
+</div>

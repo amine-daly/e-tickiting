@@ -1,7 +1,7 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { BehaviorSubject, map, Observable } from 'rxjs';
-import { PhoneType, UserType } from 'src/app/modules/auth/models/user-type';
+import { PhoneType, UserType } from 'src/app/core/models/user-type';
 
 const API_USERS_URL = '/api/users';
 

@@ -1,27 +1,14 @@
 import { Component, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import {
-  RouterLink,
-  RouterLinkActive,
-  RouterOutlet,
-  Router,
-} from '@angular/router';
-import { NgbCollapse } from '@ng-bootstrap/ng-bootstrap';
-import { ToastsComponent } from './core/ui/toasts.component';
+import { Router, RouterOutlet } from '@angular/router';
 import { AuthService } from './core/services/auth.service';
-import { ToastService } from './core/ui/toast.service';
+import { ToastPopupComponent } from './shared/components/toast/toast-container.component';
+import { ToasterService } from './shared/components/toast/toaster.service';
 
 @Component({
   selector: 'app-root',
   standalone: true,
-  imports: [
-    CommonModule,
-    RouterOutlet,
-    RouterLink,
-    RouterLinkActive,
-    NgbCollapse,
-    ToastsComponent,
-  ],
+  imports: [CommonModule, RouterOutlet, ToastPopupComponent],
   templateUrl: './app.component.html',
   styleUrl: './app.component.scss',
 })
@@ -29,9 +16,11 @@ export class AppComponent {
   title = 'frontend';
   isNavCollapsed = true;
 
-  authService = inject(AuthService);
-  private router = inject(Router);
-  private toastService = inject(ToastService);
+  constructor(
+    private toastService: ToasterService,
+    private router: Router,
+    private authService: AuthService
+  ) {}
 
   shouldShowHero(): boolean {
     // Show hero section only on landing page

@@ -1,7 +1,6 @@
 import { ApplicationConfig } from '@angular/core';
-import { provideRouter } from '@angular/router';
+import { provideRouter, Routes } from '@angular/router';
 
-import { routes } from './app.routes';
 import { provideClientHydration } from '@angular/platform-browser';
 import { provideHttpClient, withInterceptors } from '@angular/common/http';
 import { HttpInterceptorFn } from '@angular/common/http';
@@ -14,6 +13,19 @@ const authInterceptor: HttpInterceptorFn = (req, next) => {
   }
   return next(req);
 };
+
+export const routes: Routes = [
+  {
+    path: '',
+    loadChildren: () =>
+      import('./modules/modules.routes').then((m) => m.modulesRoutes),
+  },
+  {
+    path: 'auth',
+    loadChildren: () =>
+      import('./modules/auth/auth.routes').then((m) => m.authRoutes),
+  },
+];
 
 export const appConfig: ApplicationConfig = {
   providers: [

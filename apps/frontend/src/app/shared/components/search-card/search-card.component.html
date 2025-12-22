@@ -1,0 +1,62 @@
+<div class="search-card mt-3">
+  <h6 class="text-primary-color mb-3 fw-semibold">
+    <i class="bi bi-search me-2"></i>Find Your Bus
+  </h6>
+  <form class="search-form" [formGroup]="placesForm" (ngSubmit)="searchTrips()">
+    <div class="mb-3 form-field">
+      <label for="fromLocation" class="form-label">
+        <i class="bi bi-geo-alt me-1 text-primary-color"></i>From
+      </label>
+      <ng-select
+        [items]="filteredOrigins"
+        bindLabel="city"
+        formControlName="origin"
+        placeholder="Select departure city"
+        [clearable]="true"
+        id="fromLocation"
+      >
+      </ng-select>
+    </div>
+    <div class="mb-3 form-field">
+      <label for="toLocation" class="form-label">
+        <i class="bi bi-geo-alt-fill me-1 text-secondary-color"></i>To
+      </label>
+      <ng-select
+        [items]="filteredDestinations"
+        bindLabel="city"
+        formControlName="destination"
+        placeholder="Select destination city"
+        [clearable]="true"
+        id="toLocation"
+      >
+      </ng-select>
+    </div>
+    <div class="mb-3 form-field form-field-date position-relative">
+      <label for="travelDate" class="form-label">
+        <i class="bi bi-calendar3 me-1 text-accent-color"></i>Date of Journey
+      </label>
+      <input
+        type="date"
+        class="form-control pe-5"
+        id="travelDate"
+        formControlName="date"
+      />
+      <button
+        type="button"
+        class="btn btn-sm btn-link position-absolute top-70 end-0 translate-middle-y me-2 px-1 py-0"
+        style="z-index: 2"
+        [disabled]="!placesForm.get('date')?.value"
+        (click)="placesForm.get('date')?.setValue(null)"
+      >
+        <i class="bi bi-x-lg"></i>
+      </button>
+    </div>
+    <button
+      (click)="searchTrips()"
+      type="button"
+      class="btn-app pulse-animation p-2 fw-bold btn search-submit w-auto"
+    >
+      <i class="bi bi-search me-2"></i>Search Buses
+    </button>
+  </form>
+</div>

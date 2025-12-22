@@ -34,6 +34,11 @@ const Routing: Routes = [
       import('./customers/customers.routes').then((m) => m.customersRoutes),
   },
   {
+    path: 'routes',
+    loadChildren: () =>
+      import('./routes/routes.routes').then((m) => m.routesRoutes),
+  },
+  {
     path: 'crafted/pages/profile',
     loadChildren: () =>
       import('../modules/profile/profile.module').then((m) => m.ProfileModule),

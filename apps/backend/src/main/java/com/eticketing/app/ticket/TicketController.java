@@ -45,7 +45,7 @@ import com.eticketing.app.trip.SeatStateEnum;
 import com.eticketing.app.trip.SeatUnit;
 import com.eticketing.app.trip.TripType;
 import com.eticketing.app.trip.TripTypeRepository;
-import com.eticketing.app.user.RoleType;
+import com.eticketing.app.user.RoleEnum;
 import com.eticketing.app.user.UserType;
 import com.eticketing.app.user.UserTypeRepository;
 
@@ -171,7 +171,7 @@ public class TicketController {
         }
 
         int seatCount = seatsToReserve.size();
-        BigDecimal unitPrice = trip.getPrice();
+        BigDecimal unitPrice = trip.getTotalPrice();
         BigDecimal totalAmount = unitPrice != null ? unitPrice.multiply(BigDecimal.valueOf(seatCount)) : null;
 
         if (req.payment != null && req.payment.amount != null && totalAmount != null && req.payment.amount.compareTo(totalAmount) != 0) {
@@ -460,7 +460,7 @@ public class TicketController {
         if (Objects.equals(principal.getUsername(), ticket.getUserId())) {
             return true;
         }
-        return principal.getAuthorities().stream().map(GrantedAuthority::getAuthority).anyMatch(auth -> auth.equals(roleName(RoleType.ADMIN)) || auth.equals(roleName(RoleType.MANAGER)));
+        return principal.getAuthorities().stream().map(GrantedAuthority::getAuthority).anyMatch(auth -> auth.equals(roleName(RoleEnum.ADMIN)) || auth.equals(roleName(RoleEnum.MANAGER)));
     }
 
     private boolean canManageTicket(TicketType ticket, User principal) {
@@ -477,10 +477,10 @@ public class TicketController {
         if (principal == null) {
             return false;
         }
-        return principal.getAuthorities().stream().map(GrantedAuthority::getAuthority).anyMatch(auth -> auth.equals(roleName(RoleType.ADMIN)) || auth.equals(roleName(RoleType.MANAGER)));
+        return principal.getAuthorities().stream().map(GrantedAuthority::getAuthority).anyMatch(auth -> auth.equals(roleName(RoleEnum.ADMIN)) || auth.equals(roleName(RoleEnum.MANAGER)));
     }
 
-    private String roleName(RoleType role) {
+    private String roleName(RoleEnum role) {
         return "ROLE_" + role.name();
     }
 }

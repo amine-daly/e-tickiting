@@ -3,16 +3,23 @@ import { HttpClient } from '@angular/common/http';
 import { BehaviorSubject, Observable, throwError } from 'rxjs';
 import { catchError, finalize, map, tap } from 'rxjs/operators';
 
-import { Trip as TripType, TripStatus } from '../../core/models/trip.model';
+import { TripType as TripType, TripStatus } from '../../core/models/trip.model';
 import { PaginateResponse } from '../../core/models/paginate-response.model';
-import { TripFilterInput } from 'src/app/modules/auth/models/trip-filter-input.model';
+import { TripFilterInput } from 'src/app/core/models/trip-filter-input.model';
+
+// Route input for creating a trip (optional intermediate stops)
+export interface RouteInput {
+  routeId: string;
+  fare?: number; // Optional override, defaults to route's fare
+}
 
 export interface TripCreatePayload {
   agencyId?: string | null;
-  originId: string;
-  destinationId: string;
-  departureDate: string;
-  price: number;
+  originId: string; // Required: origin place ID
+  destinationId: string; // Required: destination place ID
+  totalPrice: number; // Required: admin-entered total price
+  stops?: RouteInput[]; // Optional: intermediate stops
+  departureDate: string; // ISO datetime
   availableSeats: number;
   status?: TripStatus | null;
 }
@@ -21,8 +28,9 @@ export interface TripUpdatePayload {
   agencyId?: string | null;
   originId?: string | null;
   destinationId?: string | null;
+  totalPrice?: number | null;
+  stops?: RouteInput[] | null;
   departureDate?: string | null;
-  price?: number | null;
   availableSeats?: number | null;
   status?: TripStatus | null;
 }
@@ -42,6 +50,10 @@ export class TripService {
   }
 
   constructor(private http: HttpClient) {}
+
+  getTripById(id: string): Observable<TripType> {
+    return this.http.get<TripType>(`${this.baseUrl}/${id}`);
+  }
 
   getTrips(filter: TripFilterInput): Observable<PaginateResponse<TripType>> {
     this.loading.next(true);

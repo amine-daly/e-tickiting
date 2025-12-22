@@ -18,7 +18,7 @@ import { Subscription } from 'rxjs';
 
 import { AlertService } from '../../core/services/alert.service';
 import { FormHelper } from '../../core/helpers/form-helper';
-import { PlaceType } from '../../modules/auth/models/place-type';
+import { PlaceType } from '../../core/models/place-type';
 import { KeeniconComponent } from 'src/app/_metronic/shared/keenicon/keenicon.component';
 import { TranslateModule, TranslateService } from '@ngx-translate/core';
 import {

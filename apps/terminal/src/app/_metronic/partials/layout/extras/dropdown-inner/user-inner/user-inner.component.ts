@@ -4,7 +4,7 @@ import { CookieService } from 'ngx-cookie-service';
 import { TranslateModule } from '@ngx-translate/core';
 import { Component, HostBinding, OnDestroy, OnInit } from '@angular/core';
 
-import { UserType } from 'src/app/modules/auth/models/user-type';
+import { UserType } from 'src/app/core/models/user-type';
 import { TranslationService } from '../../../../../../modules/i18n';
 import { AuthService } from '../../../../../../modules/auth';
 

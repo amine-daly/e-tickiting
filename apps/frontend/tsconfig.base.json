@@ -1,0 +1,10 @@
+{
+  "compileOnSave": false,
+  "compilerOptions": {
+    "module": "es2020",
+    "rootDir": ".",
+    "baseUrl": ".",
+    "useDefineForClassFields": false
+  },
+  "exclude": ["node_modules", "tmp"]
+}

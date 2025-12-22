@@ -1,0 +1,134 @@
+<div class="auth-page-bg">
+  <div class="auth-container">
+    <div class="auth-container">
+      <!-- Logo and Header -->
+      <div class="text-center mb-4">
+        <div class="app-logo mb-3">
+          <i class="bi bi-bus-front"></i>
+        </div>
+        <h4 class="fw-bold text-primary-color">BusGo</h4>
+        <p class="text-muted">Sign in to your account</p>
+      </div>
+
+      <!-- Sign In Form -->
+      <form [formGroup]="loginForm" (ngSubmit)="onSubmit()" class="auth-form">
+        <div class="mb-3">
+          <label for="email" class="form-label">Email</label>
+          <div class="input-group">
+            <span class="input-group-text bg-transparent border-end-0">
+              <i class="bi bi-envelope text-muted"></i>
+            </span>
+            <input
+              type="email"
+              class="form-control border-start-0"
+              id="email"
+              formControlName="email"
+              placeholder="Enter your email"
+              [class.is-invalid]="
+                email?.invalid && (email?.dirty || email?.touched)
+              "
+            />
+          </div>
+          <div
+            *ngIf="email?.invalid && (email?.dirty || email?.touched)"
+            class="invalid-feedback d-block"
+          >
+            <span *ngIf="email?.errors?.['required']">Email is required.</span>
+            <span *ngIf="email?.errors?.['email']">Enter a valid email.</span>
+          </div>
+        </div>
+        <div class="mb-3">
+          <div class="d-flex justify-content-between align-items-center">
+            <label for="password" class="form-label">Password</label>
+            <a
+              routerLink="/auth/forgot-password"
+              class="small text-primary-color text-decoration-none"
+              >Forgot Password?</a
+            >
+          </div>
+          <div class="input-group">
+            <span class="input-group-text bg-transparent border-end-0">
+              <i class="bi bi-lock text-muted"></i>
+            </span>
+            <input
+              type="password"
+              class="form-control border-start-0 border-end-0"
+              id="password"
+              formControlName="password"
+              placeholder="Enter your password"
+              [class.is-invalid]="
+                password?.invalid && (password?.dirty || password?.touched)
+              "
+            />
+            <button
+              class="input-group-text bg-transparent border-start-0"
+              id="togglePassword"
+              type="button"
+              tabindex="-1"
+            >
+              <i class="bi bi-eye text-muted"></i>
+            </button>
+          </div>
+          <div
+            *ngIf="password?.invalid && (password?.dirty || password?.touched)"
+            class="invalid-feedback d-block"
+          >
+            <span *ngIf="password?.errors?.['required']"
+              >Password is required.</span
+            >
+          </div>
+        </div>
+        <div class="mb-3 form-check">
+          <input
+            type="checkbox"
+            class="form-check-input"
+            id="rememberMe"
+            formControlName="rememberMe"
+          />
+          <!-- <label class="form-check-label" for="rememberMe">Remember me</label> -->
+        </div>
+        <div class="d-grid gap-2 mb-4">
+          <button
+            type="submit"
+            class="btn btn-app"
+            [disabled]="loginForm.invalid || loading"
+          >
+            <span *ngIf="!loading">Sign In</span>
+            <span *ngIf="loading">
+              <span class="spinner-border spinner-border-sm me-2"></span>
+              Signing In...
+            </span>
+          </button>
+        </div>
+
+        <!-- Social Sign In -->
+        <div class="text-center mb-4">
+          <p class="text-muted mb-3">Or sign in with</p>
+          <div class="d-flex justify-content-center gap-3">
+            <button class="btn social-btn" type="button">
+              <i class="bi bi-google"></i>
+            </button>
+            <button class="btn social-btn" type="button">
+              <i class="bi bi-facebook"></i>
+            </button>
+            <button class="btn social-btn" type="button">
+              <i class="bi bi-apple"></i>
+            </button>
+          </div>
+        </div>
+
+        <!-- Sign Up Link -->
+        <div class="text-center">
+          <p class="mb-0">
+            Don't have an account?
+            <a
+              routerLink="/auth/register"
+              class="text-primary-color text-decoration-none"
+              >Sign Up</a
+            >
+          </p>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>

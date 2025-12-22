@@ -13,7 +13,7 @@ import org.springframework.web.server.ResponseStatusException;
 
 import com.eticketing.app.agency.AgencyRepository;
 import com.eticketing.app.agency.AgencyType;
-import com.eticketing.app.place.PlaceDocument;
+import com.eticketing.app.place.PlaceType;
 import com.eticketing.app.place.PlaceRepository;
 import com.eticketing.app.ticket.TicketType.SeatAssignment;
 import com.eticketing.app.ticket.TicketType.TicketUserSnapshot;
@@ -58,8 +58,12 @@ public class TicketDocumentService {
         UserType user = userRepository.findById(ticket.getUserId()).orElse(null);
         TicketUserSnapshot snapshot = ticket.getUser();
         AgencyType agency = trip.getAgencyId() != null ? agencyRepository.findById(trip.getAgencyId()).orElse(null) : null;
-        PlaceDocument origin = trip.getOriginId() != null ? placeRepository.findById(trip.getOriginId()).orElse(null) : null;
-        PlaceDocument destination = trip.getDestinationId() != null ? placeRepository.findById(trip.getDestinationId()).orElse(null) : null;
+
+        // Get origin and destination directly from trip
+        String originId = trip.getOriginId();
+        String destinationId = trip.getDestinationId();
+        PlaceType origin = originId != null ? placeRepository.findById(originId).orElse(null) : null;
+        PlaceType destination = destinationId != null ? placeRepository.findById(destinationId).orElse(null) : null;
 
         String passengerFirstName = user != null ? user.getFirstName() : snapshot != null ? snapshot.getFirstName() : null;
         String passengerLastName = user != null ? user.getLastName() : snapshot != null ? snapshot.getLastName() : null;
@@ -76,8 +80,8 @@ public class TicketDocumentService {
                 ? String.format("+%s %s", defaultString(agency.getPhone().getCountryCode()), defaultString(agency.getPhone().getNumber()))
                 : "";
         String routeLabel = String.format("%s → %s",
-                origin != null ? origin.getCity() : defaultString(trip.getOriginId()),
-                destination != null ? destination.getCity() : defaultString(trip.getDestinationId()));
+                origin != null ? origin.getCity() : defaultString(originId),
+                destination != null ? destination.getCity() : defaultString(destinationId));
         String seatList = ticket.getSeats() == null || ticket.getSeats().isEmpty()
                 ? "Non assigné"
                 : ticket.getSeats().stream()
@@ -98,7 +102,7 @@ public class TicketDocumentService {
         context.put("seatCount", ticket.getSeats().size());
         context.put("tripRoute", routeLabel);
         context.put("tripDate", trip.getDepartureDate() != null ? DATE_FORMAT.format(trip.getDepartureDate()) : "");
-        context.put("tripTime", trip.getDepartureDateTime() != null ? TIME_FORMAT.format(trip.getDepartureDateTime()) : "");
+        context.put("tripTime", trip.getDepartureDate() != null ? TIME_FORMAT.format(trip.getDepartureDate()) : "");
         context.put("currency", ticket.getCurrency());
         context.put("totalAmount", totalAmount);
         context.put("status", translateStatus(ticket.getStatus()));
@@ -145,7 +149,7 @@ public class TicketDocumentService {
         tripMeta.put("id", trip.getId());
         tripMeta.put("route", routeLabel);
         tripMeta.put("date", trip.getDepartureDate());
-        tripMeta.put("time", trip.getDepartureDateTime());
+        tripMeta.put("time", trip.getDepartureDate() != null ? trip.getDepartureDate().toLocalTime() : null);
 
         Map<String, Object> agencyMeta = new HashMap<>();
         agencyMeta.put("id", trip.getAgencyId());

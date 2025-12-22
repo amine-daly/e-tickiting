@@ -1,14 +1,29 @@
 <!--begin::Menu wrapper-->
-<div id="kt_app_sidebar_menu_wrapper" class="app-sidebar-wrapper hover-scroll-overlay-y my-5" data-kt-scroll="true"
-  data-kt-scroll-activate="true" data-kt-scroll-height="auto"
+<div
+  id="kt_app_sidebar_menu_wrapper"
+  class="app-sidebar-wrapper hover-scroll-overlay-y my-5"
+  data-kt-scroll="true"
+  data-kt-scroll-activate="true"
+  data-kt-scroll-height="auto"
   data-kt-scroll-dependencies="#kt_app_sidebar_logo, #kt_app_sidebar_footer"
-  data-kt-scroll-wrappers="#kt_app_sidebar_menu" data-kt-scroll-offset="5px" data-kt-scroll-save-state="true">
+  data-kt-scroll-wrappers="#kt_app_sidebar_menu"
+  data-kt-scroll-offset="5px"
+  data-kt-scroll-save-state="true"
+>
   <!--begin::Menu-->
-  <div class="menu menu-column menu-rounded menu-sub-indention px-3" id="#kt_app_sidebar_menu" data-kt-menu="true"
-    data-kt-menu-expand="false">
+  <div
+    class="menu menu-column menu-rounded menu-sub-indention px-3"
+    id="#kt_app_sidebar_menu"
+    data-kt-menu="true"
+    data-kt-menu-expand="false"
+  >
     <!-- Dashboard -->
     <div class="menu-item">
-      <a class="menu-link without-sub" routerLink="/dashboard" routerLinkActive="active">
+      <a
+        class="menu-link without-sub"
+        routerLink="/dashboard"
+        routerLinkActive="active"
+      >
         <span class="menu-icon">
           <app-keenicon name="element-11" class="fs-2"></app-keenicon>
         </span>
@@ -19,33 +34,53 @@
     <!-- Separator -->
     <div class="menu-item">
       <div class="menu-content pt-8 pb-2">
-        <span class="menu-section text-muted text-uppercase fs-8 ls-1">Crafted</span>
+        <span class="menu-section text-muted text-uppercase fs-8 ls-1"
+          >Crafted</span
+        >
       </div>
     </div>
 
     <!-- Pages -->
-    <div class="menu-item menu-accordion" data-kt-menu-trigger="click" routerLinkActive="here show">
+    <div
+      class="menu-item menu-accordion"
+      data-kt-menu-trigger="click"
+      routerLinkActive="here show"
+    >
       <span class="menu-link">
         <span class="menu-icon">
           <app-keenicon name="element-plus" class="fs-2"></app-keenicon>
         </span>
-        <span class="menu-title">Pages
-        </span>
+        <span class="menu-title">Pages </span>
         <span class="menu-arrow"></span>
       </span>
-      <div class="menu-sub menu-sub-accordion" routerLinkActive="menu-active-bg">
-        <div class="menu-item menu-accordion" routerLinkActive="here show" data-kt-menu-trigger="click">
+      <div
+        class="menu-sub menu-sub-accordion"
+        routerLinkActive="menu-active-bg"
+      >
+        <div
+          class="menu-item menu-accordion"
+          routerLinkActive="here show"
+          data-kt-menu-trigger="click"
+        >
           <span class="menu-link">
             <span class="menu-bullet">
               <span class="bullet bullet-dot"></span>
             </span>
-            <span class="menu-title" data-link="/crafted/pages/profile">Profile
+            <span class="menu-title" data-link="/crafted/pages/profile"
+              >Profile
             </span>
             <span class="menu-arrow"></span>
           </span>
-          <div class="menu-sub menu-sub-accordion" routerLinkActive="menu-active-bg">
+          <div
+            class="menu-sub menu-sub-accordion"
+            routerLinkActive="menu-active-bg"
+          >
             <div class="menu-item">
-              <a class="menu-link without-sub" routerLinkActive="active" routerLink="/crafted/pages/profile/campaigns">
+              <a
+                class="menu-link without-sub"
+                routerLinkActive="active"
+                routerLink="/crafted/pages/profile/campaigns"
+              >
                 <span class="menu-bullet">
                   <span class="bullet bullet-dot"></span>
                 </span>
@@ -58,89 +93,123 @@
     </div>
 
     <!-- Accounts -->
-    <div class="menu-item menu-accordion" data-kt-menu-trigger="click" routerLinkActive="here show">
+    <div
+      class="menu-item menu-accordion"
+      data-kt-menu-trigger="click"
+      routerLinkActive="here show"
+    >
       <span class="menu-link">
         <span class="menu-icon">
           <app-keenicon name="profile-circle" class="fs-2"></app-keenicon>
         </span>
-        <span class="menu-title" data-link="/crafted/account">Accounts
-        </span>
+        <span class="menu-title" data-link="/crafted/account">Accounts </span>
         <span class="menu-arrow"></span>
       </span>
-      <div class="menu-sub menu-sub-accordion" routerLinkActive="menu-active-bg">
+      <div
+        class="menu-sub menu-sub-accordion"
+        routerLinkActive="menu-active-bg"
+      >
         <div class="menu-item">
-          <a class="menu-link without-sub" routerLinkActive="active" routerLink="/crafted/account/overview">
+          <a
+            class="menu-link without-sub"
+            routerLinkActive="active"
+            routerLink="/crafted/account/overview"
+          >
             <span class="menu-bullet">
               <span class="bullet bullet-dot"></span>
             </span>
-            <span class="menu-title">Overview
-            </span>
+            <span class="menu-title">Overview </span>
           </a>
         </div>
         <div class="menu-item">
-          <a class="menu-link without-sub" routerLinkActive="active" routerLink="/crafted/account/settings">
+          <a
+            class="menu-link without-sub"
+            routerLinkActive="active"
+            routerLink="/crafted/account/settings"
+          >
             <span class="menu-bullet">
               <span class="bullet bullet-dot"></span>
             </span>
-            <span class="menu-title">Settings
-            </span>
+            <span class="menu-title">Settings </span>
           </a>
         </div>
       </div>
     </div>
 
     <!-- Widgets -->
-    <div class="menu-item menu-accordion" data-kt-menu-trigger="click" routerLinkActive="here show">
+    <div
+      class="menu-item menu-accordion"
+      data-kt-menu-trigger="click"
+      routerLinkActive="here show"
+    >
       <span class="menu-link">
         <span class="menu-icon">
           <app-keenicon name="element-7" class="fs-2"></app-keenicon>
         </span>
-        <span class="menu-title" data-link="/crafted/widgets">Widgets
-        </span>
+        <span class="menu-title" data-link="/crafted/widgets">Widgets </span>
         <span class="menu-arrow"></span>
       </span>
-      <div class="menu-sub menu-sub-accordion" routerLinkActive="menu-active-bg">
+      <div
+        class="menu-sub menu-sub-accordion"
+        routerLinkActive="menu-active-bg"
+      >
         <div class="menu-item">
-          <a class="menu-link without-sub" routerLinkActive="active" routerLink="/crafted/widgets/statistics">
+          <a
+            class="menu-link without-sub"
+            routerLinkActive="active"
+            routerLink="/crafted/widgets/statistics"
+          >
             <span class="menu-bullet">
               <span class="bullet bullet-dot"></span>
             </span>
-            <span class="menu-title">Statistics
-            </span>
+            <span class="menu-title">Statistics </span>
           </a>
         </div>
         <div class="menu-item">
-          <a class="menu-link without-sub" routerLinkActive="active" routerLink="/crafted/widgets/charts">
+          <a
+            class="menu-link without-sub"
+            routerLinkActive="active"
+            routerLink="/crafted/widgets/charts"
+          >
             <span class="menu-bullet">
               <span class="bullet bullet-dot"></span>
             </span>
-            <span class="menu-title">Charts
-            </span>
+            <span class="menu-title">Charts </span>
           </a>
         </div>
         <div class="menu-item">
-          <a class="menu-link without-sub" routerLinkActive="active" routerLink="/crafted/widgets/mixed">
+          <a
+            class="menu-link without-sub"
+            routerLinkActive="active"
+            routerLink="/crafted/widgets/mixed"
+          >
             <span class="menu-bullet">
               <span class="bullet bullet-dot"></span>
             </span>
-            <span class="menu-title">Mixed
-            </span>
+            <span class="menu-title">Mixed </span>
           </a>
         </div>
         <div class="menu-item">
-          <a class="menu-link without-sub" routerLinkActive="active" routerLink="/crafted/widgets/tables">
+          <a
+            class="menu-link without-sub"
+            routerLinkActive="active"
+            routerLink="/crafted/widgets/tables"
+          >
             <span class="menu-bullet">
               <span class="bullet bullet-dot"></span>
             </span>
-            <span class="menu-title">Tables
-            </span>
+            <span class="menu-title">Tables </span>
           </a>
         </div>
       </div>
     </div>
 
     <div class="menu-item">
-      <a class="menu-link without-sub" routerLink="/customers" routerLinkActive="active">
+      <a
+        class="menu-link without-sub"
+        routerLink="/customers"
+        routerLinkActive="active"
+      >
         <span class="menu-icon">
           <app-keenicon name="people" class="fs-2"></app-keenicon>
         </span>
@@ -149,7 +218,11 @@
     </div>
 
     <div class="menu-item">
-      <a class="menu-link without-sub" routerLink="/places" routerLinkActive="active">
+      <a
+        class="menu-link without-sub"
+        routerLink="/places"
+        routerLinkActive="active"
+      >
         <span class="menu-icon">
           <app-keenicon name="map" class="fs-2"></app-keenicon>
         </span>
@@ -158,7 +231,11 @@
     </div>
 
     <div class="menu-item">
-      <a class="menu-link without-sub" routerLink="/trips" routerLinkActive="active">
+      <a
+        class="menu-link without-sub"
+        routerLink="/trips"
+        routerLinkActive="active"
+      >
         <span class="menu-icon">
           <app-keenicon name="bus" class="fs-2"></app-keenicon>
         </span>
@@ -167,7 +244,24 @@
     </div>
 
     <div class="menu-item">
-      <a class="menu-link without-sub" routerLink="/tickets" routerLinkActive="active">
+      <a
+        class="menu-link without-sub"
+        routerLink="/routes"
+        routerLinkActive="active"
+      >
+        <span class="menu-icon">
+          <app-keenicon name="route" class="fs-2"></app-keenicon>
+        </span>
+        <span class="menu-title">Route Pricing</span>
+      </a>
+    </div>
+
+    <div class="menu-item">
+      <a
+        class="menu-link without-sub"
+        routerLink="/tickets"
+        routerLinkActive="active"
+      >
         <span class="menu-icon">
           <app-keenicon name="archive-tick" class="fs-2"></app-keenicon>
         </span>
@@ -176,7 +270,11 @@
     </div>
 
     <div class="menu-item">
-      <a class="menu-link without-sub" routerLink="/agencies" routerLinkActive="active">
+      <a
+        class="menu-link without-sub"
+        routerLink="/agencies"
+        routerLinkActive="active"
+      >
         <span class="menu-icon">
           <app-keenicon name="office-bag" class="fs-2"></app-keenicon>
         </span>

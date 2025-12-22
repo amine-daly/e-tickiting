@@ -1,0 +1,157 @@
+<div>
+  <div class="p-3">
+    <!-- Booking Progress -->
+    <div class="booking-progress d-flex justify-content-between mb-4">
+      <div class="progress-step completed">
+        <div class="step-dot"></div>
+        <div class="step-label small">Seats</div>
+      </div>
+      <div class="progress-connector completed"></div>
+      <div class="progress-step active">
+        <div class="step-dot"></div>
+        <div class="step-label small">Verify</div>
+      </div>
+      <div class="progress-connector"></div>
+      <div class="progress-step">
+        <div class="step-dot"></div>
+        <div class="step-label small">Payment</div>
+      </div>
+      <div class="progress-connector"></div>
+      <div class="progress-step">
+        <div class="step-dot"></div>
+        <div class="step-label small">Ticket</div>
+      </div>
+    </div>
+    <!-- Trip Summary -->
+    <div class="trip-summary mb-4">
+      <h6 class="fw-bold mb-3">Trip Summary</h6>
+      <div class="summary-card p-3 rounded-3 bg-primary-light">
+        <!-- Bus Info -->
+        <div class="d-flex align-items-center mb-3">
+          <div class="bus-icon me-3">
+            <i class="bi bi-bus-front"></i>
+          </div>
+          <div>
+            <h6 class="fw-bold mb-0">Express Lines</h6>
+            <div class="text-muted small">Premium Sleeper</div>
+          </div>
+        </div>
+        <!-- Journey Details -->
+        <div class="journey-details mb-3">
+          <div class="d-flex mb-3">
+            <div class="journey-stops me-3">
+              <div class="departure-stop"></div>
+              <div class="journey-line"></div>
+              <div class="arrival-stop"></div>
+            </div>
+            <div class="journey-info flex-grow-1">
+              <div class="mb-3">
+                <div class="fw-bold">New York Central Station</div>
+                <div class="text-muted small">Jun 15, 07:00 AM</div>
+              </div>
+              <div>
+                <div class="fw-bold">Boston South Station</div>
+                <div class="text-muted small">Jun 15, 11:30 AM</div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <!-- Seat Details -->
+        <div class="seat-details mb-3">
+          <div class="text-muted small mb-1">Selected Seats</div>
+          <div class="d-flex flex-wrap gap-2">
+            <span class="seat-tag">B1</span>
+            <span class="seat-tag">B2</span>
+          </div>
+        </div>
+        <!-- Fare Details -->
+        <div class="fare-details">
+          <div class="fare-item d-flex justify-content-between mb-1">
+            <div class="text-muted small">Base Fare (2 seats)</div>
+            <div class="small">$90.00</div>
+          </div>
+          <div class="fare-item d-flex justify-content-between mb-1">
+            <div class="text-muted small">Service Fee</div>
+            <div class="small">$5.00</div>
+          </div>
+          <div class="fare-item d-flex justify-content-between mb-1">
+            <div class="text-muted small">Discount</div>
+            <div class="small text-success">-$4.50</div>
+          </div>
+          <hr class="my-2">
+          <div class="fare-item d-flex justify-content-between">
+            <div class="fw-bold">Total Amount</div>
+            <div class="fw-bold text-primary-color">$90.50</div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <!-- Passenger Details Form -->
+    <div class="passenger-details mb-4">
+      <h6 class="fw-bold mb-3">Passenger Details</h6>
+      <div class="mb-3">
+        <label for="passName" class="form-label">Full Name</label>
+        <input type="text" class="form-control" id="passName" placeholder="Enter your full name">
+      </div>
+      <div class="mb-3">
+        <label for="passEmail" class="form-label">Email Address</label>
+        <input type="email" class="form-control" id="passEmail" placeholder="Enter your email">
+      </div>
+      <div class="mb-2">
+        <label for="passPhone" class="form-label">Phone Number</label>
+        <input type="tel" class="form-control" id="passPhone" placeholder="Enter your phone number">
+      </div>
+      <div class="form-check mb-3">
+        <input class="form-check-input" type="checkbox" id="bookForOthers">
+        <label class="form-check-label" for="bookForOthers">
+          Booking for someone else?
+        </label>
+      </div>
+    </div>
+    <!-- Contact Information for Emergency -->
+    <div class="emergency-contact mb-4 d-none" id="emergencyContact">
+      <h6 class="fw-bold mb-3">Traveler's Information</h6>
+      <div class="mb-3">
+        <label for="travelerName" class="form-label">Traveler's Name</label>
+        <input type="text" class="form-control" id="travelerName" placeholder="Enter traveler's name">
+      </div>
+      <div class="mb-3">
+        <label for="travelerPhone" class="form-label">Traveler's Phone</label>
+        <input type="tel" class="form-control" id="travelerPhone" placeholder="Enter traveler's phone">
+      </div>
+    </div>
+    <!-- Booking Conditions -->
+    <div class="booking-conditions mb-4">
+      <div class="form-check mb-1">
+        <input class="form-check-input" type="checkbox" id="termsCheck">
+        <label class="form-check-label small" for="termsCheck">
+          I agree to the <a href="#" class="text-decoration-none">Terms and Conditions</a> and <a href="#"
+            class="text-decoration-none">Privacy Policy</a>
+        </label>
+      </div>
+      <div class="form-check">
+        <input class="form-check-input" type="checkbox" id="priceCheck">
+        <label class="form-check-label small" for="priceCheck">
+          I agree to the final price of $90.50
+        </label>
+      </div>
+    </div>
+    <!-- Promo Code -->
+    <div class="promo-code mb-4">
+      <div class="d-flex gap-2">
+        <input type="text" class="form-control" placeholder="Enter promo code">
+        <button class="btn btn-app px-3 w-auto rounded-3">Apply</button>
+      </div>
+    </div>
+  </div>
+  <!-- Bottom Fixed Bar for Continue -->
+  <div class="bottom-fixed-bar p-3">
+    <div class="d-flex justify-content-between align-items-center gap-3">
+      <div class="lh-sm">
+        <div class="fw-bold fs-5 text-primary-color">$90.50</div>
+        <div class="text-muted small">Total</div>
+      </div>
+      <a href="checkout-payment.html" class="btn btn-app py-2 fw-bold">Proceed to Payment</a>
+    </div>
+  </div>
+</div>

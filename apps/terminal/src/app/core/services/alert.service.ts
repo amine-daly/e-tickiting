@@ -22,7 +22,15 @@ export class AlertService {
   }
 
   warning(title: string, text?: string) {
-    return Swal.fire({ icon: 'warning', title, text });
+    console.log('🚀 ~ AlertService ~ warning ~ title:', title);
+    return Swal.fire({
+      title,
+      text,
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: 'rgb(3, 142, 220)',
+      cancelButtonColor: 'rgb(243, 78, 78)',
+    });
   }
 
   info(title: string, text?: string) {

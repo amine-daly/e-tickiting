@@ -1,4 +1,4 @@
-import { PhoneType } from 'src/app/modules/auth/models/user-type';
+import { PhoneType } from 'src/app/core/models/user-type';
 
 export interface AgencyType {
   id: string;

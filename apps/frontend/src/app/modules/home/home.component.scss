@@ -1,0 +1,58 @@
+/* Ensure horizontal scroll on popular routes works well on desktop */
+.scroll-container {
+    display: flex;
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    gap: 20px;
+    padding-bottom: 8px;
+    margin-bottom: 24px;
+}
+
+/* Keep cards and sections spaced and aligned for desktop */
+.search-card,
+.route-card,
+.offer-card {
+    margin-bottom: 24px;
+}
+
+/* Prepare search form for layout tweaks without affecting styling */
+.search-form {
+    display: flex;
+    flex-direction: column;
+}
+
+/* Responsive adjustments for desktop */
+@media (min-width: 992px) {
+    .search-card {
+        margin-bottom: 32px;
+    }
+
+    .section-header {
+        margin-top: 32px;
+        margin-bottom: 16px;
+    }
+
+    /* Align search inputs and button in a single row on desktop */
+    .search-form {
+        flex-direction: row;
+        align-items: center;
+        gap: 16px;
+    }
+
+    .search-form .form-field {
+        flex: 1;
+        margin-bottom: 0;
+    }
+
+    .search-form .form-field-date {
+        max-width: 220px;
+    }
+
+    .search-form .search-submit {
+        flex: 0 0 auto;
+        margin-bottom: 0;
+        min-width: 170px;
+    }
+}
+
+/* No design/UX changes, only layout improvements for desktop */

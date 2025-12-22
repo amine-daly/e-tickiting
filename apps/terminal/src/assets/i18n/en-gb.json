@@ -1,5 +1,9 @@
 {
   "COMMON": {
+    "STATUS": {
+      "ACTIVE": "Active",
+      "INACTIVE": "Inactive"
+    },
     "LABEL": {
       "NAME": "Name",
       "ADDRESS": "Address",
@@ -15,6 +19,7 @@
       "STATUS": "Status",
       "AGENCY": "Agency",
       "PRICE": "Price",
+      "TOTAL_PRICE": "Total price",
       "AVAILABLE_SEATS": "Available seats",
       "REFERENCE": "Reference",
       "FIRST_NAME": "First name",
@@ -90,6 +95,9 @@
     "ADD_BUTTON": "Add trip",
     "LOADING": "Loading trips...",
     "EMPTY": "No trips available.",
+    "LABEL": {
+      "ROUTE": "Route"
+    },
     "STATUS": {
       "SCHEDULED": "Scheduled",
       "COMPLETED": "Completed",
@@ -110,18 +118,46 @@
       "EDIT_TITLE": "Edit trip",
       "ADD_TITLE": "Add trip",
       "AGENCY_PLACEHOLDER": "Select an agency",
+      "ORIGIN": "Origin",
       "ORIGIN_PLACEHOLDER": "Select origin",
+      "DESTINATION": "Destination",
       "DESTINATION_PLACEHOLDER": "Select destination",
+      "TOTAL_PRICE": "Total price",
+      "STOPS": "Intermediate stops (optional)",
+      "STOP_PLACEHOLDER": "Select a stop",
+      "ADD_STOP": "Add stop",
+      "STOPS_HINT": "Add intermediate stops if the route has multiple segments. Drag to reorder.",
       "DEPARTURE_DATE_LABEL": "Departure date",
       "DEPARTURE_DATE_PLACEHOLDER": "Pick a departure date",
       "CLEAR_DATE": "Clear date",
       "ERRORS": {
         "ORIGIN_REQUIRED": "Origin is required.",
         "DESTINATION_REQUIRED": "Destination is required.",
+        "PRICE_REQUIRED": "Total price is required.",
         "DEPARTURE_REQUIRED": "Departure date is required.",
         "PRICE_INVALID": "Enter a valid price.",
         "SEATS_REQUIRED": "Available seats are required."
       }
+    },
+    "FARES": {
+      "TITLE": "Fares",
+      "LOADING": "Loading fares...",
+      "EMPTY": "No fares found for this trip.",
+      "FROM": "From",
+      "TO": "To",
+      "TYPE": "Type",
+      "AUTO": "Auto",
+      "MANUAL": "Manual",
+      "REGENERATE": "Regenerate fares",
+      "REGENERATE_CONFIRM_TITLE": "Regenerate fares",
+      "REGENERATE_CONFIRM_TEXT": "This will recalculate fares for this trip. Manual overrides will be preserved.",
+      "REGENERATE_CONFIRM_OK": "Yes, regenerate",
+      "REGENERATE_SUCCESS": "Fares regenerated successfully.",
+      "REGENERATE_ERROR": "Unable to regenerate fares.",
+      "LOAD_ERROR": "Unable to load fares.",
+      "SAVE_SUCCESS": "Fare updated successfully.",
+      "SAVE_ERROR": "Unable to update fare.",
+      "PRICE_INVALID": "Enter a valid fare price."
     }
   },
   "TICKETS": {
@@ -207,6 +243,71 @@
         "PHONE_CODE": "Phone code is required.",
         "PHONE_NUMBER": "Phone number is required."
       }
+    }
+  },
+  "ROUTES": {
+    "TITLE": "Route Pricing",
+    "TAB_ROUTES": "Routes",
+    "TAB_COEFFICIENTS": "Seasonal Pricing",
+    "ADD_ROUTE_BUTTON": "Add route",
+    "ADD_COEFF_BUTTON": "Add coefficient",
+    "LOADING": "Loading routes...",
+    "EMPTY": "No routes found. Add a route to enable automatic fare calculation.",
+    "COEFF_EMPTY": "No seasonal coefficients configured. Add coefficients to apply seasonal pricing.",
+    "COEFF_INFO_TITLE": "About Seasonal Pricing",
+    "COEFF_INFO_TEXT": "Coefficients modify fare calculation for specific date ranges. Higher priority coefficients override lower ones. A coefficient of 1.5 increases fares by 50%.",
+    "LABEL": {
+      "KILOMETERS": "Distance",
+      "RATE": "Rate",
+      "COEFFICIENT": "Coefficient",
+      "DEFAULT_FARE": "Default fare",
+      "MILLIMES_KM": "millimes/km",
+      "COEFF_NAME": "Name",
+      "START_DATE": "Start date",
+      "END_DATE": "End date",
+      "PRIORITY": "Priority",
+      "RANK": "Display rank",
+      "ACTIVE": "Active",
+      "GLOBAL": "Global"
+    },
+    "MODAL": {
+      "ADD_ROUTE_TITLE": "Add route",
+      "EDIT_ROUTE_TITLE": "Edit route",
+      "ADD_COEFF_TITLE": "Add seasonal coefficient",
+      "EDIT_COEFF_TITLE": "Edit seasonal coefficient",
+      "ORIGIN_PLACEHOLDER": "Select origin city",
+      "DESTINATION_PLACEHOLDER": "Select destination city",
+      "COEFF_NAME_PLACEHOLDER": "e.g. Summer Peak, Ramadan, etc.",
+      "COEFF_NAME_HELP": "Optional. Helps identify this coefficient.",
+      "COEFF_HELP": "e.g. 1.0 = normal, 1.5 = +50%, 0.8 = -20%",
+      "PRIORITY_HELP": "Higher priority overrides lower. Default is 0.",
+      "FARE_PREVIEW": "Estimated fare",
+      "ERRORS": {
+        "ORIGIN_REQUIRED": "Origin is required.",
+        "DESTINATION_REQUIRED": "Destination is required.",
+        "KILOMETERS_REQUIRED": "Distance in kilometers is required.",
+        "RATE_REQUIRED": "Rate per kilometer is required.",
+        "COEFF_REQUIRED": "Coefficient is required.",
+        "START_DATE_REQUIRED": "Start date is required.",
+        "END_DATE_REQUIRED": "End date is required."
+      }
+    },
+    "MESSAGES": {
+      "LOAD_ERROR": "Unable to load routes. Please try again later.",
+      "SAVE_SUCCESS": "Route saved successfully.",
+      "CREATE_SUCCESS": "Route created successfully.",
+      "UPDATE_SUCCESS": "Route updated successfully.",
+      "CREATE_ERROR": "Unable to create route.",
+      "UPDATE_ERROR": "Unable to update the route.",
+      "DELETE_SUCCESS": "Route deleted successfully.",
+      "DELETE_ERROR": "Unable to delete the route.",
+      "COEFF_SAVE_SUCCESS": "Coefficient saved successfully.",
+      "COEFF_CREATE_SUCCESS": "Coefficient created successfully.",
+      "COEFF_UPDATE_SUCCESS": "Coefficient updated successfully.",
+      "COEFF_CREATE_ERROR": "Unable to create the coefficient.",
+      "COEFF_UPDATE_ERROR": "Unable to update the coefficient.",
+      "COEFF_DELETE_SUCCESS": "Coefficient deleted successfully.",
+      "COEFF_DELETE_ERROR": "Unable to delete the coefficient."
     }
   }
 }

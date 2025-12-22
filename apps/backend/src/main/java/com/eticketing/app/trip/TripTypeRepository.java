@@ -3,9 +3,21 @@ package com.eticketing.app.trip;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.mongodb.repository.MongoRepository;
+import org.springframework.data.mongodb.repository.Query;
 
-import java.time.LocalDate;
+import java.time.OffsetDateTime;
 
 public interface TripTypeRepository extends MongoRepository<TripType, String> {
-    Page<TripType> findByOriginIdAndDestinationIdAndDepartureDate(String originId, String destinationId, LocalDate departureDate, Pageable pageable);
+
+    /**
+     * Find trips by originId, destinationId and date range.
+     */
+    @Query("{ 'originId': ?0, 'destinationId': ?1, 'departureDate': { $gte: ?2, $lt: ?3 } }")
+    Page<TripType> findByOriginAndDestinationAndDateRange(
+            String originId,
+            String destinationId,
+            OffsetDateTime startOfDay,
+            OffsetDateTime endOfDay,
+            Pageable pageable
+    );
 }

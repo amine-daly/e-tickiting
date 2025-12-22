@@ -4,6 +4,7 @@ import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.NotNull;
 
+import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.LinkedHashMap;
@@ -18,7 +19,8 @@ import org.springframework.data.domain.Sort;
 import com.eticketing.app.agency.AgencyRepository;
 import com.eticketing.app.agency.AgencyType;
 import com.eticketing.app.place.PlaceRepository;
-import com.eticketing.app.place.PlaceDocument;
+import com.eticketing.app.route.RouteRepository;
+import com.eticketing.app.route.RouteType;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -55,78 +57,93 @@ public class TripController {
     private final TripTypeRepository tripTypeRepository;
     private final AgencyRepository agencyRepository;
     private final PlaceRepository placeRepository;
+    private final RouteRepository routeRepository;
     private final org.springframework.data.mongodb.core.MongoTemplate mongoTemplate;
 
     public TripController(
             TripTypeRepository tripTypeRepository,
             AgencyRepository agencyRepository,
             PlaceRepository placeRepository,
+            RouteRepository routeRepository,
             org.springframework.data.mongodb.core.MongoTemplate mongoTemplate
     ) {
         this.tripTypeRepository = tripTypeRepository;
         this.agencyRepository = agencyRepository;
         this.placeRepository = placeRepository;
+        this.routeRepository = routeRepository;
         this.mongoTemplate = mongoTemplate;
+    }
+
+    @Operation(summary = "Get a trip by id", responses = {
+        @ApiResponse(responseCode = "200", description = "Trip found"),
+        @ApiResponse(responseCode = "404", description = "Trip not found")
+    })
+    @GetMapping("/{id}")
+    public ResponseEntity<Map<String, Object>> getTripById(@PathVariable String id) {
+        TripType trip = tripTypeRepository.findById(id)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Trip not found"));
+        return ResponseEntity.ok(buildTripResponse(trip));
     }
 
     @PostMapping(path = "/create", consumes = org.springframework.http.MediaType.APPLICATION_JSON_VALUE,
             produces = org.springframework.http.MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<Map<String, Object>> createTrip(@Valid @RequestBody CreateTripRequest payload) {
-        // Map request with full datetime to domain entity (stores date part)
         TripType toSave = new TripType();
         toSave.setAgencyId(payload.agencyId());
         toSave.setOriginId(payload.originId());
         toSave.setDestinationId(payload.destinationId());
-        if (payload.departureDate() != null) {
-            // Persist both date-only (for indexing/filter) and full datetime (for accurate responses)
-            toSave.setDepartureDate(payload.departureDate().toLocalDate());
-            toSave.setDepartureDateTime(payload.departureDate().withOffsetSameInstant(ZoneOffset.UTC));
+        toSave.setTotalPrice(payload.totalPrice() != null ? payload.totalPrice() : BigDecimal.ZERO);
+
+        // Process stops: build snapshots from route IDs
+        List<TripRouteSnapshot> stopSnapshots = new ArrayList<>();
+        if (payload.stops() != null && !payload.stops().isEmpty()) {
+            for (int i = 0; i < payload.stops().size(); i++) {
+                RouteInput ri = payload.stops().get(i);
+                RouteType route = routeRepository.findById(ri.id())
+                        .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "Route not found: " + ri.id()));
+
+                TripRouteSnapshot snapshot = new TripRouteSnapshot();
+                snapshot.setId(route.getId());
+                snapshot.setOriginId(route.getOriginId());
+                snapshot.setDestinationId(route.getDestinationId());
+                snapshot.setRank(ri.rank() != null ? ri.rank() : i);
+                // Use provided fare if present, otherwise use route's default fare
+                snapshot.setFare(ri.fare() != null ? ri.fare() : route.getFare());
+                stopSnapshots.add(snapshot);
+            }
         }
-        toSave.setPrice(payload.price());
+        // Sort by rank
+        stopSnapshots.sort(Comparator.comparing(r -> r.getRank() == null ? Integer.MAX_VALUE : r.getRank()));
+        toSave.setStops(stopSnapshots);
+
+        if (payload.departureDate() != null) {
+            toSave.setDepartureDate(payload.departureDate().withOffsetSameInstant(ZoneOffset.UTC));
+        }
         toSave.setAvailableSeats(payload.availableSeats());
         toSave.setStatus(payload.status() == null ? TripStatusEnum.SCHEDULED : payload.status());
 
         TripType saved = tripTypeRepository.save(toSave);
-        // Fetch referenced objects
-        AgencyType agency = null;
-        if (saved.getAgencyId() != null) {
-            agency = agencyRepository.findById(saved.getAgencyId()).orElse(null);
-        }
-        PlaceDocument origin = null;
-        if (saved.getOriginId() != null) {
-            origin = placeRepository.findById(saved.getOriginId()).orElse(null);
-        }
-        PlaceDocument destination = null;
-        if (saved.getDestinationId() != null) {
-            destination = placeRepository.findById(saved.getDestinationId()).orElse(null);
-        }
-
-        Map<String, Object> response = new LinkedHashMap<>();
-        response.put("id", saved.getId());
-        response.put("version", saved.getVersion());
-        response.put("agency", agency);
-        response.put("origin", origin);
-        response.put("destination", destination);
-        // Echo back full datetime from request
-        response.put(
-                "departureDate",
-                payload.departureDate() == null ? null : payload.departureDate().format(DateTimeFormatter.ISO_OFFSET_DATE_TIME)
-        );
-        response.put("price", saved.getPrice());
-        response.put("availableSeats", saved.getAvailableSeats());
-        response.put("status", saved.getStatus());
-        return ResponseEntity.ok(response);
+        return ResponseEntity.ok(buildTripResponse(saved));
     }
 
-    // DTO for create-trip with full datetime
+    // DTO for create-trip
     public record CreateTripRequest(
             String agencyId,
-            String originId,
-            String destinationId,
+            @NotNull String originId,
+            @NotNull String destinationId,
+            @NotNull BigDecimal totalPrice,
+            List<RouteInput> stops,
             OffsetDateTime departureDate,
-            java.math.BigDecimal price,
             int availableSeats,
             TripStatusEnum status
+            ) {
+
+    }
+
+    public record RouteInput(
+            @NotNull String id,
+            Integer rank,
+            BigDecimal fare
             ) {
 
     }
@@ -162,65 +179,31 @@ public class TripController {
         }
         Pageable pageable = PageRequest.of(page, limit, Sort.by(Sort.Direction.ASC, "departureDate"));
 
-        // Use TripFilterInput for clean filter handling
-        TripFilterInput filter = new TripFilterInput(originId, destinationId, date, agencyId);
-
         // Build dynamic query
         var q = new org.springframework.data.mongodb.core.query.Query();
-        if (filter.originId() != null && !filter.originId().isBlank()) {
-            q.addCriteria(org.springframework.data.mongodb.core.query.Criteria.where("originId").is(filter.originId()));
+        if (originId != null && !originId.isBlank()) {
+            q.addCriteria(org.springframework.data.mongodb.core.query.Criteria.where("routes.originId").is(originId));
         }
-        if (filter.destinationId() != null && !filter.destinationId().isBlank()) {
-            q.addCriteria(org.springframework.data.mongodb.core.query.Criteria.where("destinationId").is(filter.destinationId()));
+        if (destinationId != null && !destinationId.isBlank()) {
+            q.addCriteria(org.springframework.data.mongodb.core.query.Criteria.where("routes.destinationId").is(destinationId));
         }
-        if (filter.date() != null) {
-            q.addCriteria(org.springframework.data.mongodb.core.query.Criteria.where("departureDate").is(filter.date()));
+        if (date != null) {
+            // Match trips on the given date (comparing date part of departureDate)
+            var start = date.atStartOfDay().atOffset(ZoneOffset.UTC);
+            var end = date.plusDays(1).atStartOfDay().atOffset(ZoneOffset.UTC);
+            q.addCriteria(org.springframework.data.mongodb.core.query.Criteria.where("departureDate").gte(start).lt(end));
         }
-        if (filter.agencyId() != null && !filter.agencyId().isBlank()) {
-            q.addCriteria(org.springframework.data.mongodb.core.query.Criteria.where("agencyId").is(filter.agencyId()));
+        if (agencyId != null && !agencyId.isBlank()) {
+            q.addCriteria(org.springframework.data.mongodb.core.query.Criteria.where("agencyId").is(agencyId));
         }
         q.with(pageable);
 
         List<TripType> found = mongoTemplate.find(q, TripType.class);
         long count = mongoTemplate.count(q.skip(-1).limit(-1), TripType.class);
 
-        // Map to view objects
-        List<Map<String, Object>> tripsView = found.stream().map(trip -> {
-            Map<String, Object> map = new LinkedHashMap<>();
-            map.put("id", trip.getId());
-            map.put("version", trip.getVersion());
-            // Expand foreign keys to full objects
-            map.put("agency", trip.getAgencyId() != null ? agencyRepository.findById(trip.getAgencyId()).orElse(null) : null);
-            map.put("origin", trip.getOriginId() != null ? placeRepository.findById(trip.getOriginId()).orElse(null) : null);
-            map.put("destination", trip.getDestinationId() != null ? placeRepository.findById(trip.getDestinationId()).orElse(null) : null);
-            map.put(
-                    "departureDate",
-                    trip.getDepartureDateTime() != null
-                    ? trip.getDepartureDateTime().format(DateTimeFormatter.ISO_OFFSET_DATE_TIME)
-                    : (trip.getDepartureDate() == null
-                    ? null
-                    : trip.getDepartureDate().atStartOfDay().atOffset(ZoneOffset.UTC).format(DateTimeFormatter.ISO_OFFSET_DATE_TIME))
-            );
-            map.put("price", trip.getPrice());
-            map.put("availableSeats", trip.getAvailableSeats());
-            map.put("seats", trip.getSeats());
-            map.put("status", trip.getStatus());
-            return map;
-        }).toList();
+        List<Map<String, Object>> tripsView = found.stream().map(this::buildTripResponse).toList();
         boolean isLast = (page * limit + found.size()) >= count;
         return ResponseEntity.ok(new PaginateResponseType<>(tripsView, count, isLast));
-    }
-
-    /**
-     * Clean filter input for searching trips.
-     */
-    public record TripFilterInput(
-            String originId,
-            String destinationId,
-            LocalDate date,
-            String agencyId
-            ) {
-
     }
 
     @PostMapping(path = "/update/{id}", consumes = org.springframework.http.MediaType.APPLICATION_JSON_VALUE, produces = org.springframework.http.MediaType.APPLICATION_JSON_VALUE)
@@ -232,36 +215,75 @@ public class TripController {
         if (updates.containsKey("agencyId")) {
             trip.setAgencyId((String) updates.get("agencyId"));
         }
+
         if (updates.containsKey("originId")) {
             trip.setOriginId((String) updates.get("originId"));
         }
+
         if (updates.containsKey("destinationId")) {
             trip.setDestinationId((String) updates.get("destinationId"));
         }
+
+        if (updates.containsKey("totalPrice")) {
+            Object val = updates.get("totalPrice");
+            if (val instanceof Number n) {
+                trip.setTotalPrice(BigDecimal.valueOf(n.doubleValue()));
+            } else if (val instanceof String s) {
+                trip.setTotalPrice(new BigDecimal(s));
+            }
+        }
+
+        if (updates.containsKey("stops") && updates.get("stops") != null) {
+            Object val = updates.get("stops");
+            if (val instanceof List<?> list) {
+                List<TripRouteSnapshot> stopSnapshots = new ArrayList<>();
+                for (int i = 0; i < list.size(); i++) {
+                    Object raw = list.get(i);
+                    if (raw instanceof Map m) {
+                        String routeId = m.get("id") != null ? m.get("id").toString() : null;
+                        if (routeId == null) {
+                            continue;
+                        }
+
+                        RouteType route = routeRepository.findById(routeId).orElse(null);
+                        if (route == null) {
+                            continue;
+                        }
+
+                        TripRouteSnapshot snapshot = new TripRouteSnapshot();
+                        snapshot.setId(route.getId());
+                        snapshot.setOriginId(route.getOriginId());
+                        snapshot.setDestinationId(route.getDestinationId());
+
+                        Object rankObj = m.get("rank");
+                        Integer rank = i;
+                        if (rankObj instanceof Number n) {
+                            rank = n.intValue();
+                        }
+                        snapshot.setRank(rank);
+
+                        Object fareObj = m.get("fare");
+                        BigDecimal fare = route.getFare();
+                        if (fareObj instanceof Number n) {
+                            fare = BigDecimal.valueOf(n.doubleValue());
+                        } else if (fareObj instanceof String s) {
+                            fare = new BigDecimal(s);
+                        }
+                        snapshot.setFare(fare);
+                        stopSnapshots.add(snapshot);
+                    }
+                }
+                stopSnapshots.sort(Comparator.comparing(r -> r.getRank() == null ? Integer.MAX_VALUE : r.getRank()));
+                trip.setStops(stopSnapshots);
+            }
+        }
+
         if (updates.containsKey("departureDate") && updates.get("departureDate") != null) {
             String dateStr = updates.get("departureDate").toString();
-            System.out.println("DEBUG: Updating departureDate with value: " + dateStr);
-            // Accept ISO 8601 with or without time
-            if (dateStr.length() > 10) { // has time component
-                System.out.println("DEBUG: Detected time component in departureDate: " + 11);
-                var dt = java.time.OffsetDateTime.parse(dateStr);
-                trip.setDepartureDate(dt.toLocalDate());
-                trip.setDepartureDateTime(dt.withOffsetSameInstant(ZoneOffset.UTC));
-            } else { // only date
-                System.out.println("DEBUG: Detected time component in departureDate: " + 22);
-                var date = java.time.LocalDate.parse(dateStr);
-                trip.setDepartureDate(date);
-                trip.setDepartureDateTime(date.atStartOfDay().atOffset(ZoneOffset.UTC));
-            }
+            var dt = java.time.OffsetDateTime.parse(dateStr);
+            trip.setDepartureDate(dt.withOffsetSameInstant(ZoneOffset.UTC));
         }
-        if (updates.containsKey("price")) {
-            Object val = updates.get("price");
-            if (val instanceof Number n) {
-                trip.setPrice(java.math.BigDecimal.valueOf(n.doubleValue()));
-            } else if (val instanceof String s) {
-                trip.setPrice(new java.math.BigDecimal(s));
-            }
-        }
+
         if (updates.containsKey("availableSeats")) {
             Object val = updates.get("availableSeats");
             if (val instanceof Number n) {
@@ -280,18 +302,17 @@ public class TripController {
                 }
             }
         }
-        // Optionally handle seats update if needed
+        // Handle seats update
         if (updates.containsKey("seats") && updates.get("seats") != null) {
-            // Assume seats is a List<Map<String, Object>>
             Object val = updates.get("seats");
             if (val instanceof List<?> list) {
-                List<com.eticketing.app.trip.SeatUnit> seatUnits = list.stream().filter(e -> e instanceof java.util.Map).map(e -> {
+                List<SeatUnit> seatUnits = list.stream().filter(e -> e instanceof java.util.Map).map(e -> {
                     var m = (java.util.Map<String, Object>) e;
                     int row = Integer.parseInt(m.get("row").toString());
                     int col = Integer.parseInt(m.get("col").toString());
-                    com.eticketing.app.trip.SeatStateEnum state = com.eticketing.app.trip.SeatStateEnum.valueOf(m.get("state").toString());
+                    SeatStateEnum state = SeatStateEnum.valueOf(m.get("state").toString());
                     String label = (String) m.getOrDefault("label", generateSeatLabel(row, col));
-                    return new com.eticketing.app.trip.SeatUnit(row, col, state, label);
+                    return new SeatUnit(row, col, state, label);
                 }).collect(Collectors.toCollection(java.util.ArrayList::new));
                 trip.setSeats(seatUnits);
                 trip.setAvailableSeats((int) seatUnits.stream().filter(seat -> seat.getState() == SeatStateEnum.AVAILABLE).count());
@@ -313,13 +334,11 @@ public class TripController {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Seats payload cannot be empty");
         }
 
-        // Ensure seats are initialized
         List<SeatUnit> current = trip.getSeats();
         if (current == null || current.isEmpty()) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "No seats initialized for this trip. Generate seats first.");
         }
 
-        // Build lookup maps for existing seats: by label and by position (row-col)
         java.util.Map<String, SeatUnit> byLabel = new java.util.HashMap<>();
         java.util.Map<String, SeatUnit> byPos = new java.util.HashMap<>();
         for (SeatUnit s : current) {
@@ -329,7 +348,6 @@ public class TripController {
             byPos.put(s.getRow() + "-" + s.getCol(), s);
         }
 
-        // Track not-found seats to fail fast
         List<Map<String, Object>> notFound = new ArrayList<>();
 
         for (SeatUnit reqSeat : request.seats()) {
@@ -343,14 +361,12 @@ public class TripController {
             }
 
             if (target == null) {
-                // collect missing seat info
                 Map<String, Object> miss = new LinkedHashMap<>();
                 miss.put("label", reqSeat.getLabel());
                 miss.put("row", reqSeat.getRow());
                 miss.put("col", reqSeat.getCol());
                 notFound.add(miss);
             } else {
-                // Update only state; keep label/row/col intact
                 target.setState(reqSeat.getState());
             }
         }
@@ -359,7 +375,6 @@ public class TripController {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Some seats do not exist: " + notFound);
         }
 
-        // Recompute available seats
         trip.setAvailableSeats((int) current.stream().filter(seat -> seat.getState() == SeatStateEnum.AVAILABLE).count());
 
         TripType saved = tripTypeRepository.save(trip);
@@ -379,25 +394,16 @@ public class TripController {
 
         if (body != null) {
             Integer rowsVal = body.get("rows");
-            if (rowsVal != null) {
-                int val = rowsVal;
-                if (val > 0) {
-                    rows = val;
-                }
+            if (rowsVal != null && rowsVal > 0) {
+                rows = rowsVal;
             }
             Integer colsVal = body.get("cols");
-            if (colsVal != null) {
-                int val = colsVal;
-                if (val > 0) {
-                    cols = val;
-                }
+            if (colsVal != null && colsVal > 0) {
+                cols = colsVal;
             }
             Integer backVal = body.get("lastRowSeats");
-            if (backVal != null) {
-                int val = backVal;
-                if (val > 0) {
-                    lastRowSeats = val;
-                }
+            if (backVal != null && backVal > 0) {
+                lastRowSeats = backVal;
             }
         }
 
@@ -419,39 +425,45 @@ public class TripController {
         TripType saved = tripTypeRepository.save(trip);
         Map<String, Object> response = new LinkedHashMap<>();
         response.put("message", "Seats generated successfully");
+        response.put("seats", saved.getSeats());
+        response.put("availableSeats", saved.getAvailableSeats());
         return ResponseEntity.ok(response);
     }
 
     private Map<String, Object> buildTripResponse(TripType trip) {
         AgencyType agency = trip.getAgencyId() != null ? agencyRepository.findById(trip.getAgencyId()).orElse(null) : null;
-        PlaceDocument origin = trip.getOriginId() != null ? placeRepository.findById(trip.getOriginId()).orElse(null) : null;
-        PlaceDocument destination = trip.getDestinationId() != null ? placeRepository.findById(trip.getDestinationId()).orElse(null) : null;
+        var origin = trip.getOriginId() != null ? placeRepository.findById(trip.getOriginId()).orElse(null) : null;
+        var destination = trip.getDestinationId() != null ? placeRepository.findById(trip.getDestinationId()).orElse(null) : null;
 
         Map<String, Object> response = new LinkedHashMap<>();
         response.put("id", trip.getId());
         response.put("version", trip.getVersion());
-        response.put("agency", agency);
+        response.put("agency", agency != null ? Map.of("id", agency.getId(), "name", agency.getName()) : null);
+        response.put("originId", trip.getOriginId());
+        response.put("destinationId", trip.getDestinationId());
         response.put("origin", origin);
         response.put("destination", destination);
+        response.put("stops", trip.getStops());
         response.put(
                 "departureDate",
-                trip.getDepartureDateTime() == null
-                ? (trip.getDepartureDate() == null ? null : trip.getDepartureDate().atStartOfDay().atOffset(ZoneOffset.UTC).format(DateTimeFormatter.ISO_OFFSET_DATE_TIME))
-                : trip.getDepartureDateTime().format(DateTimeFormatter.ISO_OFFSET_DATE_TIME)
+                trip.getDepartureDate() == null
+                ? null
+                : trip.getDepartureDate().format(DateTimeFormatter.ISO_OFFSET_DATE_TIME)
         );
-        response.put("price", trip.getPrice());
         response.put("availableSeats", trip.getAvailableSeats());
         response.put("seats", trip.getSeats());
+        response.put("totalPrice", trip.getTotalPrice());
         response.put("status", trip.getStatus());
+        response.put("createdAt", trip.getCreatedAt() != null ? trip.getCreatedAt().format(DateTimeFormatter.ISO_OFFSET_DATE_TIME) : null);
+        response.put("updatedAt", trip.getUpdatedAt() != null ? trip.getUpdatedAt().format(DateTimeFormatter.ISO_OFFSET_DATE_TIME) : null);
         return response;
     }
 
     private String generateSeatLabel(int row, int col) {
-        // Rows become letters: 1->A, 2->B, ... 27->AA, etc.
         StringBuilder sb = new StringBuilder();
         int r = row;
         while (r > 0) {
-            r--; // 0-index
+            r--;
             sb.insert(0, (char) ('A' + (r % 26)));
             r /= 26;
         }

@@ -1,0 +1,10 @@
+.header-wrap {
+    width: 1170px;
+    margin: 0 auto;
+}
+
+@media screen and (max-width: 1024px) {
+    .header-wrap {
+        width: 100%;
+    }
+}

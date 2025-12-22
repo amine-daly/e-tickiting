@@ -16,7 +16,7 @@ public class PlaceController {
 
     private record PlaceRes(String id, String city, LonLatType location) {
 
-        static PlaceRes from(PlaceDocument d) {
+        static PlaceRes from(PlaceType d) {
             return new PlaceRes(d.getId(), d.getCity(), d.getLocation());
         }
     }
@@ -35,7 +35,7 @@ public class PlaceController {
     public Paginated<PlaceRes> list(@RequestParam(defaultValue = "") String q,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "50") int limit) {
-        Page<PlaceDocument> p = q == null || q.isBlank()
+        Page<PlaceType> p = q == null || q.isBlank()
                 ? repo.findAll(PageRequest.of(page, limit))
                 : repo.findByCityIgnoreCaseContaining(q, PageRequest.of(page, limit));
         var list = p.getContent().stream().map(PlaceRes::from).toList();
@@ -49,7 +49,7 @@ public class PlaceController {
 
     @PostMapping
     public PlaceRes create(@RequestBody PlaceReq req) {
-        var saved = repo.save(new PlaceDocument(req.city(), req.location()));
+        var saved = repo.save(new PlaceType(req.city(), req.location()));
         return PlaceRes.from(saved);
     }
 
