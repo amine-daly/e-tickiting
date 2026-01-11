@@ -1,5 +1,6 @@
-import { PlaceType } from 'src/app/core/models/place-type';
-import { TripRouteSnapshot } from './route.model';
+import { PlaceType, SubPlaceType } from 'src/app/core/models/place-type';
+import { CountryType } from './country-type';
+import { StateType } from './state-type';
 
 export interface AgencyPhone {
   countryCode: string;
@@ -21,17 +22,37 @@ export enum TripStatus {
   CANCELLED = 'CANCELLED',
 }
 
+// Intermediate stop with place, rank, and fare
+export interface StopType {
+  placeId: string;
+  rank: number;
+  fare: number;
+  place?: PlaceType; // Expanded place from backend
+}
+
+/** Extended place with state, country, and sub-places (pickup/dropoff points) */
+export interface TripPlaceType {
+  id?: string;
+  city: string;
+  location?: { coordinates: [number, number] };
+  state?: StateType;
+  country?: CountryType;
+  /** Sub-places (pickup/dropoff points) */
+  places?: SubPlaceType[];
+}
+
 export interface TripType {
   id: string;
   agency: AgencyType;
   agencyId?: string;
-  originId: string; // Admin-entered origin place ID
-  destinationId: string; // Admin-entered destination place ID
-  origin?: PlaceType; // Populated from originId
-  destination?: PlaceType; // Populated from destinationId
-  stops?: TripRouteSnapshot[]; // Optional intermediate stops
+  originId: string;
+  destinationId: string;
+  origin?: TripPlaceType;
+  destination?: TripPlaceType;
+  stops?: StopType[]; // Intermediate stops with placeId, rank, fare
   departureDate: string; // ISO datetime with timezone
-  totalPrice: number; // Admin-entered total price
+  totalPrice: number;
+  totalPlaces: number;
   availableSeats: number;
   seats?: any[];
   version?: number;

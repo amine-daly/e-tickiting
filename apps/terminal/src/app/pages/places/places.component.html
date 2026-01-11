@@ -1,116 +1,600 @@
 <div>
-    <div class="container py-5">
-        <div class="card">
-            <div class="card-body">
-                <div class="d-flex justify-content-between align-items-center mb-4">
-                    <h2 class="mb-0">{{ 'PLACES.TITLE' | translate }}</h2>
-                    <div>
-                        <button class="btn btn-primary me-2" (click)="openPlaceModal(placeModal)">{{ 'PLACES.ADD_BUTTON'
-                            | translate }}</button>
+  <div class="container py-5">
+    <div class="card">
+      <div class="card-body">
+        <!-- Tab Navigation -->
+        <ul
+          ngbNav
+          #nav="ngbNav"
+          [(activeId)]="activeTab"
+          class="nav nav-stretch nav-line-tabs nav-line-tabs-2x border-transparent fs-5 fw-bolder flex-nowrap mb-3"
+        >
+          <li [ngbNavItem]="'places'">
+            <a
+              (click)="onTabChange('places')"
+              class="nav-link text-active-primary me-6"
+              ngbNavLink
+            >
+              {{ "PLACES.TAB.PLACES" | translate }}
+            </a>
+            <ng-template ngbNavContent>
+              <!-- Places Tab Content -->
+              <div
+                class="d-flex justify-content-between align-items-center mb-4"
+              >
+                <h2 class="mb-0">{{ "PLACES.TITLE" | translate }}</h2>
+                <div class="d-flex align-items-center">
+                  <div class="input-group me-2" style="width: 360px">
+                    <span class="input-group-text">
+                      <i class="ki-duotone ki-magnifier fs-3">
+                        <span class="path1"></span>
+                        <span class="path2"></span>
+                      </i>
+                    </span>
+                    <input
+                      type="text"
+                      class="form-control"
+                      [(ngModel)]="placesSearch"
+                      (ngModelChange)="onPlacesSearchChange()"
+                      placeholder="{{ 'COMMON.LABEL.SEARCH' | translate }}"
+                    />
+                  </div>
+
+                  <button
+                    class="btn btn-primary"
+                    (click)="openPlaceModal(placeModal)"
+                  >
+                    {{ "PLACES.ADD_BUTTON" | translate }}
+                  </button>
+                </div>
+              </div>
+
+              <div *ngIf="loading" class="text-center my-5">
+                <span class="spinner-border spinner-border-lg"></span>
+                <div>{{ "PLACES.LOADING" | translate }}</div>
+              </div>
+              <div *ngIf="error" class="alert alert-danger">{{ error }}</div>
+              <div
+                *ngIf="!loading && !(places$ | async)?.length && !error"
+                class="alert alert-info"
+              >
+                {{ "PLACES.EMPTY" | translate }}
+              </div>
+
+              <div
+                *ngIf="!loading && (places$ | async)?.length"
+                class="table-responsive"
+              >
+                <!-- begin::Table -->
+                <table
+                  class="table table-row-dashed table-row-gray-300 align-middle gs-0 gy-4"
+                >
+                  <!-- begin::Table head -->
+                  <thead>
+                    <tr class="fw-bolder text-muted">
+                      <th></th>
+                      <th class="min-w-150px">
+                        {{ "COMMON.LABEL.CITY" | translate }}
+                      </th>
+                      <th class="min-w-120px">
+                        {{ "COMMON.LABEL.COUNTRY" | translate }}
+                      </th>
+                      <th class="min-w-120px">
+                        {{ "COMMON.LABEL.STATE" | translate }}
+                      </th>
+                      <th class="min-w-100px">
+                        {{ "PLACES.TAB.SUBPLACES" | translate }}
+                      </th>
+                      <th class="min-w-100px text-end">
+                        {{ "COMMON.LABEL.ACTIONS" | translate }}
+                      </th>
+                    </tr>
+                  </thead>
+                  <!-- end::Table head -->
+                  <!-- begin::Table body -->
+                  <tbody>
+                    <tr *ngFor="let p of places$ | async; let i = index">
+                      <td>
+                        <div
+                          class="form-check form-check-sm form-check-custom form-check-solid"
+                        >
+                          <input
+                            class="form-check-input widget-9-check"
+                            type="checkbox"
+                            [value]="p.id"
+                          />
+                        </div>
+                      </td>
+                      <td>
+                        <span
+                          class="text-dark fw-bolder text-hover-primary fs-6"
+                          >{{ p.city }}</span
+                        >
+                      </td>
+                      <td>
+                        <span *ngIf="p.country"
+                          >{{ p.country.flag }} {{ p.country.name }}</span
+                        >
+                        <span *ngIf="!p.country">-</span>
+                      </td>
+                      <td>{{ p.state?.name || "-" }}</td>
+                      <td>
+                        <div
+                          class="d-flex flex-wrap"
+                          [attr.title]="getSubPlacesText(p)"
+                        >
+                          <ng-container
+                            *ngIf="p.subPlaces?.length; else noSubPlaces"
+                          >
+                            <ng-container
+                              *ngFor="let sp of p.subPlaces; let idx = index"
+                            >
+                              <span
+                                class="badge badge-light-info me-1 mb-1"
+                                *ngIf="idx < 3"
+                              >
+                                {{ sp.address || "-" }}
+                              </span>
+                            </ng-container>
+                            <span
+                              *ngIf="(p.subPlaces?.length || 0) > 3"
+                              class="badge badge-light-secondary mb-1"
+                            >
+                              +{{ p.subPlaces.length - 3 }}
+                              {{
+                                "PLACES.SUBPLACES.MORE"
+                                  | translate
+                                    : { count: p.subPlaces.length - 3 }
+                              }}
+                            </span>
+                          </ng-container>
+                          <ng-template #noSubPlaces>-</ng-template>
+                        </div>
+                      </td>
+                      <td>
+                        <div class="d-flex justify-content-end flex-shrink-0">
+                          <button
+                            class="btn btn-icon btn-active-light-primary w-30px h-30px me-3"
+                            (click)="openPlaceModal(placeModal, p)"
+                          >
+                            <i class="ki-duotone ki-pencil fs-2">
+                              <span class="path1"></span>
+                              <span class="path2"></span>
+                            </i>
+                          </button>
+                          <button
+                            class="btn btn-icon btn-active-light-danger w-30px h-30px"
+                            (click)="deletePlace(p)"
+                          >
+                            <i class="ki-duotone ki-trash fs-2">
+                              <span class="path1"></span>
+                              <span class="path2"></span>
+                            </i>
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  </tbody>
+                  <!-- end::Table body -->
+                </table>
+                <!-- end::Table -->
+                <div class="d-flex justify-content-end mt-10">
+                  <div class="col col-sm-6">
+                    <div class="text-sm-right float-end listjs-pagination">
+                      <ngb-pagination
+                        [maxSize]="5"
+                        [collectionSize]="pagination?.length"
+                        [(page)]="page"
+                        (pageChange)="onPageChange($event)"
+                        [pageSize]="pagination?.size"
+                      >
+                      </ngb-pagination>
                     </div>
+                  </div>
                 </div>
+              </div>
+            </ng-template>
+          </li>
 
-                <div *ngIf="loading" class="text-center my-5">
-                    <span class="spinner-border spinner-border-lg"></span>
-                    <div>{{ 'PLACES.LOADING' | translate }}</div>
-                </div>
-                <div *ngIf="error" class="alert alert-danger">{{ error }}</div>
-                <div *ngIf="!loading && !(places$ | async)?.length && !error" class="alert alert-info">{{ 'PLACES.EMPTY'
-                    | translate }}
-                </div>
+          <li [ngbNavItem]="'subPlaces'">
+            <a
+              (click)="onTabChange('subPlaces')"
+              class="nav-link text-active-primary me-6"
+              ngbNavLink
+            >
+              {{ "PLACES.TAB.SUBPLACES" | translate }}
+            </a>
+            <ng-template ngbNavContent>
+              <!-- SubPlaces Tab Content -->
+              <div
+                class="d-flex justify-content-between align-items-center mb-4"
+              >
+                <h2 class="mb-0">{{ "PLACES.SUBPLACES.TITLE" | translate }}</h2>
+                <div class="d-flex align-items-center">
+                  <div class="input-group me-2" style="width: 360px">
+                    <span class="input-group-text">
+                      <i class="ki-duotone ki-magnifier fs-3">
+                        <span class="path1"></span>
+                        <span class="path2"></span>
+                      </i>
+                    </span>
+                    <input
+                      type="text"
+                      class="form-control"
+                      [ngModel]="placesService.subPlacesSearchString"
+                      (ngModelChange)="subPlacesSearchInput$.next($event)"
+                      placeholder="{{ 'COMMON.LABEL.SEARCH' | translate }}"
+                    />
+                  </div>
 
-                <div *ngIf="!loading && (places$ | async)?.length" class="table-responsive">
-                    <!-- begin::Table -->
-                    <table class="table table-row-dashed table-row-gray-300 align-middle gs-0 gy-4">
-                        <!-- begin::Table head -->
-                        <thead>
-                            <tr class="fw-bolder text-muted">
-                                <th></th>
-                                <th class="min-w-150px">{{ 'COMMON.LABEL.CITY' | translate }}</th>
-                                <th class="min-w-140px">{{ 'COMMON.LABEL.LATITUDE' | translate }}</th>
-                                <th class="min-w-120px">{{ 'COMMON.LABEL.LONGITUDE' | translate }}</th>
-                                <th class="min-w-100px text-end">{{ 'COMMON.LABEL.ACTIONS' | translate }}</th>
-                            </tr>
-                        </thead>
-                        <!-- end::Table head -->
-                        <!-- begin::Table body -->
-                        <tbody>
-                            <tr *ngFor="let p of places$ | async; let i = index">
-                                <td>
-                                    <div class="form-check form-check-sm form-check-custom form-check-solid">
-                                        <input class="form-check-input widget-9-check" type="checkbox" [value]="p.id" />
-                                    </div>
-                                </td>
-                                <td>
-                                    <span class="text-dark fw-bolder text-hover-primary fs-6">{{ p.city }}</span>
-                                </td>
-                                <td>{{ p.location ? p.location.coordinates[1] : '-' }}</td>
-                                <td>{{ p.location ? p.location.coordinates[0] : '-' }}</td>
-                                <td>
-                                    <div class="d-flex justify-content-end flex-shrink-0">
-                                        <button class="btn btn-icon btn-active-light-primary w-30px h-30px me-3"
-                                            (click)="openPlaceModal(placeModal, p)">
-                                            <i class="ki-duotone ki-pencil fs-2">
-                                                <span class="path1"></span>
-                                                <span class="path2"></span>
-                                            </i>
-                                        </button>
-                                        <button class="btn btn-icon btn-active-light-danger w-30px h-30px"
-                                            (click)="deletePlace(p)">
-                                            <i class="ki-duotone ki-trash fs-2">
-                                                <span class="path1"></span>
-                                                <span class="path2"></span>
-                                            </i>
-                                        </button>
-                                    </div>
-                                </td>
-                            </tr>
-                        </tbody>
-                        <!-- end::Table body -->
-                    </table>
-                    <!-- end::Table -->
+                  <button
+                    class="btn btn-primary"
+                    (click)="openSubPlaceModal(subPlaceModal)"
+                  >
+                    {{ "PLACES.SUBPLACES.ADD_BUTTON" | translate }}
+                  </button>
                 </div>
-            </div>
-        </div>
+              </div>
+
+              <div *ngIf="subPlacesLoading" class="text-center my-5">
+                <span class="spinner-border spinner-border-lg"></span>
+                <div>{{ "PLACES.SUBPLACES.LOADING" | translate }}</div>
+              </div>
+              <div *ngIf="subPlacesError" class="alert alert-danger">
+                {{ subPlacesError }}
+              </div>
+              <div
+                *ngIf="
+                  !subPlacesLoading &&
+                  !(subPlaces$ | async)?.length &&
+                  !subPlacesError
+                "
+                class="alert alert-info"
+              >
+                {{ "PLACES.SUBPLACES.EMPTY" | translate }}
+              </div>
+
+              <div
+                *ngIf="!subPlacesLoading && (subPlaces$ | async)?.length"
+                class="table-responsive"
+              >
+                <table
+                  class="table table-row-dashed table-row-gray-300 align-middle gs-0 gy-4"
+                >
+                  <thead>
+                    <tr class="fw-bolder text-muted">
+                      <th></th>
+                      <th class="min-w-150px">
+                        {{ "COMMON.LABEL.ADDRESS" | translate }}
+                      </th>
+                      <th class="min-w-120px">
+                        {{ "PLACES.SUBPLACES.PARENT_CITY" | translate }}
+                      </th>
+                      <th class="min-w-80px">
+                        {{ "COMMON.LABEL.DEFAULT" | translate }}
+                      </th>
+                      <th class="min-w-100px text-end">
+                        {{ "COMMON.LABEL.ACTIONS" | translate }}
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr *ngFor="let sp of subPlaces$ | async; let i = index">
+                      <td>
+                        <div
+                          class="form-check form-check-sm form-check-custom form-check-solid"
+                        >
+                          <input
+                            class="form-check-input widget-9-check"
+                            type="checkbox"
+                            [value]="sp.id"
+                          />
+                        </div>
+                      </td>
+                      <td>
+                        <span
+                          class="text-dark fw-bolder text-hover-primary fs-6"
+                          >{{ sp.address || "-" }}</span
+                        >
+                      </td>
+                      <td>{{ sp.parentCity || "-" }}</td>
+                      <td>
+                        <span
+                          *ngIf="sp.isDefault"
+                          class="badge badge-light-success"
+                          >{{ "COMMON.LABEL.YES" | translate }}</span
+                        >
+                        <span
+                          *ngIf="!sp.isDefault"
+                          class="badge badge-light-danger"
+                          >{{ "COMMON.LABEL.NO" | translate }}</span
+                        >
+                      </td>
+                      <td>
+                        <div class="d-flex justify-content-end flex-shrink-0">
+                          <button
+                            class="btn btn-icon btn-active-light-primary w-30px h-30px me-3"
+                            (click)="openSubPlaceModal(subPlaceModal, sp)"
+                          >
+                            <i class="ki-duotone ki-pencil fs-2">
+                              <span class="path1"></span>
+                              <span class="path2"></span>
+                            </i>
+                          </button>
+                          <button
+                            class="btn btn-icon btn-active-light-danger w-30px h-30px"
+                            (click)="deleteSubPlace(sp)"
+                          >
+                            <i class="ki-duotone ki-trash fs-2">
+                              <span class="path1"></span>
+                              <span class="path2"></span>
+                            </i>
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+                <div class="d-flex justify-content-end mt-10">
+                  <div class="col col-sm-6">
+                    <div class="text-sm-right float-end listjs-pagination">
+                      <ngb-pagination
+                        [maxSize]="5"
+                        [collectionSize]="subPlacesPagination?.length"
+                        [(page)]="subPlacesPage"
+                        (pageChange)="onSubPlacesPageChange($event)"
+                        [pageSize]="subPlacesPagination?.size"
+                      >
+                      </ngb-pagination>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </ng-template>
+          </li>
+        </ul>
+
+        <div [ngbNavOutlet]="nav"></div>
+      </div>
     </div>
-    <ng-template #placeModal let-modal>
-        <div class="modal-header">
-            <h5 class="modal-title">{{ (editing ? 'PLACES.MODAL.EDIT_TITLE' : 'PLACES.MODAL.ADD_TITLE') | translate }}
-            </h5>
-            <button type="button" class="btn-close" aria-label="Close" (click)="modal.dismiss('Cross click')"></button>
+  </div>
+  <ng-template #placeModal let-modal>
+    <div class="modal-header">
+      <h5 class="modal-title">
+        {{
+          (editing ? "PLACES.MODAL.EDIT_TITLE" : "PLACES.MODAL.ADD_TITLE")
+            | translate
+        }}
+      </h5>
+      <button
+        type="button"
+        class="btn-close"
+        aria-label="Close"
+        (click)="modal.dismiss('Cross click')"
+      ></button>
+    </div>
+    <form [formGroup]="form">
+      <div class="modal-body">
+        <!-- City -->
+        <div class="mb-3">
+          <label
+            >{{ "COMMON.LABEL.CITY" | translate }}
+            <span class="text-danger">*</span></label
+          >
+          <input
+            required
+            class="form-control"
+            type="text"
+            formControlName="city"
+          />
+          <div *ngIf="isInvalid('city')" class="text-danger small">
+            {{ "PLACES.MODAL.ERRORS.CITY_REQUIRED" | translate }}
+          </div>
         </div>
-        <form [formGroup]="form">
-            <div class="modal-body">
-                <div class="mb-3">
-                    <label>{{ 'COMMON.LABEL.CITY' | translate }} <span class="text-danger">*</span></label>
-                    <input class="form-control" type="text" formControlName="city" />
-                    <div *ngIf="isInvalid('city')" class="text-danger small">{{ 'PLACES.MODAL.ERRORS.CITY_REQUIRED' |
-                        translate }}</div>
-                </div>
-                <div class="mb-3">
-                    <label>{{ 'PLACES.MODAL.LOCATION_LABEL' | translate }} <span class="text-danger">*</span></label>
-                    <div *ngIf="form.get('location')?.value; else missingLocation">
-                        Lat: {{ form.get('location')?.value.coordinates[1] }}, Lng:
-                        {{ form.get('location')?.value.coordinates[0] }}
-                    </div>
-                    <ng-template #missingLocation>
-                        <div class="text-danger small">{{ 'PLACES.MODAL.LOCATION_HELP' | translate }}</div>
-                    </ng-template>
-                    <google-map class="place-map" [center]="position || { lat: 33.886917, lng: 9.537499 }"
-                        [zoom]="position ? 12 : 4" (mapClick)="pickAddress($event)">
-                        <map-marker *ngIf="position" [position]="position"></map-marker>
-                    </google-map>
-                </div>
+
+        <div class="row mb-3">
+          <div class="col-lg-6">
+            <!-- Country -->
+            <div class="mb-3">
+              <label>{{ "COMMON.LABEL.COUNTRY" | translate }}</label>
+              <ng-select
+                [items]="countries"
+                formControlName="country"
+                [clearable]="true"
+                [searchable]="true"
+                [loading]="countriesLoading"
+                (change)="onCountryChange()"
+                [typeahead]="countriesSearchInput$"
+                (search)="onCountrySearch($event)"
+                placeholder="{{ 'PLACES.MODAL.SELECT_COUNTRY' | translate }}"
+              >
+                <ng-template ng-label-tmp let-item="item">
+                  {{ item.flag }} {{ item.name }}
+                </ng-template>
+                <ng-template ng-option-tmp let-item="item">
+                  {{ item.flag }} {{ item.name }}
+                </ng-template>
+              </ng-select>
             </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-primary" (click)="submit(modal)"
-                    [disabled]="form.invalid || isButtonDisabled">
-                    {{ (editing ? 'COMMON.BUTTON.UPDATE' : 'COMMON.BUTTON.SAVE') | translate }}
-                </button>
-                <button type="button" class="btn btn-secondary" (click)="modal.dismiss('Cross click')">
-                    {{ 'COMMON.BUTTON.CANCEL' | translate }}
-                </button>
+          </div>
+          <div class="col-lg-6">
+            <!-- State -->
+            <div class="mb-3">
+              <label>{{ "COMMON.LABEL.STATE" | translate }}</label>
+              <ng-select
+                [items]="states"
+                [clearable]="true"
+                [searchable]="true"
+                formControlName="state"
+                [loading]="statesLoading"
+                size="8"
+                (scrollToEnd)="loadMoreStates()"
+                [typeahead]="statesSearchInput$"
+                placeholder="{{ 'PLACES.MODAL.SELECT_STATE' | translate }}"
+              >
+                <ng-template ng-label-tmp let-item="item">
+                  {{ item.name }}
+                </ng-template>
+                <ng-template ng-option-tmp let-item="item">
+                  {{ item.name }}
+                </ng-template>
+              </ng-select>
             </div>
-        </form>
-    </ng-template>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button
+          type="button"
+          class="btn btn-primary"
+          (click)="submit(modal)"
+          [disabled]="form.invalid || isButtonDisabled"
+        >
+          {{
+            (editing ? "COMMON.BUTTON.UPDATE" : "COMMON.BUTTON.SAVE")
+              | translate
+          }}
+        </button>
+        <button
+          type="button"
+          class="btn btn-secondary"
+          (click)="modal.dismiss('Cross click')"
+        >
+          {{ "COMMON.BUTTON.CANCEL" | translate }}
+        </button>
+      </div>
+    </form>
+  </ng-template>
+
+  <!-- SubPlace Modal -->
+  <ng-template #subPlaceModal let-modal>
+    <div class="modal-header">
+      <h5 class="modal-title">
+        {{
+          (editingSubPlace
+            ? "PLACES.SUBPLACES.MODAL.EDIT_TITLE"
+            : "PLACES.SUBPLACES.MODAL.ADD_TITLE"
+          ) | translate
+        }}
+      </h5>
+      <button
+        type="button"
+        class="btn-close"
+        aria-label="Close"
+        (click)="modal.dismiss('Cross click')"
+      ></button>
+    </div>
+    <form [formGroup]="subPlaceForm">
+      <div class="modal-body">
+        <!-- Parent Place -->
+        <div class="mb-3">
+          <label
+            >{{ "COMMON.LABEL.PARENT_PLACE" | translate }}
+            <span class="text-danger">*</span></label
+          >
+          <!-- Use ng-select with infinite loading (scroll to end) to avoid missing parents due to pagination -->
+          <ng-select
+            formControlName="parentId"
+            [items]="infinitePlaces$ | async"
+            bindLabel="city"
+            bindValue="id"
+            placeholder="{{ 'PLACES.MODAL.SELECT_PARENT' | translate }}"
+            (scrollToEnd)="loadMoreParentPlaces()"
+            [clearable]="false"
+            [loading]="false"
+          >
+            <ng-template ng-label-tmp let-item="item">
+              {{ item.city }}
+            </ng-template>
+            <ng-template ng-option-tmp let-item="item">
+              {{ item.city }}
+            </ng-template>
+          </ng-select>
+
+          <div *ngIf="isSubPlaceInvalid('parentId')" class="text-danger small">
+            {{ "PLACES.MODAL.ERRORS.PARENT_REQUIRED" | translate }}
+          </div>
+        </div>
+
+        <!-- Address -->
+        <div class="mb-3">
+          <label
+            >{{ "COMMON.LABEL.ADDRESS" | translate }}
+            <span class="text-danger">*</span></label
+          >
+          <input
+            required
+            class="form-control"
+            type="text"
+            formControlName="address"
+          />
+          <div *ngIf="isSubPlaceInvalid('address')" class="text-danger small">
+            {{ "PLACES.MODAL.ERRORS.ADDRESS_REQUIRED" | translate }}
+          </div>
+        </div>
+
+        <!-- Pickup Instructions -->
+        <div class="mb-3">
+          <label>{{ "COMMON.LABEL.PICKUP_INSTRUCTIONS" | translate }}</label>
+          <textarea
+            class="form-control"
+            formControlName="pickupInstructions"
+            rows="2"
+          ></textarea>
+        </div>
+
+        <!-- Is Default -->
+        <div class="mb-3 form-check">
+          <input
+            type="checkbox"
+            class="form-check-input"
+            formControlName="isDefault"
+            id="isDefaultSubPlace"
+          />
+          <label class="form-check-label" for="isDefaultSubPlace">{{
+            "COMMON.LABEL.IS_DEFAULT" | translate
+          }}</label>
+        </div>
+
+        <!-- Location (Map) -->
+        <div class="mb-3">
+          <label>{{ "PLACES.MODAL.LOCATION_LABEL" | translate }}</label>
+          <div class="text-muted small mb-2">
+            {{ "PLACES.MODAL.LOCATION_HELP" | translate }}
+          </div>
+          <google-map
+            class="place-map"
+            [center]="subPlacePosition || { lat: 33.886917, lng: 9.537499 }"
+            [zoom]="subPlacePosition ? 12 : 4"
+            (mapClick)="pickSubPlaceAddress($event)"
+          >
+            <map-marker
+              *ngIf="subPlacePosition"
+              [position]="subPlacePosition"
+            ></map-marker>
+          </google-map>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button
+          type="button"
+          class="btn btn-primary"
+          (click)="submitSubPlace(modal)"
+          [disabled]="subPlaceForm.invalid || isSubPlaceButtonDisabled"
+        >
+          {{
+            (editingSubPlace ? "COMMON.BUTTON.UPDATE" : "COMMON.BUTTON.SAVE")
+              | translate
+          }}
+        </button>
+        <button
+          type="button"
+          class="btn btn-secondary"
+          (click)="modal.dismiss('Cross click')"
+        >
+          {{ "COMMON.BUTTON.CANCEL" | translate }}
+        </button>
+      </div>
+    </form>
+  </ng-template>
 </div>

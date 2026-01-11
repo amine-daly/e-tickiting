@@ -4,23 +4,24 @@ import { BehaviorSubject, Observable, throwError } from 'rxjs';
 import { catchError, finalize, map, tap } from 'rxjs/operators';
 
 import { TripType as TripType, TripStatus } from '../../core/models/trip.model';
-import { PaginateResponse } from '../../core/models/paginate-response.model';
 import { TripFilterInput } from 'src/app/core/models/trip-filter-input.model';
+import { PaginateResponse } from 'src/app/core/models/paginate-model';
 
-// Route input for creating a trip (optional intermediate stops)
-export interface RouteInput {
-  routeId: string;
-  fare?: number; // Optional override, defaults to route's fare
+// Stop input for creating/updating a trip
+export interface StopInput {
+  placeId: string;
+  rank?: number;
+  fare?: number;
 }
 
 export interface TripCreatePayload {
   agencyId?: string | null;
-  originId: string; // Required: origin place ID
-  destinationId: string; // Required: destination place ID
-  totalPrice: number; // Required: admin-entered total price
-  stops?: RouteInput[]; // Optional: intermediate stops
-  departureDate: string; // ISO datetime
-  availableSeats: number;
+  originId: string;
+  destinationId: string;
+  totalPrice: number;
+  stops?: StopInput[];
+  departureDate: string;
+  totalPlaces: number;
   status?: TripStatus | null;
 }
 
@@ -29,9 +30,9 @@ export interface TripUpdatePayload {
   originId?: string | null;
   destinationId?: string | null;
   totalPrice?: number | null;
-  stops?: RouteInput[] | null;
+  stops?: StopInput[] | null;
   departureDate?: string | null;
-  availableSeats?: number | null;
+  totalPlaces?: number | null;
   status?: TripStatus | null;
 }
 

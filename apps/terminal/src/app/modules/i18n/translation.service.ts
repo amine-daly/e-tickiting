@@ -45,10 +45,6 @@ export class TranslationService {
 
   setLanguage(lang: string) {
     this.translate.use(lang);
-    console.log(
-      '🚀 ~ TranslationService ~ setLanguage ~ this.translate:',
-      this.translate
-    );
     this.cookieService.set('lang', lang);
   }
 }

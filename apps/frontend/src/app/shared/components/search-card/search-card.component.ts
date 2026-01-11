@@ -14,8 +14,9 @@ import { takeUntil, startWith } from 'rxjs/operators';
 import { PlacesService } from '../../../modules/home/home.service';
 import { TripService } from '../../../modules/pages/bus/trip.service';
 import { ToasterService } from '../toast/toaster.service';
-import { TripSearchParams } from '../../../core/models/trip.model';
+import { RecentSearchesService } from '../../../core/services/recent-searches.service';
 import { PlaceType } from '../../../core/models/place-type';
+import { TripSearchParams } from '../../../core/models/trip.model';
 
 @Component({
   selector: 'search-card',
@@ -36,7 +37,8 @@ export class SearchCardComponent implements OnInit, OnDestroy {
     private fb: FormBuilder,
     private tripService: TripService,
     private placesService: PlacesService,
-    private toasterService: ToasterService
+    private toasterService: ToasterService,
+    private recentSearchesService: RecentSearchesService
   ) {
     this.placesForm = this.fb.group({
       origin: [null, Validators.required],
@@ -91,6 +93,16 @@ export class SearchCardComponent implements OnInit, OnDestroy {
       return;
     }
     const { origin, destination, date } = this.placesForm.value;
+
+    // Add to recent searches
+    this.recentSearchesService.addSearch({
+      originId: origin.id,
+      originLabel: origin.city,
+      destinationId: destination.id,
+      destinationLabel: destination.city,
+      date: date || '',
+    });
+
     const params: TripSearchParams = {
       originId: origin.id,
       destinationId: destination.id,

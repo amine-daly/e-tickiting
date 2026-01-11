@@ -2,7 +2,7 @@
 @import "./assets/sass/style.scss";
 // Replace above style with this css file to enable RTL styles
 // @import "./assets/css/style.rtl";
-@import './assets/sass/plugins.scss';
+@import "./assets/sass/plugins.scss";
 // @import "./assets/css/style.rtl.css";
 @import "./assets/sass/style.angular.scss";
 
@@ -13,50 +13,50 @@
 @import "./assets/plugins/keenicons/solid/style.css";
 
 // Custom dark mode styles for ng-select
-[data-bs-theme=dark] .ng-select {
-    background: #1e1e2d !important;
-    color: #92929F !important;
+[data-bs-theme="dark"] .ng-select {
+  background: #1e1e2d !important;
+  color: #92929f !important;
 }
 
-[data-bs-theme=dark] .ng-select .ng-select-container {
-    background: #1e1e2d !important;
-    border-color: #444 !important;
-    color: #92929F !important;
+[data-bs-theme="dark"] .ng-select .ng-select-container {
+  background: #1e1e2d !important;
+  border-color: #444 !important;
+  color: #92929f !important;
 }
 
-[data-bs-theme=dark] .ng-select .ng-dropdown-panel {
-    background: #1e1e2d !important;
-    color: #92929F !important;
-    border-color: #444 !important;
+[data-bs-theme="dark"] .ng-select .ng-dropdown-panel {
+  background: #1e1e2d !important;
+  color: #92929f !important;
+  border-color: #444 !important;
 }
 
-[data-bs-theme=dark] .ng-select .ng-option {
-    background: #1e1e2d !important;
-    color: #92929F !important;
+[data-bs-theme="dark"] .ng-select .ng-option {
+  background: #1e1e2d !important;
+  color: #92929f !important;
 }
 
-[data-bs-theme=dark] .ng-select .ng-option-selected,
-[data-bs-theme=dark] .ng-select .ng-option-marked {
-    background: #2b2e3e !important;
-    color: #fff !important;
+[data-bs-theme="dark"] .ng-select .ng-option-selected,
+[data-bs-theme="dark"] .ng-select .ng-option-marked {
+  background: #2b2e3e !important;
+  color: #fff !important;
 }
 
-[data-bs-theme=dark] .ng-select .ng-select-clear {
-    color: #bbb !important;
+[data-bs-theme="dark"] .ng-select .ng-select-clear {
+  color: #bbb !important;
 }
 
 label {
-    margin-bottom: 0.75rem;
+  margin-bottom: 0.75rem;
 }
 
 // Input text color for dark mode
-[data-bs-theme=dark] .ng-select .ng-input>input {
-    color: #fff !important;
+[data-bs-theme="dark"] .ng-select .ng-input > input {
+  color: #fff !important;
 }
 
 .place-map {
-    .map-container {
-        height: 340px !important;
-        width: 100% !important;
-    }
+  .map-container {
+    height: 340px !important;
+    width: 100% !important;
+  }
 }

@@ -1,11 +1,10 @@
 import { isEqual } from 'lodash';
-import { Component, OnDestroy, OnInit, TemplateRef } from '@angular/core';
+import { Component, OnDestroy, OnInit } from '@angular/core';
 import {
   NgbDropdownModule,
   NgbModal,
   NgbModule,
 } from '@ng-bootstrap/ng-bootstrap';
-import Swal from 'sweetalert2';
 import { CommonModule } from '@angular/common';
 import {
   FormBuilder,
@@ -24,26 +23,18 @@ import {
 } from 'rxjs';
 
 import { TripType as TripType, TripStatus } from '../../core/models/trip.model';
-import { RouteType } from '../../core/models/route.model';
-import { TripService, TripUpdatePayload, RouteInput } from './trip.service';
+import { TripService, TripUpdatePayload, StopInput } from './trip.service';
 import { KeeniconComponent } from 'src/app/_metronic/shared/keenicon/keenicon.component';
 import { AlertService } from '../../core/services/alert.service';
-import { FormHelper } from '../../core/helpers/form-helper';
 import { AgenciesService } from '../agencies/agencies.service';
 import { PlacesService } from '../places/places.service';
-import { RoutesService } from '../routes/routes.service';
 import { NgSelectComponent } from '@ng-select/ng-select';
 import {
   FlatpickrDirective,
   provideFlatpickrDefaults,
 } from 'angularx-flatpickr';
 import { TranslateModule, TranslateService } from '@ngx-translate/core';
-import {
-  CdkDragDrop,
-  moveItemInArray,
-  DragDropModule,
-} from '@angular/cdk/drag-drop';
-import { firstValueFrom } from 'rxjs';
+import { CdkDragDrop, DragDropModule } from '@angular/cdk/drag-drop';
 import { PlaceType } from '../../core/models/place-type';
 
 @Component({
@@ -79,10 +70,16 @@ export class TripListComponent implements OnInit, OnDestroy {
   loading$ = this.tripService.loading$;
   places$ = this.placesService.places$;
   agencies$ = this.agenciesService.agencies$;
-  routes$ = this.routesService.routes$;
 
   private allPlaces: PlaceType[] = [];
-  private allRoutes: RouteType[] = [];
+  // Cached available options per stop index to avoid expensive per-render computations
+  availablePlacesForStops: PlaceType[][] = [];
+  // Options for origin/destination selects with optional disabled flag
+  originOptions: Array<PlaceType & { disabled?: boolean }> = [];
+  destinationOptions: Array<PlaceType & { disabled?: boolean }> = [];
+
+  // Flatpickr options for departure date (min today, max +14 days)
+  dateOptions: any = {};
 
   statusOptions: Array<{ value: TripStatus; labelKey: string }> = [
     { value: TripStatus.SCHEDULED, labelKey: 'TRIPS.STATUS.SCHEDULED' },
@@ -110,8 +107,7 @@ export class TripListComponent implements OnInit, OnDestroy {
     private tripService: TripService,
     private translate: TranslateService,
     private placesService: PlacesService,
-    private agenciesService: AgenciesService,
-    private routesService: RoutesService
+    private agenciesService: AgenciesService
   ) {}
 
   ngOnInit(): void {
@@ -120,14 +116,10 @@ export class TripListComponent implements OnInit, OnDestroy {
     // Keep a cached copy of places so we can filter quickly without async pipes.
     const sub = this.places$.subscribe((places) => {
       this.allPlaces = Array.isArray(places) ? places : [];
+      // recompute options when places list changes
+      this.recomputeAvailablePlaces();
     });
     this.subscriptions.add(sub);
-
-    // Keep a cached copy of routes
-    const routeSub = this.routes$.subscribe((routes) => {
-      this.allRoutes = Array.isArray(routes) ? routes : [];
-    });
-    this.subscriptions.add(routeSub);
   }
 
   async changeStatus(trip: TripType, nextStatus: TripStatus): Promise<void> {
@@ -179,14 +171,18 @@ export class TripListComponent implements OnInit, OnDestroy {
     combineLatest([
       this.agenciesService.getAgencies(),
       this.placesService.getPlaces(),
-      this.routesService.getRoutes(),
     ]).subscribe();
 
     this.selectedTrip = trip;
 
-    // Build stops form array from existing trip stops
+    // Build stops form array from existing trip stops (each stop has placeId, rank, fare)
     const stopsControls = trip?.stops?.length
-      ? trip.stops.map((r) => this.fb.control(r?.id ?? null))
+      ? trip.stops.map((s) =>
+          this.fb.group({
+            placeId: [s?.placeId ?? ''],
+            fare: [s?.fare ?? 0],
+          })
+        )
       : [];
     const stopsFormArray = this.fb.array(stopsControls);
 
@@ -199,19 +195,40 @@ export class TripListComponent implements OnInit, OnDestroy {
         trip?.totalPrice || 0,
         [Validators.required, Validators.min(0)],
       ],
-      availableSeats: [
-        trip?.availableSeats || '',
+      totalPlaces: [
+        (trip as any)?.totalPlaces ?? '',
         [Validators.required, Validators.min(0)],
       ],
       stops: stopsFormArray,
     });
 
+    // Configure date picker bounds: min = today (start of day), max = today + 14 days
+    const today = new Date();
+    // Set time to 00:00 for min date
+    const minDate = new Date(
+      today.getFullYear(),
+      today.getMonth(),
+      today.getDate()
+    );
+    const maxDate = new Date(minDate.getTime() + 14 * 24 * 60 * 60 * 1000);
+    this.dateOptions = {
+      enableTime: true,
+      altInput: true,
+      altFormat: 'F j, Y h:i K',
+      dateFormat: 'Y-m-d H:i',
+      minDate,
+      maxDate,
+    };
     this.initialValues = this.form.value;
     this.form.valueChanges
       .pipe(takeUntil(this.unsubscribeAll))
       .subscribe((values) => {
         this.isButtonDisabled = isEqual(this.initialValues, values);
+        this.recomputeAvailablePlaces();
       });
+
+    // Compute initial options
+    this.recomputeAvailablePlaces();
 
     this.modalService.open(modal, { size: 'lg', centered: true });
   }
@@ -220,11 +237,18 @@ export class TripListComponent implements OnInit, OnDestroy {
     let field = this.selectedTrip ? 'updateTrip' : 'createTrip';
     this.isButtonDisabled = true;
 
-    // Build stops payload from the FormArray
-    const stopIds = (this.stopsFormArray.value || []) as Array<string | null>;
-    const stops: RouteInput[] = stopIds
-      .filter((id): id is string => !!id)
-      .map((routeId) => ({ routeId }));
+    // Build stops payload from the FormArray (each stop has placeId, fare)
+    const stopsRaw = (this.stopsFormArray.value || []) as Array<{
+      placeId: string;
+      fare: number;
+    }>;
+    const stops: StopInput[] = stopsRaw
+      .filter((s) => s?.placeId)
+      .map((s, idx) => ({
+        placeId: s.placeId,
+        rank: idx,
+        fare: s.fare ?? 0,
+      }));
 
     const payload: any = {
       agencyId: this.form.get('agencyId')?.value,
@@ -232,7 +256,7 @@ export class TripListComponent implements OnInit, OnDestroy {
       destinationId: this.form.get('destinationId')?.value,
       departureDate: this.form.get('departureDate')?.value,
       totalPrice: this.form.get('totalPrice')?.value,
-      availableSeats: this.form.get('availableSeats')?.value,
+      totalPlaces: this.form.get('totalPlaces')?.value,
       stops,
     };
 
@@ -241,31 +265,73 @@ export class TripListComponent implements OnInit, OnDestroy {
       : [payload];
     this.tripService[field](...args).subscribe({
       next: (res) => {
-        console.log('🚀 ~ TripListComponent ~ submit ~ res:', res);
         this.alert.success(this.t('TRIPS.MESSAGES.SAVE_SUCCESS'));
         modal?.close();
-        if (!this.selectedTrip) {
-          this.tripService.generateSeats(res.id).subscribe();
+        // NOTE: seat generation requires a seat-map layout matching totalPlaces.
+        // Keep manual generation for now to avoid server-side mismatch errors.
+      },
+      error: (err: any) => {
+        const rawMsg =
+          err?.error?.message || err?.error?.details || err?.message;
+        const normalizedMsg = this.normalizeServerMessage(rawMsg);
+
+        // Known validation: totalPlaces must match the seat map size (N)
+        if (typeof normalizedMsg === 'string') {
+          const match = normalizedMsg.match(
+            /totalPlaces\s+must\s+match\s+the\s+seat\s+map\s+size\s*\((\d+)\)/i
+          );
+          if (match?.[1]) {
+            this.alert.error(
+              this.t('TRIPS.MESSAGES.SAVE_ERROR'),
+              this.t('TRIPS.MESSAGES.TOTAL_PLACES_SEATMAP_MISMATCH', {
+                total: match[1],
+              })
+            );
+            return;
+          }
+        }
+
+        if (normalizedMsg) {
+          this.alert.error(
+            this.t('TRIPS.MESSAGES.SAVE_ERROR'),
+            String(normalizedMsg)
+          );
+        } else {
+          this.alert.error(this.t('COMMON.MESSAGES.GENERIC_ERROR'));
         }
       },
-      error: () => this.alert.error(this.t('COMMON.MESSAGES.GENERIC_ERROR')),
     });
   }
 
-  // Get route label for display
-  getRouteLabel(routeId: string): string {
-    const route = this.allRoutes.find((r) => r.id === routeId);
-    if (!route) return routeId;
-    const origin = route.origin?.city || route.originId;
-    const dest = route.destination?.city || route.destinationId;
-    return `${origin} → ${dest} (${route.fare?.toFixed(3) || '0'} TND)`;
+  private normalizeServerMessage(message: unknown): string | null {
+    if (message === null || message === undefined) return null;
+    let text = String(message).trim();
+    if (!text) return null;
+
+    // Strip Spring/Angular style prefixes like: 400 BAD_REQUEST "..."
+    text = text.replace(/^\s*\d{3}\s+[A-Z_]+\s*/g, '');
+
+    // Strip surrounding quotes
+    if (
+      (text.startsWith('"') && text.endsWith('"')) ||
+      (text.startsWith("'") && text.endsWith("'"))
+    ) {
+      text = text.slice(1, -1).trim();
+    }
+
+    return text || null;
+  }
+
+  // Get place name for display
+  getPlaceName(placeId: string): string {
+    const place = this.allPlaces.find((p) => p.id === placeId);
+    return place?.city || placeId;
   }
 
   // Get route preview for trip display
   routePreview(trip: TripType | null | undefined): string {
     if (!trip) return '';
 
-    // Use origin and destination directly
     const parts: string[] = [];
     if (trip.origin?.city) {
       parts.push(trip.origin.city);
@@ -277,9 +343,9 @@ export class TripListComponent implements OnInit, OnDestroy {
     // Add intermediate stops if any
     if (trip.stops?.length) {
       for (const stop of trip.stops) {
-        const place = this.allPlaces.find((p) => p.id === stop.destinationId);
-        if (place?.city && !parts.includes(place.city)) {
-          parts.push(place.city);
+        const city = stop.place?.city || this.getPlaceName(stop.placeId);
+        if (city && !parts.includes(city)) {
+          parts.push(city);
         }
       }
     }
@@ -301,12 +367,19 @@ export class TripListComponent implements OnInit, OnDestroy {
 
   addStopField() {
     const fa = this.stopsFormArray;
-    fa.push(this.fb.control(null));
+    fa.push(
+      this.fb.group({
+        placeId: [],
+        fare: [0],
+      })
+    );
+    this.recomputeAvailablePlaces();
   }
 
   removeStop(idx: number): void {
     const fa = this.stopsFormArray;
     fa.removeAt(idx);
+    this.recomputeAvailablePlaces();
   }
 
   moveStopUp(idx: number): void {
@@ -314,7 +387,14 @@ export class TripListComponent implements OnInit, OnDestroy {
     const fa = this.stopsFormArray;
     const val = fa.at(idx).value;
     fa.removeAt(idx);
-    fa.insert(idx - 1, this.fb.control(val));
+    fa.insert(
+      idx - 1,
+      this.fb.group({
+        placeId: [val?.placeId || ''],
+        fare: [val?.fare || 0],
+      })
+    );
+    this.recomputeAvailablePlaces();
   }
 
   moveStopDown(idx: number): void {
@@ -322,14 +402,28 @@ export class TripListComponent implements OnInit, OnDestroy {
     const fa = this.stopsFormArray;
     const val = fa.at(idx).value;
     fa.removeAt(idx);
-    fa.insert(idx + 1, this.fb.control(val));
+    fa.insert(
+      idx + 1,
+      this.fb.group({
+        placeId: [val?.placeId || ''],
+        fare: [val?.fare || 0],
+      })
+    );
+    this.recomputeAvailablePlaces();
   }
 
   dropStop(event: CdkDragDrop<any[]>): void {
     const fa = this.stopsFormArray;
     const val = fa.at(event.previousIndex).value;
     fa.removeAt(event.previousIndex);
-    fa.insert(event.currentIndex, this.fb.control(val));
+    fa.insert(
+      event.currentIndex,
+      this.fb.group({
+        placeId: [val?.placeId || ''],
+        fare: [val?.fare || 0],
+      })
+    );
+    this.recomputeAvailablePlaces();
   }
 
   deleteTrip(trip: TripType): void {
@@ -370,5 +464,58 @@ export class TripListComponent implements OnInit, OnDestroy {
   formatFare(fare: number | undefined): string {
     if (fare === undefined || fare === null) return '-';
     return fare.toFixed(3) + ' TND';
+  }
+
+  // Recompute cached available options for all stop indices. This is called
+  // once per form change instead of per-render to avoid overload.
+  private recomputeAvailablePlaces(): void {
+    if (!this.form) return;
+
+    const originId = this.form.get('originId')?.value;
+    const destinationId = this.form.get('destinationId')?.value;
+
+    // Build set of selected placeIds (including origin/destination)
+    const selected = new Set<string>();
+    if (originId) selected.add(originId);
+    if (destinationId) selected.add(destinationId);
+
+    const stops = this.stopsFormArray.controls.map((ctrl) => ctrl.value || {});
+
+    // Collect selected stops (all indices)
+    stops.forEach((s: any) => {
+      const id = s?.placeId;
+      if (id) selected.add(id);
+    });
+
+    // For each stop index, compute its allowed options but allow the control's
+    // current value even if it's in `selected` (so editing doesn't clear it).
+    this.availablePlacesForStops = this.stopsFormArray.controls.map((ctrl) => {
+      const current = ctrl.value?.placeId;
+      return this.allPlaces.filter((p) => {
+        if (!p || !p.id) return false;
+        if (p.id === current) return true;
+        return !selected.has(p.id);
+      });
+    });
+
+    // Build origin/destination option lists with disabled flags.
+    const selectedStops = new Set<string>();
+    stops.forEach((s: any) => {
+      if (s?.placeId) selectedStops.add(s.placeId);
+    });
+
+    this.originOptions = this.allPlaces.map((p) => {
+      const curr = originId;
+      const disabled =
+        p.id !== curr && (p.id === destinationId || selectedStops.has(p.id));
+      return { ...p, disabled };
+    });
+
+    this.destinationOptions = this.allPlaces.map((p) => {
+      const curr = destinationId;
+      const disabled =
+        p.id !== curr && (p.id === originId || selectedStops.has(p.id));
+      return { ...p, disabled };
+    });
   }
 }

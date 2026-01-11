@@ -5,7 +5,7 @@
   <h6 class="section-header">Popular Routes</h6>
   <div class="scroll-container ms-3">
     <a
-      *ngFor="let trip of allTrips$ | async"
+      *ngFor="let route of explicitTrips$ | async"
       routerLink="/bus-listing"
       class="scroll-item"
     >
@@ -14,66 +14,66 @@
         <div class="route-line"></div>
         <div class="route-point end"></div>
         <div class="route-cities">
-          <div class="fw-semibold">
-            {{ trip.origin?.city || trip.originId }}
-          </div>
-          <div class="fw-semibold">
-            {{ trip.destination?.city || trip.destinationId }}
-          </div>
+          <div class="fw-semibold">{{ route.originLabel }}</div>
+          <div class="fw-semibold">{{ route.destinationLabel }}</div>
         </div>
       </div>
+
       <div class="mt-3">
         <div class="fw-bold text-primary-color">
-          {{ trip.price | number : "1.3-3" }} DT
+          {{ route.price | number : "1.3-3" }} DT
         </div>
         <div class="d-flex align-items-center mt-1">
           <i class="bi bi-clock me-1 fs-12 text-secondary-color"></i>
           <span class="text-muted small">
-            {{ trip.departureDate | date : "mediumDate" }}
-            {{ trip.departureDate | date : "hh:mm a" }}
+            {{ route.departureDate | date : "mediumDate" }}
+            {{ route.departureDate | date : "hh:mm a" }}
           </span>
         </div>
       </div>
     </a>
   </div>
   <!-- Recent Searches -->
-  <h6 class="section-header">Recent Searches</h6>
-  <a routerLink="/bus-listing" class="route-card d-block">
-    <div class="d-flex justify-content-between align-items-center">
-      <div>
-        <div class="d-flex align-items-center">
-          <span class="fw-semibold text-primary-color">NYC</span>
-          <i class="bi bi-arrow-right mx-2 text-secondary-color"></i>
-          <span class="fw-semibold text-primary-color">Boston</span>
+  <ng-container *ngIf="recentSearches$ | async as recentSearches">
+    <h6 class="section-header" *ngIf="recentSearches.length > 0">
+      Recent Searches
+    </h6>
+
+    <a
+      *ngFor="let search of recentSearches"
+      [routerLink]="['/bus-listing']"
+      [queryParams]="{
+        originId: search.originId,
+        destinationId: search.destinationId,
+        date: search.date
+      }"
+      class="route-card d-block"
+    >
+      <div class="d-flex justify-content-between align-items-center">
+        <div>
+          <div class="d-flex align-items-center">
+            <span class="fw-semibold text-primary-color">{{
+              search.originLabel
+            }}</span>
+            <i class="bi bi-arrow-right mx-2 text-secondary-color"></i>
+            <span class="fw-semibold text-primary-color">{{
+              search.destinationLabel
+            }}</span>
+          </div>
+          <div class="d-flex align-items-center mt-2" *ngIf="search.date">
+            <i class="bi bi-calendar3 me-2 fs-12 text-secondary-color"></i>
+            <span class="text-muted small">{{
+              search.date | date : "mediumDate"
+            }}</span>
+          </div>
         </div>
-        <div class="d-flex align-items-center mt-2">
-          <i class="bi bi-calendar3 me-2 fs-12 text-secondary-color"></i>
-          <span class="text-muted small">Apr 15, 2025</span>
+        <div class="btn btn-light-2">
+          <i class="bi bi-search"></i>
         </div>
       </div>
-      <div class="btn btn-light-2">
-        <i class="bi bi-search"></i>
-      </div>
-    </div>
-  </a>
-  <a routerLink="/bus-listing" class="route-card d-block">
-    <div class="d-flex justify-content-between align-items-center">
-      <div>
-        <div class="d-flex align-items-center">
-          <span class="fw-semibold text-primary-color">DC</span>
-          <i class="bi bi-arrow-right mx-2 text-secondary-color"></i>
-          <span class="fw-semibold text-primary-color">Philly</span>
-        </div>
-        <div class="d-flex align-items-center mt-2">
-          <i class="bi bi-calendar3 me-2 fs-12 text-secondary-color"></i>
-          <span class="text-muted small">Apr 10, 2025</span>
-        </div>
-      </div>
-      <div class="btn btn-light-2">
-        <i class="bi bi-search"></i>
-      </div>
-    </div>
-  </a>
+    </a>
+  </ng-container>
+
   <!-- Special Offers -->
   <h6 class="section-header">Special Offers</h6>
   <a href="offers-rewards.html" class="offer-card d-block">

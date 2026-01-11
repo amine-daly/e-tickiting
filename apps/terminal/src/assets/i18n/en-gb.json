@@ -10,7 +10,11 @@
       "EMAIL": "Email",
       "PHONE": "Phone",
       "ACTIONS": "Actions",
+      "KIND": "Type",
       "CITY": "City",
+      "STATE": "State",
+      "COUNTRY": "Country",
+      "PARENT_PLACE": "Parent place",
       "LATITUDE": "Latitude",
       "LONGITUDE": "Longitude",
       "ORIGIN": "Origin",
@@ -20,11 +24,19 @@
       "AGENCY": "Agency",
       "PRICE": "Price",
       "TOTAL_PRICE": "Total price",
+      "OCCUPANCY": "Occupancy",
+      "TOTAL_PLACES": "Total places",
       "AVAILABLE_SEATS": "Available seats",
       "REFERENCE": "Reference",
       "FIRST_NAME": "First name",
       "LAST_NAME": "Last name",
-      "ROLE": "Role"
+      "ROLE": "Role",
+      "PICKUP_INSTRUCTIONS": "Pickup instructions",
+      "IS_DEFAULT": "Default",
+      "DEFAULT": "Default",
+      "YES": "Yes",
+      "NO": "No",
+      "SEARCH": "Search..."
     },
     "BUTTON": {
       "SAVE": "Save",
@@ -80,14 +92,59 @@
     "ADD_BUTTON": "Add place",
     "LOADING": "Loading places...",
     "EMPTY": "No places available.",
+    "TAB": {
+      "PLACES": "Cities",
+      "SUBPLACES": "Pickup Points"
+    },
+    "KIND": {
+      "CITY": "City",
+      "POINT": "Point"
+    },
     "MODAL": {
       "EDIT_TITLE": "Edit place",
       "ADD_TITLE": "Add place",
+      "SELECT_PARENT": "Select parent place",
+      "SELECT_COUNTRY": "Select a country",
+      "SELECT_STATE": "Select a state",
       "LOCATION_LABEL": "Map location",
       "LOCATION_HELP": "Click on the map to set the latitude and longitude.",
       "ERRORS": {
-        "CITY_REQUIRED": "City is required."
+        "CITY_REQUIRED": "City is required.",
+        "PARENT_REQUIRED": "Parent place is required.",
+        "ADDRESS_REQUIRED": "Address is required."
       }
+    },
+    "SUBPLACES": {
+      "TITLE": "Pickup Points",
+      "ADD_BUTTON": "Add pickup point",
+      "LOADING": "Loading pickup points...",
+      "EMPTY": "No pickup points available.",
+      "COUNT": "Points",
+      "PARENT_CITY": "Parent City",
+      "ERROR": {
+        "LOAD": "Unable to load pickup points."
+      },
+      "MODAL": {
+        "EDIT_TITLE": "Edit pickup point",
+        "ADD_TITLE": "Add pickup point"
+      },
+      "MESSAGES": {
+        "CREATE_SUCCESS": "Pickup point created successfully.",
+        "CREATE_ERROR": "Unable to create the pickup point.",
+        "UPDATE_SUCCESS": "Pickup point updated successfully.",
+        "UPDATE_ERROR": "Unable to update the pickup point.",
+        "DELETE_SUCCESS": "Pickup point deleted successfully.",
+        "DELETE_ERROR": "Unable to delete the pickup point."
+      },
+      "MORE": "+{{count}} more"
+    },
+    "MESSAGES": {
+      "CREATE_SUCCESS": "Place created successfully.",
+      "CREATE_ERROR": "Unable to create the place.",
+      "UPDATE_SUCCESS": "Place updated successfully.",
+      "UPDATE_ERROR": "Unable to update the place.",
+      "DELETE_SUCCESS": "Place deleted successfully.",
+      "DELETE_ERROR": "Unable to delete the place."
     }
   },
   "TRIPS": {
@@ -111,8 +168,13 @@
       "STATUS_UPDATE_ERROR": "Unable to update the trip status.",
       "LOAD_ERROR": "Unable to load trips. Please try again later.",
       "SAVE_SUCCESS": "Trip saved successfully.",
+      "SAVE_ERROR": "Unable to save the trip.",
+      "TOTAL_PLACES_SEATMAP_MISMATCH": "Total places must match the seat map size ({{total}}).",
       "DELETE_SUCCESS": "Trip deleted successfully.",
       "DELETE_ERROR": "Unable to delete the trip."
+    },
+    "TOOLTIP": {
+      "OCCUPANCY": "Booked: {{booked}} / {{total}}"
     },
     "MODAL": {
       "EDIT_TITLE": "Edit trip",
@@ -123,8 +185,10 @@
       "DESTINATION": "Destination",
       "DESTINATION_PLACEHOLDER": "Select destination",
       "TOTAL_PRICE": "Total price",
+      "TOTAL_PLACES": "Total places",
       "STOPS": "Intermediate stops (optional)",
       "STOP_PLACEHOLDER": "Select a stop",
+      "FARE_PLACEHOLDER": "Fare",
       "ADD_STOP": "Add stop",
       "STOPS_HINT": "Add intermediate stops if the route has multiple segments. Drag to reorder.",
       "DEPARTURE_DATE_LABEL": "Departure date",
@@ -136,7 +200,8 @@
         "PRICE_REQUIRED": "Total price is required.",
         "DEPARTURE_REQUIRED": "Departure date is required.",
         "PRICE_INVALID": "Enter a valid price.",
-        "SEATS_REQUIRED": "Available seats are required."
+        "SEATS_REQUIRED": "Available seats are required.",
+        "TOTAL_PLACES_REQUIRED": "Total places is required."
       }
     },
     "FARES": {

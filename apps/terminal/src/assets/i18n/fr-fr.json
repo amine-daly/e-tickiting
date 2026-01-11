@@ -10,7 +10,11 @@
       "EMAIL": "E-mail",
       "PHONE": "Téléphone",
       "ACTIONS": "Actions",
+      "KIND": "Type",
       "CITY": "Ville",
+      "STATE": "Gouvernorat",
+      "COUNTRY": "Pays",
+      "PARENT_PLACE": "Lieu parent",
       "LATITUDE": "Latitude",
       "LONGITUDE": "Longitude",
       "ORIGIN": "Origine",
@@ -19,12 +23,20 @@
       "STATUS": "Statut",
       "AGENCY": "Agence",
       "PRICE": "Prix",
+      "OCCUPANCY": "Occupation",
       "TOTAL_PRICE": "Prix total",
+      "TOTAL_PLACES": "Places totales",
       "AVAILABLE_SEATS": "Places disponibles",
       "REFERENCE": "Référence",
       "FIRST_NAME": "Prénom",
       "LAST_NAME": "Nom",
-      "ROLE": "Rôle"
+      "ROLE": "Rôle",
+      "PICKUP_INSTRUCTIONS": "Instructions de prise en charge",
+      "IS_DEFAULT": "Par défaut",
+      "DEFAULT": "Par défaut",
+      "YES": "Oui",
+      "NO": "Non",
+      "SEARCH": "Rechercher..."
     },
     "BUTTON": {
       "SAVE": "Enregistrer",
@@ -80,14 +92,59 @@
     "ADD_BUTTON": "Ajouter un lieu",
     "LOADING": "Chargement des lieux...",
     "EMPTY": "Aucun lieu disponible.",
+    "TAB": {
+      "PLACES": "Villes",
+      "SUBPLACES": "Points de ramassage"
+    },
+    "KIND": {
+      "CITY": "Ville",
+      "POINT": "Point"
+    },
     "MODAL": {
       "EDIT_TITLE": "Modifier le lieu",
       "ADD_TITLE": "Ajouter un lieu",
+      "SELECT_PARENT": "Sélectionnez le lieu parent",
+      "SELECT_COUNTRY": "Sélectionnez un pays",
+      "SELECT_STATE": "Sélectionnez un gouvernorat",
       "LOCATION_LABEL": "Position sur la carte",
       "LOCATION_HELP": "Cliquez sur la carte pour définir la latitude et la longitude.",
       "ERRORS": {
-        "CITY_REQUIRED": "La ville est obligatoire."
+        "CITY_REQUIRED": "La ville est obligatoire.",
+        "PARENT_REQUIRED": "Le lieu parent est obligatoire.",
+        "ADDRESS_REQUIRED": "L'adresse est obligatoire."
       }
+    },
+    "SUBPLACES": {
+      "TITLE": "Points de ramassage",
+      "ADD_BUTTON": "Ajouter un point de ramassage",
+      "LOADING": "Chargement des points de ramassage...",
+      "EMPTY": "Aucun point de ramassage disponible.",
+      "COUNT": "Points",
+      "PARENT_CITY": "Ville parente",
+      "ERROR": {
+        "LOAD": "Impossible de charger les points de ramassage."
+      },
+      "MODAL": {
+        "EDIT_TITLE": "Modifier le point de ramassage",
+        "ADD_TITLE": "Ajouter un point de ramassage"
+      },
+      "MESSAGES": {
+        "CREATE_SUCCESS": "Point de ramassage créé avec succès.",
+        "CREATE_ERROR": "Impossible de créer le point de ramassage.",
+        "UPDATE_SUCCESS": "Point de ramassage mis à jour avec succès.",
+        "UPDATE_ERROR": "Impossible de mettre à jour le point de ramassage.",
+        "DELETE_SUCCESS": "Point de ramassage supprimé avec succès.",
+        "DELETE_ERROR": "Impossible de supprimer le point de ramassage."
+      },
+      "MORE": "+{{count}} de plus"
+    },
+    "MESSAGES": {
+      "CREATE_SUCCESS": "Lieu créé avec succès.",
+      "CREATE_ERROR": "Impossible de créer le lieu.",
+      "UPDATE_SUCCESS": "Lieu mis à jour avec succès.",
+      "UPDATE_ERROR": "Impossible de mettre à jour le lieu.",
+      "DELETE_SUCCESS": "Lieu supprimé avec succès.",
+      "DELETE_ERROR": "Impossible de supprimer le lieu."
     }
   },
   "TRIPS": {
@@ -111,8 +168,13 @@
       "STATUS_UPDATE_ERROR": "Impossible de mettre à jour le statut du voyage.",
       "LOAD_ERROR": "Impossible de charger les voyages. Réessayez plus tard.",
       "SAVE_SUCCESS": "Voyage enregistré avec succès.",
+      "SAVE_ERROR": "Impossible d'enregistrer le voyage.",
+      "TOTAL_PLACES_SEATMAP_MISMATCH": "Le nombre total de places doit correspondre à la taille du plan des sièges ({{total}}).",
       "DELETE_SUCCESS": "Voyage supprimé avec succès.",
       "DELETE_ERROR": "Impossible de supprimer le voyage."
+    },
+    "TOOLTIP": {
+      "OCCUPANCY": "Réservés : {{booked}} / {{total}}"
     },
     "MODAL": {
       "EDIT_TITLE": "Modifier le voyage",
@@ -123,8 +185,10 @@
       "DESTINATION": "Destination",
       "DESTINATION_PLACEHOLDER": "Sélectionnez la destination",
       "TOTAL_PRICE": "Prix total",
+      "TOTAL_PLACES": "Nombre total de places",
       "STOPS": "Arrêts intermédiaires (optionnel)",
       "STOP_PLACEHOLDER": "Sélectionnez un arrêt",
+      "FARE_PLACEHOLDER": "Tarif",
       "ADD_STOP": "Ajouter un arrêt",
       "STOPS_HINT": "Ajoutez des arrêts intermédiaires si le trajet comporte plusieurs étapes. Faites glisser pour réorganiser.",
       "DEPARTURE_DATE_LABEL": "Date de départ",
@@ -136,7 +200,8 @@
         "PRICE_REQUIRED": "Le prix total est obligatoire.",
         "DEPARTURE_REQUIRED": "La date de départ est obligatoire.",
         "PRICE_INVALID": "Entrez un prix valide.",
-        "SEATS_REQUIRED": "Le nombre de places disponibles est obligatoire."
+        "SEATS_REQUIRED": "Le nombre de places disponibles est obligatoire.",
+        "TOTAL_PLACES_REQUIRED": "Le nombre total de places est obligatoire."
       }
     },
     "FARES": {

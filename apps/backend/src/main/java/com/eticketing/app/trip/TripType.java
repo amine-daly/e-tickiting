@@ -19,7 +19,7 @@ import java.util.List;
 
 @Document("trips")
 @CompoundIndexes({
-    @CompoundIndex(name = "search_idx_v3", def = "{ 'routes.originId': 1, 'routes.destinationId': 1, 'departureDate': 1 }", unique = false)
+    @CompoundIndex(name = "search_idx", def = "{ 'originId': 1, 'destinationId': 1, 'departureDate': 1 }", unique = false)
 })
 public class TripType {
 
@@ -54,11 +54,11 @@ public class TripType {
     private String destinationId;
 
     /**
-     * Ordered list of intermediate stops (route snapshots) for this trip. Each
-     * stop has id, originId, destinationId, rank, and fare (BigDecimal).
+     * Ordered list of intermediate stops. Each stop has placeId, rank, and
+     * fare.
      */
     @JsonProperty("stops")
-    private List<TripRouteSnapshot> stops;
+    private List<StopType> stops;
 
     /**
      * Departure datetime (ISO 8601)
@@ -71,6 +71,14 @@ public class TripType {
     @Min(0)
     @JsonProperty("availableSeats")
     private int availableSeats;
+
+    /**
+     * Total capacity for the trip (admin-entered). This value is the source of
+     * truth for capacity and should not be auto-derived from the seat map.
+     */
+    @Min(0)
+    @JsonProperty("totalPlaces")
+    private int totalPlaces;
 
     @JsonProperty("seats")
     private List<SeatUnit> seats;
@@ -141,11 +149,11 @@ public class TripType {
         this.destinationId = destinationId;
     }
 
-    public List<TripRouteSnapshot> getStops() {
+    public List<StopType> getStops() {
         return stops;
     }
 
-    public void setStops(List<TripRouteSnapshot> stops) {
+    public void setStops(List<StopType> stops) {
         this.stops = stops;
     }
 
@@ -165,6 +173,15 @@ public class TripType {
     @JsonProperty("availableSeats")
     public void setAvailableSeats(int availableSeats) {
         this.availableSeats = availableSeats;
+    }
+
+    public int getTotalPlaces() {
+        return totalPlaces;
+    }
+
+    @JsonProperty("totalPlaces")
+    public void setTotalPlaces(int totalPlaces) {
+        this.totalPlaces = totalPlaces;
     }
 
     public List<SeatUnit> getSeats() {

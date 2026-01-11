@@ -54,8 +54,9 @@
                   {{ "COMMON.LABEL.TOTAL_PRICE" | translate }}
                 </th>
                 <th class="min-w-100px">
-                  {{ "COMMON.LABEL.AVAILABLE_SEATS" | translate }}
+                  {{ "COMMON.LABEL.TOTAL_PLACES" | translate }}
                 </th>
+                <th class="min-w-120px">Occupancy</th>
                 <th class="min-w-100px text-end">
                   {{ "COMMON.LABEL.ACTIONS" | translate }}
                 </th>
@@ -82,7 +83,17 @@
                     routePreview(data)
                   }}</span>
                 </td>
-                <td>{{ data?.departureDate | date : "yyyy-MM-dd HH:mm" }}</td>
+
+                <td>
+                  <div class="d-flex flex-column gap-1">
+                    <span>
+                      {{ data?.departureDate | date : "yyyy-MM-dd" }}
+                    </span>
+                    <span class="text-muted">
+                      {{ data?.departureDate | date : "HH:mm" }}
+                    </span>
+                  </div>
+                </td>
                 <td>
                   <span
                     class="badge"
@@ -100,7 +111,52 @@
                   {{ data?.totalPrice | number : "1.3-3" }}
                   {{ "COMMON.CURRENCY.TND" | translate }}
                 </td>
-                <td>{{ data?.availableSeats }}</td>
+                <td>{{ data?.totalPlaces }}</td>
+                <td>
+                  <ng-container *ngIf="data?.totalPlaces; else noCapacity">
+                    <div
+                      class="progress"
+                      style="height: 18px"
+                      [ngbTooltip]="
+                        'TRIPS.TOOLTIP.OCCUPANCY'
+                          | translate
+                            : {
+                                booked:
+                                  data?.totalPlaces -
+                                    (data?.availableSeats || 0) || 0,
+                                total: data?.totalPlaces
+                              }
+                      "
+                      placement="top"
+                    >
+                      <div
+                        class="progress-bar"
+                        role="progressbar"
+                        [style.width.%]="
+                          ((data?.totalPlaces - (data?.availableSeats || 0)) /
+                            data?.totalPlaces) *
+                          100
+                        "
+                        [attr.aria-valuenow]="
+                          ((data?.totalPlaces - (data?.availableSeats || 0)) /
+                            data?.totalPlaces) *
+                          100
+                        "
+                        aria-valuemin="0"
+                        aria-valuemax="100"
+                      >
+                        {{
+                          ((data?.totalPlaces - (data?.availableSeats || 0)) /
+                            data?.totalPlaces) *
+                            100 | number : "1.0-0"
+                        }}%
+                      </div>
+                    </div>
+                  </ng-container>
+                  <ng-template #noCapacity>
+                    <span class="text-muted">-</span>
+                  </ng-template>
+                </td>
                 <td>
                   <div class="d-flex justify-content-end flex-shrink-0">
                     <div ngbDropdown class="me-2">
@@ -206,15 +262,20 @@
             <span class="text-danger">*</span></label
           >
           <ng-select
-            [items]="places$ | async"
+            [items]="originOptions"
             bindLabel="city"
             bindValue="id"
             formControlName="originId"
             [placeholder]="'TRIPS.MODAL.ORIGIN_PLACEHOLDER' | translate"
             [clearable]="true"
+            [ngOptionDisabled]="'disabled'"
           >
-            <ng-template ng-label-tmp let-item="item">{{ item.city }}</ng-template>
-            <ng-template ng-option-tmp let-item="item">{{ item.city }}</ng-template>
+            <ng-template ng-label-tmp let-item="item">{{
+              item.city
+            }}</ng-template>
+            <ng-template ng-option-tmp let-item="item">{{
+              item.city
+            }}</ng-template>
           </ng-select>
           <div *ngIf="isInvalid('originId')" class="text-danger small">
             {{ "TRIPS.MODAL.ERRORS.ORIGIN_REQUIRED" | translate }}
@@ -228,15 +289,20 @@
             <span class="text-danger">*</span></label
           >
           <ng-select
-            [items]="places$ | async"
+            [items]="destinationOptions"
             bindLabel="city"
             bindValue="id"
             formControlName="destinationId"
             [placeholder]="'TRIPS.MODAL.DESTINATION_PLACEHOLDER' | translate"
             [clearable]="true"
+            [ngOptionDisabled]="'disabled'"
           >
-            <ng-template ng-label-tmp let-item="item">{{ item.city }}</ng-template>
-            <ng-template ng-option-tmp let-item="item">{{ item.city }}</ng-template>
+            <ng-template ng-label-tmp let-item="item">{{
+              item.city
+            }}</ng-template>
+            <ng-template ng-option-tmp let-item="item">{{
+              item.city
+            }}</ng-template>
           </ng-select>
           <div *ngIf="isInvalid('destinationId')" class="text-danger small">
             {{ "TRIPS.MODAL.ERRORS.DESTINATION_REQUIRED" | translate }}
@@ -257,7 +323,9 @@
               step="0.001"
               formControlName="totalPrice"
             />
-            <span class="input-group-text">{{ "COMMON.CURRENCY.TND" | translate }}</span>
+            <span class="input-group-text">{{
+              "COMMON.CURRENCY.TND" | translate
+            }}</span>
           </div>
           <div *ngIf="isInvalid('totalPrice')" class="text-danger small">
             {{ "TRIPS.MODAL.ERRORS.PRICE_REQUIRED" | translate }}
@@ -278,25 +346,43 @@
             >
               <li
                 class="list-group-item d-flex justify-content-between align-items-center"
-                *ngFor="let _ of stopsFormArray.controls; let idx = index"
+                *ngFor="
+                  let stopCtrl of stopsFormArray.controls;
+                  let idx = index
+                "
+                [formGroupName]="idx"
                 cdkDrag
               >
                 <div class="w-100 d-flex gap-2 align-items-center">
                   <ng-select
                     class="flex-grow-1"
-                    [items]="routes$ | async"
+                    [items]="availablePlacesForStops[idx] || []"
+                    bindLabel="city"
                     bindValue="id"
-                    [formControlName]="idx"
+                    formControlName="placeId"
                     [clearable]="true"
                     [placeholder]="'TRIPS.MODAL.STOP_PLACEHOLDER' | translate"
                   >
-                    <ng-template ng-label-tmp let-item="item">
-                      {{ item.origin?.city }} → {{ item.destination?.city }} ({{ item.fare?.toFixed(3) || "0" }} TND)
-                    </ng-template>
-                    <ng-template ng-option-tmp let-item="item">
-                      {{ item.origin?.city }} → {{ item.destination?.city }} ({{ item.fare?.toFixed(3) || "0" }} TND)
-                    </ng-template>
+                    <ng-template ng-label-tmp let-item="item">{{
+                      item.city
+                    }}</ng-template>
+                    <ng-template ng-option-tmp let-item="item">{{
+                      item.city
+                    }}</ng-template>
                   </ng-select>
+                  <div class="input-group" style="width: 150px">
+                    <input
+                      type="number"
+                      class="form-control"
+                      min="0"
+                      step="0.001"
+                      formControlName="fare"
+                      [placeholder]="'TRIPS.MODAL.FARE_PLACEHOLDER' | translate"
+                    />
+                    <span class="input-group-text">{{
+                      "COMMON.CURRENCY.TND" | translate
+                    }}</span>
+                  </div>
                   <div class="btn-group">
                     <button
                       class="btn btn-sm btn-outline-secondary"
@@ -328,7 +414,7 @@
             <button
               type="button"
               (click)="addStopField()"
-              class="btn btn-sm btn-outline-primary mt-2"
+              class="btn btn-sm btn-secondary mt-2"
             >
               {{ "TRIPS.MODAL.ADD_STOP" | translate }}
             </button>
@@ -353,6 +439,8 @@
               [enableTime]="true"
               [altFormat]="'F j, Y h:i K'"
               [dateFormat]="'Y-m-d H:i'"
+              [maxDate]="dateOptions?.maxDate"
+              [minDate]="dateOptions?.minDate"
               formControlName="departureDate"
             />
             <a
@@ -370,17 +458,17 @@
         </div>
         <div class="mb-3">
           <label
-            >{{ "COMMON.LABEL.AVAILABLE_SEATS" | translate }}
+            >{{ "TRIPS.MODAL.TOTAL_PLACES" | translate }}
             <span class="text-danger">*</span></label
           >
           <input
             class="form-control"
             type="number"
             min="0"
-            formControlName="availableSeats"
+            formControlName="totalPlaces"
           />
-          <div *ngIf="isInvalid('availableSeats')" class="text-danger small">
-            {{ "TRIPS.MODAL.ERRORS.SEATS_REQUIRED" | translate }}
+          <div *ngIf="isInvalid('totalPlaces')" class="text-danger small">
+            {{ "TRIPS.MODAL.ERRORS.TOTAL_PLACES_REQUIRED" | translate }}
           </div>
         </div>
       </div>

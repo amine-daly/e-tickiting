@@ -18,9 +18,12 @@ import org.springframework.data.domain.Sort;
 
 import com.eticketing.app.agency.AgencyRepository;
 import com.eticketing.app.agency.AgencyType;
+import com.eticketing.app.country.CountryRepository;
+import com.eticketing.app.country.CountryType;
 import com.eticketing.app.place.PlaceRepository;
-import com.eticketing.app.route.RouteRepository;
-import com.eticketing.app.route.RouteType;
+import com.eticketing.app.place.PlaceType;
+import com.eticketing.app.state.StateRepository;
+import com.eticketing.app.state.StateType;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -57,20 +60,23 @@ public class TripController {
     private final TripTypeRepository tripTypeRepository;
     private final AgencyRepository agencyRepository;
     private final PlaceRepository placeRepository;
-    private final RouteRepository routeRepository;
+    private final StateRepository stateRepository;
+    private final CountryRepository countryRepository;
     private final org.springframework.data.mongodb.core.MongoTemplate mongoTemplate;
 
     public TripController(
             TripTypeRepository tripTypeRepository,
             AgencyRepository agencyRepository,
             PlaceRepository placeRepository,
-            RouteRepository routeRepository,
+            StateRepository stateRepository,
+            CountryRepository countryRepository,
             org.springframework.data.mongodb.core.MongoTemplate mongoTemplate
     ) {
         this.tripTypeRepository = tripTypeRepository;
         this.agencyRepository = agencyRepository;
         this.placeRepository = placeRepository;
-        this.routeRepository = routeRepository;
+        this.stateRepository = stateRepository;
+        this.countryRepository = countryRepository;
         this.mongoTemplate = mongoTemplate;
     }
 
@@ -94,32 +100,35 @@ public class TripController {
         toSave.setDestinationId(payload.destinationId());
         toSave.setTotalPrice(payload.totalPrice() != null ? payload.totalPrice() : BigDecimal.ZERO);
 
-        // Process stops: build snapshots from route IDs
-        List<TripRouteSnapshot> stopSnapshots = new ArrayList<>();
+        // Capacity is admin-entered. Available seats starts equal to total places.
+        if (payload.totalPlaces() < 0) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "totalPlaces must be >= 0");
+        }
+        toSave.setTotalPlaces(payload.totalPlaces());
+        toSave.setAvailableSeats(payload.totalPlaces());
+
+        // Process stops: simple StopType with placeId, rank, fare
+        List<StopType> stopsList = new ArrayList<>();
         if (payload.stops() != null && !payload.stops().isEmpty()) {
             for (int i = 0; i < payload.stops().size(); i++) {
-                RouteInput ri = payload.stops().get(i);
-                RouteType route = routeRepository.findById(ri.id())
-                        .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "Route not found: " + ri.id()));
-
-                TripRouteSnapshot snapshot = new TripRouteSnapshot();
-                snapshot.setId(route.getId());
-                snapshot.setOriginId(route.getOriginId());
-                snapshot.setDestinationId(route.getDestinationId());
-                snapshot.setRank(ri.rank() != null ? ri.rank() : i);
-                // Use provided fare if present, otherwise use route's default fare
-                snapshot.setFare(ri.fare() != null ? ri.fare() : route.getFare());
-                stopSnapshots.add(snapshot);
+                StopInput si = payload.stops().get(i);
+                if (si.placeId() == null || si.placeId().isBlank()) {
+                    continue;
+                }
+                StopType stop = new StopType();
+                stop.setPlaceId(si.placeId());
+                stop.setRank(si.rank() != null ? si.rank() : i);
+                stop.setFare(si.fare() != null ? si.fare() : BigDecimal.ZERO);
+                stopsList.add(stop);
             }
         }
         // Sort by rank
-        stopSnapshots.sort(Comparator.comparing(r -> r.getRank() == null ? Integer.MAX_VALUE : r.getRank()));
-        toSave.setStops(stopSnapshots);
+        stopsList.sort(Comparator.comparing(s -> s.getRank() == null ? Integer.MAX_VALUE : s.getRank()));
+        toSave.setStops(stopsList);
 
         if (payload.departureDate() != null) {
             toSave.setDepartureDate(payload.departureDate().withOffsetSameInstant(ZoneOffset.UTC));
         }
-        toSave.setAvailableSeats(payload.availableSeats());
         toSave.setStatus(payload.status() == null ? TripStatusEnum.SCHEDULED : payload.status());
 
         TripType saved = tripTypeRepository.save(toSave);
@@ -132,16 +141,16 @@ public class TripController {
             @NotNull String originId,
             @NotNull String destinationId,
             @NotNull BigDecimal totalPrice,
-            List<RouteInput> stops,
+            List<StopInput> stops,
             OffsetDateTime departureDate,
-            int availableSeats,
+            int totalPlaces,
             TripStatusEnum status
             ) {
 
     }
 
-    public record RouteInput(
-            @NotNull String id,
+    public record StopInput(
+            @NotNull String placeId,
             Integer rank,
             BigDecimal fare
             ) {
@@ -182,10 +191,13 @@ public class TripController {
         // Build dynamic query
         var q = new org.springframework.data.mongodb.core.query.Query();
         if (originId != null && !originId.isBlank()) {
-            q.addCriteria(org.springframework.data.mongodb.core.query.Criteria.where("routes.originId").is(originId));
+            q.addCriteria(org.springframework.data.mongodb.core.query.Criteria.where("originId").is(originId));
         }
         if (destinationId != null && !destinationId.isBlank()) {
-            q.addCriteria(org.springframework.data.mongodb.core.query.Criteria.where("routes.destinationId").is(destinationId));
+            // Match destination or any stop with this placeId
+            var cDest = org.springframework.data.mongodb.core.query.Criteria.where("destinationId").is(destinationId);
+            var cStops = org.springframework.data.mongodb.core.query.Criteria.where("stops.placeId").is(destinationId);
+            q.addCriteria(new org.springframework.data.mongodb.core.query.Criteria().orOperator(cDest, cStops));
         }
         if (date != null) {
             // Match trips on the given date (comparing date part of departureDate)
@@ -236,45 +248,38 @@ public class TripController {
         if (updates.containsKey("stops") && updates.get("stops") != null) {
             Object val = updates.get("stops");
             if (val instanceof List<?> list) {
-                List<TripRouteSnapshot> stopSnapshots = new ArrayList<>();
+                List<StopType> stopsList = new ArrayList<>();
                 for (int i = 0; i < list.size(); i++) {
                     Object raw = list.get(i);
                     if (raw instanceof Map m) {
-                        String routeId = m.get("id") != null ? m.get("id").toString() : null;
-                        if (routeId == null) {
+                        String placeId = m.get("placeId") != null ? m.get("placeId").toString() : null;
+                        if (placeId == null || placeId.isBlank()) {
                             continue;
                         }
 
-                        RouteType route = routeRepository.findById(routeId).orElse(null);
-                        if (route == null) {
-                            continue;
-                        }
-
-                        TripRouteSnapshot snapshot = new TripRouteSnapshot();
-                        snapshot.setId(route.getId());
-                        snapshot.setOriginId(route.getOriginId());
-                        snapshot.setDestinationId(route.getDestinationId());
+                        StopType stop = new StopType();
+                        stop.setPlaceId(placeId);
 
                         Object rankObj = m.get("rank");
                         Integer rank = i;
                         if (rankObj instanceof Number n) {
                             rank = n.intValue();
                         }
-                        snapshot.setRank(rank);
+                        stop.setRank(rank);
 
                         Object fareObj = m.get("fare");
-                        BigDecimal fare = route.getFare();
+                        BigDecimal fare = BigDecimal.ZERO;
                         if (fareObj instanceof Number n) {
                             fare = BigDecimal.valueOf(n.doubleValue());
                         } else if (fareObj instanceof String s) {
                             fare = new BigDecimal(s);
                         }
-                        snapshot.setFare(fare);
-                        stopSnapshots.add(snapshot);
+                        stop.setFare(fare);
+                        stopsList.add(stop);
                     }
                 }
-                stopSnapshots.sort(Comparator.comparing(r -> r.getRank() == null ? Integer.MAX_VALUE : r.getRank()));
-                trip.setStops(stopSnapshots);
+                stopsList.sort(Comparator.comparing(s -> s.getRank() == null ? Integer.MAX_VALUE : s.getRank()));
+                trip.setStops(stopsList);
             }
         }
 
@@ -284,12 +289,43 @@ public class TripController {
             trip.setDepartureDate(dt.withOffsetSameInstant(ZoneOffset.UTC));
         }
 
-        if (updates.containsKey("availableSeats")) {
-            Object val = updates.get("availableSeats");
+        // Capacity update: totalPlaces is editable by admin; availableSeats is derived and NOT directly editable.
+        if (updates.containsKey("totalPlaces") && updates.get("totalPlaces") != null) {
+            int newTotal;
+            Object val = updates.get("totalPlaces");
             if (val instanceof Number n) {
-                trip.setAvailableSeats(n.intValue());
-            } else if (val instanceof String s) {
-                trip.setAvailableSeats(Integer.parseInt(s));
+                newTotal = n.intValue();
+            } else {
+                newTotal = Integer.parseInt(val.toString());
+            }
+            if (newTotal < 0) {
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "totalPlaces must be >= 0");
+            }
+
+            List<SeatUnit> seats = trip.getSeats();
+            if (seats != null && !seats.isEmpty()) {
+                // Keep capacity consistent with the seat map.
+                if (newTotal != seats.size()) {
+                    throw new ResponseStatusException(
+                            HttpStatus.BAD_REQUEST,
+                            "totalPlaces must match the seat map size (" + seats.size() + ")"
+                    );
+                }
+                long reserved = seats.stream().filter(s -> s.getState() != SeatStateEnum.AVAILABLE).count();
+                if (newTotal < reserved) {
+                    throw new ResponseStatusException(
+                            HttpStatus.BAD_REQUEST,
+                            "totalPlaces cannot be less than currently reserved/blocked seats (" + reserved + ")"
+                    );
+                }
+                trip.setTotalPlaces(newTotal);
+                trip.setAvailableSeats((int) (newTotal - reserved));
+            } else {
+                int oldTotal = trip.getTotalPlaces();
+                int oldAvailable = trip.getAvailableSeats();
+                int reserved = Math.max(0, oldTotal - oldAvailable);
+                trip.setTotalPlaces(newTotal);
+                trip.setAvailableSeats(Math.max(0, newTotal - reserved));
             }
         }
         if (updates.containsKey("status")) {
@@ -388,6 +424,10 @@ public class TripController {
             @RequestBody(required = false) Map<String, Integer> body) {
         TripType trip = tripTypeRepository.findById(id).orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Trip not found"));
 
+        if (trip.getTotalPlaces() <= 0) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "totalPlaces must be set before generating seats");
+        }
+
         int rows = 10;
         int cols = 4;
         int lastRowSeats = 5;
@@ -419,6 +459,13 @@ public class TripController {
             String label = generateSeatLabel(backRowIndex, c);
             seats.add(new SeatUnit(backRowIndex, c, SeatStateEnum.AVAILABLE, label));
         }
+
+        if (seats.size() != trip.getTotalPlaces()) {
+            throw new ResponseStatusException(
+                    HttpStatus.BAD_REQUEST,
+                    "Generated seat count (" + seats.size() + ") does not match totalPlaces (" + trip.getTotalPlaces() + ")"
+            );
+        }
         trip.setSeats(seats);
         trip.setAvailableSeats((int) seats.stream().filter(s -> s.getState() == SeatStateEnum.AVAILABLE).count());
 
@@ -432,8 +479,23 @@ public class TripController {
 
     private Map<String, Object> buildTripResponse(TripType trip) {
         AgencyType agency = trip.getAgencyId() != null ? agencyRepository.findById(trip.getAgencyId()).orElse(null) : null;
-        var origin = trip.getOriginId() != null ? placeRepository.findById(trip.getOriginId()).orElse(null) : null;
-        var destination = trip.getDestinationId() != null ? placeRepository.findById(trip.getDestinationId()).orElse(null) : null;
+        PlaceType origin = trip.getOriginId() != null ? placeRepository.findById(trip.getOriginId()).orElse(null) : null;
+        PlaceType destination = trip.getDestinationId() != null ? placeRepository.findById(trip.getDestinationId()).orElse(null) : null;
+
+        // Expand stops with place details
+        List<Map<String, Object>> expandedStops = new ArrayList<>();
+        if (trip.getStops() != null) {
+            for (StopType stop : trip.getStops()) {
+                Map<String, Object> stopMap = new LinkedHashMap<>();
+                stopMap.put("placeId", stop.getPlaceId());
+                stopMap.put("rank", stop.getRank());
+                stopMap.put("fare", stop.getFare());
+                // Expand place
+                PlaceType place = stop.getPlaceId() != null ? placeRepository.findById(stop.getPlaceId()).orElse(null) : null;
+                stopMap.put("place", buildPlaceView(place, false));
+                expandedStops.add(stopMap);
+            }
+        }
 
         Map<String, Object> response = new LinkedHashMap<>();
         response.put("id", trip.getId());
@@ -441,9 +503,9 @@ public class TripController {
         response.put("agency", agency != null ? Map.of("id", agency.getId(), "name", agency.getName()) : null);
         response.put("originId", trip.getOriginId());
         response.put("destinationId", trip.getDestinationId());
-        response.put("origin", origin);
-        response.put("destination", destination);
-        response.put("stops", trip.getStops());
+        response.put("origin", buildPlaceView(origin, true));
+        response.put("destination", buildPlaceView(destination, true));
+        response.put("stops", expandedStops);
         response.put(
                 "departureDate",
                 trip.getDepartureDate() == null
@@ -451,12 +513,83 @@ public class TripController {
                 : trip.getDepartureDate().format(DateTimeFormatter.ISO_OFFSET_DATE_TIME)
         );
         response.put("availableSeats", trip.getAvailableSeats());
+        response.put("totalPlaces", trip.getTotalPlaces());
         response.put("seats", trip.getSeats());
         response.put("totalPrice", trip.getTotalPrice());
         response.put("status", trip.getStatus());
         response.put("createdAt", trip.getCreatedAt() != null ? trip.getCreatedAt().format(DateTimeFormatter.ISO_OFFSET_DATE_TIME) : null);
         response.put("updatedAt", trip.getUpdatedAt() != null ? trip.getUpdatedAt().format(DateTimeFormatter.ISO_OFFSET_DATE_TIME) : null);
         return response;
+    }
+
+    /**
+     * Build a place view with state, country, and sub-places (if includePlaces
+     * is true).
+     */
+    private Map<String, Object> buildPlaceView(PlaceType place, boolean includePlaces) {
+        if (place == null) {
+            return null;
+        }
+
+        StateType state = place.getStateId() != null ? stateRepository.findById(place.getStateId()).orElse(null) : null;
+        CountryType country = place.getCountryId() != null ? countryRepository.findById(place.getCountryId()).orElse(null) : null;
+
+        Map<String, Object> view = new LinkedHashMap<>();
+        view.put("id", place.getId());
+        view.put("city", place.getCity());
+        view.put("location", place.getLocation());
+
+        // State object
+        if (state != null) {
+            Map<String, Object> stateView = new LinkedHashMap<>();
+            stateView.put("id", state.getId());
+            stateView.put("name", state.getName());
+            stateView.put("code", state.getCode());
+            stateView.put("countryId", state.getCountryId());
+            view.put("state", stateView);
+        } else {
+            view.put("state", null);
+        }
+
+        // Country object
+        if (country != null) {
+            Map<String, Object> countryView = new LinkedHashMap<>();
+            countryView.put("id", country.getId());
+            countryView.put("name", country.getName());
+            countryView.put("code", country.getCode());
+            countryView.put("flag", country.getFlag());
+            view.put("country", countryView);
+        } else {
+            view.put("country", null);
+        }
+
+        // Sub-places (pickup/dropoff points) - only for CITY places
+        if (includePlaces && place.getKind() == PlaceType.PlaceKind.CITY) {
+            List<PlaceType> subPlaces = placeRepository.findByParentId(place.getId());
+            List<Map<String, Object>> placesView = subPlaces.stream().map(sp -> {
+                StateType spState = sp.getStateId() != null ? stateRepository.findById(sp.getStateId()).orElse(null) : null;
+                CountryType spCountry = sp.getCountryId() != null ? countryRepository.findById(sp.getCountryId()).orElse(null) : null;
+
+                Map<String, Object> spView = new LinkedHashMap<>();
+                spView.put("id", sp.getId());
+                spView.put("address", sp.getAddress());
+                spView.put("location", sp.getLocation());
+                spView.put("pickupInstructions", sp.getPickupInstructions());
+                spView.put("isDefault", sp.getIsDefault());
+
+                if (spState != null) {
+                    spView.put("state", Map.of("id", spState.getId(), "name", spState.getName(), "code", spState.getCode()));
+                }
+                if (spCountry != null) {
+                    spView.put("country", Map.of("id", spCountry.getId(), "name", spCountry.getName(), "code", spCountry.getCode()));
+                }
+
+                return spView;
+            }).toList();
+            view.put("places", placesView);
+        }
+
+        return view;
     }
 
     private String generateSeatLabel(int row, int col) {
