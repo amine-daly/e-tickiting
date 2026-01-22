@@ -5,12 +5,15 @@ import com.eticketing.app.country.CountryType;
 import com.eticketing.app.state.StateRepository;
 import com.eticketing.app.state.StateType;
 import com.eticketing.app.subplace.SubPlaceRes;
+import com.eticketing.app.subplace.SubPlaceRepository;
+import com.eticketing.app.subplace.SubPlaceType;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
 
+import java.time.Instant;
 import java.util.List;
 
 @RestController
@@ -18,12 +21,16 @@ import java.util.List;
 public class PlaceController {
 
     // ========== Request/Response DTOs ==========
+    public record TargetReq(String pos) {
+
+    }
+
     public record PlaceReq(
             String city,
-            LonLatType location,
             String kind, // "CITY"
             String stateId,
-            String countryId
+            String countryId,
+            TargetReq target
             ) {
 
     }
@@ -42,13 +49,23 @@ public class PlaceController {
         }
     }
 
+    public record TargetRes(String pos) {
+
+        static TargetRes from(PlaceType.TargetType t) {
+            return t == null ? null : new TargetRes(t.getPos());
+        }
+    }
+
     public record PlaceRes(
             String id,
             String city,
             String kind,
             StateRes state,
             CountryRes country,
-            List<SubPlaceRes> subPlaces
+            TargetRes target,
+            List<SubPlaceRes> subPlaces,
+            Instant createdAt,
+            Instant updatedAt
             ) {
 
         static PlaceRes from(PlaceType p, StateType s, CountryType c, List<SubPlaceRes> subPlaces) {
@@ -58,7 +75,10 @@ public class PlaceController {
                     p.getKind() != null ? p.getKind().name() : "CITY",
                     StateRes.from(s),
                     CountryRes.from(c),
-                    subPlaces
+                    TargetRes.from(p.getTarget()),
+                    subPlaces,
+                    p.getCreatedAt(),
+                    p.getUpdatedAt()
             );
         }
     }
@@ -69,11 +89,13 @@ public class PlaceController {
 
     // ========== Dependencies ==========
     private final PlaceRepository repo;
+    private final SubPlaceRepository subPlaceRepo;
     private final StateRepository stateRepo;
     private final CountryRepository countryRepo;
 
-    public PlaceController(PlaceRepository repo, StateRepository stateRepo, CountryRepository countryRepo) {
+    public PlaceController(PlaceRepository repo, SubPlaceRepository subPlaceRepo, StateRepository stateRepo, CountryRepository countryRepo) {
         this.repo = repo;
+        this.subPlaceRepo = subPlaceRepo;
         this.stateRepo = stateRepo;
         this.countryRepo = countryRepo;
     }
@@ -88,10 +110,10 @@ public class PlaceController {
         Page<PlaceType> p;
         // Default to CITY
         if (searchString != null && !searchString.isBlank()) {
-            // Find SubPlaces (POINT) matching the search string
-            List<PlaceType> matchingSubPlaces = repo.findByKindAndAddressIgnoreCaseContaining(PlaceType.PlaceKind.POINT, searchString);
+            // Find SubPlaces matching the search string and collect their parent CITY ids
+            List<SubPlaceType> matchingSubPlaces = subPlaceRepo.findByAddressIgnoreCaseContaining(searchString);
             List<String> parentIds = matchingSubPlaces.stream()
-                    .map(PlaceType::getParentId)
+                    .map(SubPlaceType::getParentId)
                     .filter(pid -> pid != null && !pid.isBlank())
                     .distinct()
                     .toList();
@@ -105,6 +127,21 @@ public class PlaceController {
             p = repo.findByKind(PlaceType.PlaceKind.CITY, PageRequest.of(page, limit));
         }
 
+        // Fetch response: include both timestamps
+        var list = p.getContent().stream().map(place -> buildPlaceRes(place, true)).toList();
+        return new Paginated<>(list, p.getTotalElements(), p.isLast());
+    }
+
+    @GetMapping("/by-target")
+    public Paginated<PlaceRes> byTarget(
+            @RequestParam String posId,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int limit) {
+        if (posId == null || posId.isBlank()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "posId is required");
+        }
+        Page<PlaceType> p = repo.findByTargetPosAndKind(posId, PlaceType.PlaceKind.CITY, PageRequest.of(page, limit));
+        // Fetch response: include both timestamps
         var list = p.getContent().stream().map(place -> buildPlaceRes(place, true)).toList();
         return new Paginated<>(list, p.getTotalElements(), p.isLast());
     }
@@ -113,6 +150,7 @@ public class PlaceController {
     public PlaceRes get(@PathVariable String id) {
         PlaceType p = repo.findById(id)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Place not found"));
+        // Fetch response: include both timestamps
         return buildPlaceRes(p, true);
     }
 
@@ -121,7 +159,7 @@ public class PlaceController {
         // Verify parent exists
         PlaceType parent = repo.findById(id)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Place not found"));
-        List<PlaceType> subPlaces = repo.findByParentId(id);
+        List<SubPlaceType> subPlaces = subPlaceRepo.findByParentId(id);
         return subPlaces.stream().map(sp -> SubPlaceRes.from(sp, parent.getCity())).toList();
     }
 
@@ -129,12 +167,19 @@ public class PlaceController {
     public PlaceRes create(@RequestBody PlaceReq req) {
         PlaceType p = new PlaceType();
         p.setCity(req.city());
-        p.setLocation(req.location());
         p.setKind(PlaceType.PlaceKind.CITY);
         p.setStateId(req.stateId());
         p.setCountryId(req.countryId());
+        if (req.target() != null && req.target().pos() != null && !req.target().pos().isBlank()) {
+            p.setTarget(new PlaceType.TargetType(req.target().pos()));
+        }
+        // Server-managed timestamps
+        Instant now = Instant.now();
+        p.setCreatedAt(now);
+        p.setUpdatedAt(now);
 
         PlaceType saved = repo.save(p);
+        // Create response: include createdAt only
         return buildPlaceRes(saved, false);
     }
 
@@ -150,15 +195,14 @@ public class PlaceController {
         if (req.city() != null) {
             p.setCity(req.city());
         }
-        if (req.location() != null) {
-            p.setLocation(req.location());
-        }
         if (req.stateId() != null) {
             p.setStateId(req.stateId());
         }
         if (req.countryId() != null) {
             p.setCountryId(req.countryId());
         }
+        // Server-managed timestamps
+        p.setUpdatedAt(Instant.now());
 
         PlaceType saved = repo.save(p);
         return buildPlaceRes(saved, false);
@@ -174,8 +218,8 @@ public class PlaceController {
         }
 
         // Also delete sub-places
-        List<PlaceType> subPlaces = repo.findByParentId(id);
-        repo.deleteAll(subPlaces);
+        List<SubPlaceType> subPlaces = subPlaceRepo.findByParentId(id);
+        subPlaceRepo.deleteAll(subPlaces);
         repo.deleteById(id);
     }
 
@@ -186,7 +230,7 @@ public class PlaceController {
 
         List<SubPlaceRes> subPlaces = null;
         if (includeSubPlaces && p.getKind() == PlaceType.PlaceKind.CITY) {
-            List<PlaceType> children = repo.findByParentId(p.getId());
+            List<SubPlaceType> children = subPlaceRepo.findByParentId(p.getId());
             subPlaces = children.stream().map(sp -> SubPlaceRes.from(sp, p.getCity())).toList();
         }
 

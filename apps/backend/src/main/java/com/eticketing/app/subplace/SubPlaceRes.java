@@ -1,7 +1,8 @@
 package com.eticketing.app.subplace;
 
 import com.eticketing.app.place.LonLatType;
-import com.eticketing.app.place.PlaceType;
+
+import java.time.Instant;
 
 public record SubPlaceRes(
         String id,
@@ -11,19 +12,23 @@ public record SubPlaceRes(
         String pickupInstructions,
         Boolean isDefault,
         String parentId,
-        String parentCity
+        String parentCity,
+        Instant createdAt,
+        Instant updatedAt
         ) {
 
-    public static SubPlaceRes from(PlaceType p, String parentCity) {
+    public static SubPlaceRes from(SubPlaceType p, String parentCity) {
         return new SubPlaceRes(
                 p.getId(),
                 p.getAddress(),
-                p.getKind() != null ? p.getKind().name() : "POINT",
+                "POINT",
                 p.getLocation(),
                 p.getPickupInstructions(),
                 p.getIsDefault(),
                 p.getParentId(),
-                parentCity
+                parentCity,
+                p.getCreatedAt(),
+                p.getUpdatedAt()
         );
     }
 }

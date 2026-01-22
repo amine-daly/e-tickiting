@@ -1,0 +1,33 @@
+<div class="d-flex flex-stack flex-wrap pt-10" *ngIf="total > 0">
+  <div class="fs-6 fw-semibold text-gray-700">
+    Showing {{ startIndex }} to {{ endIndex }} of {{ total }} entries
+  </div>
+  <ul class="pagination">
+    <li class="page-item previous" [class.disabled]="page <= 1">
+      <a
+        href="#"
+        class="page-link"
+        (click)="$event.preventDefault(); onPageChange(page - 1)"
+      >
+        <i class="previous"></i>
+      </a>
+    </li>
+    <li class="page-item" *ngFor="let p of pages" [class.active]="p === page">
+      <a
+        href="#"
+        class="page-link"
+        (click)="$event.preventDefault(); onPageChange(p)"
+        >{{ p }}</a
+      >
+    </li>
+    <li class="page-item next" [class.disabled]="page >= totalPages">
+      <a
+        href="#"
+        class="page-link"
+        (click)="$event.preventDefault(); onPageChange(page + 1)"
+      >
+        <i class="next"></i>
+      </a>
+    </li>
+  </ul>
+</div>

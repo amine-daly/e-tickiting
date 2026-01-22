@@ -1,9 +1,13 @@
 package com.eticketing.app.place;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import org.springframework.data.annotation.CreatedDate;
 import org.springframework.data.annotation.Id;
+import org.springframework.data.annotation.LastModifiedDate;
 import org.springframework.data.mongodb.core.index.Indexed;
 import org.springframework.data.mongodb.core.mapping.Document;
+
+import java.time.Instant;
 
 /**
  * Place document — can represent a city (kind=CITY) or a pickup/dropoff point
@@ -24,9 +28,6 @@ public class PlaceType {
     @JsonProperty("city")
     private String city;
 
-    @JsonProperty("location")
-    private LonLatType location;
-
     /**
      * Optional ordering rank when a place is used as a stop inside a trip
      */
@@ -38,13 +39,6 @@ public class PlaceType {
      */
     @JsonProperty("kind")
     private PlaceKind kind = PlaceKind.CITY;
-
-    /**
-     * Parent place ID (for POINT places, this is the parent CITY id)
-     */
-    @Indexed
-    @JsonProperty("parentId")
-    private String parentId;
 
     /**
      * State (governorate) ID
@@ -61,29 +55,45 @@ public class PlaceType {
     private String countryId;
 
     /**
-     * Full address (for POINT places)
+     * Target scope (POS ID) - places can be scoped to a specific Point of Sale
      */
-    @JsonProperty("address")
-    private String address;
+    @JsonProperty("target")
+    private TargetType target;
 
-    /**
-     * Pickup instructions for passengers
-     */
-    @JsonProperty("pickupInstructions")
-    private String pickupInstructions;
+    @CreatedDate
+    @JsonProperty("createdAt")
+    private Instant createdAt;
 
-    /**
-     * Whether this is the default pickup/dropoff point for the parent city
-     */
-    @JsonProperty("isDefault")
-    private Boolean isDefault;
+    @LastModifiedDate
+    @JsonProperty("updatedAt")
+    private Instant updatedAt;
+
+    public static class TargetType {
+
+        @JsonProperty("pos")
+        private String pos;
+
+        public TargetType() {
+        }
+
+        public TargetType(String pos) {
+            this.pos = pos;
+        }
+
+        public String getPos() {
+            return pos;
+        }
+
+        public void setPos(String pos) {
+            this.pos = pos;
+        }
+    }
 
     public PlaceType() {
     }
 
-    public PlaceType(String city, LonLatType location) {
+    public PlaceType(String city) {
         this.city = city;
-        this.location = location;
         this.kind = PlaceKind.CITY;
     }
 
@@ -104,14 +114,6 @@ public class PlaceType {
         this.city = city;
     }
 
-    public LonLatType getLocation() {
-        return location;
-    }
-
-    public void setLocation(LonLatType location) {
-        this.location = location;
-    }
-
     public Integer getRank() {
         return rank;
     }
@@ -126,14 +128,6 @@ public class PlaceType {
 
     public void setKind(PlaceKind kind) {
         this.kind = kind;
-    }
-
-    public String getParentId() {
-        return parentId;
-    }
-
-    public void setParentId(String parentId) {
-        this.parentId = parentId;
     }
 
     public String getStateId() {
@@ -152,27 +146,27 @@ public class PlaceType {
         this.countryId = countryId;
     }
 
-    public String getAddress() {
-        return address;
+    public TargetType getTarget() {
+        return target;
     }
 
-    public void setAddress(String address) {
-        this.address = address;
+    public void setTarget(TargetType target) {
+        this.target = target;
     }
 
-    public String getPickupInstructions() {
-        return pickupInstructions;
+    public Instant getCreatedAt() {
+        return createdAt;
     }
 
-    public void setPickupInstructions(String pickupInstructions) {
-        this.pickupInstructions = pickupInstructions;
+    public void setCreatedAt(Instant createdAt) {
+        this.createdAt = createdAt;
     }
 
-    public Boolean getIsDefault() {
-        return isDefault;
+    public Instant getUpdatedAt() {
+        return updatedAt;
     }
 
-    public void setIsDefault(Boolean isDefault) {
-        this.isDefault = isDefault;
+    public void setUpdatedAt(Instant updatedAt) {
+        this.updatedAt = updatedAt;
     }
 }

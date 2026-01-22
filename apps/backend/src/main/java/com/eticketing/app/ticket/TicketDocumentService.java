@@ -11,10 +11,10 @@ import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
 
-import com.eticketing.app.agency.AgencyRepository;
-import com.eticketing.app.agency.AgencyType;
 import com.eticketing.app.place.PlaceType;
 import com.eticketing.app.place.PlaceRepository;
+import com.eticketing.app.pos.PointOfSaleType;
+import com.eticketing.app.pos.PointOfSaleRepository;
 import com.eticketing.app.ticket.TicketType.SeatAssignment;
 import com.eticketing.app.ticket.TicketType.TicketUserSnapshot;
 import com.eticketing.app.trip.TripType;
@@ -30,20 +30,20 @@ public class TicketDocumentService {
 
     private final TripTypeRepository tripRepository;
     private final UserTypeRepository userRepository;
-    private final AgencyRepository agencyRepository;
+    private final PointOfSaleRepository posRepository;
     private final PlaceRepository placeRepository;
     private final TicketTemplateEngine templateEngine;
     private final TicketQrCodeService qrCodeService;
 
     public TicketDocumentService(TripTypeRepository tripRepository,
             UserTypeRepository userRepository,
-            AgencyRepository agencyRepository,
+            PointOfSaleRepository posRepository,
             PlaceRepository placeRepository,
             TicketTemplateEngine templateEngine,
             TicketQrCodeService qrCodeService) {
         this.tripRepository = tripRepository;
         this.userRepository = userRepository;
-        this.agencyRepository = agencyRepository;
+        this.posRepository = posRepository;
         this.placeRepository = placeRepository;
         this.templateEngine = templateEngine;
         this.qrCodeService = qrCodeService;
@@ -57,7 +57,10 @@ public class TicketDocumentService {
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Trip not found for ticket"));
         UserType user = userRepository.findById(ticket.getUserId()).orElse(null);
         TicketUserSnapshot snapshot = ticket.getUser();
-        AgencyType agency = trip.getAgencyId() != null ? agencyRepository.findById(trip.getAgencyId()).orElse(null) : null;
+
+        // Get POS for company info (replaced Agency)
+        String posId = trip.getTarget() != null ? trip.getTarget().getPos() : null;
+        PointOfSaleType pos = posId != null ? posRepository.findById(posId).orElse(null) : null;
 
         // Get origin and destination directly from trip
         String originId = trip.getOriginId();
@@ -74,10 +77,11 @@ public class TicketDocumentService {
             passengerName = "Client";
         }
         String passengerEmail = user != null ? user.getEmail() : snapshot != null ? snapshot.getEmail() : null;
-        String agencyName = agency != null ? agency.getName() : "Agence";
-        String agencyEmail = agency != null ? defaultString(agency.getEmail()) : "";
-        String agencyPhone = agency != null && agency.getPhone() != null
-                ? String.format("+%s %s", defaultString(agency.getPhone().getCountryCode()), defaultString(agency.getPhone().getNumber()))
+        // Use POS for company/agency info
+        String agencyName = pos != null ? pos.getTitle() : "Agence";
+        String agencyEmail = pos != null ? defaultString(pos.getEmail()) : "";
+        String agencyPhone = pos != null && pos.getPhone() != null
+                ? String.format("+%s %s", defaultString(pos.getPhone().getCountryCode()), defaultString(pos.getPhone().getNumber()))
                 : "";
         String routeLabel = String.format("%s → %s",
                 origin != null ? origin.getCity() : defaultString(originId),
@@ -91,7 +95,7 @@ public class TicketDocumentService {
         String reference = ticket.getReference();
         String qrCodeDataUri = qrCodeService.generateDataUri(reference);
         String qrCodeUrl = qrCodeService.generatePublicUrl(reference);
-        String template = agency != null && agency.getTemplate() != null ? agency.getTemplate() : TicketTemplateDefaults.defaultTemplate();
+        String template = pos != null && pos.getEmailTemplate() != null ? pos.getEmailTemplate() : TicketTemplateDefaults.defaultTemplate();
 
         Map<String, Object> context = new HashMap<>();
         context.put("reference", reference);
@@ -151,8 +155,10 @@ public class TicketDocumentService {
         tripMeta.put("date", trip.getDepartureDate());
         tripMeta.put("time", trip.getDepartureDate() != null ? trip.getDepartureDate().toLocalTime() : null);
 
+        // Use POS ID instead of agencyId
+        String posIdValue = trip.getTarget() != null ? trip.getTarget().getPos() : null;
         Map<String, Object> agencyMeta = new HashMap<>();
-        agencyMeta.put("id", trip.getAgencyId());
+        agencyMeta.put("id", posIdValue);
         agencyMeta.put("name", agencyName);
 
         Map<String, Object> metadata = new HashMap<>();

@@ -8,6 +8,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
 
+import java.time.Instant;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -16,10 +17,12 @@ import java.util.stream.Collectors;
 @RequestMapping("/api/sub-places")
 public class SubPlaceController {
 
-    private final PlaceRepository repo;
+    private final SubPlaceRepository repo;
+    private final PlaceRepository placeRepo;
 
-    public SubPlaceController(PlaceRepository repo) {
+    public SubPlaceController(SubPlaceRepository repo, PlaceRepository placeRepo) {
         this.repo = repo;
+        this.placeRepo = placeRepo;
     }
 
     public record Paginated<T>(List<T> objects, long count, boolean isLast) {
@@ -32,24 +35,18 @@ public class SubPlaceController {
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int limit) {
 
-        Page<PlaceType> p;
-        if (searchString != null && !searchString.isBlank()) {
-            p = repo.findByKindAndCityIgnoreCaseContainingOrKindAndAddressIgnoreCaseContaining(
-                    PlaceType.PlaceKind.POINT, searchString,
-                    PlaceType.PlaceKind.POINT, searchString,
-                    PageRequest.of(page, limit));
-        } else {
-            p = repo.findByKind(PlaceType.PlaceKind.POINT, PageRequest.of(page, limit));
-        }
+        Page<SubPlaceType> p = (searchString != null && !searchString.isBlank())
+                ? repo.findByAddressIgnoreCaseContaining(searchString, PageRequest.of(page, limit))
+                : repo.findAll(PageRequest.of(page, limit));
 
         // Fetch parent cities
         List<String> parentIds = p.getContent().stream()
-                .map(PlaceType::getParentId)
+                .map(SubPlaceType::getParentId)
                 .filter(id -> id != null && !id.isBlank())
                 .distinct()
                 .toList();
 
-        Map<String, String> parentCityMap = repo.findAllById(parentIds).stream()
+        Map<String, String> parentCityMap = placeRepo.findAllById(parentIds).stream()
                 .collect(Collectors.toMap(PlaceType::getId, PlaceType::getCity));
 
         List<SubPlaceRes> list = p.getContent().stream()
@@ -61,16 +58,12 @@ public class SubPlaceController {
 
     @GetMapping("/{id}")
     public SubPlaceRes get(@PathVariable String id) {
-        PlaceType p = repo.findById(id)
+        SubPlaceType p = repo.findById(id)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "SubPlace not found"));
-
-        if (p.getKind() != PlaceType.PlaceKind.POINT) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Requested place is not a SubPlace (POINT)");
-        }
 
         String parentCity = "Unknown";
         if (p.getParentId() != null) {
-            parentCity = repo.findById(p.getParentId()).map(PlaceType::getCity).orElse("Unknown");
+            parentCity = placeRepo.findById(p.getParentId()).map(PlaceType::getCity).orElse("Unknown");
         }
 
         return SubPlaceRes.from(p, parentCity);
@@ -81,30 +74,33 @@ public class SubPlaceController {
         if (req.parentId() == null || req.parentId().isBlank()) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Parent ID is required");
         }
-        PlaceType parent = repo.findById(req.parentId())
+        PlaceType parent = placeRepo.findById(req.parentId())
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Parent place not found"));
 
-        PlaceType p = new PlaceType();
-        p.setKind(PlaceType.PlaceKind.POINT);
+        SubPlaceType p = new SubPlaceType();
         p.setAddress(req.address());
         p.setLocation(req.location());
         p.setPickupInstructions(req.pickupInstructions());
         p.setIsDefault(req.isDefault());
         p.setParentId(req.parentId());
-        // Do not set City/State/Country on POINT, they inherit or are irrelevant.
+        // Inherit target scope from parent city if available
+        if (parent.getTarget() != null && parent.getTarget().getPos() != null) {
+            p.setTarget(new SubPlaceType.TargetType(parent.getTarget().getPos()));
+        }
+        // Server-managed timestamps
+        Instant now = Instant.now();
+        p.setCreatedAt(now);
+        p.setUpdatedAt(now);
 
-        PlaceType saved = repo.save(p);
+        SubPlaceType saved = repo.save(p);
+        // Create response: include createdAt only
         return SubPlaceRes.from(saved, parent.getCity());
     }
 
     @PutMapping("/{id}")
     public SubPlaceRes update(@PathVariable String id, @RequestBody SubPlaceReq req) {
-        PlaceType p = repo.findById(id)
+        SubPlaceType p = repo.findById(id)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "SubPlace not found"));
-
-        if (p.getKind() != PlaceType.PlaceKind.POINT) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Requested place is not a SubPlace");
-        }
 
         if (req.address() != null) {
             p.setAddress(req.address());
@@ -120,17 +116,24 @@ public class SubPlaceController {
         }
         if (req.parentId() != null) {
             // Validate new parent
-            if (!repo.existsById(req.parentId())) {
+            if (!placeRepo.existsById(req.parentId())) {
                 throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Parent place not found");
             }
             p.setParentId(req.parentId());
+            // Inherit target scope from new parent
+            PlaceType parent = placeRepo.findById(req.parentId()).orElse(null);
+            if (parent != null && parent.getTarget() != null && parent.getTarget().getPos() != null) {
+                p.setTarget(new SubPlaceType.TargetType(parent.getTarget().getPos()));
+            }
         }
+        // Server-managed timestamps
+        p.setUpdatedAt(Instant.now());
 
-        PlaceType saved = repo.save(p);
+        SubPlaceType saved = repo.save(p);
 
         String parentCity = "Unknown";
         if (saved.getParentId() != null) {
-            parentCity = repo.findById(saved.getParentId()).map(PlaceType::getCity).orElse("Unknown");
+            parentCity = placeRepo.findById(saved.getParentId()).map(PlaceType::getCity).orElse("Unknown");
         }
 
         return SubPlaceRes.from(saved, parentCity);
@@ -138,11 +141,8 @@ public class SubPlaceController {
 
     @DeleteMapping("/{id}")
     public void delete(@PathVariable String id) {
-        PlaceType p = repo.findById(id)
+        SubPlaceType p = repo.findById(id)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "SubPlace not found"));
-        if (p.getKind() != PlaceType.PlaceKind.POINT) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Requested place is not a SubPlace");
-        }
         repo.deleteById(id);
     }
 }

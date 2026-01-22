@@ -3,20 +3,28 @@ package com.eticketing.app.place;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.mongodb.repository.MongoRepository;
+import org.springframework.data.mongodb.repository.Query;
 
 import java.util.List;
 
 public interface PlaceRepository extends MongoRepository<PlaceType, String> {
 
+    /**
+     * Find places by target POS ID
+     */
+    @Query("{ 'target.pos': ?0 }")
+    Page<PlaceType> findByTargetPos(String posId, Pageable pageable);
+
+    /**
+     * Find places by target POS ID and kind
+     */
+    @Query("{ 'target.pos': ?0, 'kind': ?1 }")
+    Page<PlaceType> findByTargetPosAndKind(String posId, PlaceType.PlaceKind kind, Pageable pageable);
+
     Page<PlaceType> findByCityIgnoreCaseContaining(String city, Pageable pageable);
 
     /**
-     * Find all sub-places (POINT) for a given parent (CITY)
-     */
-    List<PlaceType> findByParentId(String parentId);
-
-    /**
-     * Find places by kind (CITY or POINT)
+     * Find places by kind (CITY)
      */
     Page<PlaceType> findByKind(PlaceType.PlaceKind kind, Pageable pageable);
 
@@ -29,19 +37,6 @@ public interface PlaceRepository extends MongoRepository<PlaceType, String> {
      * Find places by country
      */
     List<PlaceType> findByCountryId(String countryId);
-
-    /**
-     * Find places by kind and search string (city or address contains)
-     */
-    Page<PlaceType> findByKindAndCityIgnoreCaseContainingOrKindAndAddressIgnoreCaseContaining(
-            PlaceType.PlaceKind kind1, String city,
-            PlaceType.PlaceKind kind2, String address,
-            Pageable pageable);
-
-    /**
-     * Find subplaces matching address
-     */
-    List<PlaceType> findByKindAndAddressIgnoreCaseContaining(PlaceType.PlaceKind kind, String address);
 
     /**
      * Find cities by ID list OR city name

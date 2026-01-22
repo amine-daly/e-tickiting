@@ -40,6 +40,7 @@
     },
     "BUTTON": {
       "SAVE": "Save",
+      "VIEW_PROFILE": "View profile",
       "CANCEL": "Cancel",
       "UPDATE": "Update",
       "RESET": "Reset",
@@ -85,6 +86,28 @@
       "PREVIEW_TOGGLE": "Preview template",
       "PLACEHOLDER": "Paste the HTML template here. You can use placeholders such as {{customerName}} or {{tripReference}}.",
       "USE_DEFAULT": "Use default template"
+    }
+  },
+  "PERMISSIONS": {
+    "TITLE": "Permissions",
+    "ADD_BUTTON": "Add permission",
+    "LOADING": "Loading permissions...",
+    "EMPTY": "No permissions found.",
+    "TOTAL_GRANTS": "Total grants: {{count}}",
+    "GRANTS_EMPTY": "No grants selected.",
+    "SECTION_TITLE": "Roles",
+    "CHECK_ALL": "Check all",
+    "READ": "Read",
+    "WRITE": "Write",
+    "CREATE": "Create",
+    "MODAL": {
+      "ADD_TITLE": "Add permission",
+      "EDIT_TITLE": "Edit permission",
+      "ROLE_NAME": "Role name",
+      "ROLE_NAME_PLACEHOLDER": "Enter role name",
+      "ERRORS": {
+        "NAME_REQUIRED": "Role name is required."
+      }
     }
   },
   "PLACES": {
@@ -373,6 +396,15 @@
       "COEFF_UPDATE_ERROR": "Unable to update the coefficient.",
       "COEFF_DELETE_SUCCESS": "Coefficient deleted successfully.",
       "COEFF_DELETE_ERROR": "Unable to delete the coefficient."
+    }
+  }
+  ,
+  "BUSINESS_PROFILE": {
+    "MESSAGES": {
+      "SAVE_SUCCESS": "Business profile saved successfully.",
+      "SAVE_ERROR": "Unable to save business profile.",
+      "LOCATION_SAVE_SUCCESS": "Location saved successfully.",
+      "LOCATION_SAVE_ERROR": "Unable to save location."
     }
   }
 }

@@ -57,6 +57,7 @@ import { PlaceType } from '../../core/models/place-type';
   styleUrls: ['./trip-list.component.scss'],
 })
 export class TripListComponent implements OnInit, OnDestroy {
+  private allPlaces: PlaceType[] = [];
   private subscriptions = new Subscription();
   private selectedTrip: TripType | null = null;
   private initialValues: TripUpdatePayload | null = null;
@@ -71,7 +72,6 @@ export class TripListComponent implements OnInit, OnDestroy {
   places$ = this.placesService.places$;
   agencies$ = this.agenciesService.agencies$;
 
-  private allPlaces: PlaceType[] = [];
   // Cached available options per stop index to avoid expensive per-render computations
   availablePlacesForStops: PlaceType[][] = [];
   // Options for origin/destination selects with optional disabled flag

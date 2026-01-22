@@ -1,10 +1,14 @@
 package com.eticketing.app.state;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import org.springframework.data.annotation.CreatedDate;
 import org.springframework.data.annotation.Id;
+import org.springframework.data.annotation.LastModifiedDate;
 import org.springframework.data.mongodb.core.index.CompoundIndex;
 import org.springframework.data.mongodb.core.index.CompoundIndexes;
 import org.springframework.data.mongodb.core.mapping.Document;
+
+import java.time.Instant;
 
 @Document("states")
 @CompoundIndexes({
@@ -24,6 +28,14 @@ public class StateType {
 
     @JsonProperty("countryId")
     private String countryId;
+
+    @CreatedDate
+    @JsonProperty("createdAt")
+    private Instant createdAt;
+
+    @LastModifiedDate
+    @JsonProperty("updatedAt")
+    private Instant updatedAt;
 
     public StateType() {
     }
@@ -64,5 +76,21 @@ public class StateType {
 
     public void setCountryId(String countryId) {
         this.countryId = countryId;
+    }
+
+    public Instant getCreatedAt() {
+        return createdAt;
+    }
+
+    public void setCreatedAt(Instant createdAt) {
+        this.createdAt = createdAt;
+    }
+
+    public Instant getUpdatedAt() {
+        return updatedAt;
+    }
+
+    public void setUpdatedAt(Instant updatedAt) {
+        this.updatedAt = updatedAt;
     }
 }

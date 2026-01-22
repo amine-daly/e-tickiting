@@ -1,5 +1,6 @@
 package com.eticketing.app.trip;
 
+import com.eticketing.app.common.TargetInput;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
 import jakarta.validation.constraints.Min;
@@ -14,6 +15,7 @@ import org.springframework.data.mongodb.core.index.CompoundIndexes;
 import org.springframework.data.mongodb.core.mapping.Document;
 
 import java.math.BigDecimal;
+import java.time.Instant;
 import java.time.OffsetDateTime;
 import java.util.List;
 
@@ -32,12 +34,11 @@ public class TripType {
     private Long version;
 
     /**
-     * Reference to agency ID (stored); full agency object returned in
-     * responses.
+     * Target containing POS ID for multi-tenant scoping. Terminal trips are
+     * scoped by target.pos; frontoffice search is unscoped.
      */
-    @NotNull
-    @JsonProperty("agencyId")
-    private String agencyId;
+    @JsonProperty("target")
+    private TargetInput target;
 
     /**
      * Origin place ID (admin-entered)
@@ -96,13 +97,11 @@ public class TripType {
 
     @CreatedDate
     @JsonProperty("createdAt")
-    @com.fasterxml.jackson.annotation.JsonFormat(shape = com.fasterxml.jackson.annotation.JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd'T'HH:mm:ssXXX")
-    private OffsetDateTime createdAt;
+    private Instant createdAt;
 
     @LastModifiedDate
     @JsonProperty("updatedAt")
-    @com.fasterxml.jackson.annotation.JsonFormat(shape = com.fasterxml.jackson.annotation.JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd'T'HH:mm:ssXXX")
-    private OffsetDateTime updatedAt;
+    private Instant updatedAt;
 
     public TripType() {
     }
@@ -125,12 +124,12 @@ public class TripType {
         this.version = version;
     }
 
-    public String getAgencyId() {
-        return agencyId;
+    public TargetInput getTarget() {
+        return target;
     }
 
-    public void setAgencyId(String agencyId) {
-        this.agencyId = agencyId;
+    public void setTarget(TargetInput target) {
+        this.target = target;
     }
 
     public String getOriginId() {
@@ -211,19 +210,19 @@ public class TripType {
         this.status = status;
     }
 
-    public OffsetDateTime getCreatedAt() {
+    public Instant getCreatedAt() {
         return createdAt;
     }
 
-    public void setCreatedAt(OffsetDateTime createdAt) {
+    public void setCreatedAt(Instant createdAt) {
         this.createdAt = createdAt;
     }
 
-    public OffsetDateTime getUpdatedAt() {
+    public Instant getUpdatedAt() {
         return updatedAt;
     }
 
-    public void setUpdatedAt(OffsetDateTime updatedAt) {
+    public void setUpdatedAt(Instant updatedAt) {
         this.updatedAt = updatedAt;
     }
 }

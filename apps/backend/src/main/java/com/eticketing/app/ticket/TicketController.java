@@ -15,6 +15,7 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
 
+import com.eticketing.app.common.TargetInput;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotEmpty;
@@ -39,8 +40,6 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.server.ResponseStatusException;
 
-import com.eticketing.app.agency.AgencyRepository;
-import com.eticketing.app.agency.AgencyType;
 import com.eticketing.app.trip.SeatStateEnum;
 import com.eticketing.app.trip.SeatUnit;
 import com.eticketing.app.trip.TripType;
@@ -62,8 +61,6 @@ public class TicketController {
     @Autowired
     private UserTypeRepository userRepository;
     @Autowired
-    private AgencyRepository agencyRepository;
-    @Autowired
     private TicketDocumentService ticketDocumentService;
     @Autowired
     private TicketEmailService ticketEmailService;
@@ -78,6 +75,11 @@ public class TicketController {
         @Valid
         public PaymentRequest payment;
         public Instant holdUntil;
+        /**
+         * Optional target override. If provided, uses this instead of trip's
+         * target.
+         */
+        public TargetInput target;
     }
 
     public static class RequestedSeat {
@@ -180,6 +182,12 @@ public class TicketController {
 
         TicketType ticket = new TicketType();
         ticket.setTripId(trip.getId());
+        // Use target from request if provided, otherwise copy from trip
+        if (req.target != null && req.target.getPos() != null && !req.target.getPos().isBlank()) {
+            ticket.setTarget(req.target);
+        } else if (trip.getTarget() != null) {
+            ticket.setTarget(trip.getTarget());
+        }
         ticket.setUserId(user.getId());
         ticket.setUser(new TicketType.TicketUserSnapshot(
                 user.getId(),
@@ -259,6 +267,53 @@ public class TicketController {
         return ticketRepository.findAll().stream()
                 .map(ticket -> buildTicketResponse(ticket, null, null))
                 .toList();
+    }
+
+    /**
+     * Get tickets by POS (terminal-scoped). Used by terminal app to fetch
+     * tickets for a specific Point of Sale.
+     */
+    @GetMapping("/by-pos/{posId}")
+    public ResponseEntity<?> getTicketsByPos(
+            @PathVariable String posId,
+            @org.springframework.web.bind.annotation.RequestParam(required = false) TicketType.TicketStatusEnum status,
+            @org.springframework.web.bind.annotation.RequestParam(defaultValue = "0") int page,
+            @org.springframework.web.bind.annotation.RequestParam(defaultValue = "20") int limit,
+            @AuthenticationPrincipal User principal) {
+        if (!isAdminOrManager(principal)) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(Map.of("error", "Access denied"));
+        }
+        if (posId == null || posId.isBlank()) {
+            return ResponseEntity.badRequest().body(Map.of("error", "posId is required"));
+        }
+        if (page < 0) {
+            page = 0;
+        }
+        if (limit < 1 || limit > 100) {
+            limit = 20;
+        }
+
+        org.springframework.data.domain.Pageable pageable = org.springframework.data.domain.PageRequest.of(page, limit,
+                org.springframework.data.domain.Sort.by(org.springframework.data.domain.Sort.Direction.DESC, "createdAt"));
+
+        org.springframework.data.domain.Page<TicketType> result;
+        if (status != null) {
+            result = ticketRepository.findByTargetPosAndStatus(posId, status, pageable);
+        } else {
+            result = ticketRepository.findByTargetPos(posId, pageable);
+        }
+
+        List<Map<String, Object>> tickets = result.getContent().stream()
+                .map(ticket -> buildTicketResponse(ticket, null, null))
+                .toList();
+
+        return ResponseEntity.ok(Map.of(
+                "content", tickets,
+                "totalElements", result.getTotalElements(),
+                "totalPages", result.getTotalPages(),
+                "last", result.isLast(),
+                "number", result.getNumber()
+        ));
     }
 
     @GetMapping("/{id}")
@@ -383,17 +438,12 @@ public class TicketController {
     private Map<String, Object> buildTicketResponse(TicketType ticket, TripType trip, UserType user) {
         TripType resolvedTrip = trip != null ? trip : tripRepository.findById(ticket.getTripId()).orElse(null);
         UserType resolvedUser = user != null ? user : userRepository.findById(ticket.getUserId()).orElse(null);
-        AgencyType agency = null;
-        if (resolvedTrip != null && resolvedTrip.getAgencyId() != null) {
-            agency = agencyRepository.findById(resolvedTrip.getAgencyId()).orElse(null);
-        }
 
         Map<String, Object> payload = new LinkedHashMap<>();
         payload.put("id", ticket.getId());
         payload.put("version", ticket.getVersion());
         payload.put("reference", ticket.getReference());
         payload.put("trip", resolvedTrip);
-        payload.put("agency", agency);
         payload.put("user", resolvedUser != null ? resolvedUser : ticket.getUser());
         payload.put("status", ticket.getStatus());
         payload.put("seats", ticket.getSeats());

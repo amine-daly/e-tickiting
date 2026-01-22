@@ -40,6 +40,7 @@
     },
     "BUTTON": {
       "SAVE": "Enregistrer",
+      "VIEW_PROFILE": "Voir le profil",
       "CANCEL": "Annuler",
       "UPDATE": "Mettre à jour",
       "RESET": "Réinitialiser",
@@ -85,6 +86,28 @@
       "PREVIEW_TOGGLE": "Prévisualiser le modèle",
       "PLACEHOLDER": "Collez ici le modèle HTML. Vous pouvez utiliser des variables comme {{customerName}} ou {{tripReference}}.",
       "USE_DEFAULT": "Utiliser le modèle par défaut"
+    }
+  },
+  "PERMISSIONS": {
+    "TITLE": "Permissions",
+    "ADD_BUTTON": "Ajouter une permission",
+    "LOADING": "Chargement des permissions...",
+    "EMPTY": "Aucune permission trouvée.",
+    "TOTAL_GRANTS": "Total des autorisations : {{count}}",
+    "GRANTS_EMPTY": "Aucune autorisation sélectionnée.",
+    "SECTION_TITLE": "Rôles",
+    "CHECK_ALL": "Tout cocher",
+    "READ": "Lecture",
+    "WRITE": "Écriture",
+    "CREATE": "Création",
+    "MODAL": {
+      "ADD_TITLE": "Ajouter une permission",
+      "EDIT_TITLE": "Modifier la permission",
+      "ROLE_NAME": "Nom du rôle",
+      "ROLE_NAME_PLACEHOLDER": "Saisir le nom du rôle",
+      "ERRORS": {
+        "NAME_REQUIRED": "Le nom du rôle est obligatoire."
+      }
     }
   },
   "PLACES": {
@@ -373,6 +396,15 @@
       "COEFF_UPDATE_ERROR": "Impossible de mettre à jour le coefficient.",
       "COEFF_DELETE_SUCCESS": "Coefficient supprimé avec succès.",
       "COEFF_DELETE_ERROR": "Impossible de supprimer le coefficient."
+    }
+  }
+  ,
+  "BUSINESS_PROFILE": {
+    "MESSAGES": {
+      "SAVE_SUCCESS": "Profil d'entreprise enregistré avec succès.",
+      "SAVE_ERROR": "Impossible d'enregistrer le profil de l'entreprise.",
+      "LOCATION_SAVE_SUCCESS": "Emplacement enregistré avec succès.",
+      "LOCATION_SAVE_ERROR": "Impossible d'enregistrer l'emplacement."
     }
   }
 }

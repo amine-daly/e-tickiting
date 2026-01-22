@@ -1,0 +1,206 @@
+<div class="container py-5">
+  <div class="d-flex justify-content-between align-items-center mb-4">
+    <h2 class="mb-0">{{ "PERMISSIONS.TITLE" | translate }}</h2>
+    <button
+      type="button"
+      class="btn btn-primary"
+      (click)="openPermissionModal(permissionModal)"
+    >
+      <i class="ki-duotone ki-plus fs-2"></i>
+      {{ "PERMISSIONS.ADD_BUTTON" | translate }}
+    </button>
+  </div>
+
+  <div *ngIf="loading$ | async" class="text-center my-5">
+    <span class="spinner-border spinner-border-lg"></span>
+    <div>{{ "PERMISSIONS.LOADING" | translate }}</div>
+  </div>
+
+  <div
+    *ngIf="!(loading$ | async) && !(permissions$ | async)?.length"
+    class="alert alert-info"
+  >
+    {{ "PERMISSIONS.EMPTY" | translate }}
+  </div>
+
+  <div
+    *ngIf="!(loading$ | async) && (permissions$ | async)?.length"
+    class="row"
+  >
+    <div
+      *ngFor="let permission of permissions$ | async"
+      class="col-12 col-md-6 col-xl-4 mb-4"
+    >
+      <div class="card h-100 permission-card">
+        <div class="card-body">
+          <div class="d-flex justify-content-between align-items-center">
+            <div class="fw-bold fs-5">
+              {{ permission?.name }}
+            </div>
+            <span class="badge badge-light">
+              {{ permissionsCount(permission?.permissions) }}
+            </span>
+          </div>
+          <div class="fw-bold text-gray-600 mb-5">
+            {{
+              "PERMISSIONS.TOTAL_GRANTS"
+                | translate
+                  : { count: permissionsCount(permission?.permissions) }
+            }}
+          </div>
+
+          <div class="permission-list">
+            <ng-container
+              *ngIf="permission?.permissions?.length; else noGrants"
+            >
+              <div *ngFor="let grant of permission?.permissions" class="mb-2">
+                <ng-container *ngIf="hasAnyGrant(grant)">
+                  <div class="d-flex align-items-center">
+                    <span class="bullet bg-primary me-2"></span>
+                    <span>{{ getDefinitionName(grant?.permission) }}</span>
+                  </div>
+                </ng-container>
+              </div>
+            </ng-container>
+            <ng-template #noGrants>
+              <div class="text-muted">
+                {{ "PERMISSIONS.GRANTS_EMPTY" | translate }}
+              </div>
+            </ng-template>
+          </div>
+        </div>
+        <div class="card-footer d-flex justify-content-end gap-2">
+          <button
+            type="button"
+            class="btn btn-sm btn-light-primary"
+            (click)="openPermissionModal(permissionModal, permission)"
+          >
+            {{ "COMMON.BUTTON.EDIT" | translate }}
+          </button>
+          <button
+            type="button"
+            class="btn btn-sm btn-light-danger"
+            (click)="confirmDelete(permission)"
+          >
+            {{ "COMMON.BUTTON.DELETE" | translate }}
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<ng-template #permissionModal let-modal>
+  <div class="modal-header">
+    <h5 class="modal-title">
+      {{
+        (selectedPermission
+          ? "PERMISSIONS.MODAL.EDIT_TITLE"
+          : "PERMISSIONS.MODAL.ADD_TITLE"
+        ) | translate
+      }}
+    </h5>
+    <button
+      type="button"
+      class="btn-close"
+      aria-label="Close"
+      (click)="modal.dismiss('Cross click')"
+    ></button>
+  </div>
+  <form [formGroup]="rolesForm" (ngSubmit)="save(modal)">
+    <div class="modal-body">
+      <div class="mb-4">
+        <label class="form-label">
+          {{ "PERMISSIONS.MODAL.ROLE_NAME" | translate }}
+          <span class="text-danger">*</span>
+        </label>
+        <input
+          class="form-control"
+          formControlName="name"
+          [placeholder]="'PERMISSIONS.MODAL.ROLE_NAME_PLACEHOLDER' | translate"
+        />
+        <div *ngIf="isInvalid('name')" class="text-danger small">
+          {{ "PERMISSIONS.MODAL.ERRORS.NAME_REQUIRED" | translate }}
+        </div>
+      </div>
+
+      <div class="d-flex justify-content-between align-items-center mb-3">
+        <h5 class="mb-0">{{ "PERMISSIONS.SECTION_TITLE" | translate }}</h5>
+        <button
+          type="button"
+          class="btn btn-sm btn-light-primary"
+          (click)="toggleCheckAll()"
+        >
+          {{ "PERMISSIONS.CHECK_ALL" | translate }}
+        </button>
+      </div>
+
+      <div class="permission-modal-list" formArrayName="permissions">
+        <div
+          *ngFor="let role of permissionsArray.controls; let i = index"
+          [formGroupName]="i"
+          class="row align-items-center mb-3"
+        >
+          <div class="col-md-4">
+            <span class="fw-semibold">
+              {{
+                role.get("permission")?.value?.name ||
+                  role.get("permission")?.value?.code
+              }}
+            </span>
+          </div>
+          <div class="col-md-8">
+            <div class="d-flex flex-wrap gap-4">
+              <label class="form-check form-check-custom form-check-solid">
+                <input
+                  class="form-check-input"
+                  type="checkbox"
+                  formControlName="read"
+                />
+                <span class="form-check-label">
+                  {{ "PERMISSIONS.READ" | translate }}
+                </span>
+              </label>
+              <label class="form-check form-check-custom form-check-solid">
+                <input
+                  class="form-check-input"
+                  type="checkbox"
+                  formControlName="update"
+                />
+                <span class="form-check-label">
+                  {{ "PERMISSIONS.WRITE" | translate }}
+                </span>
+              </label>
+              <label class="form-check form-check-custom form-check-solid">
+                <input
+                  class="form-check-input"
+                  type="checkbox"
+                  formControlName="create"
+                />
+                <span class="form-check-label">
+                  {{ "PERMISSIONS.CREATE" | translate }}
+                </span>
+              </label>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button
+        type="submit"
+        class="btn btn-primary"
+        [disabled]="rolesForm.invalid || isButtonDisabled"
+      >
+        {{ "COMMON.BUTTON.SAVE" | translate }}
+      </button>
+      <button
+        type="button"
+        class="btn btn-secondary"
+        (click)="modal.dismiss('Cross click')"
+      >
+        {{ "COMMON.BUTTON.CANCEL" | translate }}
+      </button>
+    </div>
+  </form>
+</ng-template>

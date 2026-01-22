@@ -20,4 +20,22 @@ public interface TripTypeRepository extends MongoRepository<TripType, String> {
             OffsetDateTime endOfDay,
             Pageable pageable
     );
+
+    /**
+     * Find trips by target.pos (POS ID) for terminal-scoped queries.
+     */
+    @Query("{ 'target.pos': ?0 }")
+    Page<TripType> findByTargetPos(String posId, Pageable pageable);
+
+    /**
+     * Find trips by target.pos (POS ID) and date range for terminal-scoped
+     * queries.
+     */
+    @Query("{ 'target.pos': ?0, 'departureDate': { $gte: ?1, $lt: ?2 } }")
+    Page<TripType> findByTargetPosAndDateRange(
+            String posId,
+            OffsetDateTime startOfDay,
+            OffsetDateTime endOfDay,
+            Pageable pageable
+    );
 }

@@ -9,8 +9,12 @@ export interface UserType {
   lastName: string;
   email: string | null;
   phone: PhoneType | null;
-  role: string; // RoleType enum string from backend
+  role: RoleEnum;
+  picture?: any | null;
+  app?: string | null;
+  target?: { pos?: { id?: string } } | null;
   createdAt?: string; // ISO date string
+  updatedAt?: string; // ISO date string
 }
 
 // Minimal auth response mapping convenience
@@ -22,4 +26,11 @@ export interface AuthResponseModel {
 export enum AppsEnum {
   FRONT = 'FRONT',
   TERMINAL = 'TERMINAL',
+}
+
+export enum RoleEnum {
+  ADMIN = 'ADMIN',
+  MANAGER = 'MANAGER',
+  DRIVER = 'DRIVER',
+  CUSTOMER = 'CUSTOMER',
 }

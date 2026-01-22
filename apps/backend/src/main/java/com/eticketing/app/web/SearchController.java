@@ -2,7 +2,10 @@ package com.eticketing.app.web;
 
 import com.eticketing.app.trip.TripTypeRepository;
 import com.eticketing.app.place.PlaceRepository;
+import com.eticketing.app.place.LonLatType;
 import com.eticketing.app.place.PlaceType;
+import com.eticketing.app.subplace.SubPlaceRepository;
+import com.eticketing.app.subplace.SubPlaceType;
 import com.eticketing.app.web.error.ApiExceptions.BadRequestException;
 
 import io.swagger.v3.oas.annotations.Operation;
@@ -31,10 +34,36 @@ public class SearchController {
 
     private final TripTypeRepository trips;
     private final PlaceRepository places;
+    private final SubPlaceRepository subPlaces;
 
-    public SearchController(TripTypeRepository trips, PlaceRepository places) {
+    public SearchController(TripTypeRepository trips, PlaceRepository places, SubPlaceRepository subPlaces) {
         this.trips = trips;
         this.places = places;
+        this.subPlaces = subPlaces;
+    }
+
+    private LonLatType resolveCityLocation(String cityId) {
+        if (cityId == null || cityId.isBlank()) {
+            return null;
+        }
+
+        List<SubPlaceType> list = subPlaces.findByParentId(cityId);
+        if (list == null || list.isEmpty()) {
+            return null;
+        }
+
+        // Prefer default with location, else first with location.
+        for (SubPlaceType sp : list) {
+            if (Boolean.TRUE.equals(sp.getIsDefault()) && sp.getLocation() != null) {
+                return sp.getLocation();
+            }
+        }
+        for (SubPlaceType sp : list) {
+            if (sp.getLocation() != null) {
+                return sp.getLocation();
+            }
+        }
+        return null;
     }
 
     @GetMapping("/trips")
@@ -82,19 +111,22 @@ public class SearchController {
             // Use direct originId/destinationId from trip
             PlaceType origin = t.getOriginId() != null ? places.findById(t.getOriginId()).orElse(null) : null;
             PlaceType destinationPlace = t.getDestinationId() != null ? places.findById(t.getDestinationId()).orElse(null) : null;
+
+            LonLatType originLocation = origin == null ? null : resolveCityLocation(origin.getId());
+            LonLatType destinationLocation = destinationPlace == null ? null : resolveCityLocation(destinationPlace.getId());
             m.put("source", origin == null ? null : Map.of(
                     "city", origin.getCity(),
-                    "location", origin.getLocation() == null ? null : Map.of(
-                    "type", origin.getLocation().getType().name(),
-                    "coordinates", origin.getLocation().getCoordinates()
-            )
+                    "location", originLocation == null ? null : Map.of(
+                                    "type", originLocation.getType().name(),
+                                    "coordinates", originLocation.getCoordinates()
+                            )
             ));
             m.put("destination", destinationPlace == null ? null : Map.of(
                     "city", destinationPlace.getCity(),
-                    "location", destinationPlace.getLocation() == null ? null : Map.of(
-                    "type", destinationPlace.getLocation().getType().name(),
-                    "coordinates", destinationPlace.getLocation().getCoordinates()
-            )
+                    "location", destinationLocation == null ? null : Map.of(
+                                    "type", destinationLocation.getType().name(),
+                                    "coordinates", destinationLocation.getCoordinates()
+                            )
             ));
             m.put("date", t.getDepartureDate());
             m.put("price", t.getTotalPrice());

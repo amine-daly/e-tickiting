@@ -5,13 +5,24 @@ const Routing: Routes = [
     path: 'dashboard',
     loadComponent: () =>
       import('./dashboard/dashboard.component').then(
-        (m) => m.DashboardComponent
+        (m) => m.DashboardComponent,
+      ),
+  },
+  {
+    path: 'business-profile',
+    loadChildren: () =>
+      import('./business-profile/business-profile/business-profile.routes').then(
+        (m) => m.businessProfileRoutes,
       ),
   },
   {
     path: 'places',
     loadChildren: () =>
       import('./places/places.routes').then((m) => m.placesRoutes),
+  },
+  {
+    path: 'team',
+    loadChildren: () => import('./team/team.routes').then((m) => m.teamRoutes),
   },
   {
     path: 'agencies',
@@ -33,6 +44,19 @@ const Routing: Routes = [
     loadChildren: () =>
       import('./customers/customers.routes').then((m) => m.customersRoutes),
   },
+
+  {
+    path: 'customers',
+    loadChildren: () =>
+      import('./customers/customers.routes').then((m) => m.customersRoutes),
+  },
+  {
+    path: 'permissions',
+    loadChildren: () =>
+      import('./permissions/permissions.routes').then(
+        (m) => m.permissionsRoutes,
+      ),
+  },
   {
     path: 'crafted/pages/profile',
     loadChildren: () =>
@@ -40,16 +64,10 @@ const Routing: Routes = [
     data: { layout: 'light-sidebar' },
   },
   {
-    path: 'crafted/account',
-    loadChildren: () =>
-      import('../modules/account/account.module').then((m) => m.AccountModule),
-    data: { layout: 'dark-header' },
-  },
-  {
     path: 'crafted/widgets',
     loadChildren: () =>
       import('../modules/widgets-examples/widgets-examples.module').then(
-        (m) => m.WidgetsExamplesModule
+        (m) => m.WidgetsExamplesModule,
       ),
     data: { layout: 'light-header' },
   },

@@ -1,0 +1,79 @@
+<div class="card mb-5 mb-xl-10">
+  <div class="card-header">
+    <div class="card-title m-0">
+      <h3 class="fw-bolder m-0">Account Settings</h3>
+    </div>
+  </div>
+
+  <form class="card-body p-9" [formGroup]="userForm">
+    <div class="row mb-7">
+      <label class="col-lg-4 fw-bold text-muted">First Name</label>
+      <div class="col-lg-8">
+        <input
+          class="form-control form-control-solid"
+          formControlName="firstName"
+        />
+      </div>
+    </div>
+
+    <div class="row mb-7">
+      <label class="col-lg-4 fw-bold text-muted">Last Name</label>
+      <div class="col-lg-8">
+        <input
+          class="form-control form-control-solid"
+          formControlName="lastName"
+        />
+      </div>
+    </div>
+
+    <div class="row mb-7">
+      <label class="col-lg-4 fw-bold text-muted">Email</label>
+      <div class="col-lg-8">
+        <input
+          class="form-control form-control-solid"
+          formControlName="email"
+        />
+      </div>
+    </div>
+
+    <div class="row mb-7" formGroupName="phone">
+      <label class="col-lg-4 fw-bold text-muted">Phone</label>
+      <div class="col-lg-4">
+        <input
+          class="form-control form-control-solid"
+          formControlName="countryCode"
+          placeholder="Country code"
+        />
+      </div>
+      <div class="col-lg-4">
+        <input
+          class="form-control form-control-solid"
+          formControlName="number"
+          placeholder="Number"
+        />
+      </div>
+    </div>
+
+    <div class="row mb-7">
+      <label class="col-lg-4 fw-bold text-muted">Role</label>
+      <div class="col-lg-8">
+        <select class="form-select" formControlName="role">
+          <option *ngFor="let role of roles" [value]="role">
+            {{ "CUSTOMERS.ROLES." + role | translate }}
+          </option>
+        </select>
+      </div>
+    </div>
+
+    <div class="d-flex justify-content-end">
+      <button
+        type="button"
+        class="btn btn-primary"
+        [disabled]="userForm.invalid || isSaving || isButtonDisabled"
+        (click)="save()"
+      >
+        {{ isSaving ? "Saving..." : "Save" }}
+      </button>
+    </div>
+  </form>
+</div>

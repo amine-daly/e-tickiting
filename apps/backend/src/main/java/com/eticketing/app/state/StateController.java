@@ -8,6 +8,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
 
+import java.time.Instant;
 import java.util.List;
 import java.util.Comparator;
 
@@ -26,10 +27,18 @@ public class StateController {
         }
     }
 
-    public record StateRes(String id, String name, String code, String countryId, CountryRes country) {
+    public record StateRes(String id, String name, String code, String countryId, CountryRes country, Instant createdAt, Instant updatedAt) {
 
         static StateRes from(StateType s, CountryType c) {
-            return new StateRes(s.getId(), s.getName(), s.getCode(), s.getCountryId(), CountryRes.from(c));
+            return new StateRes(
+                    s.getId(),
+                    s.getName(),
+                    s.getCode(),
+                    s.getCountryId(),
+                    CountryRes.from(c),
+                    s.getCreatedAt(),
+                    s.getUpdatedAt()
+            );
         }
     }
 
@@ -59,6 +68,7 @@ public class StateController {
         } else {
             p = repo.findAll(PageRequest.of(page, limit));
         }
+        // Fetch response: include both timestamps
         var list = p.getContent().stream().map(s -> {
             CountryType c = s.getCountryId() != null ? countryRepo.findById(s.getCountryId()).orElse(null) : null;
             return StateRes.from(s, c);
@@ -80,6 +90,7 @@ public class StateController {
         } else {
             p = repo.findByCountryId(countryId, PageRequest.of(page, limit));
         }
+        // Fetch response: include both timestamps
         var list = p.getContent().stream()
                 .sorted(Comparator.comparing(StateType::getName, String.CASE_INSENSITIVE_ORDER))
                 .map(s -> StateRes.from(s, c))
@@ -92,6 +103,7 @@ public class StateController {
         StateType s = repo.findById(id)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "State not found"));
         CountryType c = s.getCountryId() != null ? countryRepo.findById(s.getCountryId()).orElse(null) : null;
+        // Fetch response: include both timestamps
         return StateRes.from(s, c);
     }
 
@@ -103,7 +115,12 @@ public class StateController {
         CountryType c = countryRepo.findById(req.countryId())
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Country not found"));
         StateType s = new StateType(req.name(), req.code(), req.countryId());
+        // Server-managed timestamps
+        Instant now = Instant.now();
+        s.setCreatedAt(now);
+        s.setUpdatedAt(now);
         StateType saved = repo.save(s);
+        // Create response: include createdAt only
         return StateRes.from(saved, c);
     }
 
@@ -116,6 +133,8 @@ public class StateController {
         if (req.countryId() != null && !req.countryId().isBlank()) {
             s.setCountryId(req.countryId());
         }
+        // Server-managed timestamps
+        s.setUpdatedAt(Instant.now());
         StateType saved = repo.save(s);
         CountryType c = saved.getCountryId() != null ? countryRepo.findById(saved.getCountryId()).orElse(null) : null;
         return StateRes.from(saved, c);

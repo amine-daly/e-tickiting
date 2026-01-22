@@ -5,10 +5,13 @@ import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 
+import com.eticketing.app.common.TargetInput;
 import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.NotNull;
 
+import org.springframework.data.annotation.CreatedDate;
 import org.springframework.data.annotation.Id;
+import org.springframework.data.annotation.LastModifiedDate;
 import org.springframework.data.annotation.Version;
 import org.springframework.data.mongodb.core.mapping.Document;
 
@@ -195,6 +198,13 @@ public class TicketType {
     private String id;
     @Version
     private Long version;
+
+    /**
+     * Target containing POS ID for multi-tenant scoping. Tickets are scoped by
+     * target.pos for terminal queries.
+     */
+    private TargetInput target;
+
     @NotNull
     private String tripId;
     @NotNull
@@ -211,8 +221,13 @@ public class TicketType {
     private String reference;
     @JsonIgnore
     private String bookingReference;
-    private Instant createdAt = Instant.now();
-    private Instant updatedAt = Instant.now();
+
+    @CreatedDate
+    private Instant createdAt;
+
+    @LastModifiedDate
+    private Instant updatedAt;
+
     private Instant expiresAt;
     private Instant paidAt;
     private Instant cancelledAt;
@@ -231,6 +246,14 @@ public class TicketType {
 
     public void setVersion(Long version) {
         this.version = version;
+    }
+
+    public TargetInput getTarget() {
+        return target;
+    }
+
+    public void setTarget(TargetInput target) {
+        this.target = target;
     }
 
     public String getTripId() {

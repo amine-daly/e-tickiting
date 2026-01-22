@@ -1,5 +1,6 @@
 package com.eticketing.app.trip;
 
+import com.eticketing.app.common.TargetInput;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.NotNull;
@@ -16,12 +17,12 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
 
-import com.eticketing.app.agency.AgencyRepository;
-import com.eticketing.app.agency.AgencyType;
 import com.eticketing.app.country.CountryRepository;
 import com.eticketing.app.country.CountryType;
 import com.eticketing.app.place.PlaceRepository;
 import com.eticketing.app.place.PlaceType;
+import com.eticketing.app.subplace.SubPlaceRepository;
+import com.eticketing.app.subplace.SubPlaceType;
 import com.eticketing.app.state.StateRepository;
 import com.eticketing.app.state.StateType;
 
@@ -31,6 +32,7 @@ import org.springframework.http.ResponseEntity;
 import java.time.format.DateTimeFormatter;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
+import java.time.Instant;
 
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -58,26 +60,49 @@ import com.eticketing.app.web.PaginateResponseType;
 public class TripController {
 
     private final TripTypeRepository tripTypeRepository;
-    private final AgencyRepository agencyRepository;
     private final PlaceRepository placeRepository;
+    private final SubPlaceRepository subPlaceRepository;
     private final StateRepository stateRepository;
     private final CountryRepository countryRepository;
     private final org.springframework.data.mongodb.core.MongoTemplate mongoTemplate;
 
     public TripController(
             TripTypeRepository tripTypeRepository,
-            AgencyRepository agencyRepository,
             PlaceRepository placeRepository,
+            SubPlaceRepository subPlaceRepository,
             StateRepository stateRepository,
             CountryRepository countryRepository,
             org.springframework.data.mongodb.core.MongoTemplate mongoTemplate
     ) {
         this.tripTypeRepository = tripTypeRepository;
-        this.agencyRepository = agencyRepository;
         this.placeRepository = placeRepository;
+        this.subPlaceRepository = subPlaceRepository;
         this.stateRepository = stateRepository;
         this.countryRepository = countryRepository;
         this.mongoTemplate = mongoTemplate;
+    }
+
+    private com.eticketing.app.place.LonLatType resolveCityLocation(String cityId) {
+        if (cityId == null || cityId.isBlank()) {
+            return null;
+        }
+
+        List<SubPlaceType> list = subPlaceRepository.findByParentId(cityId);
+        if (list == null || list.isEmpty()) {
+            return null;
+        }
+
+        for (SubPlaceType sp : list) {
+            if (Boolean.TRUE.equals(sp.getIsDefault()) && sp.getLocation() != null) {
+                return sp.getLocation();
+            }
+        }
+        for (SubPlaceType sp : list) {
+            if (sp.getLocation() != null) {
+                return sp.getLocation();
+            }
+        }
+        return null;
     }
 
     @Operation(summary = "Get a trip by id", responses = {
@@ -95,10 +120,13 @@ public class TripController {
             produces = org.springframework.http.MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<Map<String, Object>> createTrip(@Valid @RequestBody CreateTripRequest payload) {
         TripType toSave = new TripType();
-        toSave.setAgencyId(payload.agencyId());
+        // Handle target (new multi-tenant model)
+        if (payload.target() != null && payload.target().getPos() != null) {
+            toSave.setTarget(payload.target());
+        }
         toSave.setOriginId(payload.originId());
         toSave.setDestinationId(payload.destinationId());
-        toSave.setTotalPrice(payload.totalPrice() != null ? payload.totalPrice() : BigDecimal.ZERO);
+        toSave.setTotalPrice(payload.totalPrice());
 
         // Capacity is admin-entered. Available seats starts equal to total places.
         if (payload.totalPlaces() < 0) {
@@ -131,13 +159,24 @@ public class TripController {
         }
         toSave.setStatus(payload.status() == null ? TripStatusEnum.SCHEDULED : payload.status());
 
+        // Server-managed timestamps
+        Instant now = Instant.now();
+        toSave.setCreatedAt(now);
+        toSave.setUpdatedAt(now);
+
         TripType saved = tripTypeRepository.save(toSave);
+        // Create response: include createdAt only
         return ResponseEntity.ok(buildTripResponse(saved));
     }
 
     // DTO for create-trip
+    /**
+     * CreateTripRequest DTO.
+     *
+     * @param target Target containing POS ID for multi-tenant scoping
+     */
     public record CreateTripRequest(
-            String agencyId,
+            TargetInput target,
             @NotNull String originId,
             @NotNull String destinationId,
             @NotNull BigDecimal totalPrice,
@@ -158,12 +197,56 @@ public class TripController {
     }
 
     @Operation(
+            summary = "Get trips by POS (terminal-scoped)",
+            description = "Returns trips scoped to a specific Point of Sale. Used by terminal app.",
+            parameters = {
+                @Parameter(name = "posId", description = "Point of Sale ID", required = true),
+                @Parameter(name = "date", description = "Filter by departure date (yyyy-MM-dd)", example = "2025-11-01"),
+                @Parameter(name = "page", description = "Page index (0-based)", example = "0"),
+                @Parameter(name = "limit", description = "Page size", example = "10")
+            },
+            responses = {
+                @ApiResponse(responseCode = "200", description = "Trips found"),
+                @ApiResponse(responseCode = "400", description = "Invalid parameters")
+            }
+    )
+    @GetMapping("/by-target/{posId}")
+    public ResponseEntity<PaginateResponseType<Map<String, Object>>> getTripsByPos(
+            @PathVariable String posId,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int limit) {
+        if (posId == null || posId.isBlank()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "posId is required");
+        }
+        if (page < 0) {
+            page = 0;
+        }
+        if (limit < 1 || limit > 100) {
+            limit = 10;
+        }
+        Pageable pageable = PageRequest.of(page, limit, Sort.by(Sort.Direction.ASC, "departureDate"));
+
+        org.springframework.data.domain.Page<TripType> result;
+        if (date != null) {
+            var start = date.atStartOfDay().atOffset(ZoneOffset.UTC);
+            var end = date.plusDays(1).atStartOfDay().atOffset(ZoneOffset.UTC);
+            result = tripTypeRepository.findByTargetPosAndDateRange(posId, start, end, pageable);
+        } else {
+            result = tripTypeRepository.findByTargetPos(posId, pageable);
+        }
+
+        List<Map<String, Object>> tripsView = result.getContent().stream().map(t -> buildTripResponse(t)).toList();
+        return ResponseEntity.ok(new PaginateResponseType<>(tripsView, result.getTotalElements(), result.isLast()));
+    }
+
+    @Operation(
             summary = "Search trips with filters and pagination",
             parameters = {
                 @Parameter(name = "originId", description = "Origin place ID"),
                 @Parameter(name = "destinationId", description = "Destination place ID"),
                 @Parameter(name = "date", description = "Departure date (yyyy-MM-dd)", example = "2025-11-01"),
-                @Parameter(name = "agencyId", description = "Agency ID"),
+                @Parameter(name = "posId", description = "POS ID for filtering"),
                 @Parameter(name = "page", description = "Page index (0-based)", example = "0"),
                 @Parameter(name = "limit", description = "Page size", example = "10")
             },
@@ -177,7 +260,7 @@ public class TripController {
             @RequestParam(required = false) String originId,
             @RequestParam(required = false) String destinationId,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date,
-            @RequestParam(required = false) String agencyId,
+            @RequestParam(required = false) String posId,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int limit) {
         if (page < 0) {
@@ -205,15 +288,15 @@ public class TripController {
             var end = date.plusDays(1).atStartOfDay().atOffset(ZoneOffset.UTC);
             q.addCriteria(org.springframework.data.mongodb.core.query.Criteria.where("departureDate").gte(start).lt(end));
         }
-        if (agencyId != null && !agencyId.isBlank()) {
-            q.addCriteria(org.springframework.data.mongodb.core.query.Criteria.where("agencyId").is(agencyId));
+        if (posId != null && !posId.isBlank()) {
+            q.addCriteria(org.springframework.data.mongodb.core.query.Criteria.where("target.pos").is(posId));
         }
         q.with(pageable);
 
         List<TripType> found = mongoTemplate.find(q, TripType.class);
         long count = mongoTemplate.count(q.skip(-1).limit(-1), TripType.class);
 
-        List<Map<String, Object>> tripsView = found.stream().map(this::buildTripResponse).toList();
+        List<Map<String, Object>> tripsView = found.stream().map(t -> buildTripResponse(t)).toList();
         boolean isLast = (page * limit + found.size()) >= count;
         return ResponseEntity.ok(new PaginateResponseType<>(tripsView, count, isLast));
     }
@@ -224,8 +307,21 @@ public class TripController {
             @RequestBody Map<String, Object> updates) {
         TripType trip = tripTypeRepository.findById(id).orElseThrow(() -> new RuntimeException("Trip not found"));
 
-        if (updates.containsKey("agencyId")) {
-            trip.setAgencyId((String) updates.get("agencyId"));
+        // Prevent clients from setting server-managed timestamps
+        if (updates.containsKey("createdAt") || updates.containsKey("updatedAt")) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "createdAt/updatedAt are server-managed and must not be provided");
+        }
+
+        // Handle target (new multi-tenant model)
+        if (updates.containsKey("target") && updates.get("target") != null) {
+            Object targetObj = updates.get("target");
+            if (targetObj instanceof Map targetMap) {
+                TargetInput target = new TargetInput();
+                if (targetMap.get("pos") != null) {
+                    target.setPos(targetMap.get("pos").toString());
+                }
+                trip.setTarget(target);
+            }
         }
 
         if (updates.containsKey("originId")) {
@@ -355,6 +451,13 @@ public class TripController {
             }
         }
 
+        // Server-managed timestamps
+        Instant now = Instant.now();
+        if (trip.getCreatedAt() == null) {
+            trip.setCreatedAt(now);
+        }
+        trip.setUpdatedAt(now);
+
         TripType saved = tripTypeRepository.save(trip);
         return ResponseEntity.ok(buildTripResponse(saved));
     }
@@ -413,6 +516,13 @@ public class TripController {
 
         trip.setAvailableSeats((int) current.stream().filter(seat -> seat.getState() == SeatStateEnum.AVAILABLE).count());
 
+        // Server-managed timestamps
+        Instant now = Instant.now();
+        if (trip.getCreatedAt() == null) {
+            trip.setCreatedAt(now);
+        }
+        trip.setUpdatedAt(now);
+
         TripType saved = tripTypeRepository.save(trip);
         return ResponseEntity.ok(buildTripResponse(saved));
     }
@@ -469,16 +579,25 @@ public class TripController {
         trip.setSeats(seats);
         trip.setAvailableSeats((int) seats.stream().filter(s -> s.getState() == SeatStateEnum.AVAILABLE).count());
 
+        // Server-managed timestamps
+        Instant now = Instant.now();
+        if (trip.getCreatedAt() == null) {
+            trip.setCreatedAt(now);
+        }
+        trip.setUpdatedAt(now);
+
         TripType saved = tripTypeRepository.save(trip);
         Map<String, Object> response = new LinkedHashMap<>();
         response.put("message", "Seats generated successfully");
         response.put("seats", saved.getSeats());
         response.put("availableSeats", saved.getAvailableSeats());
+        response.put("updatedAt", saved.getUpdatedAt() != null
+                ? DateTimeFormatter.ISO_OFFSET_DATE_TIME.format(saved.getUpdatedAt().atOffset(ZoneOffset.UTC))
+                : null);
         return ResponseEntity.ok(response);
     }
 
     private Map<String, Object> buildTripResponse(TripType trip) {
-        AgencyType agency = trip.getAgencyId() != null ? agencyRepository.findById(trip.getAgencyId()).orElse(null) : null;
         PlaceType origin = trip.getOriginId() != null ? placeRepository.findById(trip.getOriginId()).orElse(null) : null;
         PlaceType destination = trip.getDestinationId() != null ? placeRepository.findById(trip.getDestinationId()).orElse(null) : null;
 
@@ -500,7 +619,7 @@ public class TripController {
         Map<String, Object> response = new LinkedHashMap<>();
         response.put("id", trip.getId());
         response.put("version", trip.getVersion());
-        response.put("agency", agency != null ? Map.of("id", agency.getId(), "name", agency.getName()) : null);
+        response.put("target", trip.getTarget() != null ? Map.of("pos", trip.getTarget().getPos()) : null);
         response.put("originId", trip.getOriginId());
         response.put("destinationId", trip.getDestinationId());
         response.put("origin", buildPlaceView(origin, true));
@@ -517,8 +636,12 @@ public class TripController {
         response.put("seats", trip.getSeats());
         response.put("totalPrice", trip.getTotalPrice());
         response.put("status", trip.getStatus());
-        response.put("createdAt", trip.getCreatedAt() != null ? trip.getCreatedAt().format(DateTimeFormatter.ISO_OFFSET_DATE_TIME) : null);
-        response.put("updatedAt", trip.getUpdatedAt() != null ? trip.getUpdatedAt().format(DateTimeFormatter.ISO_OFFSET_DATE_TIME) : null);
+        response.put("createdAt", trip.getCreatedAt() != null
+                ? DateTimeFormatter.ISO_OFFSET_DATE_TIME.format(trip.getCreatedAt().atOffset(ZoneOffset.UTC))
+                : null);
+        response.put("updatedAt", trip.getUpdatedAt() != null
+                ? DateTimeFormatter.ISO_OFFSET_DATE_TIME.format(trip.getUpdatedAt().atOffset(ZoneOffset.UTC))
+                : null);
         return response;
     }
 
@@ -537,7 +660,7 @@ public class TripController {
         Map<String, Object> view = new LinkedHashMap<>();
         view.put("id", place.getId());
         view.put("city", place.getCity());
-        view.put("location", place.getLocation());
+        view.put("location", resolveCityLocation(place.getId()));
 
         // State object
         if (state != null) {
@@ -565,25 +688,14 @@ public class TripController {
 
         // Sub-places (pickup/dropoff points) - only for CITY places
         if (includePlaces && place.getKind() == PlaceType.PlaceKind.CITY) {
-            List<PlaceType> subPlaces = placeRepository.findByParentId(place.getId());
+            List<SubPlaceType> subPlaces = subPlaceRepository.findByParentId(place.getId());
             List<Map<String, Object>> placesView = subPlaces.stream().map(sp -> {
-                StateType spState = sp.getStateId() != null ? stateRepository.findById(sp.getStateId()).orElse(null) : null;
-                CountryType spCountry = sp.getCountryId() != null ? countryRepository.findById(sp.getCountryId()).orElse(null) : null;
-
                 Map<String, Object> spView = new LinkedHashMap<>();
                 spView.put("id", sp.getId());
                 spView.put("address", sp.getAddress());
                 spView.put("location", sp.getLocation());
                 spView.put("pickupInstructions", sp.getPickupInstructions());
                 spView.put("isDefault", sp.getIsDefault());
-
-                if (spState != null) {
-                    spView.put("state", Map.of("id", spState.getId(), "name", spState.getName(), "code", spState.getCode()));
-                }
-                if (spCountry != null) {
-                    spView.put("country", Map.of("id", spCountry.getId(), "name", spCountry.getName(), "code", spCountry.getCode()));
-                }
-
                 return spView;
             }).toList();
             view.put("places", placesView);

@@ -6,6 +6,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
 
+import java.time.Instant;
 import java.util.List;
 
 @RestController
@@ -16,10 +17,17 @@ public class CountryController {
 
     }
 
-    public record CountryRes(String id, String name, String code, String flag) {
+    public record CountryRes(String id, String name, String code, String flag, Instant createdAt, Instant updatedAt) {
 
         static CountryRes from(CountryType c) {
-            return new CountryRes(c.getId(), c.getName(), c.getCode(), c.getFlag());
+            return new CountryRes(
+                    c.getId(),
+                    c.getName(),
+                    c.getCode(),
+                    c.getFlag(),
+                    c.getCreatedAt(),
+                    c.getUpdatedAt()
+            );
         }
     }
 
@@ -41,20 +49,27 @@ public class CountryController {
         Page<CountryType> p = (searchString == null || searchString.isBlank())
                 ? repo.findAll(PageRequest.of(page, limit))
                 : repo.findByNameIgnoreCaseContaining(searchString, PageRequest.of(page, limit));
-        var list = p.getContent().stream().map(CountryRes::from).toList();
+        // Fetch response: include both timestamps
+        var list = p.getContent().stream().map(c -> CountryRes.from(c)).toList();
         return new Paginated<>(list, p.getTotalElements(), p.isLast());
     }
 
     @GetMapping("/{id}")
     public CountryRes get(@PathVariable String id) {
+        // Fetch response: include both timestamps
         return repo.findById(id)
-                .map(CountryRes::from)
+                .map(c -> CountryRes.from(c))
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Country not found"));
     }
 
     @PostMapping
     public CountryRes create(@RequestBody CountryReq req) {
         CountryType c = new CountryType(req.name(), req.code(), req.flag());
+        // Server-managed timestamps
+        Instant now = Instant.now();
+        c.setCreatedAt(now);
+        c.setUpdatedAt(now);
+        // Create response: include createdAt only
         return CountryRes.from(repo.save(c));
     }
 
@@ -65,6 +80,8 @@ public class CountryController {
         c.setName(req.name());
         c.setCode(req.code());
         c.setFlag(req.flag());
+        // Server-managed timestamps
+        c.setUpdatedAt(Instant.now());
         return CountryRes.from(repo.save(c));
     }
 

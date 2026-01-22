@@ -11,6 +11,7 @@ import org.springframework.data.mongodb.core.index.CompoundIndex;
 import org.springframework.data.mongodb.core.index.CompoundIndexes;
 import org.springframework.data.mongodb.core.mapping.Document;
 import org.springframework.data.annotation.CreatedDate;
+import org.springframework.data.annotation.LastModifiedDate;
 import java.time.Instant;
 
 @Document("users")
@@ -41,27 +42,58 @@ public class UserType {
     private String email;
     @Valid
     private PhoneType phone;
+    /**
+     * Profile picture
+     */
+    private com.eticketing.app.common.PictureType picture;
     @NotBlank
     @JsonIgnore
-    private String passwordHash;
+    private String password;
     @NotNull
     private RoleEnum role;
     private AppEnum app;
 
+    /**
+     * Target scope (POS ID) - users can be scoped to a specific Point of Sale
+     */
+    private TargetType target;
+
+    public static class TargetType {
+
+        private String pos;
+
+        public TargetType() {
+        }
+
+        public TargetType(String pos) {
+            this.pos = pos;
+        }
+
+        public String getPos() {
+            return pos;
+        }
+
+        public void setPos(String pos) {
+            this.pos = pos;
+        }
+    }
+
     @CreatedDate
     private Instant createdAt;
+
+    @LastModifiedDate
+    private Instant updatedAt;
 
     public UserType() {
     }
 
-    public UserType(String firstName, String lastName, String email, PhoneType phone, String passwordHash, RoleEnum role) {
+    public UserType(String firstName, String lastName, String email, PhoneType phone, String password, RoleEnum role) {
         this.firstName = firstName;
         this.lastName = lastName;
         this.email = email;
         this.phone = phone;
-        this.passwordHash = passwordHash;
+        this.password = password;
         this.role = role;
-        this.createdAt = Instant.now();
     }
 
     public AppEnum getApp() {
@@ -112,12 +144,20 @@ public class UserType {
         this.phone = phone;
     }
 
+    public com.eticketing.app.common.PictureType getPicture() {
+        return picture;
+    }
+
+    public void setPicture(com.eticketing.app.common.PictureType picture) {
+        this.picture = picture;
+    }
+
     public String getPasswordHash() {
-        return passwordHash;
+        return password;
     }
 
     public void setPasswordHash(String passwordHash) {
-        this.passwordHash = passwordHash;
+        this.password = passwordHash;
     }
 
     public RoleEnum getRole() {
@@ -134,5 +174,21 @@ public class UserType {
 
     public void setCreatedAt(Instant createdAt) {
         this.createdAt = createdAt;
+    }
+
+    public Instant getUpdatedAt() {
+        return updatedAt;
+    }
+
+    public void setUpdatedAt(Instant updatedAt) {
+        this.updatedAt = updatedAt;
+    }
+
+    public TargetType getTarget() {
+        return target;
+    }
+
+    public void setTarget(TargetType target) {
+        this.target = target;
     }
 }
