@@ -27,6 +27,9 @@ public class PointOfSaleType {
     @JsonProperty("title")
     private String title;
 
+    @JsonProperty("subtitle")
+    private String subtitle;
+
     @JsonProperty("picture")
     private PictureType picture;
 
@@ -85,6 +88,14 @@ public class PointOfSaleType {
 
     public void setTitle(String title) {
         this.title = title;
+    }
+
+    public String getSubtitle() {
+        return subtitle;
+    }
+
+    public void setSubtitle(String subtitle) {
+        this.subtitle = subtitle;
     }
 
     public PictureType getPicture() {

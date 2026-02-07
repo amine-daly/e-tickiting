@@ -50,7 +50,7 @@ export class CustomersListComponent implements OnInit, OnDestroy {
   pagination$ = this.customersService.pagination$;
 
   page = 1;
-  pageSize = 10;
+  pageSize = this.customersService.pageLimit;
 
   userForm: FormGroup;
   isButtonDisabled = true;
@@ -71,10 +71,6 @@ export class CustomersListComponent implements OnInit, OnDestroy {
   ngOnDestroy(): void {
     this.subscriptions.unsubscribe();
     this.formChangesSub?.unsubscribe();
-  }
-
-  onPageChange(page: number): void {
-    this.loadPage(page);
   }
 
   openCustomerModal(modal: TemplateRef<any>, customer?: UserType): void {
@@ -99,7 +95,6 @@ export class CustomersListComponent implements OnInit, OnDestroy {
       this.userForm.value,
       this.initialValues,
     );
-    console.log('🚀 ~ CustomersComponent ~ submit ~ changes:', changes);
     if (isEdit) {
       if (Object.keys(changes).length === 0) {
         this.showAlert('info', 'Aucune modification détectée', '');
@@ -226,19 +221,14 @@ export class CustomersListComponent implements OnInit, OnDestroy {
     });
   }
 
+  onPageChange(page: number): void {
+    this.loadPage(page);
+  }
+
   private loadPage(page: number): void {
     this.page = page;
-    const sub = this.customersService
-      .getCustomers(this.page - 1, this.pageSize)
-      .subscribe({
-        error: () =>
-          this.showAlert(
-            'error',
-            'Échec du chargement',
-            'Impossible de récupérer la liste des clients. Veuillez réessayer plus tard.',
-          ),
-      });
-    this.subscriptions.add(sub);
+    this.customersService.pageIndex = page - 1;
+    this.customersService.getCustomers().subscribe();
   }
 
   private prepareFormForModal(customer?: UserType): void {

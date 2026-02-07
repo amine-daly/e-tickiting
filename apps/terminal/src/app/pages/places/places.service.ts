@@ -124,7 +124,7 @@ export class PlacesService {
         map((data) => {
           this.countries.next(data.objects);
           return data.objects;
-        })
+        }),
       );
   }
 
@@ -145,7 +145,7 @@ export class PlacesService {
           this.isLastStates.next(data.isLast);
           this.states.next(data.objects);
           return data.objects;
-        })
+        }),
       );
   }
 
@@ -169,16 +169,21 @@ export class PlacesService {
 
   // ========== Places (CITY) ==========
   getParentPlaces(): Observable<PlaceType[]> {
+    const posId = localStorage.getItem('posId');
     let requestParams: any = {
       page: this.parentPlacesPageIndex,
       limit: this.placesPageLimit,
       kind: PlaceKindEnum.CITY,
+      ...(posId ? { posId } : {}),
       ...(this.placesSearchString
         ? { searchString: this.placesSearchString }
         : {}),
     };
     return this.http
-      .get<PaginatedPlaces>(this.baseUrl, { params: requestParams })
+      .get<PaginatedPlaces>(
+        posId ? `${this.baseUrl}/by-target` : this.baseUrl,
+        { params: requestParams },
+      )
       .pipe(
         map((data) => {
           this.isLastPlaces.next(data.isLast);
@@ -187,21 +192,26 @@ export class PlacesService {
             ...data.objects,
           ]);
           return data.objects;
-        })
+        }),
       );
   }
 
   getPlaces(): Observable<PlaceType[]> {
+    const posId = localStorage.getItem('posId');
     let requestParams: any = {
       page: this.placesPageIndex,
       limit: this.placesPageLimit,
-      kind: 'CITY',
+      kind: PlaceKindEnum.CITY,
+      ...(posId ? { posId } : {}),
       ...(this.placesSearchString
         ? { searchString: this.placesSearchString }
         : {}),
     };
     return this.http
-      .get<PaginatedPlaces>(this.baseUrl, { params: requestParams })
+      .get<PaginatedPlaces>(
+        posId ? `${this.baseUrl}/by-target` : this.baseUrl,
+        { params: requestParams },
+      )
       .pipe(
         map((data) => {
           this.pagination.next({
@@ -211,7 +221,7 @@ export class PlacesService {
           });
           this.places.next(data.objects);
           return data.objects;
-        })
+        }),
       );
   }
 
@@ -220,13 +230,18 @@ export class PlacesService {
   }
 
   createPlace(payload: PlaceCreatePayload): Observable<PlaceType> {
-    return this.http.post<PlaceType>(this.baseUrl, payload).pipe(
-      tap((created: PlaceType) => {
-        if (created.kind === PlaceKindEnum.CITY || !created.kind) {
-          this.places.next([...this.places.value, created]);
-        }
+    return this.http
+      .post<PlaceType>(this.baseUrl, {
+        ...payload,
+        target: { pos: localStorage.getItem('posId') },
       })
-    );
+      .pipe(
+        tap((created: PlaceType) => {
+          if (created.kind === PlaceKindEnum.CITY || !created.kind) {
+            this.places.next([...this.places.value, created]);
+          }
+        }),
+      );
   }
 
   updatePlace(id: string, changes: PlaceUpdatePayload): Observable<PlaceType> {
@@ -234,11 +249,11 @@ export class PlacesService {
       tap((updated: PlaceType) => {
         if (updated.kind === PlaceKindEnum.CITY || !updated.kind) {
           const updatedList = this.places.value.map((p) =>
-            p.id === id ? updated : p
+            p.id === id ? updated : p,
           );
           this.places.next(updatedList);
         }
-      })
+      }),
     );
   }
 
@@ -246,7 +261,7 @@ export class PlacesService {
     return this.http.delete<void>(`${this.baseUrl}/${id}`).pipe(
       tap(() => {
         this.places.next(this.places.value.filter((p) => p.id !== id));
-      })
+      }),
     );
   }
 

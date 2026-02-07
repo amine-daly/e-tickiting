@@ -1,21 +1,102 @@
+<!--begin::POS Selector-->
+<div
+  class="app-navbar-item pos-selector-wrapper"
+  [ngClass]="itemClass"
+  ngbDropdown
+  placement="bottom-end"
+>
+  <div
+    class="pos-selector-trigger cursor-pointer d-flex align-items-center justify-content-center"
+    ngbDropdownToggle
+  >
+    <div class="symbol symbol-30px">
+      <img
+        *ngIf="currentPos?.picture?.baseUrl && currentPos?.picture?.path"
+        [src]="currentPos.picture.baseUrl + '/' + currentPos.picture.path"
+        alt="POS"
+        class="pos-avatar"
+      />
+      <span
+        *ngIf="!currentPos?.picture?.baseUrl || !currentPos?.picture?.path"
+        class="symbol-label bg-primary text-white fw-bold fs-7"
+      >
+        {{ currentPos?.title?.charAt(0) | uppercase }}
+      </span>
+    </div>
+  </div>
+  <div
+    ngbDropdownMenu
+    class="menu menu-sub menu-sub-dropdown menu-column menu-rounded menu-gray-800 menu-state-bg menu-state-color fw-semibold py-4 fs-6 w-275px"
+  >
+    <!--begin::Menu item-->
+    <div *ngFor="let account of accounts" class="menu-item px-3">
+      <a
+        class="menu-link px-3 d-flex align-items-center"
+        [class.active]="account.target?.pos?.id === currentPos?.id"
+        (click)="selectPos(account)"
+      >
+        <div class="symbol symbol-35px symbol-circle me-3">
+          <img
+            *ngIf="
+              account.target?.pos?.picture?.baseUrl &&
+              account.target?.pos?.picture?.path
+            "
+            [src]="
+              account.target.pos.picture.baseUrl +
+              '/' +
+              account.target.pos.picture.path
+            "
+            alt="POS"
+          />
+          <span
+            *ngIf="
+              !account.target?.pos?.picture?.baseUrl ||
+              !account.target?.pos?.picture?.path
+            "
+            class="symbol-label bg-light-primary text-primary fw-bold"
+          >
+            {{ account.target?.pos?.title?.charAt(0) | uppercase }}
+          </span>
+        </div>
+        <span class="text-gray-800">{{ account.target?.pos?.title }}</span>
+      </a>
+    </div>
+    <!--end::Menu item-->
+  </div>
+</div>
 <!--begin::Search-->
 <div class="app-navbar-item align-items-stretch" [ngClass]="itemClass">
   <!--begin::Search-->
-  <div id="kt_header_search" class="header-search d-flex align-items-stretch" data-kt-search-keypress="true"
-    data-kt-search-min-length="2" data-kt-search-enter="enter" data-kt-search-layout="menu"
-    data-kt-menu-trigger="{default: 'hover'}" data-kt-menu-overflow="false" data-kt-menu-permanent="true"
-    data-kt-menu-placement="bottom-end" data-kt-search="true">
+  <div
+    id="kt_header_search"
+    class="header-search d-flex align-items-stretch"
+    data-kt-search-keypress="true"
+    data-kt-search-min-length="2"
+    data-kt-search-enter="enter"
+    data-kt-search-layout="menu"
+    data-kt-menu-trigger="{default: 'hover'}"
+    data-kt-menu-overflow="false"
+    data-kt-menu-permanent="true"
+    data-kt-menu-placement="bottom-end"
+    data-kt-search="true"
+  >
     <!--begin::Search toggle-->
-    <div class="d-flex align-items-center" data-kt-search-element="toggle" id="kt_header_search_toggle">
+    <div
+      class="d-flex align-items-center"
+      data-kt-search-element="toggle"
+      id="kt_header_search_toggle"
+    >
       <div [ngClass]="btnClass">
         <app-keenicon name="magnifier" [class]="btnIconClass"></app-keenicon>
       </div>
     </div>
     <!--end::Search toggle-->
-    <app-search-result-inner data-kt-search-element="content" data-kt-menu="true"
-      class="menu menu-sub menu-sub-dropdown p-7 w-325px w-md-375px"></app-search-result-inner>
+    <app-search-result-inner
+      data-kt-search-element="content"
+      data-kt-menu="true"
+      class="menu menu-sub menu-sub-dropdown p-7 w-325px w-md-375px"
+    ></app-search-result-inner>
   </div>
-
 </div>
 <!--end::Search-->
 
@@ -32,8 +113,12 @@
 <!--begin::Notifications-->
 <div class="app-navbar-item" [ngClass]="itemClass">
   <!--begin::Menu- wrapper-->
-  <div [ngClass]="btnClass" data-kt-menu-trigger="{default: 'click', lg: 'hover'}" data-kt-menu-attach="parent"
-    data-kt-menu-placement="bottom-end">
+  <div
+    [ngClass]="btnClass"
+    data-kt-menu-trigger="{default: 'click', lg: 'hover'}"
+    data-kt-menu-attach="parent"
+    data-kt-menu-placement="bottom-end"
+  >
     <app-keenicon name="notification-status" class="fs-2"></app-keenicon>
   </div>
   <app-notifications-inner></app-notifications-inner>
@@ -43,10 +128,15 @@
 
 <!--begin::Chat-->
 <div class="app-navbar-item" [ngClass]="itemClass">
-  <div [ngClass]="btnClass" class="position-relative" id="kt_drawer_chat_toggle">
+  <div
+    [ngClass]="btnClass"
+    class="position-relative"
+    id="kt_drawer_chat_toggle"
+  >
     <app-keenicon name="message-text-2" class="fs-2"></app-keenicon>
     <span
-      class="bullet bullet-dot bg-success h-6px w-6px position-absolute translate-middle top-0 start-50 animation-blink">
+      class="bullet bullet-dot bg-success h-6px w-6px position-absolute translate-middle top-0 start-50 animation-blink"
+    >
     </span>
   </div>
 </div>
@@ -55,8 +145,12 @@
 <!--begin::Quick links-->
 <div class="app-navbar-item" [ngClass]="itemClass">
   <!--begin::Menu wrapper-->
-  <div [ngClass]="btnClass" data-kt-menu-trigger="click" data-kt-menu-attach="parent"
-    data-kt-menu-placement="bottom-end">
+  <div
+    [ngClass]="btnClass"
+    data-kt-menu-trigger="click"
+    data-kt-menu-attach="parent"
+    data-kt-menu-placement="bottom-end"
+  >
     <app-keenicon name="element-11" class="fs-2"></app-keenicon>
   </div>
   <!--end::Menu wrapper-->
@@ -66,17 +160,36 @@
 
 <!--begin::Theme mode-->
 <div class="app-navbar-item" [ngClass]="itemClass">
-  <app-theme-mode-switcher [toggleBtnClass]="btnClass" toggleBtnClass="{`btn-active-light-primary btn-custom ${toolbarButtonHeightClass}`}"></app-theme-mode-switcher>
+  <app-theme-mode-switcher
+    [toggleBtnClass]="btnClass"
+    toggleBtnClass="{`btn-active-light-primary btn-custom ${toolbarButtonHeightClass}`}"
+  ></app-theme-mode-switcher>
 </div>
 <!--end::Theme mode-->
 
 <!--begin::User menu-->
 <div class="app-navbar-item" [ngClass]="itemClass">
   <!--begin::Menu wrapper-->
-  <div class="cursor-pointer symbol" [ngClass]="userAvatarClass" data-kt-menu-trigger="{default: 'click'}" data-kt-menu-attach="parent" data-kt-menu-placement="bottom-end">
-    <img src="./assets/media/avatars/300-3.jpg" />
+  <div
+    class="cursor-pointer symbol"
+    [ngClass]="userAvatarClass"
+    data-kt-menu-trigger="{default: 'click'}"
+    data-kt-menu-attach="parent"
+    data-kt-menu-placement="bottom-end"
+  >
+    <img
+      *ngIf="currentUser?.picture?.baseUrl && currentUser?.picture?.path"
+      [src]="currentUser.picture.baseUrl + '/' + currentUser.picture.path"
+      alt="User"
+    />
+    <span
+      *ngIf="!currentUser?.picture?.baseUrl || !currentUser?.picture?.path"
+      class="symbol-label bg-light-primary text-primary fw-bold fs-6"
+    >
+      {{ currentUser?.firstName?.charAt(0) | uppercase }}
+    </span>
   </div>
-  <app-user-inner data-kt-menu='true'></app-user-inner>
+  <app-user-inner data-kt-menu="true"></app-user-inner>
   <!--end::Menu wrapper-->
 </div>
 <!--end::User menu-->
@@ -84,8 +197,15 @@
 <!--begin::Header menu toggle-->
 <ng-container *ngIf="appHeaderDefaulMenuDisplay">
   <div class="app-navbar-item d-lg-none ms-2 me-n3" title="Show header menu">
-    <div class="btn btn-icon btn-active-color-primary w-35px h-35px" id="kt_app_header_menu_toggle">
-      <app-keenicon name="element-4" class="fs-1" [ngClass]="btnIconClass"></app-keenicon>
+    <div
+      class="btn btn-icon btn-active-color-primary w-35px h-35px"
+      id="kt_app_header_menu_toggle"
+    >
+      <app-keenicon
+        name="element-4"
+        class="fs-1"
+        [ngClass]="btnIconClass"
+      ></app-keenicon>
     </div>
   </div>
 </ng-container>

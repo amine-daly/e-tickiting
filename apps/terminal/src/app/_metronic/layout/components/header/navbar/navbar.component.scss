@@ -1,0 +1,30 @@
+// POS Selector Styles
+.pos-selector-wrapper {
+  // Hide the dropdown arrow/caret
+  .pos-selector-trigger {
+    &::after {
+      display: none !important;
+    }
+  }
+
+  // Also hide caret from ngbDropdownToggle
+  [ngbDropdownToggle]::after {
+    display: none !important;
+  }
+
+  .dropdown-toggle::after {
+    display: none !important;
+  }
+
+  .symbol {
+    .symbol-label {
+      border-radius: 6px;
+    }
+  }
+}
+
+// Ensure the POS avatar looks clean
+.pos-avatar {
+  object-fit: cover;
+  border-radius: 6px;
+}

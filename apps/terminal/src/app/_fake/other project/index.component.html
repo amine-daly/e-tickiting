@@ -1,0 +1,1681 @@
+<app-breadcrumbs title="{{ 'MENUITEMS.TITLE.WELCOME' | translate }}"
+  [breadcrumbItems]="breadCrumbItems"></app-breadcrumbs>
+<ng-container *ngIf="!(navigating$ | async)">
+  <div class="row">
+    <div class="col">
+      <div class="row mb-3 pb-1">
+        <div class="col-12">
+          <div class="d-flex align-items-center">
+            <div class="flex-grow-1">
+              <h5 class="mb-0">{{'MODULES.INDEX.MY_DASHBOARDS' | translate }}</h5>
+              <p class="text-muted mb-0">{{ 'MODULES.DASHBOARDS.ECOMMERCE.WHATS_HAPPENING' | translate }}</p>
+            </div>
+            <div class="flexshrink-0 d-flex align-items-center justify-content-between gap-1">
+              <button class="btn btn-success btn-sm" (click)="openDashboardModal(dashboardModal, null)">
+                <i class="ri-star-line align-bottom d-none d-sm-inline"></i>
+                <span class="d-none d-sm-inline">{{'MODULES.INDEX.ADD_DASHBOARD' | translate }}</span>
+                <span class="d-block d-sm-none">{{'COMMON.ADD' | translate }}</span>
+              </button>
+              <div *ngIf="isAdmin" class="dropdown" ngbDropdown>
+                <button class="btn btn-sm btn-icon btn-primary" data-bs-toggle="dropdown" aria-haspopup="true"
+                  aria-expanded="true" ngbDropdownToggle>
+                  <i class="ri-settings-2-line fs-16"></i>
+                </button>
+                <div class="dropdown-menu cursor-pointer dropdown-menu-end" ngbDropdownMenu>
+                  <a (click)="openCreatePosModal(createPosModal)" class="dropdown-item">
+                    {{'COMMON.CREATE_CUSTOMER' | translate}}
+                  </a>
+                  <a (click)="openAssignTargetModal(assignTargetModal)" class="dropdown-item">
+                    {{'COMMON.ASSIGN_CUSTOMER' | translate}}
+                  </a>
+                  <a (click)="openDeleteTargetModal(deleteTargetModal)" class="dropdown-item">
+                    {{'COMMON.DELETE_CUSTOMER' | translate}}
+                  </a>
+                  <a (click)="openAddPermissionModal(addPermissionModal)" class="dropdown-item">
+                    {{'MODULES.SYSTEM.ADD_EDIT_PERMISSION' | translate }}
+                  </a>
+                  <a (click)="openAssignPermissionModal(assignPermissionModal)" class="dropdown-item">
+                    {{'COMMON.ASSIGN_PERMISSION' | translate}}
+                  </a>
+                </div>
+              </div>
+              <div class="·">
+                <button type="button" (click)="toggleActivity()"
+                  class="btn btn-sm btn-soft-info btn-icon waves-effect material-shadow-none waves-light layout-rightside-btn">
+                  <i class="ri-pulse-line"></i>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="row" cdkDropList (cdkDropListDropped)="sectionDropped($event)"
+        *ngIf="((loadingCorporateDashboard$ | async) === false || null || undefined) && dashboards?.length">
+        <div *ngFor="let board of dashboards; let i = index" class="col-12 col-md-6 col-lg-4 col-xxl-3">
+          <!-- cdkDrag -->
+          <div class="cursor-pointer card card-height-100">
+            <div class="card-body">
+              <div class="float-end">
+                <div class="dropdown" ngbDropdown>
+                  <a class="text-reset arrow-none" href="javascript:void(0);" data-bs-toggle="dropdown"
+                    aria-haspopup="true" aria-expanded="false" ngbDropdownToggle>
+                    <span class="text-muted fs-18"><i class="mdi mdi-dots-horizontal"></i></span>
+                  </a>
+                  <div class="dropdown-menu dropdown-menu-end" ngbDropdownMenu>
+                    <a (click)="openDashboardModal(dashboardModal, board)" class="dropdown-item"
+                      href="javascript:void(0);">{{'COMMON.EDIT' | translate }} {{'MODULES.INDEX.DASHBOARD' |
+                      translate
+                      }}</a>
+                    <a (click)="openDeleteModal(deleteModal, board)" class="dropdown-item"
+                      href="javascript:void(0);">{{'MODULES.INDEX.REMOVE_DASHBOARD' | translate }}</a>
+                  </div>
+                </div>
+              </div>
+              <div [routerLink]="[dashboardsLinks[board?.dashboard]]">
+                <div class="d-flex align-items-center">
+                  <lord-icon trigger="loop" style="width:50px;height:50px"
+                    [colors]="'primary:' + primaryColor + ',secondary:' + secondaryColor"
+                    [src]="dashboardIcons[board?.dashboard] || 'https://cdn.lordicon.com/taymdfsf.json'">
+                  </lord-icon>
+                </div>
+                <div class="row align-items-end g-0">
+                  <div class="col-6">
+                    <h3 class="mb-2 fs-x">{{
+                      'MENUITEMS.TITLE.'+ board?.dashboard | translate
+                      }}<span class="counter-value"></span><small class="text-muted fs-13"></small>
+                    </h3>
+                    <h6 class="text-muted mb-0">{{'MODULES.INDEX.DASHBOARD' | translate }}</h6>
+                  </div>
+                  <div class="col-6">
+                    <apx-chart
+                      *ngIf="activeUsers && activeUsersChart && board?.dashboard === 'ENGAGEMENT' && !noActiveData"
+                      [series]="activeUsersChart.series" [chart]="activeUsersChart.chart"
+                      [dataLabels]="activeUsersChart.dataLabels" [stroke]="activeUsersChart.stroke"
+                      [fill]="activeUsersChart.fill" [colors]="activeUsersChart.colors" dir="ltr"></apx-chart>
+
+                    <apx-chart *ngIf="board?.dashboard !== 'ENGAGEMENT' && board?.dashboard !== 'KYC' && board?.dashboard !== 'CAMPAIGNS'"
+                      [series]="BitcoinChart.series" [chart]="BitcoinChart.chart" [dataLabels]="BitcoinChart.dataLabels"
+                      [stroke]="BitcoinChart.stroke" [fill]="BitcoinChart.fill" [colors]="BitcoinChart.colors"
+                      dir="ltr"></apx-chart>
+
+                    <apx-chart *ngIf="board?.dashboard === 'CAMPAIGNS' && totalCampaignsData && campaignsChart"
+                      [series]="campaignsChart.series" [chart]="campaignsChart.chart" [dataLabels]="campaignsChart.dataLabels"
+                      [stroke]="campaignsChart.stroke" [fill]="campaignsChart.fill" [colors]="campaignsChart.colors"
+                      dir="ltr"></apx-chart>
+
+                    <apx-chart *ngIf="board?.dashboard === 'KYC' && cumulative" [series]="cumulativeChart.series"
+                      [chart]="cumulativeChart.chart" [dataLabels]="cumulativeChart.dataLabels"
+                      [stroke]="cumulativeChart.stroke" [fill]="cumulativeChart.fill" [colors]="cumulativeChart.colors"
+                      dir="ltr"></apx-chart>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div id="noresult" class="py-4 mt-4 text-center"
+        *ngIf="(loadingCorporateDashboard$ | async) || (!(loadingCorporateDashboard$ | async) && !dashboards?.length)">
+        <div *ngIf="loadingCorporateDashboard$ | async">
+          <lord-icon trigger="loop" style="width:72px;height:72px"
+            [colors]="'primary:' + primaryColor + ',secondary:' + secondaryColor"
+            src="https://cdn.lordicon.com/msoeawqm.json">
+          </lord-icon>
+          <h5 class="mt-4">{{'COMMON.LOADING' | translate }}</h5>
+        </div>
+        <div *ngIf="!(loadingCorporateDashboard$ | async) && !dashboards?.length">
+          <lord-icon trigger="loop" style="width:72px;height:72px"
+            [colors]="'primary:' + primaryColor + ',secondary:' + secondaryColor"
+            src="https://cdn.lordicon.com/vlycxjwx.json">
+          </lord-icon>
+          <h5 class="mt-4">{{ 'COMMON.NO_RESULT' | translate }}</h5>
+        </div>
+      </div>
+      <div class="row">
+        <div class="col-xxl-5">
+          <div class="row">
+            <div class="col-12">
+              <div class="card">
+                <div class="card-body p-0">
+                  <div class="alert alert-info border-0 rounded-0 m-0 d-flex align-items-center gap-1" role="alert">
+                    <i class="ri-information-line fs-16"></i>
+                    <div class="flex-grow-1 text-truncate">
+                      {{'MENUITEMS.TS.USER_ACQUISITION' | translate}}
+                    </div>
+                    <div *ngIf="usersStats$ | async" class="flex-shrink-0">
+                      <a [routerLink]="['/dashboard/kyc']" class="text-reset text-decoration-underline"><b>
+                          {{'MENUITEMS.TS.SEE_MORE' | translate}} </b></a>
+                    </div>
+                  </div>
+                  <div class="row align-items-center">
+                    <ng-container
+                      *ngIf="(usersStats || (nonCumulative && nonCumulativeChart)) && !(loadingUsersStats$ | async)">
+                      <div *ngIf="usersStats" class="col-sm-4">
+                        <div class="p-3">
+                          <p class="fs-16 lh-base align-items-center d-flex gap-1 m-0">
+                            {{'MENUITEMS.TS.TOTAL_USERS' | translate}}
+                            <i matTooltip="{{'MENUITEMS.TS.NEW_USERS_TODAY_DESC' | translate}}"
+                              class="ri-information-line fs-16"></i>
+                          </p>
+                          <span class="m-0 text-primary" style="font-size: 2rem;">
+                            {{ (usersStats$ | async)?.usersCount }}
+                          </span>
+                        </div>
+                      </div>
+                      <div *ngIf="nonCumulative && nonCumulativeChart" class="align-items-center col-sm-8 row">
+                        <div class="col-sm-6 align-content-center">
+                          <apx-chart [series]="nonCumulativeChart.series" [chart]="nonCumulativeChart.chart"
+                            [dataLabels]="nonCumulativeChart.dataLabels" [stroke]="nonCumulativeChart.stroke"
+                            [fill]="nonCumulativeChart.fill" [colors]="nonCumulativeChart.colors"
+                            [xaxis]="nonCumulativeChart.xaxis" dir="ltr">
+                          </apx-chart>
+                        </div>
+                        <div class="col-sm-6 align-content-center d-flex justify-content-end">
+                          <img style="height: 127px;" src="assets/images/dash-home.png" class="img-fluid">
+                        </div>
+                      </div>
+                    </ng-container>
+                    <div id="noresult" class="py-4 mt-4 text-center"
+                      *ngIf="(loadingUsersStats$ | async) || (!(loadingUsersStats$ | async) && !((usersStats$ | async) && nonCumulative && nonCumulativeChart))">
+                      <div *ngIf="loadingUsersStats$ | async">
+                        <lord-icon trigger="loop" style="width:72px;height:72px"
+                          [colors]="'primary:' + primaryColor + ',secondary:' + secondaryColor"
+                          src="https://cdn.lordicon.com/msoeawqm.json">
+                        </lord-icon>
+                        <h5 class="mt-4">{{'COMMON.LOADING' | translate }}</h5>
+                      </div>
+                      <div *ngIf="!(loadingUsersStats$ | async) && !(usersStats$ | async)">
+                        <lord-icon trigger="loop" style="width:72px;height:72px"
+                          [colors]="'primary:' + primaryColor + ',secondary:' + secondaryColor"
+                          src="https://cdn.lordicon.com/vlycxjwx.json">
+                        </lord-icon>
+                        <h5 class="mt-4">{{ 'COMMON.NO_RESULT' | translate }}</h5>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div *ngIf="!(loadingUsersStats$ | async) && (usersStats$ | async)" class="row">
+            <div *ngFor="let stat of usersData" class="col-md-6">
+              <app-analatics-stat 
+                [item]="stat?.item" 
+                [icon]="stat?.icon" 
+                [showVerses]="false" 
+                [count]="stat?.count"
+                [title]="stat?.title" 
+                [value]="stat?.value" 
+                [tooltip]="stat?.tooltip" 
+                [percentage]="stat?.percentage"
+                [icon_bg_color]="stat?.icon_bg_color" 
+                [compareTooltip]="stat?.compareTooltip"
+              >
+              </app-analatics-stat>
+            </div>
+          </div>
+        </div>
+        <div class="col-md-6 col-xxl-4">
+          <user-distribution></user-distribution>
+        </div>
+        <div class="col-md-6 col-xxl-3">
+          <div class="card card-height-100">
+            <div class="card-header align-items-center d-flex">
+              <h4 class="align-items-center card-title d-flex flex-grow-1 gap-2 mb-0">
+                {{ 'MENUITEMS.TS.WALLETS_STATISTICS' | translate}}
+              </h4>
+            </div>
+            <div *ngIf="(stats$ | async) && !(loadingStats$ | async)" class="card-body">
+
+              <owl-carousel-o (changed)="onChartChange($event)" [options]="owlOptions">
+                <ng-container *ngFor="let item of wallet$ | async; let i = index">
+                  <ng-template carouselSlide>
+                    <div class="card card-animate mb-2 cursor-pointer">
+                      <div class="card-body bg-x">
+                        <div class="d-flex justify-content-between gap-3">
+                          <div class="col-6">
+                            <div class="d-flex mb-3">
+                              <div class="flex-grow-1">
+                                <lord-icon src="https://cdn.lordicon.com/vaeagfzc.json" trigger="loop"
+                                  [colors]="'primary:' + primaryColor + ',secondary:' + secondaryColor"
+                                  style="width:55px;height:55px">
+                                </lord-icon>
+                              </div>
+                              <div class="flex-shrink-0">
+                                <a href="javascript:void(0);" class="fw-medium">
+                                  {{ item?.coin?.name }} ({{ item?.coin?.code }})
+                                </a>
+                              </div>
+                            </div>
+
+                            <div class="d-flex align-items-center">
+                              <h3 [ngClass]="{ 'text-danger': +item?.amount < 0 }" class="mb-2">
+                                {{ screenWidth > 1600 ? ((+item?.amount)?.toFixed(0)) : (item?.amount |
+                                numberWithSuffix:'') }}
+                              </h3>
+
+                              <img *ngIf="item?.coin?.picture?.baseUrl"
+                                [src]="item?.coin?.picture?.baseUrl + '/' + item?.coin?.picture?.path" alt=""
+                                class="img-fluid h-100 rounded-circle avatar-xxs ms-2 mb-2">
+
+                              <lord-icon class="mb-2" *ngIf="!item?.coin?.picture?.baseUrl"
+                                src="https://cdn.lordicon.com/lxizbtuq.json" trigger="loop" delay="2000"
+                                style="width:60px;height:25px">
+                              </lord-icon>
+                            </div>
+
+                            <p class="text-muted mb-0">
+                              {{ (item?.amount * item?.coin?.unitValue?.amount) | customCurrency:
+                              item?.coin?.unitValue?.currency?.name }}
+                              {{ item?.coin?.unitValue?.currency?.name }}
+                              <small class="bg-info-subtle text-info badge"> {{ +item?.fee?.toFixed(2) }}%</small>
+                            </p>
+                          </div>
+
+                          <div class="col-6 align-content-center">
+                            <apx-chart *ngIf="walletGraphChart && walletChart" [series]="walletGraphChart.series"
+                              [chart]="walletGraphChart.chart" [dataLabels]="walletGraphChart.dataLabels"
+                              [stroke]="walletGraphChart.stroke" [fill]="walletGraphChart.fill"
+                              [colors]="walletGraphChart.colors" [xaxis]="walletGraphChart.xaxis" dir="ltr">
+                            </apx-chart>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </ng-template>
+                </ng-container>
+              </owl-carousel-o>
+
+              <div class="card mb-2">
+                <div class="card-body bg-x">
+                  <div class="d-flex">
+                    <div class="flex-grow-1">
+                      <h5 class="fs-13 mb-3">
+                        {{'MENUITEMS.CUSTOMERENGAGEMENT.LIST.TODAY_VOLUME' | translate }}
+                      </h5>
+                      <h3>
+                        {{+(stats$ | async)?.todayVolume?.current | customCurrency: (wallet$ |
+                        async)?.[0]?.coin?.unitValue?.currency?.name}}&nbsp;
+                        {{(wallet$ | async)?.[0]?.coin?.unitValue?.currency?.name}}
+                      </h3>
+                      <p class="text-muted mb-0">
+                        {{+(stats$ | async)?.todayVolume?.previous | customCurrency: (wallet$ |
+                        async)?.[0]?.coin?.unitValue?.currency?.name}}&nbsp;
+                        {{(wallet$ | async)?.[0]?.coin?.unitValue?.currency?.name}}&nbsp;
+                        <small class="badge" [ngClass]="{
+                      'bg-success-subtle text-success': +(stats$ | async)?.todayVolume?.percentage > 0,
+                      'bg-danger-subtle text-danger': +(stats$ | async)?.todayVolume?.percentage < 0,
+                      'bg-info-subtle text-info': +(stats$ | async)?.todayVolume?.percentage === 0
+                    }">
+                          <i class="fs-13 align-bottom" [ngClass]="{
+                        'ri-arrow-right-up-line': +(stats$ | async)?.todayVolume?.percentage > 0,
+                        'ri-arrow-right-down-line': +(stats$ | async)?.todayVolume?.percentage < 0
+                      }">
+                          </i>
+                          {{(+(stats$ | async)?.todayVolume?.percentage)?.toFixed(0)}}%
+                        </small>
+                      </p>
+                    </div>
+                    <div class="flex-shrink-0">
+                      <i class="ri-hand-coin-line text-primary h1"></i>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div class="card mb-2">
+                <div class="card-body bg-x">
+                  <div class="d-flex">
+                    <div class="flex-grow-1">
+                      <h5 class="fs-13 mb-3">
+                        {{'MENUITEMS.CUSTOMERENGAGEMENT.LIST.TODAY_RETURNS' | translate }}
+                      </h5>
+                      <h3>
+                        {{+(stats$ | async)?.todayReturns?.current | customCurrency: (wallet$ |
+                        async)?.[0]?.coin?.unitValue?.currency?.name}}&nbsp;
+                        {{(wallet$ | async)?.[0]?.coin?.unitValue?.currency?.name}}
+                      </h3>
+                      <p class="text-muted mb-0">
+                        {{+(stats$ | async)?.todayReturns?.previous | customCurrency: (wallet$ |
+                        async)?.[0]?.coin?.unitValue?.currency?.name}}&nbsp;
+                        {{(wallet$ | async)?.[0]?.coin?.unitValue?.currency?.name}}&nbsp;
+                        <small class="badge" [ngClass]="{
+                      'bg-success-subtle text-success': +(stats$ | async)?.todayReturns?.percentage < 0,
+                      'bg-danger-subtle text-danger': +(stats$ | async)?.todayReturns?.percentage > 0,
+                      'bg-info-subtle text-info': +(stats$ | async)?.todayReturns?.percentage === 0
+                    }">
+                          <i class="fs-13 align-bottom" [ngClass]="{
+                        'ri-arrow-right-up-line': +(stats$ | async)?.todayReturns?.percentage > 0,
+                        'ri-arrow-right-down-line': +(stats$ | async)?.todayReturns?.percentage < 0
+                      }">
+                          </i>
+                          {{(+(stats$ | async)?.todayReturns?.percentage)?.toFixed(0)}}%
+                        </small>
+                      </p>
+                    </div>
+                    <div class="flex-shrink-0">
+                      <i class="ri-hand-coin-line text-primary h1"></i>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div class="py-4 mt-4 text-center" *ngIf="loadingStats$ | async">
+              <lord-icon trigger="loop" style="width:72px;height:72px"
+                [colors]="'primary:' + primaryColor + ',secondary:' + secondaryColor"
+                src="https://cdn.lordicon.com/msoeawqm.json">
+              </lord-icon>
+              <h5 class="mt-4">{{'COMMON.LOADING' | translate }}</h5>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="d-flex align-items-center mb-3">
+        <div class="flex-grow-1">
+          <h5 class="mb-0">{{'MODULES.INDEX.YOUR_PARTNERS' | translate }}</h5>
+        </div>
+        <div *ngIf="isAdmin" routerLink="/ecommerce/customers/customers" class="flexshrink-0">
+          <button class="btn btn-success btn-sm"><i class="ri-star-line align-bottom"></i>{{'MODULES.INDEX.ADD_BUSINESS'
+            |
+            translate }}</button>
+        </div>
+      </div>
+      <div class="row">
+        <div class="col-12 col-md-6 col-lg-4 col-xxl-3" *ngFor="let pos of posList" ngxSlickItem>
+          <div class="card explore-box card-animate rounded">
+            <div class="explore-place-bid-img">
+              <img *ngIf="pos?.picture?.baseUrl" [src]="pos?.picture?.baseUrl + '/' +pos?.picture?.path " alt=""
+                class="img-fluid card-img-top explore-img" />
+              <div class="bg-overlay"></div>
+              <div class="place-bid-btn">
+                <a [href]="pos?.website ? pos?.website : null" class="btn btn-success" target="_blank"><i
+                    class="ri-global-line align-bottom me-1"></i>{{'MENUITEMS.TS.VISIT_WEBSITE' |
+                  translate}} </a>
+              </div>
+            </div>
+            <div class="card-body">
+              <h5 class="mb-1"><a [href]="pos?.website ? pos?.website : null">{{pos?.title}}</a>
+              </h5>
+              <p class="text-muted mb-0">
+                {{pos?.subtitle?.length > 100 ?
+                pos?.subtitle?.substr(0,100) + '...' : pos?.subtitle}}
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+      <!-- <div class="row">
+            <div class="col-lg-12">
+              <div class="card">
+                <div class="card-header border-0">
+                  <div class="row justify-content-center mb-4">
+                    <div class="col-lg-6">
+                      <div class="row g-2">
+                        <div class="col">
+                          <form [formGroup]="searchForm">
+                            <div class="position-relative mb-3">
+                              <input (keyup.enter)="searchValue !== '' ? searchItems() : null"
+                                formControlName="searchString" type="text"
+                                class="form-control form-control-lg bg-light border-light"
+                                placeholder="{{'PLACEHOLDER.SEARCH_HERE' | translate }}..">
+                            </div>
+                          </form>
+                        </div>
+                        <div class="col-auto">
+                          <button [disabled]="isSearchButtonDisabled" (click)="searchItems()" type="button"
+                            class="btn btn-primary btn-lg waves-effect waves-light">{{'COMMON.SEARCH' | translate
+                            }}</button>
+                        </div>
+                      </div>
+                    </div>
+                    <div class="col-lg-12">
+                      <h5 *ngIf="searchValue !== '' && isSearchButtonDisabled" class="fs-16 fw-semibold text-center mb-0">
+                        {{'MODULES.INDEX.SHOWING_RESULTS_FOR' | translate }} "<span
+                          class="text-primary fw-medium fst-italic">{{searchValue}}</span> "</h5>
+                    </div>
+                  </div>
+                </div>
+                <ng-container *ngIf="searchValue !== ''">
+                  <div>
+                    <ul (navChange)="onNavChange($event)" ngbNav #customNav="ngbNav" [activeId]="1"
+                      class="nav nav-tabs nav-tabs-custom" role="tablist">
+                      <ng-container>
+                        <li [ngbNavItem]="1" class="nav-item">
+                          <a ngbNavLink class="nav-link" data-bs-toggle="tab" role="tab">
+                            <i class="ri-search-2-line text-muted align-bottom me-1"></i>{{'MODULES.INDEX.ALL_RESULTS'
+                            | translate
+                            }}
+                          </a>
+                          <ng-template ngbNavContent>
+                            <ng-container
+                              *ngIf="((loadingItems$ | async) === false || null || undefined) && searchedItems?.length">
+                              <div class="gallery-light">
+                                <ng-container *ngFor="let searchedItem of searchedItems">
+                                  <ng-container *ngFor="let item of searchedItem?.items">
+                                    <div class="pb-3">
+                                      <h5 class="mb-1"><a href="javascript:void(0);">
+                                          {{
+                                          (searchedItem.label === 'campaigns' || searchedItem.label ===
+                                          'blogs') ? item?.title :
+                                          (searchedItem.label === 'products' || searchedItem.label ===
+                                          'projects' ||
+                                          searchedItem.label === 'articles') ? item?.name :
+                                          ((searchedItem.label === 'customers' && item?.firstName &&
+                                          item?.lastName) ||
+                                          (item?.firstName && item?.lastName)) ? (item?.firstName + ' ' +
+                                          item?.lastName) :
+                                          ''
+                                          }}
+                                        </a>
+                                      </h5>
+                                      <p [routerLink]="searchedItem.label === 'customers' ? [searchedItem?.router] : [searchedItem?.router, item?.id]"
+                                        class="text-success cursor-pointer mb-2">
+                                        {{
+                                        searchedItem.label === 'campaigns' ?
+                                        baseUrl + 'engagement/campaigns/campaigns/' +
+                                        item?.title :
+                                        searchedItem.label === 'products' ?
+                                        baseUrl + 'inventory/products/products/' + item?.name :
+                                        searchedItem.label === 'customers' ?
+                                        baseUrl + 'ecommerce/customers/customers/' :
+                                        searchedItem.label === 'projects' ?
+                                        baseUrl + 'collaboration/projects/all/' + item?.name :
+                                        searchedItem.label === 'blogs' ? baseUrl + 'website/blog/' +
+                                        item?.title
+                                        :
+                                        searchedItem.label === 'articles' ?
+                                        baseUrl + 'iinventory/products/articles/' + item?.name : ''
+                                        }}
+                                      </p>
+                                      <p class="text-muted mb-2">
+                                        {{
+                                        searchedItem.label === 'campaigns' ? (item?.description?.length > 360
+                                        ?
+                                        item?.description?.substr(0, 360) + '...' : item?.description) :
+                                        searchedItem.label === 'products' ? (item?.description?.length > 360 ?
+                                        item?.description?.substr(0, 360) + '...' : item?.description) :
+                                        searchedItem.label === 'customers' ? item?.status :
+                                        searchedItem.label === 'projects' ? (item?.description?.length > 360 ?
+                                        item?.description?.substr(0, 360) + '...' : item?.description) :
+                                        searchedItem.label === 'blogs' ?
+                                        (item?.sectionData[0]?.sectionContent.length > 360 ?
+                                        item?.sectionData[0]?.sectionContent.substr(0, 360) + '...' :
+                                        item?.sectionData[0]?.sectionContent) :
+                                        searchedItem.label === 'articles' ? item?.barcode : ''
+                                        }}
+                                      </p>
+
+                                    </div>
+                                    <div class="border border-dashed mb-3 mb-3"></div>
+                                  </ng-container>
+                                </ng-container>
+                              </div>
+                            </ng-container>
+                            <div id="noresult" class="py-4 mt-4 text-center"
+                              *ngIf="(loadingItems$ | async) === true || ((loadingItems$ | async) === false && !searchedItems?.length)">
+                              <div *ngIf="(loadingItems$ | async)">
+                                <lord-icon trigger="loop" style="width:72px;height:72px"
+                                  [colors]="'primary:' + primaryColor + ',secondary:' + secondaryColor"
+                                  src="https://cdn.lordicon.com/msoeawqm.json">
+                                </lord-icon>
+                                <h5 class="mt-4">{{'COMMON.LOADING' | translate }}</h5>
+                              </div>
+                              <div *ngIf="(loadingItems$ | async) === false && !searchedItems?.length">
+                                <lord-icon trigger="loop" style="width:72px;height:72px"
+                                  [colors]="'primary:' + primaryColor + ',secondary:' + secondaryColor"
+                                  src="https://cdn.lordicon.com/vlycxjwx.json">
+                                </lord-icon>
+                                <h5 class="mt-4">{{ 'COMMON.NO_RESULT' | translate }}</h5>
+                              </div>
+                            </div>
+                          </ng-template>
+                        </li>
+                        <li [ngbNavItem]="2" class="nav-item">
+                          <a ngbNavLink class="nav-link" data-bs-toggle="tab" role="tab">
+                            <i class="ri-flag-2-line text-muted align-bottom me-1"></i>{{'MODULES.INDEX.CAMPAIGNS'
+                            | translate }}
+                          </a>
+                          <ng-template ngbNavContent>
+                            <ng-container
+                              *ngIf="((loadingItems$ | async) === false || null || undefined) && searchedItems?.length">
+                              <div class="gallery-light">
+                                <ng-container *ngFor="let item of searchedItems; let last = last">
+                                  <div class="pb-3">
+                                    <h5 class="mb-1"><a href="javascript:void(0);"> {{item?.name}} </a></h5>
+                                    <p [routerLink]="['/engagement/campaigns/campaigns', item?.id]"
+                                      class="text-success cursor-pointer mb-2">
+                                      {{baseUrl + 'engagement/campaigns/campaigns/'+ item?.id}}</p>
+                                    <p class="text-muted mb-2"> {{item?.description}} </p>
+                                  </div>
+                                  <div class="border border-dashed mb-3"></div>
+                                </ng-container>
+                              </div>
+                            </ng-container>
+                            <ng-container *ngTemplateOutlet="paginationTemplate"></ng-container>
+                          </ng-template>
+                        </li>
+                        <li [ngbNavItem]="4" class="nav-item">
+                          <a ngbNavLink class="nav-link" data-bs-toggle="tab" role="tab">
+                            <i class="ri-list-unordered text-muted align-bottom me-1"></i>{{'MODULES.INDEX.CUSTOMERS'
+                            | translate
+                            }}
+                          </a>
+                          <ng-template ngbNavContent>
+                            <div *ngIf="((loadingItems$ | async) === false || null || undefined) && searchedItems?.length"
+                              class="gallery-light">
+                              <ng-container *ngFor="let item of searchedItems; let last = last">
+                                <div class="pb-3">
+                                  <h5 class="mb-1"><a href="javascript:void(0);"> {{item?.firstName}}
+                                      {{item?.lastName}}</a></h5>
+                                  <p routerLink="ecommerce/customers/customers" class="text-success cursor-pointer mb-2">
+                                    https://sbx-trmnl.sifca.app/ecommerce/customers/customers</p>
+                                  <p class="text-muted mb-2"> {{item?.description}} </p>
+                                </div>
+                                <div class="border border-dashed mb-3"></div>
+                              </ng-container>
+                            </div>
+                            <ng-container *ngTemplateOutlet="paginationTemplate"></ng-container>
+                          </ng-template>
+                        </li>
+                        <li [ngbNavItem]="3" class="nav-item">
+                          <a ngbNavLink class="nav-link" data-bs-toggle="tab" role="tab">
+                            <i class="ri-image-fill text-muted align-bottom me-1"></i>{{'MODULES.INDEX.PRODUCTS'
+                            | translate }}
+                          </a>
+                          <ng-template ngbNavContent>
+                            <ng-container
+                              *ngIf="((loadingItems$ | async) === false || null || undefined) && searchedItems?.length">
+                              <div class="gallery-light">
+                                <ng-container *ngFor="let item of searchedItems; let last = last">
+                                  <div class="pb-3">
+                                    <h5 class="mb-1"><a href="javascript:void(0);"> {{item?.name}} </a></h5>
+                                    <p [routerLink]="['inventory/products/products', item?.id]"
+                                      class="text-success cursor-pointer mb-2">
+                                      {{baseUrl + 'inventory/products/products/'+ item?.id}}</p>
+                                    <p class="text-muted mb-2"> {{item?.description}} </p>
+                                  </div>
+                                  <div class="border border-dashed mb-3"></div>
+                                </ng-container>
+                              </div>
+                            </ng-container>
+                            <ng-container *ngTemplateOutlet="paginationTemplate"></ng-container>
+                          </ng-template>
+                        </li>
+                        <li [ngbNavItem]="5" class="nav-item">
+                          <a ngbNavLink class="nav-link" data-bs-toggle="tab" role="tab">
+                            <i
+                              class="ri-bar-chart-horizontal-line text-muted align-bottom me-1"></i>{{'MODULES.INDEX.PROJECTS'
+                            |
+                            translate }}
+                          </a>
+                          <ng-template ngbNavContent>
+                            <ng-container
+                              *ngIf="((loadingItems$ | async) === false || null || undefined) && searchedItems?.length">
+                              <div class="gallery-light">
+                                <ng-container *ngFor="let item of searchedItems; let last = last">
+                                  <div class="pb-3">
+                                    <h5 class="mb-1"><a href="javascript:void(0);"> {{item?.name}} </a></h5>
+                                    <p [routerLink]="['collaboration/projects/all', item?.id]"
+                                      class="text-success cursor-pointer mb-2">
+                                      {{baseUrl + 'collaboration/projects/all'+ item?.name}}</p>
+                                    <p class="text-muted mb-2"> {{item?.description}} </p>
+                                  </div>
+                                  <div class="border border-dashed mb-3"></div>
+                                </ng-container>
+                              </div>
+                            </ng-container>
+                            <ng-container *ngTemplateOutlet="paginationTemplate"></ng-container>
+                          </ng-template>
+                        </li>
+                        <li [ngbNavItem]="6" class="nav-item">
+                          <a ngbNavLink class="nav-link" data-bs-toggle="tab" role="tab">
+                            <i class="ri-file-list-3-line text-muted align-bottom me-1"></i>{{'MODULES.INDEX.BLOGS'
+                            | translate }}
+                          </a>
+                          <ng-template ngbNavContent>
+                            <ng-container
+                              *ngIf="((loadingItems$ | async) === false || null || undefined) && searchedItems?.length">
+                              <div class="gallery-light">
+                                <ng-container *ngFor="let item of searchedItems; let last = last">
+                                  <div class="pb-3">
+                                    <h5 class="mb-1"><a href="javascript:void(0);"> {{item?.title}} </a></h5>
+                                    <p [routerLink]="['website/blog', item?.id]" class="text-success cursor-pointer mb-2">
+                                      {{baseUrl + 'website/blog/'+ item?.title}}</p>
+                                    <p class="text-muted mb-2"> {{item?.description}} </p>
+                                  </div>
+                                  <div class="border border-dashed mb-3"></div>
+                                </ng-container>
+                              </div>
+                            </ng-container>
+                            <ng-container *ngTemplateOutlet="paginationTemplate"></ng-container>
+                          </ng-template>
+                        </li>
+                        <li [ngbNavItem]="7" class="nav-item">
+                          <a ngbNavLink class="nav-link" data-bs-toggle="tab" role="tab">
+                            <i class="ri-barcode-line text-muted align-bottom me-1"></i>{{'MODULES.INDEX.ARTICLES'
+                            | translate }}
+                          </a>
+                          <ng-template ngbNavContent>
+                            <ng-container
+                              *ngIf="((loadingItems$ | async) === false || null || undefined) && searchedItems?.length">
+                              <div class="gallery-light">
+                                <ng-container *ngFor="let item of searchedItems; let last = last">
+                                  <div class="pb-3">
+                                    <h5 class="mb-1"><a href="javascript:void(0);"> {{item?.name}} </a></h5>
+                                    <p [routerLink]="['inventory/products/articles', item?.id]"
+                                      class="text-success cursor-pointer mb-2">
+                                      {{baseUrl + 'inventory/products/articles/'+ item?.name}}</p>
+                                    <p class="text-muted mb-2"> {{item?.description}} </p>
+                                  </div>
+                                  <div class="border border-dashed mb-3"></div>
+                                </ng-container>
+                              </div>
+                            </ng-container>
+                            <ng-container *ngTemplateOutlet="paginationTemplate"></ng-container>
+                          </ng-template>
+                        </li>
+                        <li class="nav-item ms-auto">
+                          <div class="dropdown" ngbDropdown>
+                            <a class="nav-link fw-medium text-reset mb-n1" role="button" id="dropdownMenuLink1"
+                              data-bs-toggle="dropdown" aria-expanded="false" ngbDropdownToggle>
+                              <i class="ri-settings-4-line align-middle me-1"></i>{{'MODULES.INDEX.SETTINGS' |
+                              translate }}
+                            </a>
+                            <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="dropdownMenuLink1" ngbDropdownMenu>
+                              <li><a class="dropdown-item" routerLink="faq">{{'MODULES.INDEX.HELP' | translate }}</a></li>
+                            </ul>
+                          </div>
+                        </li>
+                      </ng-container>
+                    </ul>
+                  </div>
+                  <div class="card-body p-4">
+                    <div class="tab-content text-muted">
+                      <div [ngbNavOutlet]="customNav"></div>
+                    </div>
+                  </div>
+                </ng-container>
+              </div>
+            </div>
+          </div> -->
+    </div>
+    <div class="col-auto layout-rightside-col d-none">
+      <div class="overlay" (click)="sidebarHide()"></div>
+      <div class="layout-rightside">
+        <div class="card h-100 rounded-0">
+          <div class="card-body p-0">
+            <div class="p-3">
+              <h6 class="text-muted mb-0 text-uppercase fw-bold fs-13">{{'SHARED.RECENT_TRANSACTIONS' | translate}}</h6>
+            </div>
+            <div class="mx-h overflow-auto">
+              <app-transactions></app-transactions>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div *ngIf="navigating$ | async" class="vh-100 py-4 text-center" fxLayout="column" fxLayoutAlign="center center"
+    fxLayoutGap="1rem">
+    <div>
+      <lord-icon trigger="loop" style="width:72px;height:72px"
+        [colors]="'primary:' + primaryColor + ',secondary:' + secondaryColor"
+        src="https://cdn.lordicon.com/msoeawqm.json">
+      </lord-icon>
+    </div>
+    <div class="mt-4">
+      <h5>{{ 'COMMON.LOADING' | translate }}</h5>
+    </div>
+  </div>
+</ng-container>
+<div *ngIf="navigating$ | async" class="vh-100 py-4 text-center" fxLayout="column" fxLayoutAlign="center center"
+  fxLayoutGap="1rem">
+  <div>
+    <lord-icon trigger="loop" style="width:72px;height:72px"
+      [colors]="'primary:' + primaryColor + ',secondary:' + secondaryColor"
+      src="https://cdn.lordicon.com/msoeawqm.json">
+    </lord-icon>
+  </div>
+  <div class="mt-4">
+    <h5>{{ 'COMMON.LOADING' | translate }}</h5>
+  </div>
+</div>
+
+<ng-template #transactionsModal role="document" let-modal>
+  <div class="mx-h overflow-auto">
+    <app-transactions></app-transactions>
+  </div>
+</ng-template>
+
+<ng-template #assignPermissionModal role="document" let-modal>
+  <div class="modal-header bg-secondary-subtle p-3">
+    <h5 class="modal-title" id="exampleModalLabel">{{'COMMON.ASSIGN_PERMISSION' | translate}}</h5>
+    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close" id="close-modal"
+      (click)="modal.dismiss('Cross click')"></button>
+  </div>
+  <div class="modal-body">
+    <ul ngbNav (navChange)="onTabChange($event)" #customNav="ngbNav" [activeId]="activeId"
+      class="nav nav-tabs-custom border-bottom-0" role="tablist">
+      <li [ngbNavItem]="1" class="nav-item">
+        <a ngbNavLink class="nav-link" data-bs-toggle="tab" role="tab">{{'MENUITEMS.CUSTOMERENGAGEMENT.LIST.CUSTOMER'
+          | translate }}</a>
+        <ng-template ngbNavContent>
+          <div class="p-3">
+            <div class="mb-3">
+              <label for="choices-status-input" class="form-label">{{'COMMON.CHOOSE_CUSTOMER' | translate
+                }}*</label>
+              <ng-select (change)="onChangeTarget($event, 'account')" [clearable]="false"
+                [typeahead]="accountsSearchInput$" [hideSelected]="true" [virtualScroll]="true"
+                (scrollToEnd)="loadMoreTargets()" placeholder="{{'COMMON.CHOOSE_CUSTOMER' | translate }}"
+                [items]="accounts" [multiple]="false">
+                <ng-template ng-label-tmp let-item="item" let-clear="clear">
+                  <span class="ng-value-label">
+                    {{ item?.target?.pos?.title || item?.target?.pos?.name }}
+                  </span>
+                </ng-template>
+                <ng-template ng-option-tmp let-item="item">
+                  <div class="d-flex align-items-center gap-1">
+                    <img *ngIf="item?.target?.pos?.picture?.baseUrl"
+                      [src]="item?.target?.pos?.picture?.baseUrl + '/' + item?.target?.pos?.picture?.path"
+                      alt="user-image" class="me-2 rounded" height="18">
+                    <div *ngIf="!item?.target?.pos?.picture" class="avatar-xxs me-2">
+                      <div class="avatar-title text-danger bg-secondary-subtle rounded-circle shadow">
+                        {{ item?.target?.pos?.title?.charAt(0) || item?.target?.pos?.name?.charAt(0)
+                        || 'N' }}
+                      </div>
+                    </div>
+                    {{  item?.target?.pos?.title || item?.target?.pos?.name }}
+                  </div>
+                </ng-template>
+              </ng-select>
+            </div>
+            <div class="hstack gap-2 justify-content-end">
+              <button [disabled]="!selectedTargetAccount" (click)="nextStep()" type="button" class="btn btn-success btn-label right nexttab
+                                        nexttab" data-nexttab="v-pills-bill-address-tab"><i
+                  class="ri-arrow-right-line label-icon align-middle fs-16 ms-2"></i>{{'SHARED.CONTINUE'
+                |
+                translate }}</button>
+            </div>
+          </div>
+        </ng-template>
+      </li>
+      <li [disabled]="!selectedTargetAccount" [ngbNavItem]="2" class="nav-item">
+        <a ngbNavLink class="nav-link" data-bs-toggle="tab" role="tab">{{'SHARED.USER'
+          | translate }}</a>
+        <ng-template ngbNavContent>
+          <div class="p-3">
+            <div class="mb-3">
+              <label for="choices-status-input" class="form-label">{{'COMMON.CHOOSE_USER' | translate
+                }}*</label>
+              <ng-select [clearable]="false" [typeahead]="usersSearchInput$" (change)="onChangeUserAccount($event)"
+                [hideSelected]="true" [virtualScroll]="true" (scrollToEnd)="loadMoreUserAccounts()"
+                placeholder="{{'COMMON.CHOOSE_USER' | translate }}" [items]="userAccounts" [multiple]="false"
+                [(ngModel)]="selectedUserAccount">
+                <ng-template ng-label-tmp let-item="item" let-clear="clear">
+                  <span class="ng-value-label">
+                    {{ item?.user?.firstName }} {{ item?.user?.lastName }}
+                  </span>
+                </ng-template>
+                <ng-template ng-option-tmp let-item="item">
+                  <div class="d-flex align-items-center gap-1">
+                    <img *ngIf="item?.user?.picture?.baseUrl"
+                      [src]="item?.user?.picture?.baseUrl + '/' + item?.user?.picture?.path" alt="user-image"
+                      class="me-2 rounded" height="18">
+                    <div *ngIf="!item?.user?.picture" class="avatar-xxs me-2">
+                      <div class="avatar-title text-danger bg-secondary-subtle rounded-circle shadow">
+                        {{ item?.user?.firstName?.charAt(0) || 'N' }}
+                      </div>
+                    </div>
+                    {{ item?.user?.firstName }}
+                  </div>
+                </ng-template>
+              </ng-select>
+            </div>
+            <div class="hstack gap-2 justify-content-end">
+              <button [disabled]="!selectedUserAccount" (click)="nextStep()" type="button" class="btn btn-success btn-label right nexttab
+                                        nexttab" data-nexttab="v-pills-bill-address-tab"><i
+                  class="ri-arrow-right-line label-icon align-middle fs-16 ms-2"></i>{{'SHARED.CONTINUE'
+                |
+                translate }}</button>
+            </div>
+          </div>
+        </ng-template>
+      </li>
+      <li [disabled]="!selectedUserAccount" [ngbNavItem]="3" class="nav-item">
+        <a ngbNavLink class="nav-link" data-bs-toggle="tab" role="tab">
+          {{ 'COMMON.ROLE' | translate }}
+        </a>
+        <ng-template ngbNavContent>
+          <div class="p-3">
+            <ng-container *ngIf="!displayRoles">
+              <div *ngIf="permissions?.length && !(loadingPermissions$ | async)"
+                class="team-list grid-view-filter mb-3 row gap-3">
+                <div *ngFor="let permission of permissions"
+                  [class.border-primary]="permission?.id === selectedUserPermission?.id"
+                  class="col-lg-5 border-3 border">
+                  <div class="card team-box d-flex flex-column h-100">
+                    <div class="card-body p-4 flex-fill">
+                      <div class="card-title mb-4">
+                        <span class="fs-15">{{ permission?.name }}</span>
+                      </div>
+                      <div class="mb-3">{{'COMMON.TOTAL_USERS' | translate}} {{
+                        permissionsCount(permission?.permissions) }}
+                      </div>
+                      <div *ngFor="let role of permission?.permissions?.slice(0,3); let last = last">
+                        <ng-container *ngIf="role?.create === true || role?.read === true || role?.update === true">
+                          <div class="align-items-center d-flex">
+                            <span class="bullet bg-primary me-3"></span>
+                            <span>{{ role?.permission?.name }} </span>
+                          </div>
+                          <a (click)="SeeMoreRoles(permission)" class="mt-2 link-primary cursor-pointer"
+                            *ngIf="permission?.permissions?.length > 3 && last">
+                            {{'COMMON.SEE_ALL' | translate}}
+                          </a>
+                        </ng-container>
+                      </div>
+                    </div>
+                    <div class="card-footer">
+                      <div class="d-flex justify-content-end">
+                        <button type="button" (click)="selectPermission(permission, 'user')"
+                          class="btn btn-sm btn-secondary" id="add-btn">{{'COMMON.SELECT' | translate }}</button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div id="noresult" class="py-4 mt-4 text-center"
+                *ngIf="(loadingPermissions$ | async) || (!(loadingPermissions$ | async) && !permissions?.length)">
+                <div *ngIf="loadingPermissions$ | async">
+                  <lord-icon trigger="loop" style="width:72px;height:72px"
+                    [colors]="'primary:' + primaryColor + ',secondary:' + secondaryColor"
+                    src="https://cdn.lordicon.com/msoeawqm.json">
+                  </lord-icon>
+                  <h5 class="mt-4">{{'COMMON.LOADING' | translate }}</h5>
+                </div>
+                <div *ngIf="!(loadingPermissions$ | async) && !permissions?.length">
+                  <lord-icon trigger="loop" style="width:72px;height:72px"
+                    [colors]="'primary:' + primaryColor + ',secondary:' + secondaryColor"
+                    src="https://cdn.lordicon.com/vlycxjwx.json">
+                  </lord-icon>
+                  <h5 class="mt-4">{{ 'COMMON.NO_RESULT' | translate }}</h5>
+                </div>
+              </div>
+              <div class="hstack gap-2 justify-content-end">
+                <button (click)="activeId = 1" type="button" class="btn btn-info d-flex align-items-center gap-1"
+                  data-nexttab="v-pills-bill-address-tab"><i
+                    class="ri-arrow-left-line label-icon fs-16"></i>{{'COMMON.BACK' |
+                  translate }}</button>
+                <button (click)="modal.dismiss('Cross click')" type="button"
+                  class="btn btn-soft-danger d-flex align-items-center gap-1">
+                  <i class="ri-close-line fs-16"></i> {{'COMMON.CLOSE' |
+                  translate }} </button>
+                <button (click)="assignPermissionToAccount()" type="button" class="btn btn-success" id="add-btn">
+                  {{ 'COMMON.SAVE' | translate }}</button>
+              </div>
+            </ng-container>
+            <ng-container *ngIf="displayRoles">
+              <form *ngIf="rolesForm" [formGroup]="rolesForm">
+                <div class="overflow-auto mxh-500">
+                  <div class="mb-4 col-lg-5">
+                    <label for="email_id-field" class="form-label">{{'MODULES.SYSTEM.ROLE_NAME' | translate }}</label>
+                    <input readonly type="text" id="email_id-field" class="form-control"
+                      placeholder="{{'PLACEHOLDER.ENTER_NAME' | translate }}" required formControlName="name" />
+                  </div>
+                  <h5 class="mb-4">{{'MENUITEMS.TITLE.ROLES' | translate }}</h5>
+                  <div formArrayName="permissions" class="mb-3">
+                    <div *ngFor="let role of permissionsArray['controls']; let i=index; let last = last"
+                      [formGroupName]="i" class="row mb-3">
+                      <div class="col-lg-3">
+                        <span> {{role.get('permission')?.value?.name}} </span>
+                      </div>
+                      <div class="form-check col-lg-3">
+                        <label class="form-check-label" for="Required">{{'MODULES.SYSTEM.READ' | translate }}
+                        </label>
+                        <input disabled class="form-check-input" formControlName="read" type="checkbox" id="Required">
+                      </div>
+                      <div class="form-check col-lg-3">
+                        <label class="form-check-label" for="Required">{{'MODULES.SYSTEM.WRITE' | translate }}
+                        </label>
+                        <input disabled class="form-check-input" formControlName="update" type="checkbox" id="Required">
+                      </div>
+                      <div class="form-check col-lg-3">
+                        <label class="form-check-label" for="Required">{{'MODULES.SYSTEM.CREATE' | translate }}
+                        </label>
+                        <input disabled class="form-check-input" formControlName="create" type="checkbox" id="Required">
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </form>
+              <div class="hstack gap-2 justify-content-end mt-3">
+                <button (click)="displayRoles = !displayRoles" type="button"
+                  class="btn btn-info d-flex align-items-center gap-1" data-nexttab="v-pills-bill-address-tab"><i
+                    class="ri-arrow-left-line label-icon fs-16"></i>{{'COMMON.BACK' |
+                  translate }}</button>
+                <button type="button" class="btn btn-light" data-bs-dismiss="modal"
+                  (click)="modal.close('Close click')">{{'COMMON.CLOSE' | translate }}</button>
+              </div>
+            </ng-container>
+          </div>
+        </ng-template>
+      </li>
+    </ul>
+    <div class="row">
+      <div class="col-lg-12">
+        <div class="tab-content text-muted">
+          <div [ngbNavOutlet]="customNav"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</ng-template>
+
+<ng-template #addPermissionModal role="document" let-modal>
+  <div class="modal-header bg-secondary-subtle p-3">
+    <h5 class="modal-title" id="exampleModalLabel">{{'MODULES.SYSTEM.ADD_PERMISSION' | translate}}</h5>
+    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close" id="close-modal"
+      (click)="modal.dismiss('Cross click')"></button>
+  </div>
+  <div class="modal-body">
+    <ul ngbNav (navChange)="onTabChange($event)" #customNav="ngbNav" [activeId]="activeId"
+      class="nav nav-tabs-custom border-bottom-0" role="tablist">
+      <li [ngbNavItem]="1" class="nav-item">
+        <a ngbNavLink class="nav-link" data-bs-toggle="tab" role="tab">{{'MENUITEMS.CUSTOMERENGAGEMENT.LIST.CUSTOMER'
+          | translate }}</a>
+        <ng-template ngbNavContent>
+          <div class="p-3">
+            <div class="mb-3">
+              <label for="choices-status-input" class="form-label">{{'COMMON.CHOOSE_CUSTOMER' | translate
+                }}*</label>
+              <ng-select (change)="onChangeTarget($event)" [typeahead]="posSearchInput$" [hideSelected]="true"
+                [virtualScroll]="true" (scrollToEnd)="loadMoreTargets()"
+                placeholder="{{'COMMON.CHOOSE_CUSTOMER' | translate }}" [items]="allTargets" [multiple]="false"
+                [(ngModel)]="selectedPos">
+                <ng-template ng-label-tmp let-item="item" let-clear="clear">
+                  <span class="ng-value-label">
+                    {{ item?.target?.title }}
+                  </span>
+                  <span class="ng-value-icon right" (click)="clear(item)" aria-hidden="true">×</span>
+                </ng-template>
+                <ng-template ng-option-tmp let-item="item">
+                  <div class="d-flex align-items-center gap-1">
+                    <img *ngIf="item?.target?.picture?.baseUrl"
+                      [src]="item?.target?.picture?.baseUrl + '/' + item?.target?.picture?.path" alt="user-image"
+                      class="me-2 rounded" height="18">
+                    <div *ngIf="!item?.target?.picture" class="avatar-xxs me-2">
+                      <div class="avatar-title text-danger bg-secondary-subtle rounded-circle shadow">
+                        {{ item?.target?.title?.charAt(0) || 'N' }}
+                      </div>
+                    </div>
+                    {{ item?.target?.title }}
+                  </div>
+                </ng-template>
+              </ng-select>
+            </div>
+            <div class="hstack gap-2 justify-content-end">
+              <button [disabled]="!selectedPos" (click)="nextStep()" type="button" class="btn btn-success btn-label right nexttab
+                                        nexttab" data-nexttab="v-pills-bill-address-tab"><i
+                  class="ri-arrow-right-line label-icon align-middle fs-16 ms-2"></i>{{'SHARED.CONTINUE'
+                |
+                translate }}</button>
+            </div>
+          </div>
+        </ng-template>
+      </li>
+      <li [disabled]="!selectedPos" [ngbNavItem]="2" class="nav-item">
+        <a ngbNavLink class="nav-link" data-bs-toggle="tab" role="tab">
+          {{ 'COMMON.ROLE' | translate }}
+        </a>
+        <ng-template ngbNavContent>
+          <div class="p-3">
+            <div class="d-flex justify-content-end">
+              <button (click)="addPermission()" class="btn btn-sm btn-info mb-3" data-bs-toggle="modal"
+                data-bs-target="#showModal">{{
+                (!isCreatePermission ? 'MODULES.SYSTEM.ADD_PERMISSION' : 'COMMON.CHOOSE_ROLE') |
+                translate }}</button>
+            </div>
+            <ng-container *ngIf="!isCreatePermission">
+              <div *ngIf="permissions?.length" class="team-list grid-view-filter mb-3 row gap-3">
+                <div *ngFor="let permission of permissions"
+                  [class.border-primary]="permission?.id === selectedPermission?.id" class="col-lg-5 border-3 border">
+                  <div class="card team-box d-flex flex-column h-100">
+                    <div class="card-body p-4 flex-fill">
+                      <div class="card-title mb-4">
+                        <span class="fs-15">{{ permission?.name }}</span>
+                      </div>
+                      <div class="mb-3">{{'COMMON.TOTAL_USERS' | translate}} {{
+                        permissionsCount(permission?.permissions) }}
+                      </div>
+                      <div *ngFor="let role of permission?.permissions?.slice(0,3); let last = last">
+                        <ng-container *ngIf="role?.create === true || role?.read === true || role?.update === true">
+                          <div class="align-items-center d-flex">
+                            <span class="bullet bg-primary me-3"></span>
+                            <span>{{ role?.permission?.name }} </span>
+                          </div>
+                          <a (click)="editPermission(permission)" class="mt-2 link-primary cursor-pointer"
+                            *ngIf="permission?.permissions?.length > 3 && last">
+                            {{'COMMON.SEE_ALL' | translate}}
+                          </a>
+                        </ng-container>
+                      </div>
+                    </div>
+                    <div class="card-footer">
+                      <div class="d-flex justify-content-end gap-2">
+                        <button type="button" (click)="selectPermission(permission)" class="btn btn-sm btn-secondary"
+                          id="add-btn">{{'COMMON.SELECT' | translate }}</button>
+                        <button type="button" (click)="editPermission(permission)" class="btn btn-sm btn-primary"
+                          id="add-btn">{{'COMMON.EDIT' | translate }}</button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div id="noresult" class="py-4 mt-4 text-center"
+                *ngIf="(loadingPermissions$ | async) || (!(loadingPermissions$ | async) && !permissions?.length)">
+                <div *ngIf="loadingPermissions$ | async">
+                  <lord-icon trigger="loop" style="width:72px;height:72px"
+                    [colors]="'primary:' + primaryColor + ',secondary:' + secondaryColor"
+                    src="https://cdn.lordicon.com/msoeawqm.json">
+                  </lord-icon>
+                  <h5 class="mt-4">{{'COMMON.LOADING' | translate }}</h5>
+                </div>
+                <div *ngIf="!(loadingPermissions$ | async) && !permissions?.length">
+                  <lord-icon trigger="loop" style="width:72px;height:72px"
+                    [colors]="'primary:' + primaryColor + ',secondary:' + secondaryColor"
+                    src="https://cdn.lordicon.com/vlycxjwx.json">
+                  </lord-icon>
+                  <h5 class="mt-4">{{ 'COMMON.NO_RESULT' | translate }}</h5>
+                </div>
+              </div>
+              <div class="hstack gap-2 justify-content-end">
+                <button (click)="activeId = 1" type="button" class="btn btn-info d-flex align-items-center gap-1"
+                  data-nexttab="v-pills-bill-address-tab"><i
+                    class="ri-arrow-left-line label-icon fs-16"></i>{{'COMMON.BACK' |
+                  translate }}</button>
+                <button (click)="modal.dismiss('Cross click')" type="button"
+                  class="btn btn-soft-danger d-flex align-items-center gap-1">
+                  <i class="ri-close-line fs-16"></i> {{'COMMON.CLOSE' |
+                  translate }} </button>
+                <button (click)="savePermission()" type="button" class="btn btn-success" id="add-btn">
+                  {{ 'COMMON.SAVE' | translate }}</button>
+              </div>
+            </ng-container>
+            <ng-container *ngIf="isCreatePermission">
+              <form [formGroup]="rolesForm">
+                <div class="overflow-auto mxh-500">
+                  <div class="mb-4 col-lg-5">
+                    <label for="email_id-field" class="form-label">{{'MODULES.SYSTEM.ROLE_NAME' | translate }}</label>
+                    <input type="text" id="email_id-field" class="form-control"
+                      placeholder="{{'PLACEHOLDER.ENTER_NAME' | translate }}" required formControlName="name"
+                      [ngClass]="{ 'is-invalid': rolesForm.get('name')?.touched && rolesForm.get('name').hasError('required') }" />
+                    <div class="invalid-feedback"
+                      *ngIf="rolesForm.get('name')?.touched && rolesForm.get('name').hasError('required')">
+                      {{'COMMON.REQUIRED' | translate }}
+                    </div>
+                  </div>
+                  <div class="d-lg-flex justify-content-between">
+                    <h5 class="mb-4">{{'MENUITEMS.TITLE.ROLES' | translate }}ss</h5>
+                    <!-- <div class="col-6">
+                      <input [formControl]="searchInputControl" type="text" id="email_id-field" class="form-control"
+                        placeholder="{{'COMMON.SEARCH_ROLE' | translate }}"/>
+                    </div> -->
+                    <button (click)="toggleCheckAll()" class="btn btn-sm btn-info mb-3" data-bs-toggle="modal"
+                      data-bs-target="#showModal"> {{'COMMON.CHECK_ALL' | translate}}</button>
+                  </div>
+
+                  <div formArrayName="permissions" class="mb-3">
+                    <div *ngFor="let role of permissionsArray['controls']; let i=index; let last = last"
+                      [formGroupName]="i" class="row mb-3">
+                      <div class="col-lg-3">
+                        <span> {{role.get('permission')?.value?.name}} </span>
+                      </div>
+                      <div class="form-check col-lg-3">
+                        <label class="form-check-label" for="Required">{{'MODULES.SYSTEM.READ' | translate }}
+                        </label>
+                        <input class="form-check-input" formControlName="read" type="checkbox" id="Required">
+                      </div>
+                      <div class="form-check col-lg-3">
+                        <label class="form-check-label" for="Required">{{'MODULES.SYSTEM.WRITE' | translate }}
+                        </label>
+                        <input class="form-check-input" formControlName="update" type="checkbox" id="Required">
+                      </div>
+                      <div class="form-check col-lg-3">
+                        <label class="form-check-label" for="Required">{{'MODULES.SYSTEM.CREATE' | translate }}
+                        </label>
+                        <input class="form-check-input" formControlName="create" type="checkbox" id="Required">
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </form>
+              <div class="hstack gap-2 justify-content-end mt-3">
+                <button (click)="isCreatePermission = !isCreatePermission" type="button"
+                  class="btn btn-info d-flex align-items-center gap-1" data-nexttab="v-pills-bill-address-tab"><i
+                    class="ri-arrow-left-line label-icon fs-16"></i>{{'COMMON.BACK' |
+                  translate }}</button>
+                <button type="button" class="btn btn-light" data-bs-dismiss="modal"
+                  (click)="modal.close('Close click')">{{'COMMON.CLOSE' | translate }}</button>
+                <button (click)="savePermission()" type="button" class="btn btn-success" id="add-btn">
+                  {{ 'COMMON.SAVE' | translate }}</button>
+              </div>
+            </ng-container>
+          </div>
+        </ng-template>
+      </li>
+    </ul>
+    <div class="row">
+      <div class="col-lg-12">
+        <div class="tab-content text-muted">
+          <div [ngbNavOutlet]="customNav"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</ng-template>
+
+<ng-template #deleteTargetModal role="document" let-modal>
+  <div class="modal-header bg-secondary-subtle p-3">
+    <h5 class="modal-title" id="exampleModalLabel">{{'COMMON.DELETE_CUSTOMER' | translate}}</h5>
+    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close" id="close-modal"
+      (click)="modal.dismiss('Cross click')"></button>
+  </div>
+  <div class="modal-body">
+    <div class="notify-item language py-2 align-items-center d-flex justify-content-between" data-lang="eng"
+      *ngFor="let pos of posList; let i = index">
+      <div class="align-items-center d-flex">
+        <img *ngIf="pos?.picture" [src]="pos?.picture?.baseUrl + '/' + pos?.picture?.path" alt="user-image"
+          class="me-2 rounded" height="18">
+        <div *ngIf="!pos?.picture" class="avatar-xxs me-2">
+          <div class="avatar-title text-danger bg-secondary-subtle rounded-circle shadow">
+            {{pos?.title?.charAt(0) || 'N'}}
+          </div>
+        </div>
+        <span class="align-middle">{{pos?.title}}</span>
+      </div>
+      <div>
+        <button type="button" (click)="openDeletePopup(deleteModel, pos?.id)"
+          class="delete-button btn btn-outline-danger btn-icon waves-effect mb-1 waves-light btn-sm">
+          <i class="ri-delete-bin-5-line"></i>
+        </button>
+      </div>
+    </div>
+  </div>
+  <div class="modal-footer">
+    <div class="hstack justify-content-end">
+      <button type="button" class="btn btn-light" data-bs-dismiss="modal"
+        (click)="modal.close('Close click')">{{'COMMON.CLOSE' | translate }}</button>
+    </div>
+  </div>
+</ng-template>
+
+<ng-template #assignTargetModal role="document" let-modal>
+  <div class="modal-header bg-secondary-subtle p-3">
+    <h5 class="modal-title" id="exampleModalLabel">{{'COMMON.ASSIGN_CUSTOMER' | translate}}</h5>
+    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close" id="close-modal"
+      (click)="modal.dismiss('Cross click')"></button>
+  </div>
+  <div class="modal-body">
+    <form [formGroup]="assignTargetForm">
+      <ul ngbNav (navChange)="onTabChange($event)" #customNav="ngbNav" [activeId]="activeId"
+        class="nav nav-tabs-custom border-bottom-0" role="tablist">
+        <li [ngbNavItem]="1" class="nav-item">
+          <a ngbNavLink class="nav-link" data-bs-toggle="tab" role="tab">{{'MENUITEMS.CUSTOMERENGAGEMENT.LIST.CUSTOMER'
+            | translate }}</a>
+          <ng-template ngbNavContent>
+            <div class="p-3">
+              <div class="mb-3">
+                <label for="choices-status-input" class="form-label">{{'COMMON.CHOOSE_CUSTOMER' | translate
+                  }}*</label>
+                <ng-select (change)="onChangeAccount($event)" [typeahead]="posSearchInput$" [hideSelected]="true"
+                  [virtualScroll]="true" (scrollToEnd)="loadMoreTargets()"
+                  placeholder="{{'COMMON.CHOOSE_CUSTOMER' | translate }}" bindLabel="target.name" bindValue="target.id"
+                  [items]="filteredTargets" [multiple]="false" [formControlName]="'target'">
+                  <ng-template ng-label-tmp let-item="item" let-clear="clear">
+                    <span class="ng-value-label">
+                      {{ item?.target?.title }}
+                    </span>
+                    <span class="ng-value-icon right" (click)="clear(item)" aria-hidden="true">×</span>
+                  </ng-template>
+                  <ng-template ng-option-tmp let-item="item">
+                    <div class="d-flex align-items-center gap-1">
+                      <img *ngIf="item?.target?.picture?.baseUrl"
+                        [src]="item?.target?.picture?.baseUrl + '/' + item?.target?.picture?.path" alt="user-image"
+                        class="me-2 rounded" height="18">
+                      <div *ngIf="!item?.target?.picture" class="avatar-xxs me-2">
+                        <div class="avatar-title text-danger bg-secondary-subtle rounded-circle shadow">
+                          {{ item?.target?.title?.charAt(0) || 'N'
+                          }}
+                        </div>
+                      </div>
+                      {{ item?.target?.title }}
+                    </div>
+                  </ng-template>
+                </ng-select>
+
+              </div>
+              <div class="hstack gap-2 justify-content-end">
+                <button [disabled]="assignTargetForm.get('target').invalid || isTargetButtonDisabled"
+                  (click)="nextStep()" type="button" class="btn btn-success btn-label right nexttab
+                                        nexttab" data-nexttab="v-pills-bill-address-tab"><i
+                    class="ri-arrow-right-line label-icon align-middle fs-16 ms-2"></i>{{'SHARED.CONTINUE'
+                  |
+                  translate }}</button>
+              </div>
+            </div>
+          </ng-template>
+        </li>
+        <li [disabled]="assignTargetForm.get('target').invalid || isTargetButtonDisabled" [ngbNavItem]="2"
+          class="nav-item">
+          <a ngbNavLink class="nav-link" data-bs-toggle="tab" role="tab">
+            {{ 'COMMON.ROLE' | translate }}
+          </a>
+          <ng-template ngbNavContent>
+            <div class="p-3">
+              <div class="d-flex justify-content-end">
+                <button (click)="isCreatePermission = !isCreatePermission" class="btn btn-sm btn-info mb-3"
+                  data-bs-toggle="modal" data-bs-target="#showModal">{{
+                  (!isCreatePermission ? 'MODULES.SYSTEM.ADD_PERMISSION' : 'COMMON.CHOOSE_ROLE') |
+                  translate }}</button>
+              </div>
+              <ng-container *ngIf="!isCreatePermission">
+                <div class="mb-3">
+                  <label class="form-label" for="steparrow-gen-info-username-input">{{'COMMON.ROLE' | translate
+                    }}*</label>
+                  <ng-select placeholder="{{'COMMON.CHOOSE_ROLE' | translate }}" [items]="permissions$ | async"
+                    [multiple]="false" [formControlName]="'permission'">
+                    <ng-template ng-label-tmp let-item="item" let-clear="clear">
+                      <span class="ng-value-label">
+                        {{ item?.name }}
+                      </span>
+                      <span class="ng-value-icon right" (click)="clear(item)" aria-hidden="true">×</span>
+                    </ng-template>
+                    <ng-template ng-option-tmp let-item="item">
+                      {{ item?.name }}
+                    </ng-template>
+                  </ng-select>
+                </div>
+                <div class="hstack gap-2 justify-content-end">
+                  <button (click)="activeId = 1" type="button" class="btn btn-info d-flex align-items-center gap-1"
+                    data-nexttab="v-pills-bill-address-tab"><i
+                      class="ri-arrow-left-line label-icon fs-16"></i>{{'COMMON.BACK' |
+                    translate }}</button>
+                  <button (click)="modal.dismiss('Cross click')" type="button"
+                    class="btn btn-soft-danger d-flex align-items-center gap-1">
+                    <i class="ri-close-line fs-16"></i> {{'COMMON.CLOSE' |
+                    translate }} </button>
+                  <button type="button"
+                    [disabled]="assignTargetForm.get('permission').invalid || isTargetButtonDisabled"
+                    (click)="addTargetsToAccount()" class="btn btn-success" id="add-btn">
+                    {{ 'COMMON.ASSIGN_CUSTOMER' | translate
+                    }}</button>
+                </div>
+              </ng-container>
+              <ng-container *ngIf="isCreatePermission">
+                <form *ngIf="rolesForm" [formGroup]="rolesForm">
+                  <div class="overflow-auto mxh-500">
+                    <div class="mb-4 col-lg-5">
+                      <label for="email_id-field" class="form-label">{{'MODULES.SYSTEM.ROLE_NAME' | translate }}</label>
+                      <input type="text" id="email_id-field" class="form-control"
+                        placeholder="{{'PLACEHOLDER.ENTER_NAME' | translate }}" required formControlName="name"
+                        [ngClass]="{ 'is-invalid': rolesForm.get('name')?.touched && rolesForm.get('name').hasError('required') }" />
+                      <div class="invalid-feedback"
+                        *ngIf="rolesForm.get('name')?.touched && rolesForm.get('name').hasError('required')">
+                        {{'COMMON.REQUIRED' | translate }}
+                      </div>
+                    </div>
+                    <div class="d-flex justify-content-between">
+                      <h5 class="mb-4">{{'MENUITEMS.TITLE.ROLES' | translate }}</h5>
+                      <button (click)="toggleCheckAll()" class="btn btn-sm btn-info mb-3" data-bs-toggle="modal"
+                        data-bs-target="#showModal"> {{'COMMON.CHECK_ALL' | translate}}</button>
+                    </div>
+                    <div formArrayName="permissions" class="mb-3">
+                      <div *ngFor="let role of permissionsArray['controls']; let i=index; let last = last"
+                        [formGroupName]="i" class="row mb-3">
+                        <div class="col-lg-3">
+                          <span> {{role.get('permission')?.value?.name}} </span>
+                        </div>
+                        <div class="form-check col-lg-3">
+                          <label class="form-check-label" for="Required">{{'MODULES.SYSTEM.READ' | translate }}
+                          </label>
+                          <input class="form-check-input" formControlName="read" type="checkbox" id="Required">
+                        </div>
+                        <div class="form-check col-lg-3">
+                          <label class="form-check-label" for="Required">{{'MODULES.SYSTEM.WRITE' | translate }}
+                          </label>
+                          <input class="form-check-input" formControlName="update" type="checkbox" id="Required">
+                        </div>
+                        <div class="form-check col-lg-3">
+                          <label class="form-check-label" for="Required">{{'MODULES.SYSTEM.CREATE' | translate }}
+                          </label>
+                          <input class="form-check-input" formControlName="create" type="checkbox" id="Required">
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </form>
+                <div class="hstack gap-2 justify-content-end mt-3">
+                  <button type="button" class="btn btn-light" data-bs-dismiss="modal"
+                    (click)="modal.close('Close click')">{{'COMMON.CLOSE' | translate }}</button>
+                  <button type="button" [disabled]="isRoleButtonDisabled || rolesForm.invalid"
+                    (click)="createPermission()" class="btn btn-success" id="add-btn">{{'COMMON.ASSIGN_CUSTOMER' |
+                    translate}}</button>
+                </div>
+              </ng-container>
+            </div>
+          </ng-template>
+        </li>
+      </ul>
+      <div class="row">
+        <div class="col-lg-12">
+          <div class="tab-content text-muted">
+            <div [ngbNavOutlet]="customNav"></div>
+          </div>
+        </div>
+      </div>
+    </form>
+  </div>
+</ng-template>
+
+<ng-template #createPosModal role="document" let-modal>
+  <div class="modal-header bg-secondary-subtle p-3">
+    <h5 class="modal-title" id="exampleModalLabel">{{ 'COMMON.CREATE_CUSTOMER' | translate }}</h5>
+    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close" id="close-modal"
+      (click)="modal.dismiss('Cross click')"></button>
+  </div>
+  <div class="modal-body">
+    <form [formGroup]="createPosForm">
+      <ul ngbNav (navChange)="onTabChange($event)" #customNav="ngbNav" [activeId]="activeId"
+        class="nav nav-tabs-custom border-bottom-0" role="tablist">
+        <li [ngbNavItem]="1" class="nav-item">
+          <a ngbNavLink class="nav-link" data-bs-toggle="tab" role="tab">{{'MENUITEMS.TS.COMPANY' | translate}}
+          </a>
+          <ng-template ngbNavContent>
+            <div class="card">
+              <div class="card-body">
+                <ng-container formGroupName="company">
+                  <div class="mb-3">
+                    <label class="form-label" for="steparrow-gen-info-username-input">{{'COMMON.TITLE' | translate
+                      }}</label>
+                    <input type="text" required formControlName="name" class="form-control"
+                      id="steparrow-gen-info-username-input"
+                      placeholder="{{'COMMON.ENTER' | translate }} {{'COMMON.TITLE' | translate }}">
+                  </div>
+                </ng-container>
+                <div class="hstack gap-2 justify-content-end">
+                  <button [disabled]="createPosForm.get('company').invalid" (click)="nextStep()" type="button" class="btn btn-success btn-label right nexttab
+                                        nexttab" data-nexttab="v-pills-bill-address-tab"><i
+                      class="ri-arrow-right-line label-icon align-middle fs-16 ms-2"></i>{{'SHARED.CONTINUE'
+                    |
+                    translate }}</button>
+                </div>
+              </div>
+            </div>
+          </ng-template>
+        </li>
+        <li [disabled]="createPosForm.get('company').invalid" [ngbNavItem]="2" class="nav-item">
+          <a ngbNavLink class="nav-link" data-bs-toggle="tab" role="tab">
+            {{ 'COMMON.BUSINESS' | translate }}
+          </a>
+          <ng-template ngbNavContent>
+            <div class="card">
+              <div class="card-body">
+                <div formGroupName="pos">
+                  <div class="mt-2 gap-2 d-flex flex-wrap justify-content-center">
+                    <div *ngIf="createPosForm.get(['pos', 'picture', 'baseUrl']) ?.value" class="img-wrap image-area">
+                      <img class="cover h-30 product-picture w-30"
+                        [src]="createPosForm.get(['pos', 'picture', 'baseUrl']) ?.value + '/' + createPosForm.get(['pos', 'picture', 'path']) ?.value"
+                        alt="Blog picture">
+                      <button (click)="removePicture()" type="button"
+                        class="delete-button btn btn-outline-danger btn-icon waves-effect mb-1 waves-light btn-sm">
+                        <i class="ri-delete-bin-5-line"></i>
+                      </button>
+                    </div>
+                    <div *ngIf="!createPosForm.get(['pos', 'picture', 'baseUrl']) ?.value" (click)="upload()"
+                      class="w-30 h-30 mb-3 col-4 border rounded overflow-hidden cursor-pointer d-flex align-items-center justify-content-center">
+                      <span class="fs-5 fw-bold">{{'COMMON.UPLOAD' | translate }}</span>
+                    </div>
+                  </div>
+
+                  <div class="mb-3">
+                    <label class="form-label" for="steparrow-gen-info-email-input">{{'COMMON.EMAIL' |
+                      translate}}*</label>
+                    <input type="text" formControlName="email" class="form-control" id="steparrow-gen-info-email-input"
+                      placeholder="Enter Email">
+                  </div>
+                  <div class="mb-3">
+                    <label class="form-label" for="steparrow-gen-info-username-input">{{'COMMON.TITLE' | translate
+                      }}</label>
+                    <input type="text" formControlName="title" class="form-control"
+                      id="steparrow-gen-info-username-input"
+                      placeholder="{{'COMMON.ENTER' | translate }} {{'COMMON.TITLE' | translate }}">
+                  </div>
+                  <div class="mb-3">
+                    <label class="form-label" for="steparrow-gen-info-username-input">{{'COMMON.NAME' | translate
+                      }}*</label>
+                    <input type="text" formControlName="name" class="form-control"
+                      id="steparrow-gen-info-username-input"
+                      placeholder="{{'COMMON.ENTER' | translate }} {{'COMMON.TITLE' | translate }}">
+                  </div>
+                </div>
+                <div class="hstack gap-2 justify-content-end">
+                  <button (click)="activeId = 1" type="button" class="btn btn-info"
+                    data-nexttab="v-pills-bill-address-tab"><i
+                      class="ri-arrow-left-line label-icon align-middle fs-16 me-2"></i>{{'COMMON.BACK'
+                    |
+                    translate }}</button>
+                  <button (click)="modal.dismiss('Cross click')" type="button" class="btn btn-soft-danger">
+                    {{'COMMON.CLOSE' |
+                    translate }} </button>
+                  <button [disabled]="isPosButtonDisabled || createPosForm.invalid" (click)="createPos()" type="button"
+                    class="btn btn-success btn-label right nexttab
+                                        nexttab" data-nexttab="v-pills-bill-address-tab"> {{'SHARED.SUBMIT' |
+                    translate }}</button>
+                </div>
+              </div>
+            </div>
+          </ng-template>
+        </li>
+        <li [disabled]="isPosButtonDisabled || createPosForm.invalid" [ngbNavItem]="3" class="nav-item">
+          <a ngbNavLink class="nav-link" data-bs-toggle="tab" role="tab">
+            {{ 'COMMON.ROLE' | translate }}
+          </a>
+          <ng-template ngbNavContent>
+            <div class="card">
+              <div class="card-body">
+                <div formGroupName="pos">
+                  <div class="mb-3">
+                    <label class="form-label" for="steparrow-gen-info-username-input">{{'COMMON.NAME' | translate
+                      }}*</label>
+                    <ng-select placeholder="{{'COMMON.CHOOSE_ROLE' | translate }}" [items]="permissions"
+                      [multiple]="false" [formControlName]="'permission'">
+                      <ng-template ng-label-tmp let-item="item" let-clear="clear">
+                        <span class="ng-value-label">
+                          {{ item?.title }}
+                        </span>
+                        <span class="ng-value-icon right" (click)="clear(item)" aria-hidden="true">×</span>
+                      </ng-template>
+                      <ng-template ng-option-tmp let-item="item">
+                        {{ item?.title }}
+                      </ng-template>
+                    </ng-select>
+                  </div>
+                </div>
+                <div class="hstack gap-2 justify-content-end">
+                  <button (click)="activeId = 2" type="button" class="btn btn-info"
+                    data-nexttab="v-pills-bill-address-tab"><i
+                      class="ri-arrow-left-line label-icon align-middle fs-16 me-2"></i>{{'COMMON.BACK'
+                    |
+                    translate }}</button>
+                  <button (click)="modal.dismiss('Cross click')" type="button" class="btn btn-soft-danger">
+                    {{'COMMON.CLOSE' |
+                    translate }} </button>
+                  <button [disabled]="isPosButtonDisabled || createPosForm.invalid" (click)="createPos()" type="button"
+                    class="btn btn-success btn-label right nexttab
+                                        nexttab" data-nexttab="v-pills-bill-address-tab"> {{'SHARED.SUBMIT' |
+                    translate }}</button>
+
+                  <!-- <button [disabled]="isPosButtonDisabled || createPosForm.invalid" (click)="createPos()" type="button"
+                    class="btn btn-success btn-label right nexttab
+                                        nexttab" data-nexttab="v-pills-bill-address-tab"><i
+                      class="ri-arrow-right-line label-icon align-middle fs-16 ms-2"></i>{{'COMMON.SUBMIT' |
+                    translate }}</button> -->
+                </div>
+              </div>
+            </div>
+          </ng-template>
+        </li>
+      </ul>
+      <div class="row">
+        <div class="col-lg-12">
+          <div class="tab-content text-muted">
+            <div [ngbNavOutlet]="customNav"></div>
+          </div>
+        </div>
+      </div>
+    </form>
+  </div>
+</ng-template>
+<ng-template #deleteModel let-modal>
+  <div class="modal-content">
+    <div class="modal-header">
+      <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close" id="btn-close"
+        (click)="modal.dismiss('Cross click')"></button>
+    </div>
+    <div class="modal-body">
+      <div class="mt-2 text-center">
+        <lord-icon src="https://cdn.lordicon.com/gsqxdxog.json" trigger="loop"
+          colors="primary:#405189,secondary:#f06548" style="width:90px;height:90px"></lord-icon>
+        <div class="mt-4 pt-2 fs-15 mx-4 mx-sm-5">
+          <h4>{{'MENUITEMS.CUSTOMERENGAGEMENT.CAMPAIGN.YOU_ARE_ABOUT_TO_DELETE_A_CUSTOMER' |
+            translate }} ?</h4>
+          <p class="text-muted mx-4 mb-0">
+            {{'MENUITEMS.CUSTOMERENGAGEMENT.CAMPAIGN.DELETING_YOUR_CUSTOMER_DATA_BASE_REMOVE' |
+            translate }}
+          </p>
+        </div>
+      </div>
+      <div class="d-flex gap-2 justify-content-center mt-4 mb-2">
+        <button class="btn btn-link link-success fw-medium text-decoration-none" data-bs-dismiss="modal"
+          (click)="modal.close('Close click')" id="deleteRecord-close"><i
+            class="ri-close-line me-1 align-middle"></i>{{'COMMON.CLOSE' | translate }}</button>
+        <button type="button" class="btn w-sm btn-danger " id="delete-product"
+          (click)="deleteTargetsFromAccount()">{{'COMMON.YES_DELETE_IT' | translate }}</button>
+      </div>
+    </div>
+  </div>
+</ng-template>
+
+<ng-template #paginationTemplate>
+  <div *ngIf="((loadingItems$ | async) === false || null || undefined) && searchedItems?.length" class="px-3">
+    <div class="row justify-content-md-between align-items-md-center gy-2 mt-2">
+      <div class="col col-sm-6">
+        <div class="dataTables_info mb-2" id="tickets-table_info" role="status" aria-live="polite">{{'COMMON.SHOWING' |
+          translate }} {{paginations?.startIndex + 1}}–{{paginations?.endIndex ===
+          paginations?.length ?
+          paginations?.endIndex : paginations?.endIndex + 1}} {{'COMMON.OF' | translate }}
+          {{paginations?.length}}
+          {{'COMMON.ENTRIES' | translate }}
+        </div>
+      </div>
+      <div class="col col-sm-6">
+        <div class="text-sm-right float-end listjs-pagination">
+          <ngb-pagination [maxSize]="5" [collectionSize]="paginations?.length" [(page)]="itemPage"
+            (pageChange)="onPageChange($event)" [pageSize]="paginations?.size">
+          </ngb-pagination>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div id="noresult" class="py-4 mt-4 text-center"
+    *ngIf="(loadingItems$ | async) === true || ((loadingItems$ | async) === false && !searchedItems?.length)">
+    <div *ngIf="(loadingItems$ | async)">
+      <lord-icon trigger="loop" style="width:72px;height:72px"
+        [colors]="'primary:' + primaryColor + ',secondary:' + secondaryColor"
+        src="https://cdn.lordicon.com/msoeawqm.json">
+      </lord-icon>
+      <h5 class="mt-4">{{'COMMON.LOADING' | translate }}</h5>
+    </div>
+    <div *ngIf="(loadingItems$ | async) === false && !searchedItems?.length">
+      <lord-icon trigger="loop" style="width:72px;height:72px"
+        [colors]="'primary:' + primaryColor + ',secondary:' + secondaryColor"
+        src="https://cdn.lordicon.com/vlycxjwx.json">
+      </lord-icon>
+      <h5 class="mt-4">{{ 'COMMON.NO_RESULT' | translate }}</h5>
+    </div>
+  </div>
+</ng-template>
+
+<ng-template #dashboardModal role="document" let-modal>
+  <div class="modal-header bg-secondary-subtle p-3">
+    <h5 class="modal-title" id="exampleModalLabel">{{(selectedDashboard ? 'SHARED.EDIT_DASHBOARD' :
+      'SHARED.ADD_DASHBOARD') | translate }}</h5>
+    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close" id="close-modal"
+      (click)="modal.dismiss('Cross click')"></button>
+  </div>
+  <form [formGroup]="dashboardForm">
+    <div class="modal-body">
+      <label for="choices-status-input" class="form-label">{{'MODULES.INDEX.DASHBOARD' | translate }}*</label>
+      <ng-select
+        [ngClass]="{ 'is-invalid': dashboardForm.get('dashboard')?.touched && dashboardForm.get('dashboard').hasError('required') }"
+        placeholder="{{'PLACEHOLDER.ENTER_DASHBOARD_TYPE' | translate }}" [items]="filteredDashboards"
+        [multiple]="false" [formControlName]="'dashboard'">
+        <ng-template ng-label-tmp let-item="item" let-clear="clear">
+          <span class="ng-value-label">
+            {{
+            'MENUITEMS.TITLE.' + item | translate
+            }}
+          </span>
+          <span class="ng-value-icon right" (click)="clear(item)" aria-hidden="true">×</span>
+        </ng-template>
+        <ng-template ng-option-tmp let-item="item">
+          {{
+          'MENUITEMS.TITLE.' + item | translate
+          }}
+        </ng-template>
+      </ng-select>
+      <div class="invalid-feedback"
+        *ngIf="dashboardForm.get('dashboard')?.touched && dashboardForm.get('dashboard').hasError('required')">
+        {{'COMMON.REQUIRED' | translate }}
+      </div>
+    </div>
+    <div class="modal-footer">
+      <div class="hstack gap-2 justify-content-end">
+        <button type="button" class="btn btn-light" data-bs-dismiss="modal"
+          (click)="modal.close('Close click')">{{'COMMON.CLOSE' | translate }}</button>
+        <button type="button" [disabled]="dashboardForm.invalid || isButtonDisabled" (click)="save()"
+          class="btn btn-success" id="add-btn">{{(selectedDashboard ? 'SHARED.EDIT_DASHBOARD' :
+          'SHARED.ADD_DASHBOARD')
+          | translate }}</button>
+      </div>
+    </div>
+  </form>
+</ng-template>
+
+<ng-template #deleteModal let-modal>
+  <div class="modal-content">
+    <div class="modal-header">
+      <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close" id="btn-close"
+        (click)="modal.dismiss('Cross click')"></button>
+    </div>
+    <div class="modal-body">
+      <div class="mt-2 text-center">
+        <lord-icon src="https://cdn.lordicon.com/gsqxdxog.json" trigger="loop"
+          colors="primary:#405189,secondary:#f06548" style="width:90px;height:90px"></lord-icon>
+        <div class="mt-4 pt-2 fs-15 mx-4 mx-sm-5">
+          <h4>{{'MENUITEMS.CUSTOMERENGAGEMENT.CAMPAIGN.YOU_ARE_ABOUT_TO_DELETE_A_DASHBOARD' |
+            translate }} ?</h4>
+          <p class="text-muted mx-4 mb-0">
+            {{'MENUITEMS.CUSTOMERENGAGEMENT.CAMPAIGN.DELETING_YOUR_DASHBOARD_DATA_BASE_REMOVE' |
+            translate }}
+          </p>
+        </div>
+      </div>
+      <div class="d-flex gap-2 justify-content-center mt-4 mb-2">
+        <button class="btn btn-link link-success fw-medium text-decoration-none" data-bs-dismiss="modal"
+          (click)="modal.close('Close click')" id="deleteRecord-close"><i
+            class="ri-close-line me-1 align-middle"></i>{{'COMMON.CLOSE' | translate }}</button>
+        <button type="button" class="btn w-sm btn-danger " id="delete-product" (click)="deleteDashboard()"
+          (click)="modal.close('Close click')">{{'COMMON.YES_DELETE_IT' | translate }}</button>
+      </div>
+    </div>
+  </div>
+</ng-template>

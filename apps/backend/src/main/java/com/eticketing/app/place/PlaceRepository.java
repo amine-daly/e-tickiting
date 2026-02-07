@@ -21,6 +21,12 @@ public interface PlaceRepository extends MongoRepository<PlaceType, String> {
     @Query("{ 'target.pos': ?0, 'kind': ?1 }")
     Page<PlaceType> findByTargetPosAndKind(String posId, PlaceType.PlaceKind kind, Pageable pageable);
 
+    /**
+     * Find places by target POS ID, kind and city (case-insensitive)
+     */
+    @Query("{ 'target.pos': ?0, 'kind': ?1, 'city': { $regex: ?2, $options: 'i' } }")
+    Page<PlaceType> findByTargetPosAndKindAndCityLike(String posId, PlaceType.PlaceKind kind, String city, Pageable pageable);
+
     Page<PlaceType> findByCityIgnoreCaseContaining(String city, Pageable pageable);
 
     /**

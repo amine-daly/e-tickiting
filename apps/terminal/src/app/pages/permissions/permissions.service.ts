@@ -25,14 +25,14 @@ type Paginated<T> = {
 
 @Injectable({ providedIn: 'root' })
 export class PermissionsService {
-  private permissionsSubject = new BehaviorSubject<PermissionType[]>([]);
+  private permissions = new BehaviorSubject<PermissionType[]>([]);
   private definitionsSubject = new BehaviorSubject<PermissionDefinitionType[]>(
     [],
   );
   private loadingSubject = new BehaviorSubject<boolean>(false);
 
   get permissions$(): Observable<PermissionType[]> {
-    return this.permissionsSubject.asObservable();
+    return this.permissions.asObservable();
   }
 
   get definitions$(): Observable<PermissionDefinitionType[]> {
@@ -63,7 +63,7 @@ export class PermissionsService {
       : API_PERMISSIONS_URL;
     return this.http.get<Paginated<PermissionType>>(url).pipe(
       map((data) => data?.objects ?? []),
-      tap((permissions) => this.permissionsSubject.next(permissions)),
+      tap((permissions) => this.permissions.next(permissions)),
     );
   }
 
@@ -79,10 +79,7 @@ export class PermissionsService {
   createPermission(payload: PermissionInput): Observable<PermissionType> {
     return this.http.post<PermissionType>(API_PERMISSIONS_URL, payload).pipe(
       tap((created) => {
-        this.permissionsSubject.next([
-          ...this.permissionsSubject.value,
-          created,
-        ]);
+        this.permissions.next([...this.permissions.value, created]);
       }),
     );
   }
@@ -95,10 +92,10 @@ export class PermissionsService {
       .put<PermissionType>(`${API_PERMISSIONS_URL}/${id}`, payload)
       .pipe(
         tap((updated) => {
-          const updatedList = this.permissionsSubject.value.map((perm) =>
+          const updatedList = this.permissions.value.map((perm) =>
             perm.id === id ? updated : perm,
           );
-          this.permissionsSubject.next(updatedList);
+          this.permissions.next(updatedList);
         }),
       );
   }
@@ -106,10 +103,10 @@ export class PermissionsService {
   deletePermission(id: string): Observable<void> {
     return this.http.delete<void>(`${API_PERMISSIONS_URL}/${id}`).pipe(
       tap(() => {
-        const updatedList = this.permissionsSubject.value.filter(
+        const updatedList = this.permissions.value.filter(
           (perm) => perm.id !== id,
         );
-        this.permissionsSubject.next(updatedList);
+        this.permissions.next(updatedList);
       }),
     );
   }

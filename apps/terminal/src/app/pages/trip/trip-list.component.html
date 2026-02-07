@@ -47,9 +47,6 @@
                 <th class="min-w-120px">
                   {{ "COMMON.LABEL.STATUS" | translate }}
                 </th>
-                <th class="min-w-120px">
-                  {{ "COMMON.LABEL.AGENCY" | translate }}
-                </th>
                 <th class="min-w-100px">
                   {{ "COMMON.LABEL.TOTAL_PRICE" | translate }}
                 </th>
@@ -87,10 +84,10 @@
                 <td>
                   <div class="d-flex flex-column gap-1">
                     <span>
-                      {{ data?.departureDate | date : "yyyy-MM-dd" }}
+                      {{ data?.departureDate | date: "yyyy-MM-dd" }}
                     </span>
                     <span class="text-muted">
-                      {{ data?.departureDate | date : "HH:mm" }}
+                      {{ data?.departureDate | date: "HH:mm" }}
                     </span>
                   </div>
                 </td>
@@ -100,15 +97,14 @@
                     [ngClass]="{
                       'badge-light-primary': data?.status === 'SCHEDULED',
                       'badge-light-success': data?.status === 'COMPLETED',
-                      'badge-light-danger': data?.status === 'CANCELLED'
+                      'badge-light-danger': data?.status === 'CANCELLED',
                     }"
                   >
                     {{ statusLabelMap[data?.status] | translate }}
                   </span>
                 </td>
-                <td>{{ data?.agency?.name }}</td>
                 <td>
-                  {{ data?.totalPrice | number : "1.3-3" }}
+                  {{ data?.totalPrice | number: "1.3-3" }}
                   {{ "COMMON.CURRENCY.TND" | translate }}
                 </td>
                 <td>{{ data?.totalPlaces }}</td>
@@ -124,7 +120,7 @@
                                 booked:
                                   data?.totalPlaces -
                                     (data?.availableSeats || 0) || 0,
-                                total: data?.totalPlaces
+                                total: data?.totalPlaces,
                               }
                       "
                       placement="top"
@@ -148,7 +144,7 @@
                         {{
                           ((data?.totalPlaces - (data?.availableSeats || 0)) /
                             data?.totalPlaces) *
-                            100 | number : "1.0-0"
+                            100 | number: "1.0-0"
                         }}%
                       </div>
                     </div>
@@ -215,6 +211,13 @@
           </table>
           <!-- end::Table -->
         </div>
+        <app-pagination
+          *ngIf="(pagination$ | async)?.length"
+          [page]="page"
+          [pageSize]="pageSize"
+          [total]="(pagination$ | async)?.length || 0"
+          (pageChange)="onPageChange($event)"
+        ></app-pagination>
       </div>
     </div>
   </div>
@@ -235,26 +238,6 @@
     </div>
     <form [formGroup]="form">
       <div class="modal-body">
-        <div class="mb-3">
-          <label>{{ "COMMON.LABEL.AGENCY" | translate }}</label>
-          <ng-select
-            required
-            [items]="agencies$ | async"
-            bindLabel="name"
-            bindValue="id"
-            formControlName="agencyId"
-            [placeholder]="'TRIPS.MODAL.AGENCY_PLACEHOLDER' | translate"
-            [clearable]="true"
-          >
-            <ng-template ng-label-tmp let-item="item">{{
-              item.name
-            }}</ng-template>
-            <ng-template ng-option-tmp let-item="item">{{
-              item.name
-            }}</ng-template>
-          </ng-select>
-        </div>
-
         <!-- Origin Selection -->
         <div class="mb-3">
           <label

@@ -204,6 +204,15 @@
       </div>
     </div>
 
+    <!-- Management Section -->
+    <div class="menu-item">
+      <div class="menu-content pt-8 pb-2">
+        <span class="menu-section text-muted text-uppercase fs-8 ls-1"
+          >Management</span
+        >
+      </div>
+    </div>
+
     <div class="menu-item">
       <a
         class="menu-link without-sub"
@@ -224,49 +233,73 @@
         routerLinkActive="active"
       >
         <span class="menu-icon">
-          <app-keenicon name="building" class="fs-2"></app-keenicon>
+          <app-keenicon name="briefcase" class="fs-2"></app-keenicon>
         </span>
         <span class="menu-title">Business Profile</span>
       </a>
     </div>
-
-    <div class="menu-item">
-      <a
-        class="menu-link without-sub"
-        routerLink="/places"
-        routerLinkActive="active"
-      >
-        <span class="menu-icon">
-          <app-keenicon name="map" class="fs-2"></app-keenicon>
-        </span>
-        <span class="menu-title">Zones</span>
-      </a>
-    </div>
-
-    <div class="menu-item">
-      <a
-        class="menu-link without-sub"
-        routerLink="/trips"
-        routerLinkActive="active"
-      >
+    <div
+      class="menu-item menu-accordion"
+      data-kt-menu-trigger="click"
+      routerLinkActive="here show"
+    >
+      <span class="menu-link">
         <span class="menu-icon">
           <app-keenicon name="bus" class="fs-2"></app-keenicon>
         </span>
-        <span class="menu-title">Trips</span>
-      </a>
+        <span class="menu-title">Operations</span>
+        <span class="menu-arrow"></span>
+      </span>
+      <div
+        class="menu-sub menu-sub-accordion"
+        routerLinkActive="menu-active-bg"
+      >
+        <div class="menu-item">
+          <a
+            class="menu-link without-sub"
+            routerLinkActive="active"
+            routerLink="/places"
+          >
+            <span class="menu-bullet"
+              ><span class="bullet bullet-dot"></span
+            ></span>
+            <span class="menu-title">Zones</span>
+          </a>
+        </div>
+        <div class="menu-item">
+          <a
+            class="menu-link without-sub"
+            routerLinkActive="active"
+            routerLink="/trips"
+          >
+            <span class="menu-bullet"
+              ><span class="bullet bullet-dot"></span
+            ></span>
+            <span class="menu-title">Trips</span>
+          </a>
+        </div>
+        <div class="menu-item">
+          <a
+            class="menu-link without-sub"
+            routerLinkActive="active"
+            routerLink="/tickets"
+          >
+            <span class="menu-bullet"
+              ><span class="bullet bullet-dot"></span
+            ></span>
+            <span class="menu-title">Tickets</span>
+          </a>
+        </div>
+      </div>
     </div>
 
+    <!-- Administration Section -->
     <div class="menu-item">
-      <a
-        class="menu-link without-sub"
-        routerLink="/tickets"
-        routerLinkActive="active"
-      >
-        <span class="menu-icon">
-          <app-keenicon name="archive-tick" class="fs-2"></app-keenicon>
-        </span>
-        <span class="menu-title">Tickets</span>
-      </a>
+      <div class="menu-content pt-8 pb-2">
+        <span class="menu-section text-muted text-uppercase fs-8 ls-1"
+          >Administration</span
+        >
+      </div>
     </div>
 
     <div class="menu-item">
@@ -289,22 +322,9 @@
         routerLinkActive="active"
       >
         <span class="menu-icon">
-          <app-keenicon name="team" class="fs-2"></app-keenicon>
+          <app-keenicon name="profile-user" class="fs-2"></app-keenicon>
         </span>
         <span class="menu-title">Team</span>
-      </a>
-    </div>
-
-    <div class="menu-item">
-      <a
-        class="menu-link without-sub"
-        routerLink="/agencies"
-        routerLinkActive="active"
-      >
-        <span class="menu-icon">
-          <app-keenicon name="office-bag" class="fs-2"></app-keenicon>
-        </span>
-        <span class="menu-title">Agencies</span>
       </a>
     </div>
   </div>

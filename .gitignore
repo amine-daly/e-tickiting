@@ -9,6 +9,9 @@ coverage/
 apps/frontend/.angular/
 apps/frontend/dist/
 apps/frontend/node_modules/
+apps/terminal/.angular/
+apps/*/.angular/
+**/.angular/cache/
 
 # Spring Boot / Maven
 apps/backend/target/

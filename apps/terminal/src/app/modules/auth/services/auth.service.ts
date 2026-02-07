@@ -1,3 +1,4 @@
+import { find } from 'lodash';
 import { Injectable } from '@angular/core';
 import {
   BehaviorSubject,
@@ -54,6 +55,10 @@ export class AuthService {
     this.pos.next(value);
   }
 
+  get accounts$(): Observable<AccountType[]> {
+    return this.accounts.asObservable();
+  }
+
   get isLoading$(): Observable<boolean> {
     return this.isLoading.asObservable();
   }
@@ -90,6 +95,7 @@ export class AuthService {
         switchMap((res) => {
           this.authenticated.next(true);
           this.isLoading.next(false);
+          localStorage.setItem('userId', res?.user?.id);
           localStorage.setItem('accessToken', res.token);
           return this.getCurrentAccount();
         }),
@@ -97,8 +103,12 @@ export class AuthService {
           this.isLoading.next(false);
           return of(undefined);
         }),
-        map((res) => {
-          return res;
+        map((accounts) => {
+          this.accounts.next(accounts);
+          const pos = accounts[0].target?.pos;
+          this.pos.next(pos);
+          localStorage.setItem('posId', pos.id);
+          return accounts;
         }),
       );
   }
@@ -111,19 +121,42 @@ export class AuthService {
     this.router.navigateByUrl('/auth/login');
   }
 
-  getCurrentAccount(): Observable<AccountType[]> {
+  getUserByToken(token: string): Observable<AccountType[]> {
+    const httpHeaders = new HttpHeaders({ Authorization: `Bearer ${token}` });
+    return this.http
+      .get<AccountType[]>(`${API_USERS_URL}/me`, {
+        headers: httpHeaders,
+      })
+      .pipe(
+        switchMap((user) => {
+          if (user) {
+            this.authenticated.next(true);
+          } else {
+            this.logout();
+            this.authenticated.next(false);
+          }
+          return this.getCurrentAccount(true);
+        }),
+      );
+  }
+
+  getCurrentAccount(assignhAccount = false): Observable<AccountType[]> {
     return this.http
       .get<AccountType[]>(`${API_CURRENT_ACCOUNT_URL}/current`)
       .pipe(
         map((accounts) => {
+          if (assignhAccount) {
+            this.accounts.next(accounts);
+            const user = accounts[0].user;
+            this.currentUser.next(user);
+            const posId = localStorage.getItem('posId');
+            const account = find(
+              accounts,
+              (account: AccountType) => account?.target?.pos?.id === posId,
+            );
+            this.pos.next(account?.target?.pos);
+          }
           this.accounts.next(accounts);
-          const user = accounts[0].user;
-          this.currentUser.next(user);
-          const pos = accounts[0].target?.pos;
-          this.pos.next(pos);
-          localStorage.setItem('posId', pos.id);
-          localStorage.setItem('currentUserId', user.id);
-          // Adapt REST `me` response to the `currentAccount` shape used in parts of the app
           return accounts;
         }),
       );
@@ -150,24 +183,5 @@ export class AuthService {
     return this.http.post<boolean>(`${API_AUTH_URL}/forgot-password`, {
       email,
     });
-  }
-
-  getUserByToken(token: string): Observable<AccountType[]> {
-    const httpHeaders = new HttpHeaders({ Authorization: `Bearer ${token}` });
-    return this.http
-      .get<AccountType[]>(`${API_USERS_URL}/me`, {
-        headers: httpHeaders,
-      })
-      .pipe(
-        switchMap((res) => {
-          if (res) {
-            this.authenticated.next(true);
-          } else {
-            this.logout();
-            this.authenticated.next(false);
-          }
-          return this.getCurrentAccount();
-        }),
-      );
   }
 }

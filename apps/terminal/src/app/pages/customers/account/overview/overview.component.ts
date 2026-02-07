@@ -1,14 +1,14 @@
-import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterModule } from '@angular/router';
-import { KeeniconComponent } from 'src/app/_metronic/shared/keenicon/keenicon.component';
+import { Component, OnInit } from '@angular/core';
+
 import { WidgetsModule } from 'src/app/_metronic/partials';
 import { CustomersService } from '../../customers.service';
 
 @Component({
   selector: 'app-overview',
   standalone: true,
-  imports: [CommonModule, RouterModule, WidgetsModule, KeeniconComponent],
+  imports: [CommonModule, RouterModule, WidgetsModule],
   templateUrl: './overview.component.html',
 })
 export class OverviewComponent implements OnInit {

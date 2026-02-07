@@ -48,7 +48,8 @@
       "EXPORT": "Exporter",
       "EDIT": "Modifier",
       "DELETE": "Supprimer",
-      "CLOSE": "Fermer"
+      "CLOSE": "Fermer",
+      "CONTINUE": "Continuer"
     },
     "CURRENCY": {
       "TND": "TND"
@@ -193,6 +194,7 @@
       "SAVE_SUCCESS": "Voyage enregistré avec succès.",
       "SAVE_ERROR": "Impossible d'enregistrer le voyage.",
       "TOTAL_PLACES_SEATMAP_MISMATCH": "Le nombre total de places doit correspondre à la taille du plan des sièges ({{total}}).",
+      "UNRECOGNIZED_FIELD": "Champ de requête invalide : {{field}}.",
       "DELETE_SUCCESS": "Voyage supprimé avec succès.",
       "DELETE_ERROR": "Impossible de supprimer le voyage."
     },
@@ -397,14 +399,98 @@
       "COEFF_DELETE_SUCCESS": "Coefficient supprimé avec succès.",
       "COEFF_DELETE_ERROR": "Impossible de supprimer le coefficient."
     }
-  }
-  ,
+  },
+  "TEAM": {
+    "TITLE": "Équipe",
+    "ADD_BUTTON": "Ajouter un membre",
+    "EMPTY": "Aucun membre trouvé",
+    "PROMPT": {
+      "USER_ID": "Saisissez l'identifiant utilisateur à ajouter"
+    },
+    "MODAL": {
+      "TITLE": "Ajouter un membre",
+      "DEFAULT_PICTURE": "Par défaut",
+      "PERMISSION": "Permission",
+      "PERMISSION_PLACEHOLDER": "Sélectionner une permission",
+      "PASSWORD": "Mot de passe",
+      "PASSWORD_PLACEHOLDER": "Entrez le mot de passe",
+      "CONFIRM_PASSWORD": "Confirmer le mot de passe",
+      "CONFIRM_PASSWORD_PLACEHOLDER": "Ressaisissez le mot de passe",
+      "ERRORS": {
+        "FIRST_NAME": "Le prénom est requis.",
+        "LAST_NAME": "Le nom est requis.",
+        "EMAIL": "Un email valide est requis.",
+        "PHONE_CODE": "L'indicatif pays est requis.",
+        "PHONE_NUMBER": "Le numéro de téléphone est requis.",
+        "PASSWORD": "Le mot de passe doit contenir au moins 6 caractères.",
+        "CONFIRM_PASSWORD": "Veuillez confirmer votre mot de passe.",
+        "PASSWORD_MISMATCH": "Les mots de passe ne correspondent pas."
+      }
+    },
+    "MESSAGES": {
+      "CREATE_SUCCESS": "Membre de l'équipe ajouté avec succès.",
+      "CREATE_ERROR": "Impossible d'ajouter le membre de l'équipe.",
+      "EMAIL_ALREADY_EXISTS": "Un utilisateur avec cet e-mail existe déjà.",
+      "DELETE_SUCCESS": "Membre de l'équipe supprimé avec succès.",
+      "DELETE_ERROR": "Impossible de supprimer le membre de l'équipe."
+    }
+  },
   "BUSINESS_PROFILE": {
     "MESSAGES": {
       "SAVE_SUCCESS": "Profil d'entreprise enregistré avec succès.",
       "SAVE_ERROR": "Impossible d'enregistrer le profil de l'entreprise.",
       "LOCATION_SAVE_SUCCESS": "Emplacement enregistré avec succès.",
       "LOCATION_SAVE_ERROR": "Impossible d'enregistrer l'emplacement."
+    }
+  },
+  "DASHBOARD": {
+    "ACTIONS": {
+      "TITLE": "Actions",
+      "ADD_CUSTOMER": "Ajouter un client",
+      "DELETE_CUSTOMER": "Supprimer un client",
+      "ASSIGN_CUSTOMER": "Assigner un client"
+    },
+    "POS": {
+      "ADD_TITLE": "Ajouter un nouveau client",
+      "DELETE_TITLE": "Supprimer le client",
+      "DELETE_CONFIRM_TITLE": "Êtes-vous sûr ?",
+      "DELETE_CONFIRM_TEXT": "Cette action supprimera définitivement ce client et toutes les données associées.",
+      "FORM": {
+        "TITLE": "Titre",
+        "TITLE_PLACEHOLDER": "Entrez le nom de l'entreprise",
+        "SUBTITLE": "Sous-titre",
+        "SUBTITLE_PLACEHOLDER": "Slogan ou description (optionnel)",
+        "EMAIL_PLACEHOLDER": "email@exemple.com"
+      },
+      "ERRORS": {
+        "TITLE_REQUIRED": "Le titre est requis.",
+        "EMAIL_INVALID": "Veuillez entrer une adresse email valide."
+      },
+      "MESSAGES": {
+        "CREATE_SUCCESS": "Client créé avec succès.",
+        "CREATE_ERROR": "Impossible de créer le client.",
+        "DELETE_SUCCESS": "Client supprimé avec succès.",
+        "DELETE_ERROR": "Impossible de supprimer le client.",
+        "NO_POS": "Aucun client sélectionné."
+      }
+    },
+    "ASSIGN": {
+      "TITLE": "Assigner un client",
+      "TAB_CUSTOMER": "Client",
+      "TAB_PERMISSION": "Rôle",
+      "CHOOSE_POS": "Choisir un client*",
+      "POS_PLACEHOLDER": "Choisir un client",
+      "CHOOSE_PERMISSION": "Permission (optionnel)",
+      "PERMISSION_PLACEHOLDER": "Sélectionner un rôle de permission",
+      "PERMISSION_HELP": "Laissez vide pour utiliser les permissions par défaut.",
+      "ERRORS": {
+        "POS_REQUIRED": "Veuillez sélectionner un client."
+      },
+      "MESSAGES": {
+        "SUCCESS": "Client assigné avec succès.",
+        "ERROR": "Impossible d'assigner le client.",
+        "NO_ACCOUNT": "Aucun compte trouvé."
+      }
     }
   }
 }

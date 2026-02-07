@@ -1,0 +1,88 @@
+<div class="modal-header">
+  <h2 class="modal-title">{{ "DASHBOARD.POS.DELETE_TITLE" | translate }}</h2>
+  <button
+    type="button"
+    class="btn-close"
+    aria-label="Close"
+    (click)="dismiss()"
+  ></button>
+</div>
+
+<div class="modal-body p-0">
+  <!--begin::Loading-->
+  <div *ngIf="isLoading" class="d-flex justify-content-center py-10">
+    <span class="spinner-border spinner-border-sm text-primary"></span>
+  </div>
+  <!--end::Loading-->
+
+  <!--begin::Empty State-->
+  <div
+    *ngIf="!isLoading && !posList.length"
+    class="text-center py-10 text-muted"
+  >
+    {{ "DASHBOARD.POS.NO_CUSTOMERS" | translate }}
+  </div>
+  <!--end::Empty State-->
+
+  <!--begin::POS List-->
+  <div *ngIf="!isLoading && posList.length" class="mh-400px scroll-y">
+    <div
+      *ngFor="let pos of posList"
+      class="d-flex align-items-center justify-content-between px-5 py-4 border-bottom border-gray-200"
+    >
+      <!--begin::POS Info-->
+      <div class="d-flex align-items-center">
+        <div class="symbol symbol-40px symbol-circle me-4">
+          <img
+            *ngIf="pos?.picture?.baseUrl && pos?.picture?.path"
+            [src]="pos?.picture.baseUrl + '/' + pos?.picture.path"
+            alt="POS"
+          />
+          <span
+            *ngIf="!pos?.picture?.baseUrl || !pos?.picture?.path"
+            class="symbol-label bg-light-primary text-primary fw-bold fs-6"
+          >
+            {{ pos?.title?.charAt(0) | uppercase }}
+          </span>
+        </div>
+        <div>
+          <div class="fw-bold text-gray-800">{{ pos?.title }}</div>
+          <div *ngIf="pos?.subtitle" class="text-muted small">
+            {{ pos?.subtitle }}
+          </div>
+        </div>
+      </div>
+      <!--end::POS Info-->
+
+      <!--begin::Delete Button-->
+      <button
+        type="button"
+        class="btn btn-icon btn-sm btn-light-danger"
+        [disabled]="deletingId === pos?.id || posList?.length === 1"
+        (click)="deletePos(pos)"
+      >
+        <span *ngIf="deletingId !== pos?.id">
+          <i class="ki-duotone ki-trash fs-4">
+            <span class="path1"></span>
+            <span class="path2"></span>
+            <span class="path3"></span>
+            <span class="path4"></span>
+            <span class="path5"></span>
+          </i>
+        </span>
+        <span
+          *ngIf="deletingId === pos?.id"
+          class="spinner-border spinner-border-sm"
+        ></span>
+      </button>
+      <!--end::Delete Button-->
+    </div>
+  </div>
+  <!--end::POS List-->
+</div>
+
+<div class="modal-footer">
+  <button type="button" class="btn btn-light" (click)="dismiss()">
+    {{ "COMMON.BUTTON.CLOSE" | translate }}
+  </button>
+</div>

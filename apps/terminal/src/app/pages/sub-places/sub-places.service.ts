@@ -52,9 +52,11 @@ export class SubPlacesService {
   constructor(private http: HttpClient) {}
 
   getAllSubPlaces(): Observable<SubPlaceType[]> {
+    const posId = localStorage.getItem('posId');
     let params: any = {
       page: this.pageIndex,
       limit: this.pageLimit,
+      ...(posId ? { posId } : {}),
       ...(this.searchString ? { searchString: this.searchString } : {}),
     };
 
@@ -69,13 +71,13 @@ export class SubPlacesService {
           });
           this.subPlaces.next(data.objects);
           return data.objects;
-        })
+        }),
       );
   }
 
   getSubPlacesByParent(parentId: string): Observable<SubPlaceType[]> {
     return this.http.get<SubPlaceType[]>(
-      `${this.apiBase}/places/${parentId}/places`
+      `${this.apiBase}/places/${parentId}/places`,
     );
   }
 
@@ -87,21 +89,21 @@ export class SubPlacesService {
     return this.http.post<SubPlaceType>(this.baseUrl, payload).pipe(
       tap((created) => {
         this.subPlaces.next([...this.subPlaces.value, created]);
-      })
+      }),
     );
   }
 
   updateSubPlace(
     id: string,
-    changes: SubPlaceUpdatePayload
+    changes: SubPlaceUpdatePayload,
   ): Observable<SubPlaceType> {
     return this.http.put<SubPlaceType>(`${this.baseUrl}/${id}`, changes).pipe(
       tap((updated) => {
         const updatedList = this.subPlaces.value.map((sp) =>
-          sp.id === id ? updated : sp
+          sp.id === id ? updated : sp,
         );
         this.subPlaces.next(updatedList);
-      })
+      }),
     );
   }
 
@@ -109,7 +111,7 @@ export class SubPlacesService {
     return this.http.delete<void>(`${this.baseUrl}/${id}`).pipe(
       tap(() => {
         this.subPlaces.next(this.subPlaces.value.filter((sp) => sp.id !== id));
-      })
+      }),
     );
   }
 

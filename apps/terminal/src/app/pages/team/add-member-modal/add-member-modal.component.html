@@ -1,0 +1,189 @@
+<div class="modal-header">
+  <h2 class="modal-title">{{ "TEAM.MODAL.TITLE" | translate }}</h2>
+  <button
+    type="button"
+    class="btn-close"
+    aria-label="Close"
+    (click)="dismiss()"
+  ></button>
+</div>
+<form [formGroup]="memberForm" (ngSubmit)="submit()">
+  <div class="modal-body">
+    <!--begin::Avatar-->
+    <div class="d-flex flex-center mb-8">
+      <div class="symbol symbol-100px symbol-circle">
+        <img src="assets/media/avatars/blank.png" alt="avatar" />
+        <span
+          class="badge badge-light-info position-absolute bottom-0 end-0 fs-7"
+        >
+        </span>
+      </div>
+    </div>
+    <!--end::Avatar-->
+
+    <!--begin::Name row-->
+    <div class="row">
+      <div class="col-md-6 mb-6">
+        <label class="form-label required">{{
+          "COMMON.LABEL.FIRST_NAME" | translate
+        }}</label>
+        <input
+          type="text"
+          class="form-control form-control-solid"
+          formControlName="firstName"
+        />
+        <div *ngIf="isInvalid('firstName')" class="text-danger small mt-1">
+          {{ "TEAM.MODAL.ERRORS.FIRST_NAME" | translate }}
+        </div>
+      </div>
+      <div class="col-md-6 mb-6">
+        <label class="form-label required">{{
+          "COMMON.LABEL.LAST_NAME" | translate
+        }}</label>
+        <input
+          type="text"
+          class="form-control form-control-solid"
+          formControlName="lastName"
+        />
+        <div *ngIf="isInvalid('lastName')" class="text-danger small mt-1">
+          {{ "TEAM.MODAL.ERRORS.LAST_NAME" | translate }}
+        </div>
+      </div>
+    </div>
+    <!--end::Name row-->
+
+    <!--begin::Email-->
+    <div class="mb-6">
+      <label class="form-label required">{{
+        "COMMON.LABEL.EMAIL" | translate
+      }}</label>
+      <input
+        type="email"
+        class="form-control form-control-solid"
+        formControlName="email"
+      />
+      <div *ngIf="isInvalid('email')" class="text-danger small mt-1">
+        {{ "TEAM.MODAL.ERRORS.EMAIL" | translate }}
+      </div>
+    </div>
+    <!--end::Email-->
+
+    <!--begin::Phone-->
+    <ng-container formGroupName="phone">
+      <div class="row">
+        <div class="col-md-4 mb-6">
+          <label class="form-label required">{{
+            "CUSTOMERS.MODAL.PHONE_CODE" | translate
+          }}</label>
+          <input
+            type="text"
+            class="form-control form-control-solid"
+            formControlName="countryCode"
+            placeholder="+1"
+          />
+          <div
+            *ngIf="isInvalid('phone.countryCode')"
+            class="text-danger small mt-1"
+          >
+            {{ "TEAM.MODAL.ERRORS.PHONE_CODE" | translate }}
+          </div>
+        </div>
+        <div class="col-md-8 mb-6">
+          <label class="form-label required">{{
+            "CUSTOMERS.MODAL.PHONE_NUMBER" | translate
+          }}</label>
+          <input
+            type="text"
+            class="form-control form-control-solid"
+            formControlName="number"
+            placeholder="555-1234"
+          />
+          <div *ngIf="isInvalid('phone.number')" class="text-danger small mt-1">
+            {{ "TEAM.MODAL.ERRORS.PHONE_NUMBER" | translate }}
+          </div>
+        </div>
+      </div>
+    </ng-container>
+    <!--end::Phone-->
+
+    <!--begin::Permission-->
+    <div class="mb-6">
+      <label class="form-label required">{{
+        "TEAM.MODAL.PERMISSION" | translate
+      }}</label>
+      <ng-select
+        formControlName="permissionId"
+        [items]="permissions"
+        bindLabel="name"
+        bindValue="id"
+        [placeholder]="'TEAM.MODAL.PERMISSION_PLACEHOLDER' | translate"
+        [clearable]="true"
+      ></ng-select>
+    </div>
+    <!--end::Permission-->
+
+    <!--begin::Password row-->
+    <div class="row">
+      <div class="col-md-6 mb-6">
+        <label class="form-label required">{{
+          "TEAM.MODAL.PASSWORD" | translate
+        }}</label>
+        <input
+          type="password"
+          class="form-control form-control-solid"
+          formControlName="password"
+          [placeholder]="'TEAM.MODAL.PASSWORD_PLACEHOLDER' | translate"
+        />
+        <div *ngIf="isInvalid('password')" class="text-danger small mt-1">
+          {{ "TEAM.MODAL.ERRORS.PASSWORD" | translate }}
+        </div>
+      </div>
+      <div class="col-md-6 mb-6">
+        <label class="form-label required">{{
+          "TEAM.MODAL.CONFIRM_PASSWORD" | translate
+        }}</label>
+        <input
+          type="password"
+          class="form-control form-control-solid"
+          formControlName="confirmPassword"
+          [placeholder]="'TEAM.MODAL.CONFIRM_PASSWORD_PLACEHOLDER' | translate"
+        />
+        <div
+          *ngIf="isInvalid('confirmPassword')"
+          class="text-danger small mt-1"
+        >
+          {{ "TEAM.MODAL.ERRORS.CONFIRM_PASSWORD" | translate }}
+        </div>
+        <div
+          *ngIf="hasError('passwordMismatch')"
+          class="text-danger small mt-1"
+        >
+          {{ "TEAM.MODAL.ERRORS.PASSWORD_MISMATCH" | translate }}
+        </div>
+      </div>
+    </div>
+    <!--end::Password row-->
+  </div>
+
+  <div class="modal-footer">
+    <button
+      type="button"
+      class="btn btn-light"
+      (click)="dismiss()"
+      [disabled]="isSubmitting"
+    >
+      {{ "COMMON.BUTTON.CANCEL" | translate }}
+    </button>
+    <button
+      type="submit"
+      class="btn btn-primary"
+      [disabled]="memberForm.invalid || isSubmitting || isButtonDisabled"
+    >
+      <span
+        *ngIf="isSubmitting"
+        class="spinner-border spinner-border-sm me-2"
+      ></span>
+      {{ "COMMON.BUTTON.SAVE" | translate }}
+    </button>
+  </div>
+</form>

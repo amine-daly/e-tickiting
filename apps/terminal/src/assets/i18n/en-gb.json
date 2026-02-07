@@ -48,7 +48,8 @@
       "EXPORT": "Export",
       "EDIT": "Edit",
       "DELETE": "Delete",
-      "CLOSE": "Close"
+      "CLOSE": "Close",
+      "CONTINUE": "Continue"
     },
     "CURRENCY": {
       "TND": "TND"
@@ -192,6 +193,7 @@
       "LOAD_ERROR": "Unable to load trips. Please try again later.",
       "SAVE_SUCCESS": "Trip saved successfully.",
       "SAVE_ERROR": "Unable to save the trip.",
+      "UNRECOGNIZED_FIELD": "Invalid request field: {{field}}.",
       "TOTAL_PLACES_SEATMAP_MISMATCH": "Total places must match the seat map size ({{total}}).",
       "DELETE_SUCCESS": "Trip deleted successfully.",
       "DELETE_ERROR": "Unable to delete the trip."
@@ -397,14 +399,98 @@
       "COEFF_DELETE_SUCCESS": "Coefficient deleted successfully.",
       "COEFF_DELETE_ERROR": "Unable to delete the coefficient."
     }
-  }
-  ,
+  },
+  "TEAM": {
+    "TITLE": "Team",
+    "ADD_BUTTON": "Add member",
+    "EMPTY": "No team members found",
+    "PROMPT": {
+      "USER_ID": "Enter the user ID to add"
+    },
+    "MODAL": {
+      "TITLE": "Add Team Member",
+      "DEFAULT_PICTURE": "Default",
+      "PERMISSION": "Permission",
+      "PERMISSION_PLACEHOLDER": "Select a permission",
+      "PASSWORD": "Password",
+      "PASSWORD_PLACEHOLDER": "Enter password",
+      "CONFIRM_PASSWORD": "Confirm Password",
+      "CONFIRM_PASSWORD_PLACEHOLDER": "Re-enter password",
+      "ERRORS": {
+        "FIRST_NAME": "First name is required.",
+        "LAST_NAME": "Last name is required.",
+        "EMAIL": "A valid email is required.",
+        "PHONE_CODE": "Country code is required.",
+        "PHONE_NUMBER": "Phone number is required.",
+        "PASSWORD": "Password must be at least 6 characters.",
+        "CONFIRM_PASSWORD": "Please confirm your password.",
+        "PASSWORD_MISMATCH": "Passwords do not match."
+      }
+    },
+    "MESSAGES": {
+      "CREATE_SUCCESS": "Team member added successfully.",
+      "CREATE_ERROR": "Unable to add team member.",
+      "EMAIL_ALREADY_EXISTS": "A user with this email already exists.",
+      "DELETE_SUCCESS": "Team member deleted successfully.",
+      "DELETE_ERROR": "Unable to delete team member."
+    }
+  },
   "BUSINESS_PROFILE": {
     "MESSAGES": {
       "SAVE_SUCCESS": "Business profile saved successfully.",
       "SAVE_ERROR": "Unable to save business profile.",
       "LOCATION_SAVE_SUCCESS": "Location saved successfully.",
       "LOCATION_SAVE_ERROR": "Unable to save location."
+    }
+  },
+  "DASHBOARD": {
+    "ACTIONS": {
+      "TITLE": "Actions",
+      "ADD_CUSTOMER": "Add Customer",
+      "DELETE_CUSTOMER": "Delete Customer",
+      "ASSIGN_CUSTOMER": "Assign Customer"
+    },
+    "POS": {
+      "ADD_TITLE": "Add New Customer",
+      "DELETE_TITLE": "Delete Customer",
+      "DELETE_CONFIRM_TITLE": "Are you sure?",
+      "DELETE_CONFIRM_TEXT": "This will permanently delete this customer and all associated data.",
+      "FORM": {
+        "TITLE": "Title",
+        "TITLE_PLACEHOLDER": "Enter business name",
+        "SUBTITLE": "Subtitle",
+        "SUBTITLE_PLACEHOLDER": "Optional tagline or description",
+        "EMAIL_PLACEHOLDER": "email@example.com"
+      },
+      "ERRORS": {
+        "TITLE_REQUIRED": "Title is required.",
+        "EMAIL_INVALID": "Please enter a valid email address."
+      },
+      "MESSAGES": {
+        "CREATE_SUCCESS": "Customer created successfully.",
+        "CREATE_ERROR": "Unable to create customer.",
+        "DELETE_SUCCESS": "Customer deleted successfully.",
+        "DELETE_ERROR": "Unable to delete customer.",
+        "NO_POS": "No customer selected."
+      }
+    },
+    "ASSIGN": {
+      "TITLE": "Assign Customer",
+      "TAB_CUSTOMER": "Customer",
+      "TAB_PERMISSION": "Role",
+      "CHOOSE_POS": "Choose Customer*",
+      "POS_PLACEHOLDER": "Choose Customer",
+      "CHOOSE_PERMISSION": "Permission (optional)",
+      "PERMISSION_PLACEHOLDER": "Select a permission role",
+      "PERMISSION_HELP": "Leave empty to use default permissions.",
+      "ERRORS": {
+        "POS_REQUIRED": "Please select a customer."
+      },
+      "MESSAGES": {
+        "SUCCESS": "Customer assigned successfully.",
+        "ERROR": "Unable to assign customer.",
+        "NO_ACCOUNT": "No account found."
+      }
     }
   }
 }

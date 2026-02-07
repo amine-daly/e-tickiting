@@ -1,6 +1,5 @@
 import { CommonModule } from '@angular/common';
 import {
-  AfterViewInit,
   ChangeDetectorRef,
   Component,
   ElementRef,
@@ -14,8 +13,14 @@ import {
   ReactiveFormsModule,
   Validators,
 } from '@angular/forms';
-import { Subject, takeUntil } from 'rxjs';
-import { isEqual } from 'lodash';
+import { Subject, takeUntil, of } from 'rxjs';
+import {
+  debounceTime,
+  distinctUntilChanged,
+  switchMap,
+  take,
+} from 'rxjs/operators';
+import { isEqual, omit } from 'lodash';
 import {
   CurrencyType,
   PointOfSaleType,
@@ -28,11 +33,13 @@ import * as L from 'leaflet';
 import { FormHelper } from 'src/app/core/helpers/form-helper';
 import { AlertService } from 'src/app/core/services/alert.service';
 import { TranslateModule, TranslateService } from '@ngx-translate/core';
+import { NgSelectModule } from '@ng-select/ng-select';
+import { PlacesService } from '../../places/places.service';
 
 @Component({
   selector: 'app-business-profile',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule],
+  imports: [CommonModule, ReactiveFormsModule, TranslateModule, NgSelectModule],
   templateUrl: './business-profile.component.html',
   styleUrls: ['./business-profile.component.scss'],
 })
@@ -47,6 +54,11 @@ export class BusinessProfileComponent implements OnInit, OnDestroy {
   currencies: CurrencyType[] = [];
   countries: CountryType[] = [];
   states: StateType[] = [];
+  // Typeahead subjects and loading flags for ng-select
+  countriesSearchInput$: Subject<string> = new Subject<string>();
+  statesSearchInput$: Subject<string> = new Subject<string>();
+  countriesLoading = false;
+  statesLoading = false;
 
   // Leaflet map
   private map: L.Map;
@@ -57,29 +69,66 @@ export class BusinessProfileComponent implements OnInit, OnDestroy {
   locationForm: FormGroup;
 
   // initial form values and button states (follow settings pattern)
-  private overviewInitValues: any;
-  private locationInitValues: any;
+  overviewInitValues: any;
+  locationInitValues: any;
   overviewButtonDisabled = true;
   locationButtonDisabled = true;
-
-  // Loading states
   overviewSubmitting = false;
   locationSubmitting = false;
-  isOverviewDisabled = false;
-  isLocationDisabled = false;
+  selectedCountryId: string;
 
   constructor(
     private fb: FormBuilder,
     private alert: AlertService,
     private cdr: ChangeDetectorRef,
     private authService: AuthService,
-    private profileService: BusinessProfileService,
     private translate: TranslateService,
+    private placesService: PlacesService,
+    private profileService: BusinessProfileService,
   ) {
     this.profileService.currencies$
       .pipe(takeUntil(this.destroy$))
       .subscribe((data) => {
         this.currencies = data;
+        this.cdr.markForCheck();
+      });
+
+    // Countries typeahead
+    this.countriesSearchInput$
+      .pipe(
+        takeUntil(this.destroy$),
+        debounceTime(500),
+        distinctUntilChanged(),
+        switchMap((searchString) => {
+          this.countries = [];
+          this.placesService.countriesSearchString = searchString;
+          this.countriesLoading = true;
+          return this.placesService.getCountries();
+        }),
+      )
+      .subscribe(() => {
+        this.countriesLoading = false;
+        this.cdr.markForCheck();
+      });
+
+    // States typeahead
+    this.statesSearchInput$
+      .pipe(
+        takeUntil(this.destroy$),
+        debounceTime(500),
+        distinctUntilChanged(),
+        switchMap((searchString) => {
+          this.placesService.resetStates();
+          this.states = [];
+          this.placesService.statesSearchString = searchString;
+          const country = this.locationForm?.get('country')?.value;
+          if (!country) return of([]);
+          this.statesLoading = true;
+          return this.placesService.getStatesByCountry(country.id);
+        }),
+      )
+      .subscribe(() => {
+        this.statesLoading = false;
         this.cdr.markForCheck();
       });
   }
@@ -92,6 +141,7 @@ export class BusinessProfileComponent implements OnInit, OnDestroy {
         // Overview form
         this.overviewForm = this.fb.group({
           title: [pos.title || '', Validators.required],
+          subtitle: [pos.subtitle || ''],
           email: [pos.email || '', [Validators.email]],
           phone: this.fb.group({
             countryCode: [pos.phone?.countryCode || ''],
@@ -107,9 +157,9 @@ export class BusinessProfileComponent implements OnInit, OnDestroy {
         this.overviewInitValues = this.overviewForm.value;
         this.overviewForm.valueChanges
           .pipe(takeUntil(this.destroy$))
-          .subscribe(() => {
+          .subscribe((values) => {
             this.overviewButtonDisabled = isEqual(
-              this.overviewForm.value,
+              values,
               this.overviewInitValues,
             );
             this.cdr.markForCheck();
@@ -118,8 +168,8 @@ export class BusinessProfileComponent implements OnInit, OnDestroy {
         this.locationForm = this.fb.group({
           addressLine: [pos.location?.addressLine || ''],
           city: [pos.location?.city || ''],
-          countryId: [pos.location?.countryId || ''],
-          stateId: [pos.location?.stateId || ''],
+          country: [pos.location?.country || ''],
+          state: [pos.location?.state || ''],
           zipCode: [pos.location?.zipCode || ''],
           location: this.fb.group({
             lng: [pos.location?.location?.lng || null],
@@ -130,34 +180,53 @@ export class BusinessProfileComponent implements OnInit, OnDestroy {
         this.locationInitValues = this.locationForm.value;
         this.locationForm.valueChanges
           .pipe(takeUntil(this.destroy$))
-          .subscribe(() => {
+          .subscribe((values) => {
             this.locationButtonDisabled = isEqual(
-              this.locationForm.value,
+              values,
               this.locationInitValues,
             );
             this.cdr.markForCheck();
           });
         this.locationForm
-          .get('countryId')
+          .get('country')
           ?.valueChanges.pipe(takeUntil(this.destroy$))
-          .subscribe((countryId) => {
-            if (countryId) {
-              this.loadStatesByCountry(countryId);
+          .subscribe((country) => {
+            if (country) {
+              this.selectedCountryId = country.id;
               this.locationForm.patchValue(
-                { stateId: '' },
+                { state: undefined },
                 { emitEvent: false },
               );
             } else {
-              this.profileService.resetStates();
+              this.placesService.resetStates();
               this.states = [];
             }
           });
       }
     });
 
-    // Load reference data
+    this.placesService.states$
+      .pipe(takeUntil(this.destroy$))
+      .subscribe((states) => {
+        this.states = [...this.states, ...(states || [])];
+        this.cdr.markForCheck();
+      });
+
+    this.placesService.countries$
+      .pipe(takeUntil(this.destroy$))
+      .subscribe((countries) => {
+        this.countries = countries;
+        this.cdr.markForCheck();
+      });
+  }
+
+  ngAfterViewInit(): void {
     this.loadCurrencies();
     this.loadCountries();
+    if (this.pos.location?.country) {
+      this.selectedCountryId = this.pos.location.country.id;
+      this.loadStatesByCountry(this.selectedCountryId);
+    }
   }
 
   private initMap(): void {
@@ -239,32 +308,47 @@ export class BusinessProfileComponent implements OnInit, OnDestroy {
   }
 
   private loadCountries(): void {
-    this.profileService
-      .getCountries()
-      .pipe(takeUntil(this.destroy$))
-      .subscribe((countries) => {
-        this.countries = countries;
-        this.cdr.markForCheck();
-      });
+    this.placesService.getCountries().subscribe();
   }
 
   private loadStatesByCountry(countryId: string): void {
-    this.profileService
+    this.placesService
       .getStatesByCountry(countryId)
       .pipe(takeUntil(this.destroy$))
-      .subscribe((states) => {
-        this.states = states;
-        this.cdr.markForCheck();
-      });
+      .subscribe();
   }
 
+  onCountryChange(): void {
+    const countryId = this.locationForm.get('country')?.value?.id;
+    this.locationForm.get('state')?.setValue(undefined);
+    this.resetStatesPagination();
+    if (countryId) {
+      this.loadStatesByCountry(countryId);
+    }
+  }
+
+  private resetStatesPagination(): void {
+    this.states = [];
+    this.statesLoading = false;
+    this.placesService.resetStates();
+  }
+
+  loadMoreStates(): void {
+    this.placesService.isLastStates$.pipe(take(1)).subscribe((isLast) => {
+      if (!isLast) {
+        this.statesLoading = true;
+        this.placesService.statesPageIndex += 1;
+        this.loadStatesByCountry(this.selectedCountryId);
+      }
+    });
+  }
   // ========== Form Submissions ==========
   submitOverview(): void {
     this.overviewButtonDisabled = true;
     if (this.overviewForm.invalid || !this.pos?.id) return;
 
     this.overviewSubmitting = true;
-    this.isOverviewDisabled = true;
+    this.overviewButtonDisabled = true;
 
     // send only changed values following settings component pattern
     const changed = FormHelper.getChangedValues(
@@ -285,7 +369,7 @@ export class BusinessProfileComponent implements OnInit, OnDestroy {
         },
         error: (err) => {
           this.overviewSubmitting = false;
-          this.isOverviewDisabled = false;
+          this.overviewButtonDisabled = false;
           const msg = err?.error?.message || err?.message || null;
           if (msg)
             this.alert.error(
@@ -301,15 +385,25 @@ export class BusinessProfileComponent implements OnInit, OnDestroy {
     if (this.locationForm.invalid || !this.pos?.id) return;
 
     this.locationSubmitting = true;
-    this.isLocationDisabled = true;
+    this.locationButtonDisabled = true;
 
-    const changed = FormHelper.getChangedValues(
-      this.locationForm.value,
-      this.locationInitValues,
-    );
+    const changes = {
+      ...FormHelper.getChangedValues(
+        omit(this.locationForm.value, 'state', 'country'),
+        omit(this.locationInitValues, 'state', 'country'),
+      ),
+      ...(this.locationForm.value.state?.id !==
+      this.locationInitValues.state?.id
+        ? { stateId: this.locationForm.value.state?.id }
+        : {}),
+      ...(this.locationForm.value.country?.id !==
+      this.locationInitValues.country?.id
+        ? { countryId: this.locationForm.value.country?.id }
+        : {}),
+    };
 
     this.profileService
-      .updatePos(this.pos.id, { location: changed })
+      .updatePos(this.pos.id, { location: changes })
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: () => {
@@ -321,7 +415,7 @@ export class BusinessProfileComponent implements OnInit, OnDestroy {
         },
         error: () => {
           this.locationSubmitting = false;
-          this.isLocationDisabled = false;
+          this.locationButtonDisabled = false;
           this.alert.error(
             this.t('BUSINESS_PROFILE.MESSAGES.LOCATION_SAVE_ERROR'),
           );

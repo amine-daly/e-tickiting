@@ -1,0 +1,62 @@
+.avatar-xxs {
+  height: 1.5rem !important;
+  width: 1.5rem !important;
+}
+
+.mob-flex-wrap {
+  @media (max-width: 768px) {
+    flex-wrap: wrap !important;
+  }
+}
+
+.bg-x {
+  background-color: #40518926;
+}
+
+.h-30 {
+  height: 7.5rem;
+}
+
+.w-30 {
+  width: 7.5rem;
+}
+
+.img-wrap {
+  position: relative;
+}
+
+.mxh-500 {
+  max-height: 500px;
+}
+
+button[data-bs-toggle="dropdown"]::after {
+  display: none !important;
+}
+
+.mx-h {
+  max-height: 100vh;
+}
+
+::ng-deep .offcanvas.offcanvas-end {
+  width: 300px !important; // or whatever small size you want
+}
+
+swiper-wrapper {
+  pointer-events: auto !important;
+}
+
+.swiper-slide {
+  pointer-events: auto !important;
+}
+
+.custom-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 1rem;
+}
+
+@media screen and (min-width: 1399px) and (max-width: 1549px) {
+  .fs-x {
+    font-size: 1.2rem;
+  }
+}

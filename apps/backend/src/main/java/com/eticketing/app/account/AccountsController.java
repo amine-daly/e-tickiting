@@ -18,6 +18,8 @@ import com.eticketing.app.common.PictureType;
 import com.eticketing.app.user.PhoneType;
 import com.eticketing.app.user.UserType;
 import com.eticketing.app.user.UserTypeRepository;
+import com.eticketing.app.user.RoleEnum;
+import com.eticketing.app.user.AppEnum;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.data.domain.Page;
@@ -32,6 +34,9 @@ import org.springframework.web.server.ResponseStatusException;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
+
+import org.springframework.dao.IncorrectResultSizeDataAccessException;
+import org.springframework.security.crypto.password.PasswordEncoder;
 
 /**
  * Account management controller. Provides CRUD for accounts and the critical
@@ -129,6 +134,7 @@ public class AccountsController {
     public record PosRes(
             String id,
             String title,
+            String subtitle,
             PictureRes picture,
             AddressRes location,
             PhoneRes phone,
@@ -184,6 +190,7 @@ public class AccountsController {
     private final StateRepository stateRepo;
     private final CountryRepository countryRepo;
     private final CurrencyRepository currencyRepo;
+    private final PasswordEncoder passwordEncoder;
 
     public AccountsController(
             AccountTypeRepository accountRepo,
@@ -193,7 +200,8 @@ public class AccountsController {
             PermissionDefinitionRepository permissionDefRepo,
             StateRepository stateRepo,
             CountryRepository countryRepo,
-            CurrencyRepository currencyRepo
+            CurrencyRepository currencyRepo,
+            PasswordEncoder passwordEncoder
     ) {
         this.accountRepo = accountRepo;
         this.userRepo = userRepo;
@@ -203,6 +211,7 @@ public class AccountsController {
         this.stateRepo = stateRepo;
         this.countryRepo = countryRepo;
         this.currencyRepo = currencyRepo;
+        this.passwordEncoder = passwordEncoder;
     }
 
     private AccountRes toRes(AccountType acc) {
@@ -226,6 +235,7 @@ public class AccountsController {
                 targetRes = new TargetRes(new PosRes(
                         posToUse.getId(),
                         posToUse.getTitle(),
+                        posToUse.getSubtitle(),
                         PictureRes.from(posToUse.getPicture()),
                         locationRes,
                         PhoneRes.from(posToUse.getPhone()),
@@ -405,5 +415,144 @@ public class AccountsController {
     public ResponseEntity<Void> delete(@PathVariable String id) {
         accountRepo.deleteById(id);
         return ResponseEntity.noContent().build();
+    }
+
+    // ============ Add Target to Account ============
+    public record AddTargetReq(String posId, String permissionId) {
+
+    }
+
+    @PostMapping("/{id}/target")
+    @Operation(summary = "Create a new account for the same user with the specified POS and permission")
+    public ResponseEntity<AccountRes> addTargetToAccount(@PathVariable String id, @RequestBody AddTargetReq req) {
+        // Find the source account to get the userId
+        AccountType sourceAccount = accountRepo.findById(id)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Account not found"));
+
+        if (req.posId() == null || req.posId().isBlank()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "posId is required");
+        }
+
+        // Verify POS exists
+        PointOfSaleType pos = posRepo.findById(req.posId())
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "POS not found"));
+
+        // Check if user already has an account with this POS
+        String userId = sourceAccount.getUserId();
+        List<AccountType> existingAccounts = accountRepo.findByUserId(userId);
+        boolean alreadyAssigned = existingAccounts.stream()
+                .anyMatch(acc -> acc.getTarget() != null
+                && acc.getTarget().getPos() != null
+                && req.posId().equals(acc.getTarget().getPos().getId()));
+        if (alreadyAssigned) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "User already has an account with this POS");
+        }
+
+        // Verify permission if provided
+        String permissionId = null;
+        if (req.permissionId() != null && !req.permissionId().isBlank()) {
+            permissionRepo.findById(req.permissionId())
+                    .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Permission not found"));
+            permissionId = req.permissionId();
+        }
+
+        // Create a NEW account for the same user with the new POS
+        AccountType newAccount = new AccountType();
+        newAccount.setUserId(userId);
+        newAccount.setPermissionId(permissionId);
+        newAccount.setTarget(new AccountType.TargetType(pos));
+        Instant now = Instant.now();
+        newAccount.setCreatedAt(now);
+        newAccount.setUpdatedAt(now);
+
+        return ResponseEntity.status(HttpStatus.CREATED).body(toRes(accountRepo.save(newAccount)));
+    }
+
+    // ============ Register Account For Target (Create User + Account in one call) ============
+    public record PhoneReq(String countryCode, String number) {
+
+    }
+
+    public record RegisterAccountForTargetReq(
+            String firstName,
+            String lastName,
+            String email,
+            PhoneReq phone,
+            String password,
+            String role,
+            String posId,
+            String permissionId
+            ) {
+
+    }
+
+    @PostMapping("/register-for-target")
+    @Operation(summary = "Create a new user and account for the specified POS in one call")
+    public ResponseEntity<AccountRes> registerAccountForTarget(@RequestBody RegisterAccountForTargetReq req) {
+        // Validate required fields
+        if (req.firstName() == null || req.firstName().isBlank()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "firstName is required");
+        }
+        if (req.lastName() == null || req.lastName().isBlank()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "lastName is required");
+        }
+        if (req.email() == null || req.email().isBlank()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "email is required");
+        }
+        if (req.password() == null || req.password().isBlank()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "password is required");
+        }
+        if (req.posId() == null || req.posId().isBlank()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "posId is required");
+        }
+
+        // Verify POS exists
+        PointOfSaleType pos = posRepo.findById(req.posId())
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "POS not found"));
+
+        // Verify permission if provided
+        String permissionId = null;
+        if (req.permissionId() != null && !req.permissionId().isBlank()) {
+            permissionRepo.findById(req.permissionId())
+                    .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Permission not found"));
+            permissionId = req.permissionId();
+        }
+
+        // Check if user with this email already exists
+        try {
+            if (userRepo.findByEmail(req.email()).isPresent()) {
+                throw new ResponseStatusException(HttpStatus.CONFLICT, "User with this email already exists");
+            }
+        } catch (IncorrectResultSizeDataAccessException e) {
+            // Multiple users found with same email - also means email exists
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "User with this email already exists");
+        }
+
+        // Step 1: Create the user
+        UserType user = new UserType();
+        user.setFirstName(req.firstName());
+        user.setLastName(req.lastName());
+        user.setEmail(req.email());
+        user.setPasswordHash(passwordEncoder.encode(req.password()));
+        user.setRole(req.role() != null ? RoleEnum.valueOf(req.role()) : RoleEnum.MANAGER);
+        user.setApp(AppEnum.TERMINAL);
+        user.setTarget(new UserType.TargetType(req.posId()));
+        if (req.phone() != null) {
+            user.setPhone(new PhoneType(req.phone().countryCode(), req.phone().number()));
+        }
+        Instant now = Instant.now();
+        user.setCreatedAt(now);
+        user.setUpdatedAt(now);
+        UserType savedUser = userRepo.save(user);
+
+        // Step 2: Create account linking user to POS
+        AccountType account = new AccountType();
+        account.setUserId(savedUser.getId());
+        account.setPermissionId(permissionId);
+        account.setTarget(new AccountType.TargetType(pos));
+        account.setCreatedAt(now);
+        account.setUpdatedAt(now);
+
+        return ResponseEntity.status(HttpStatus.CREATED).body(toRes(accountRepo.save(account)));
     }
 }

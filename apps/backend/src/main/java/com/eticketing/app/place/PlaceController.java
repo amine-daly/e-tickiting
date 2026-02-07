@@ -135,12 +135,15 @@ public class PlaceController {
     @GetMapping("/by-target")
     public Paginated<PlaceRes> byTarget(
             @RequestParam String posId,
+            @RequestParam(defaultValue = "") String searchString,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int limit) {
         if (posId == null || posId.isBlank()) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "posId is required");
         }
-        Page<PlaceType> p = repo.findByTargetPosAndKind(posId, PlaceType.PlaceKind.CITY, PageRequest.of(page, limit));
+        Page<PlaceType> p = (searchString != null && !searchString.isBlank())
+                ? repo.findByTargetPosAndKindAndCityLike(posId, PlaceType.PlaceKind.CITY, searchString, PageRequest.of(page, limit))
+                : repo.findByTargetPosAndKind(posId, PlaceType.PlaceKind.CITY, PageRequest.of(page, limit));
         // Fetch response: include both timestamps
         var list = p.getContent().stream().map(place -> buildPlaceRes(place, true)).toList();
         return new Paginated<>(list, p.getTotalElements(), p.isLast());

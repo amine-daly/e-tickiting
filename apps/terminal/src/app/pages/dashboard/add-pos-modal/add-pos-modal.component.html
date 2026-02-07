@@ -1,0 +1,85 @@
+<div class="modal-header">
+  <h2 class="modal-title">{{ "DASHBOARD.POS.ADD_TITLE" | translate }}</h2>
+  <button
+    type="button"
+    class="btn-close"
+    aria-label="Close"
+    (click)="dismiss()"
+  ></button>
+</div>
+<form [formGroup]="posForm" (ngSubmit)="submit()">
+  <div class="modal-body">
+    <!--begin::Avatar-->
+    <div class="d-flex flex-center mb-8">
+      <div class="symbol symbol-100px symbol-circle">
+        <img src="assets/media/avatars/blank.png" alt="POS logo" />
+      </div>
+    </div>
+    <!--end::Avatar-->
+
+    <!--begin::Title-->
+    <div class="mb-6">
+      <label class="form-label required">{{
+        "DASHBOARD.POS.FORM.TITLE" | translate
+      }}</label>
+      <input
+        type="text"
+        class="form-control form-control-solid"
+        formControlName="title"
+        placeholder="{{ 'DASHBOARD.POS.FORM.TITLE_PLACEHOLDER' | translate }}"
+      />
+      <div *ngIf="isInvalid('title')" class="text-danger small mt-1">
+        {{ "DASHBOARD.POS.ERRORS.TITLE_REQUIRED" | translate }}
+      </div>
+    </div>
+    <!--end::Title-->
+
+    <!--begin::Subtitle-->
+    <div class="mb-6">
+      <label class="form-label">{{
+        "DASHBOARD.POS.FORM.SUBTITLE" | translate
+      }}</label>
+      <input
+        type="text"
+        class="form-control form-control-solid"
+        formControlName="subtitle"
+        placeholder="{{
+          'DASHBOARD.POS.FORM.SUBTITLE_PLACEHOLDER' | translate
+        }}"
+      />
+    </div>
+    <!--end::Subtitle-->
+
+    <!--begin::Email-->
+    <div class="mb-6">
+      <label class="form-label">{{ "COMMON.LABEL.EMAIL" | translate }}</label>
+      <input
+        type="email"
+        class="form-control form-control-solid"
+        formControlName="email"
+        placeholder="{{ 'DASHBOARD.POS.FORM.EMAIL_PLACEHOLDER' | translate }}"
+      />
+      <div *ngIf="isInvalid('email')" class="text-danger small mt-1">
+        {{ "DASHBOARD.POS.ERRORS.EMAIL_INVALID" | translate }}
+      </div>
+    </div>
+    <!--end::Email-->
+  </div>
+
+  <div class="modal-footer">
+    <button type="button" class="btn btn-light" (click)="dismiss()">
+      {{ "COMMON.BUTTON.CANCEL" | translate }}
+    </button>
+    <button
+      type="submit"
+      class="btn btn-primary"
+      [disabled]="isButtonDisabled || posForm.invalid || isSubmitting"
+    >
+      <span *ngIf="!isSubmitting">{{ "COMMON.BUTTON.SAVE" | translate }}</span>
+      <span
+        *ngIf="isSubmitting"
+        class="spinner-border spinner-border-sm"
+      ></span>
+    </button>
+  </div>
+</form>

@@ -3,6 +3,17 @@ import { PermissionType } from './permission-type';
 import { CountryType } from './country-type';
 import { StateType } from './state-type';
 
+export interface RegisterAccountForTargetPayload {
+  firstName: string;
+  lastName: string;
+  email: string;
+  phone?: PhoneType;
+  password: string;
+  role?: string;
+  posId: string;
+  permissionId?: string;
+}
+
 export interface PictureType {
   baseUrl?: string;
   path?: string;
@@ -27,6 +38,7 @@ export interface AddressType {
 export interface PointOfSaleType {
   id?: string;
   title?: string;
+  subtitle?: string;
   picture?: PictureType | null;
   location?: AddressType | null;
   phone?: PhoneType | null;

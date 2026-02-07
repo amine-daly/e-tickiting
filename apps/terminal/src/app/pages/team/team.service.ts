@@ -1,8 +1,11 @@
 import { Injectable } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
-import { BehaviorSubject, finalize, map, Observable, of } from 'rxjs';
+import { BehaviorSubject, finalize, map, Observable, of, tap } from 'rxjs';
 import { environment } from 'src/environments/environment';
-import { AccountType } from 'src/app/core/models/account.model';
+import {
+  AccountType,
+  RegisterAccountForTargetPayload,
+} from 'src/app/core/models/account.model';
 import { IPagination } from 'src/app/core/models/paginate-model';
 
 interface PaginatedAccounts {
@@ -30,23 +33,17 @@ export class TeamService {
     return this.pagination.asObservable();
   }
 
+  pageLimit = 10;
+  pageIndex = 0;
+
   constructor(private http: HttpClient) {}
 
-  getAccountsByTarget(
-    posId: string,
-    page = 0,
-    limit = 9,
-  ): Observable<AccountType[]> {
-    if (!posId) {
-      this.accounts.next([]);
-      this.pagination.next({ length: 0, size: limit, page, lastPage: 0 });
-      return of([]);
-    }
+  getAccountsByTarget(): Observable<AccountType[]> {
     this.loading.next(true);
     const params = new HttpParams()
-      .set('posId', posId)
-      .set('page', page)
-      .set('limit', limit);
+      .set('posId', localStorage.getItem('posId'))
+      .set('page', this.pageIndex)
+      .set('limit', this.pageLimit);
     return this.http
       .get<PaginatedAccounts>(`${this.baseUrl}/by-target`, { params })
       .pipe(
@@ -56,13 +53,63 @@ export class TeamService {
           this.accounts.next(objects);
           this.pagination.next({
             length: count,
-            size: limit,
-            page,
-            lastPage: Math.max(0, Math.ceil(count / limit) - 1),
+            size: this.pageLimit,
+            page: this.pageIndex,
+            lastPage: Math.max(0, Math.ceil(count / this.pageLimit) - 1),
           });
           return objects;
         }),
         finalize(() => this.loading.next(false)),
+      );
+  }
+
+  deleteAccount(id: string): Observable<void> {
+    if (!id) return of(undefined);
+    return this.http.delete<void>(`${this.baseUrl}/${id}`).pipe(
+      tap(() => {
+        const filtered = (this.accounts.value ?? []).filter(
+          (account) => account.id !== id,
+        );
+        this.accounts.next(filtered);
+      }),
+    );
+  }
+
+  createAccount(payload: {
+    userId: string;
+    permissionId?: string;
+    target: { posId: string };
+  }): Observable<AccountType> {
+    return this.http.post<AccountType>(`${this.baseUrl}`, payload).pipe(
+      tap(({ data }: any) => {
+        console.log('🚀 ~ TeamService ~ createAccount ~ data:', data);
+        if (data) {
+          const accounts = [data, ...this.accounts.value];
+          this.accounts.next(accounts);
+          console.log(
+            '🚀 ~ TeamService ~ createAccount ~ this.accounts:',
+            this.accounts.value,
+          );
+        }
+      }),
+    );
+  }
+
+  /**
+   * Register a new user and create account for target POS in one API call
+   */
+  registerAccountForTarget(
+    payload: RegisterAccountForTargetPayload,
+  ): Observable<AccountType> {
+    return this.http
+      .post<AccountType>(`${this.baseUrl}/register-for-target`, payload)
+      .pipe(
+        tap((createdAccount) => {
+          if (createdAccount) {
+            const accounts = [createdAccount, ...this.accounts.value];
+            this.accounts.next(accounts);
+          }
+        }),
       );
   }
 }

@@ -193,19 +193,12 @@
 
     <!-- Empty state -->
     <ng-container *ngIf="users$ | async as users">
-      <!-- Empty state -->
-      <div
-        *ngIf="!users?.length && !(loading$ | async)"
-        class="d-flex flex-column align-items-center justify-content-center py-10"
-      >
-        <i class="ki-duotone ki-user fs-1 mb-6"></i>
-        <div class="fw-bold fs-5">{{ "CUSTOMERS.EMPTY" | translate }}</div>
-      </div>
-
       <!-- Users table -->
-      <div style="overflow-x: auto; width: 100%">
+      <div
+        *ngIf="users?.length && !(loading$ | async)"
+        style="overflow-x: auto; width: 100%"
+      >
         <table
-          *ngIf="users?.length && !(loading$ | async)"
           class="table align-middle table-row-dashed fs-6 gy-5"
           id="kt_table_users"
         >
@@ -298,7 +291,7 @@
                     'badge-light-info': user?.role === 'DRIVER',
                   }"
                 >
-                  {{ user?.role }}
+                  {{ "CUSTOMERS.ROLES." + user?.role | translate }}
                 </span>
               </td>
               <td>{{ user?.createdAt | date: "yyyy-MM-dd" }}</td>
@@ -342,7 +335,20 @@
           </tbody>
         </table>
       </div>
+      <div
+        *ngIf="!users?.length && !(loading$ | async)"
+        class="d-flex flex-column align-items-center justify-content-center py-10"
+      >
+        <i class="ki-duotone ki-user fs-xl-2hx mb-6"
+          ><span class="path1"></span>
+          <span class="path2"></span>
+        </i>
+        <div class="fw-bold fs-5 text-muted">
+          {{ "CUSTOMERS.EMPTY" | translate }}
+        </div>
+      </div>
       <app-pagination
+        *ngIf="users?.length"
         [page]="page"
         [pageSize]="pageSize"
         [total]="(pagination$ | async)?.length || 0"

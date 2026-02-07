@@ -24,6 +24,7 @@ export interface LocationPayload {
 
 export interface PosOverviewPayload {
   title?: string;
+  subtitle?: string;
   email?: string;
   phone?: PhoneType;
   currencyId?: string;
@@ -46,27 +47,12 @@ export class BusinessProfileService {
   private apiBase = environment.apiBase;
   private posUrl = `${this.apiBase}/pos`;
   private currenciesUrl = `${this.apiBase}/currencies`;
-  private countriesUrl = `${this.apiBase}/countries`;
-  private statesUrl = `${this.apiBase}/states`;
-
   private currencies = new BehaviorSubject<CurrencyType[]>([]);
-  private countries = new BehaviorSubject<CountryType[]>([]);
-  private states = new BehaviorSubject<StateType[]>([]);
 
   currenciesSearchString = '';
-  countriesSearchString = '';
-  statesSearchString = '';
 
   get currencies$(): Observable<CurrencyType[]> {
     return this.currencies.asObservable();
-  }
-
-  get countries$(): Observable<CountryType[]> {
-    return this.countries.asObservable();
-  }
-
-  get states$(): Observable<StateType[]> {
-    return this.states.asObservable();
   }
 
   constructor(
@@ -91,6 +77,24 @@ export class BusinessProfileService {
     );
   }
 
+  createPos(payload: PosUpdatePayload): Observable<PointOfSaleType> {
+    return this.http.post<PointOfSaleType>(this.posUrl, payload);
+  }
+
+  deletePos(id: string): Observable<void> {
+    return this.http.delete<void>(`${this.posUrl}/${id}`);
+  }
+
+  searchPos(searchString?: string, limit = 50): Observable<PointOfSaleType[]> {
+    const params: any = { limit };
+    if (searchString) {
+      params.searchString = searchString;
+    }
+    return this.http
+      .get<PaginateResponse<PointOfSaleType>>(this.posUrl, { params })
+      .pipe(map((data) => data.objects || []));
+  }
+
   // ========== Currencies ==========
   getCurrencies(): Observable<CurrencyType[]> {
     const params: any = {
@@ -107,51 +111,5 @@ export class BusinessProfileService {
           return data.objects;
         }),
       );
-  }
-
-  // ========== Countries ==========
-  getCountries(): Observable<CountryType[]> {
-    const params: any = {
-      limit: 250,
-      ...(this.countriesSearchString
-        ? { searchString: this.countriesSearchString }
-        : {}),
-    };
-    return this.http
-      .get<PaginateResponse<CountryType>>(this.countriesUrl, { params })
-      .pipe(
-        map((data) => {
-          this.countries.next(data.objects);
-          return data.objects;
-        }),
-      );
-  }
-
-  // ========== States ==========
-  getStatesByCountry(countryId: string): Observable<StateType[]> {
-    const params: any = {
-      limit: 100,
-      ...(this.statesSearchString
-        ? { searchString: this.statesSearchString }
-        : {}),
-    };
-    return this.http
-      .get<PaginateResponse<StateType>>(
-        `${this.statesUrl}/by-country/${countryId}`,
-        {
-          params,
-        },
-      )
-      .pipe(
-        map((data) => {
-          this.states.next(data.objects);
-          return data.objects;
-        }),
-      );
-  }
-
-  resetStates(): void {
-    this.states.next([]);
-    this.statesSearchString = '';
   }
 }

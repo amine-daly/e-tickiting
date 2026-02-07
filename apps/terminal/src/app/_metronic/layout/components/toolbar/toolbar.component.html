@@ -1,0 +1,24 @@
+<!--begin::Toolbar container-->
+<div id="kt_app_toolbar_container" class="app-toolbar py-3 py-lg-6">
+  <div class="d-flex align-items-center justify-content-between w-100">
+    <ng-container *ngIf="showPageTitle()">
+      <app-page-title
+        [appPageTitleDirection]="appPageTitleDirection"
+        [appPageTitleBreadcrumb]="appPageTitleBreadcrumb"
+        [appPageTitleDescription]="appPageTitleDescription"
+        class="page-title d-flex flex-wrap me-3"
+        [ngClass]="{
+          'flex-column justify-content-center':
+            appPageTitleDirection === 'column',
+          'align-items-center': appPageTitleDirection !== 'column',
+          appPageTitleCSSClass,
+        }"
+      >
+      </app-page-title>
+    </ng-container>
+    <div class="d-flex align-items-center gap-2 gap-lg-3">
+      <ng-content select="[toolbar-actions]"></ng-content>
+    </div>
+  </div>
+</div>
+<!--end::Toolbar container-->

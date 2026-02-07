@@ -34,6 +34,9 @@ export class CustomersService {
   private pagination: BehaviorSubject<IPagination> =
     new BehaviorSubject<IPagination>(null);
 
+  pageLimit = 10;
+  pageIndex = 0;
+
   get loading$(): Observable<boolean> {
     return this.loading.asObservable();
   }
@@ -70,21 +73,17 @@ export class CustomersService {
     return this.http.get<any>(`${API_USERS_URL}/${id}`).pipe(
       map((data: any) => {
         this.user.next(data);
-        console.log(
-          '🚀 ~ CustomersService ~ getUserById ~ this.user:',
-          this.user.value,
-        );
         return data;
       }),
-      // ensure loading flag is cleared even on error
-      // note: use finalize to handle completion
       finalize(() => this.loading.next(false)),
     );
   }
 
-  getCustomers(page = 0, limit = 10): Observable<UserType[]> {
+  getCustomers(): Observable<UserType[]> {
     this.loading.next(true);
-    const params = new HttpParams().set('page', page).set('limit', limit);
+    const params = new HttpParams()
+      .set('page', this.pageIndex)
+      .set('limit', this.pageLimit);
     return this.http.get<any>(API_USERS_URL, { params }).pipe(
       map((data: any) => {
         const objects = data?.objects ?? [];
@@ -92,9 +91,9 @@ export class CustomersService {
         this.users.next(objects);
         this.pagination.next({
           length: count,
-          size: limit,
-          page,
-          lastPage: Math.max(0, Math.ceil(count / limit) - 1),
+          size: this.pageLimit,
+          page: this.pageIndex,
+          lastPage: Math.max(0, Math.ceil(count / this.pageLimit) - 1),
         });
         return objects;
       }),
@@ -105,7 +104,7 @@ export class CustomersService {
   createCustomer(data: CustomerCreatePayload): Observable<UserType> {
     return this.http.post<UserType>(API_USERS_URL, data).pipe(
       map((created: UserType) => {
-        this.users.next([...this.users.value, created]);
+        this.users.next([...(this.users.value || []), created]);
         return created;
       }),
     );

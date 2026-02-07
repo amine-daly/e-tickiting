@@ -7,12 +7,11 @@ import {
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { InlineSVGModule } from 'ng-inline-svg-2';
-import { KeeniconComponent } from 'src/app/_metronic/shared/keenicon/keenicon.component';
 
 @Component({
   selector: 'app-search-result-inner',
   standalone: true,
-  imports: [CommonModule, FormsModule, InlineSVGModule, KeeniconComponent],
+  imports: [CommonModule, FormsModule, InlineSVGModule],
   templateUrl: './search-result-inner.component.html',
 })
 export class SearchResultInnerComponent implements OnInit {

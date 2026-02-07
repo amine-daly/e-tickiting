@@ -31,13 +31,20 @@ public class SubPlaceController {
 
     @GetMapping
     public Paginated<SubPlaceRes> list(
+            @RequestParam(required = false) String posId,
             @RequestParam(defaultValue = "") String searchString,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int limit) {
-
-        Page<SubPlaceType> p = (searchString != null && !searchString.isBlank())
-                ? repo.findByAddressIgnoreCaseContaining(searchString, PageRequest.of(page, limit))
-                : repo.findAll(PageRequest.of(page, limit));
+        Page<SubPlaceType> p;
+        if (posId != null && !posId.isBlank()) {
+            p = (searchString != null && !searchString.isBlank())
+                    ? repo.findByTargetPosAndAddressLike(posId, searchString, PageRequest.of(page, limit))
+                    : repo.findByTargetPos(posId, PageRequest.of(page, limit));
+        } else {
+            p = (searchString != null && !searchString.isBlank())
+                    ? repo.findByAddressIgnoreCaseContaining(searchString, PageRequest.of(page, limit))
+                    : repo.findAll(PageRequest.of(page, limit));
+        }
 
         // Fetch parent cities
         List<String> parentIds = p.getContent().stream()

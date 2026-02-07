@@ -1,5 +1,6 @@
 package com.eticketing.app.pos;
 
+import com.eticketing.app.account.AccountTypeRepository;
 import com.eticketing.app.common.AddressType;
 import com.eticketing.app.common.LonLatType;
 import com.eticketing.app.common.PictureType;
@@ -42,6 +43,7 @@ public class PointOfSaleController {
 
     public record PosReq(
             String title,
+            String subtitle,
             PictureReq picture,
             AddressReq location,
             PhoneType phone,
@@ -79,6 +81,7 @@ public class PointOfSaleController {
     public record PosRes(
             String id,
             String title,
+            String subtitle,
             PictureRes picture,
             AddressRes location,
             PhoneType phone,
@@ -96,17 +99,20 @@ public class PointOfSaleController {
     }
 
     private final PointOfSaleRepository repo;
+    private final AccountTypeRepository accountRepo;
     private final CurrencyRepository currencyRepo;
     private final StateRepository stateRepo;
     private final CountryRepository countryRepo;
 
     public PointOfSaleController(
             PointOfSaleRepository repo,
+            AccountTypeRepository accountRepo,
             CurrencyRepository currencyRepo,
             StateRepository stateRepo,
             CountryRepository countryRepo
     ) {
         this.repo = repo;
+        this.accountRepo = accountRepo;
         this.currencyRepo = currencyRepo;
         this.stateRepo = stateRepo;
         this.countryRepo = countryRepo;
@@ -159,6 +165,7 @@ public class PointOfSaleController {
         return new PosRes(
                 pos.getId(),
                 pos.getTitle(),
+                pos.getSubtitle(),
                 pictureRes,
                 locationRes,
                 pos.getPhone(),
@@ -311,6 +318,7 @@ public class PointOfSaleController {
 
         PointOfSaleType pos = new PointOfSaleType();
         pos.setTitle(req.title());
+        pos.setSubtitle(req.subtitle());
         pos.setCurrencyId(req.currencyId());
         pos.setPhone(req.phone());
         pos.setEmail(req.email());
@@ -340,6 +348,9 @@ public class PointOfSaleController {
         if (req.title() != null) {
             pos.setTitle(req.title());
         }
+        if (req.subtitle() != null) {
+            pos.setSubtitle(req.subtitle());
+        }
         if (req.currencyId() != null) {
             pos.setCurrencyId(req.currencyId());
         }
@@ -367,6 +378,11 @@ public class PointOfSaleController {
     @DeleteMapping("/{id}")
     @Operation(summary = "Delete a POS")
     public ResponseEntity<Void> delete(@PathVariable String id) {
+        // Delete related accounts first
+        var accounts = accountRepo.findByTargetPosId(id);
+        if (accounts != null && !accounts.isEmpty()) {
+            accountRepo.deleteAll(accounts);
+        }
         repo.deleteById(id);
         return ResponseEntity.noContent().build();
     }

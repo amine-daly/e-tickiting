@@ -26,9 +26,9 @@ import { TripType as TripType, TripStatus } from '../../core/models/trip.model';
 import { TripService, TripUpdatePayload, StopInput } from './trip.service';
 import { KeeniconComponent } from 'src/app/_metronic/shared/keenicon/keenicon.component';
 import { AlertService } from '../../core/services/alert.service';
-import { AgenciesService } from '../agencies/agencies.service';
 import { PlacesService } from '../places/places.service';
 import { NgSelectComponent } from '@ng-select/ng-select';
+import { PaginationComponent } from 'src/app/shared/components/pagination/pagination.component';
 import {
   FlatpickrDirective,
   provideFlatpickrDefaults,
@@ -36,6 +36,7 @@ import {
 import { TranslateModule, TranslateService } from '@ngx-translate/core';
 import { CdkDragDrop, DragDropModule } from '@angular/cdk/drag-drop';
 import { PlaceType } from '../../core/models/place-type';
+import { FormHelper } from 'src/app/core/helpers/form-helper';
 
 @Component({
   standalone: true,
@@ -49,6 +50,7 @@ import { PlaceType } from '../../core/models/place-type';
     FlatpickrDirective,
     NgbDropdownModule,
     NgbModule,
+    PaginationComponent,
     TranslateModule,
   ],
   providers: [provideFlatpickrDefaults()],
@@ -61,6 +63,7 @@ export class TripListComponent implements OnInit, OnDestroy {
   private subscriptions = new Subscription();
   private selectedTrip: TripType | null = null;
   private initialValues: TripUpdatePayload | null = null;
+  private formChangesSub?: Subscription;
   private unsubscribeAll: Subject<void> = new Subject<void>();
 
   form: FormGroup;
@@ -69,8 +72,10 @@ export class TripListComponent implements OnInit, OnDestroy {
   statusUpdating: Record<string, boolean> = {};
   trips$ = this.tripService.trips$;
   loading$ = this.tripService.loading$;
+  pagination$ = this.tripService.pagination$;
   places$ = this.placesService.places$;
-  agencies$ = this.agenciesService.agencies$;
+  page = 1;
+  pageSize = this.tripService.pageLimit;
 
   // Cached available options per stop index to avoid expensive per-render computations
   availablePlacesForStops: PlaceType[][] = [];
@@ -107,11 +112,10 @@ export class TripListComponent implements OnInit, OnDestroy {
     private tripService: TripService,
     private translate: TranslateService,
     private placesService: PlacesService,
-    private agenciesService: AgenciesService
   ) {}
 
   ngOnInit(): void {
-    this.loadTrips();
+    this.loadTrips(1);
 
     // Keep a cached copy of places so we can filter quickly without async pipes.
     const sub = this.places$.subscribe((places) => {
@@ -131,7 +135,7 @@ export class TripListComponent implements OnInit, OnDestroy {
       this.t('TRIPS.MESSAGES.STATUS_CONFIRM_TITLE'),
       this.t('TRIPS.MESSAGES.STATUS_CONFIRM_TEXT', { status: statusLabel }),
       this.t('TRIPS.MESSAGES.STATUS_CONFIRM_OK'),
-      this.t('COMMON.BUTTON.CANCEL')
+      this.t('COMMON.BUTTON.CANCEL'),
     );
     if (!result.isConfirmed) {
       return;
@@ -150,7 +154,9 @@ export class TripListComponent implements OnInit, OnDestroy {
     this.subscriptions.add(sub);
   }
 
-  loadTrips(): void {
+  loadTrips(page: number): void {
+    this.page = page;
+    this.tripService.pageIndex = page - 1;
     const sub = this.tripService.getTrips(this.filter).subscribe({
       error: () => this.alert.error(this.t('TRIPS.MESSAGES.LOAD_ERROR')),
     });
@@ -159,35 +165,28 @@ export class TripListComponent implements OnInit, OnDestroy {
 
   applyFilters(filter: any): void {
     this.filter = filter;
-    this.loadTrips();
+    this.loadTrips(1);
+  }
+
+  onPageChange(page: number): void {
+    this.loadTrips(page);
   }
 
   openTripModal(modal: any, trip: TripType | null): void {
-    // Tear down previous modal subscriptions to avoid leaks on repeated open/close.
-    this.unsubscribeAll.next();
-    this.unsubscribeAll.complete();
-    this.unsubscribeAll = new Subject<void>();
-
-    combineLatest([
-      this.agenciesService.getAgencies(),
-      this.placesService.getPlaces(),
-    ]).subscribe();
-
+    this.placesService.getPlaces().subscribe();
     this.selectedTrip = trip;
-
     // Build stops form array from existing trip stops (each stop has placeId, rank, fare)
     const stopsControls = trip?.stops?.length
       ? trip.stops.map((s) =>
           this.fb.group({
             placeId: [s?.placeId ?? ''],
             fare: [s?.fare ?? 0],
-          })
+          }),
         )
       : [];
     const stopsFormArray = this.fb.array(stopsControls);
 
     this.form = this.fb.group({
-      agencyId: [trip?.agency?.id],
       originId: [trip?.originId || '', Validators.required],
       destinationId: [trip?.destinationId || '', Validators.required],
       departureDate: [trip?.departureDate || '', Validators.required],
@@ -208,7 +207,7 @@ export class TripListComponent implements OnInit, OnDestroy {
     const minDate = new Date(
       today.getFullYear(),
       today.getMonth(),
-      today.getDate()
+      today.getDate(),
     );
     const maxDate = new Date(minDate.getTime() + 14 * 24 * 60 * 60 * 1000);
     this.dateOptions = {
@@ -220,7 +219,8 @@ export class TripListComponent implements OnInit, OnDestroy {
       maxDate,
     };
     this.initialValues = this.form.value;
-    this.form.valueChanges
+    this.formChangesSub?.unsubscribe();
+    this.formChangesSub = this.form.valueChanges
       .pipe(takeUntil(this.unsubscribeAll))
       .subscribe((values) => {
         this.isButtonDisabled = isEqual(this.initialValues, values);
@@ -237,6 +237,21 @@ export class TripListComponent implements OnInit, OnDestroy {
     let field = this.selectedTrip ? 'updateTrip' : 'createTrip';
     this.isButtonDisabled = true;
 
+    if (this.form.invalid) {
+      this.form.markAllAsTouched();
+      return;
+    }
+
+    const current = this.form.value;
+    const changes = FormHelper.getChangedValues(
+      current,
+      this.initialValues || {},
+    );
+
+    if (this.selectedTrip && Object.keys(changes).length === 0) {
+      return;
+    }
+
     // Build stops payload from the FormArray (each stop has placeId, fare)
     const stopsRaw = (this.stopsFormArray.value || []) as Array<{
       placeId: string;
@@ -251,12 +266,11 @@ export class TripListComponent implements OnInit, OnDestroy {
       }));
 
     const payload: any = {
-      agencyId: this.form.get('agencyId')?.value,
-      originId: this.form.get('originId')?.value,
-      destinationId: this.form.get('destinationId')?.value,
-      departureDate: this.form.get('departureDate')?.value,
-      totalPrice: this.form.get('totalPrice')?.value,
-      totalPlaces: this.form.get('totalPlaces')?.value,
+      originId: current?.originId,
+      destinationId: current?.destinationId,
+      departureDate: current?.departureDate,
+      totalPrice: current?.totalPrice,
+      totalPlaces: current?.totalPlaces,
       stops,
     };
 
@@ -275,17 +289,30 @@ export class TripListComponent implements OnInit, OnDestroy {
           err?.error?.message || err?.error?.details || err?.message;
         const normalizedMsg = this.normalizeServerMessage(rawMsg);
 
-        // Known validation: totalPlaces must match the seat map size (N)
+        // Detect backend JSON parse errors like: Unrecognized field "posId"
         if (typeof normalizedMsg === 'string') {
+          const unrec = normalizedMsg.match(
+            /Unrecognized field\s+["']?([a-zA-Z0-9_]+)["']?/i,
+          );
+          if (unrec?.[1]) {
+            const field = unrec[1];
+            this.alert.error(
+              this.t('TRIPS.MESSAGES.SAVE_ERROR'),
+              this.t('TRIPS.MESSAGES.UNRECOGNIZED_FIELD', { field }),
+            );
+            return;
+          }
+
+          // Known validation: totalPlaces must match the seat map size (N)
           const match = normalizedMsg.match(
-            /totalPlaces\s+must\s+match\s+the\s+seat\s+map\s+size\s*\((\d+)\)/i
+            /totalPlaces\s+must\s+match\s+the\s+seat\s+map\s+size\s*\((\d+)\)/i,
           );
           if (match?.[1]) {
             this.alert.error(
               this.t('TRIPS.MESSAGES.SAVE_ERROR'),
               this.t('TRIPS.MESSAGES.TOTAL_PLACES_SEATMAP_MISMATCH', {
                 total: match[1],
-              })
+              }),
             );
             return;
           }
@@ -294,7 +321,7 @@ export class TripListComponent implements OnInit, OnDestroy {
         if (normalizedMsg) {
           this.alert.error(
             this.t('TRIPS.MESSAGES.SAVE_ERROR'),
-            String(normalizedMsg)
+            String(normalizedMsg),
           );
         } else {
           this.alert.error(this.t('COMMON.MESSAGES.GENERIC_ERROR'));
@@ -371,7 +398,7 @@ export class TripListComponent implements OnInit, OnDestroy {
       this.fb.group({
         placeId: [],
         fare: [0],
-      })
+      }),
     );
     this.recomputeAvailablePlaces();
   }
@@ -392,7 +419,7 @@ export class TripListComponent implements OnInit, OnDestroy {
       this.fb.group({
         placeId: [val?.placeId || ''],
         fare: [val?.fare || 0],
-      })
+      }),
     );
     this.recomputeAvailablePlaces();
   }
@@ -407,7 +434,7 @@ export class TripListComponent implements OnInit, OnDestroy {
       this.fb.group({
         placeId: [val?.placeId || ''],
         fare: [val?.fare || 0],
-      })
+      }),
     );
     this.recomputeAvailablePlaces();
   }
@@ -421,7 +448,7 @@ export class TripListComponent implements OnInit, OnDestroy {
       this.fb.group({
         placeId: [val?.placeId || ''],
         fare: [val?.fare || 0],
-      })
+      }),
     );
     this.recomputeAvailablePlaces();
   }
@@ -430,7 +457,7 @@ export class TripListComponent implements OnInit, OnDestroy {
     this.alert
       .warning(
         this.t('COMMON.CONFIRM.DELETE_TITLE'),
-        this.t('COMMON.CONFIRM.DELETE_TEXT')
+        this.t('COMMON.CONFIRM.DELETE_TEXT'),
       )
       .then((result) => {
         if (result.isConfirmed) {
@@ -448,12 +475,6 @@ export class TripListComponent implements OnInit, OnDestroy {
   isInvalid(controlName: string): boolean {
     const control = this.form.get(controlName);
     return !!control && control.invalid && (control.dirty || control.touched);
-  }
-
-  ngOnDestroy(): void {
-    this.unsubscribeAll.next();
-    this.unsubscribeAll.complete();
-    this.subscriptions.unsubscribe();
   }
 
   private t(key: string, params?: Record<string, unknown>): string {
@@ -517,5 +538,12 @@ export class TripListComponent implements OnInit, OnDestroy {
         p.id !== curr && (p.id === originId || selectedStops.has(p.id));
       return { ...p, disabled };
     });
+  }
+
+  ngOnDestroy(): void {
+    this.unsubscribeAll.next();
+    this.unsubscribeAll.complete();
+    this.formChangesSub?.unsubscribe();
+    this.subscriptions.unsubscribe();
   }
 }

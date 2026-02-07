@@ -1,0 +1,229 @@
+<div class="modal-header">
+  <h2 class="modal-title">{{ "DASHBOARD.ASSIGN.TITLE" | translate }}</h2>
+  <button
+    type="button"
+    class="btn-close"
+    aria-label="Close"
+    (click)="dismiss()"
+  ></button>
+</div>
+
+<form [formGroup]="assignForm" (ngSubmit)="submit()">
+  <div class="modal-body">
+    <!--begin::Nav Tabs-->
+    <ul
+      ngbNav
+      #nav="ngbNav"
+      [(activeId)]="activeTab"
+      class="nav nav-tabs nav-line-tabs nav-line-tabs-2x mb-5 fs-6"
+    >
+      <li [ngbNavItem]="1">
+        <a ngbNavLink class="cursor-pointer">
+          {{ "DASHBOARD.ASSIGN.TAB_CUSTOMER" | translate }}
+        </a>
+        <ng-template ngbNavContent>
+          <!--begin::Customer/POS Selection-->
+          <div class="py-4">
+            <label class="form-label required">{{
+              "DASHBOARD.ASSIGN.CHOOSE_POS" | translate
+            }}</label>
+            <ng-select
+              formControlName="pos"
+              [items]="filteredPosList"
+              [loading]="posLoading"
+              [searchable]="true"
+              [clearable]="true"
+              bindLabel="title"
+              placeholder="{{ 'DASHBOARD.ASSIGN.POS_PLACEHOLDER' | translate }}"
+              (search)="onPosSearch($event.term)"
+            >
+              <ng-template ng-option-tmp let-item="item">
+                <div class="d-flex align-items-center">
+                  <div class="symbol symbol-35px symbol-circle me-3">
+                    <img
+                      *ngIf="item.picture?.baseUrl && item.picture?.path"
+                      [src]="item.picture.baseUrl + '/' + item.picture.path"
+                      alt="POS"
+                    />
+                    <span
+                      *ngIf="!item.picture?.baseUrl || !item.picture?.path"
+                      class="symbol-label bg-light-primary text-primary fw-bold"
+                    >
+                      {{ item.title?.charAt(0) | uppercase }}
+                    </span>
+                  </div>
+                  <div>
+                    <div class="fw-bold">{{ item.title }}</div>
+                    <div *ngIf="item.subtitle" class="text-muted small">
+                      {{ item.subtitle }}
+                    </div>
+                  </div>
+                </div>
+              </ng-template>
+            </ng-select>
+            <div *ngIf="isInvalid('pos')" class="text-danger small mt-1">
+              {{ "DASHBOARD.ASSIGN.ERRORS.POS_REQUIRED" | translate }}
+            </div>
+          </div>
+          <!--end::Customer/POS Selection-->
+        </ng-template>
+      </li>
+
+      <li [ngbNavItem]="2">
+        <a
+          ngbNavLink
+          class="cursor-pointer"
+          [class.disabled]="!assignForm.get('pos')?.valid"
+        >
+          {{ "DASHBOARD.ASSIGN.TAB_PERMISSION" | translate }}
+        </a>
+        <ng-template ngbNavContent>
+          <!--begin::Permission Creation-->
+          <div class="py-4">
+            <!--begin::Permission Name-->
+            <div class="mb-4">
+              <label class="form-label">
+                {{ "PERMISSIONS.MODAL.ROLE_NAME" | translate }}
+                <span class="text-danger">*</span>
+              </label>
+              <input
+                class="form-control"
+                formControlName="permissionName"
+                [placeholder]="
+                  'PERMISSIONS.MODAL.ROLE_NAME_PLACEHOLDER' | translate
+                "
+              />
+              <div
+                *ngIf="isInvalid('permissionName')"
+                class="text-danger small"
+              >
+                {{ "PERMISSIONS.MODAL.ERRORS.NAME_REQUIRED" | translate }}
+              </div>
+            </div>
+            <!--end::Permission Name-->
+
+            <!--begin::Grants Header-->
+            <div class="d-flex justify-content-between align-items-center mb-3">
+              <h5 class="mb-0">
+                {{ "PERMISSIONS.SECTION_TITLE" | translate }}
+              </h5>
+              <button
+                type="button"
+                class="btn btn-sm btn-light-primary"
+                (click)="toggleCheckAll()"
+              >
+                {{ "PERMISSIONS.CHECK_ALL" | translate }}
+              </button>
+            </div>
+            <!--end::Grants Header-->
+
+            <!--begin::Loading-->
+            <div *ngIf="definitionsLoading" class="text-center py-4">
+              <span class="spinner-border spinner-border-sm"></span>
+            </div>
+            <!--end::Loading-->
+
+            <!--begin::Grants List-->
+            <div
+              *ngIf="!definitionsLoading"
+              class="permission-modal-list mh-300px scroll-y"
+              formArrayName="permissions"
+            >
+              <div
+                *ngFor="let role of permissionsArray.controls; let i = index"
+                [formGroupName]="i"
+                class="row align-items-center mb-3"
+              >
+                <div class="col-md-4">
+                  <span class="fw-semibold">
+                    {{
+                      role.get("permission")?.value?.name ||
+                        role.get("permission")?.value?.code
+                    }}
+                  </span>
+                </div>
+                <div class="col-md-8">
+                  <div class="d-flex flex-wrap gap-4">
+                    <label
+                      class="form-check form-check-custom form-check-solid"
+                    >
+                      <input
+                        class="form-check-input"
+                        type="checkbox"
+                        formControlName="read"
+                      />
+                      <span class="form-check-label">
+                        {{ "PERMISSIONS.READ" | translate }}
+                      </span>
+                    </label>
+                    <label
+                      class="form-check form-check-custom form-check-solid"
+                    >
+                      <input
+                        class="form-check-input"
+                        type="checkbox"
+                        formControlName="update"
+                      />
+                      <span class="form-check-label">
+                        {{ "PERMISSIONS.WRITE" | translate }}
+                      </span>
+                    </label>
+                    <label
+                      class="form-check form-check-custom form-check-solid"
+                    >
+                      <input
+                        class="form-check-input"
+                        type="checkbox"
+                        formControlName="create"
+                      />
+                      <span class="form-check-label">
+                        {{ "PERMISSIONS.CREATE" | translate }}
+                      </span>
+                    </label>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <!--end::Grants List-->
+          </div>
+          <!--end::Permission Creation-->
+        </ng-template>
+      </li>
+    </ul>
+
+    <div [ngbNavOutlet]="nav"></div>
+  </div>
+
+  <div class="modal-footer">
+    <button type="button" class="btn btn-light me-3" (click)="dismiss()">
+      {{ "COMMON.BUTTON.CANCEL" | translate }}
+    </button>
+
+    <button
+      *ngIf="activeTab === 1"
+      type="button"
+      class="btn btn-primary"
+      [disabled]="!assignForm.get('pos')?.valid"
+      (click)="nextTab()"
+    >
+      {{ "COMMON.BUTTON.CONTINUE" | translate }}
+      <i class="ki-duotone ki-arrow-right fs-4 ms-1">
+        <span class="path1"></span>
+        <span class="path2"></span>
+      </i>
+    </button>
+
+    <button
+      *ngIf="activeTab === 2"
+      type="submit"
+      class="btn btn-success"
+      [disabled]="isButtonDisabled || assignForm.invalid || isSubmitting"
+    >
+      <span *ngIf="!isSubmitting">{{ "COMMON.BUTTON.SAVE" | translate }}</span>
+      <span
+        *ngIf="isSubmitting"
+        class="spinner-border spinner-border-sm"
+      ></span>
+    </button>
+  </div>
+</form>

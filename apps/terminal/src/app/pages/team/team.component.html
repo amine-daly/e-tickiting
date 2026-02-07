@@ -1,74 +1,116 @@
-<div class="container py-5">
-  <div id="kt_project_users_card_pane" class="tab-pane fade show active">
-    <ng-container *ngIf="accounts$ | async as accounts">
-      <div
-        *ngIf="!accounts?.length && !(loading$ | async)"
-        class="d-flex flex-column align-items-center justify-content-center py-10"
-      >
-        <i class="ki-duotone ki-user fs-1 mb-6"></i>
-        <div class="fw-bold fs-5">No team members found</div>
-      </div>
-      <div class="row g-6 g-xl-9">
-        <div *ngFor="let account of accounts" class="col-md-6 col-xxl-4">
-          <!--begin::Card-->
-          <div class="card">
-            <!--begin::Card body-->
-            <div class="card-body d-flex flex-center flex-column pt-12 p-9">
-              <!--begin::Avatar-->
-              <div class="symbol symbol-65px symbol-circle mb-5">
-                <img
-                  *ngIf="account?.user?.picture?.baseUrl; else noPicture"
-                  [src]="
-                    account.user.picture.baseUrl +
-                    '/' +
-                    account.user.picture.path
-                  "
-                  alt="image"
-                />
-              </div>
-              <ng-template #noPicture>
-                <span
-                  class="symbol-label fs-2x fw-semibold text-info bg-light-info"
-                  >P</span
-                >
-                <div
-                  class="bg-success position-absolute border border-4 border-body h-15px w-15px rounded-circle translate-middle start-100 top-100 ms-n3 mt-n3"
-                ></div>
-              </ng-template>
-              <!--end::Avatar-->
-              <!--begin::Name-->
-              <a
-                [routerLink]="['/customers', account?.user?.id]"
-                class="fs-4 text-gray-800 text-hover-primary fw-bold mb-0"
-                >{{ account?.user?.firstName }} {{ account?.user?.lastName }}</a
+<app-toolbar [appToolbarLayout]="'classic'">
+  <div toolbar-actions>
+    <button
+      class="btn btn-sm fw-bold btn-primary"
+      (click)="openAddMemberModal()"
+    >
+      <i class="ki-duotone ki-plus fs-2"></i>
+      {{ "TEAM.ADD_BUTTON" | translate }}
+    </button>
+  </div>
+</app-toolbar>
+<div id="kt_project_users_card_pane" class="tab-pane fade show active">
+  <ng-container *ngIf="accounts$ | async as accounts">
+    <div class="row g-6 g-xl-9">
+      <div *ngFor="let account of accounts" class="col-md-6 col-xxl-4">
+        <!--begin::Card-->
+        <div class="card">
+          <!--begin::Card body-->
+          <div class="card-body d-flex flex-center flex-column pt-12 p-9">
+            <!--begin::Avatar-->
+            <div class="symbol symbol-65px symbol-circle mb-5">
+              <img
+                *ngIf="account?.user?.picture?.baseUrl; else noPicture"
+                [src]="
+                  account.user.picture.baseUrl + '/' + account.user.picture.path
+                "
+                alt="image"
+              />
+            </div>
+            <ng-template #noPicture>
+              <span
+                class="symbol-label fs-2x fw-semibold text-info bg-light-info"
+                >{{ account?.user?.firstName.charAt(0) }}</span
               >
-              <!--end::Name-->
-              <!--begin::Position-->
               <div
-                *ngIf="account?.user?.role"
-                class="fw-semibold text-gray-400"
+                class="bg-success position-absolute border border-4 border-body h-15px w-15px rounded-circle translate-middle start-100 top-100 ms-n3 mt-n3"
+              ></div>
+            </ng-template>
+            <!--end::Avatar-->
+            <!--begin::Name-->
+            <a
+              [routerLink]="['/customers', account?.user?.id]"
+              class="fs-4 text-gray-800 text-hover-primary fw-bold mb-0"
+              >{{ account?.user?.firstName }} {{ account?.user?.lastName }}</a
+            >
+            <!--end::Name-->
+            <!--begin::Position-->
+            <div *ngIf="account?.user?.role" class="fw-semibold text-gray-400">
+              <span
+                class="badge"
+                [ngClass]="{
+                  'badge-light-primary': account?.user?.role === 'ADMIN',
+                  'badge-light-success': account?.user?.role === 'CUSTOMER',
+                  'badge-light-warning': account?.user?.role === 'MANAGER',
+                  'badge-light-info': account?.user?.role === 'DRIVER',
+                }"
               >
                 {{ "CUSTOMERS.ROLES." + account?.user?.role | translate }}
-              </div>
-              <div class="d-flex flex-center flex-wrap">
-                <div
-                  class="border border-gray-300 border-dashed rounded min-w-80px py-3 px-4 mx-2 mb-3"
-                >
-                  <div class="fs-6 fw-bold text-gray-700">
-                    {{ account?.user?.email || "-" }}
-                  </div>
+              </span>
+            </div>
+            <div class="d-flex flex-center flex-wrap">
+              <div
+                class="border border-gray-300 border-dashed rounded min-w-80px py-3 px-4 mx-2 mb-3"
+              >
+                <div class="fs-6 fw-bold text-gray-700">
+                  {{ account?.user?.email || "-" }}
                 </div>
               </div>
             </div>
           </div>
+          <div class="crad-footer p-3">
+            <div class="d-flex justify-content-end flex-shrink-0">
+              <button
+                [routerLink]="['/customers', account?.user?.id]"
+                class="btn btn-icon btn-active-light-primary w-30px h-30px me-3"
+              >
+                <i class="ki-duotone ki-pencil fs-2">
+                  <span class="path1"></span>
+                  <span class="path2"></span
+                ></i>
+              </button>
+              <button
+                (click)="deleteMember(account)"
+                class="btn btn-icon btn-active-light-danger w-30px h-30px me-3"
+              >
+                <i class="ki-duotone ki-trash fs-2">
+                  <span class="path1"></span>
+                  <span class="path2"></span
+                ></i>
+              </button>
+            </div>
+          </div>
         </div>
       </div>
-      <app-pagination
-        [page]="page"
-        [pageSize]="pageSize"
-        [total]="(pagination$ | async)?.length || 0"
-        (pageChange)="onPageChange($event)"
-      ></app-pagination>
-    </ng-container>
-  </div>
+    </div>
+    <div
+      *ngIf="!accounts?.length && !(loading$ | async)"
+      class="d-flex flex-column align-items-center justify-content-center py-10"
+    >
+      <i class="ki-duotone ki-user fs-xl-2hx mb-6"
+        ><span class="path1"></span>
+        <span class="path2"></span>
+      </i>
+      <div class="fw-bold fs-5 text-muted">
+        {{ "TEAM.EMPTY" | translate }}
+      </div>
+    </div>
+    <app-pagination
+      *ngIf="accounts?.length"
+      [page]="page"
+      [pageSize]="pageSize"
+      [total]="(pagination$ | async)?.length || 0"
+      (pageChange)="onPageChange($event)"
+    ></app-pagination>
+  </ng-container>
 </div>

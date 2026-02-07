@@ -1,0 +1,13 @@
+// Assign Customer Modal Styles
+.modal-header {
+  border-bottom: 1px solid var(--kt-border-color);
+}
+
+.modal-footer {
+  border-top: 1px solid var(--kt-border-color);
+}
+
+.nav-link.disabled {
+  opacity: 0.5;
+  pointer-events: none;
+}
