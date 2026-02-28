@@ -52,12 +52,7 @@ public class SearchController {
             return null;
         }
 
-        // Prefer default with location, else first with location.
-        for (SubPlaceType sp : list) {
-            if (Boolean.TRUE.equals(sp.getIsDefault()) && sp.getLocation() != null) {
-                return sp.getLocation();
-            }
-        }
+        // Return first sub-place with a location
         for (SubPlaceType sp : list) {
             if (sp.getLocation() != null) {
                 return sp.getLocation();

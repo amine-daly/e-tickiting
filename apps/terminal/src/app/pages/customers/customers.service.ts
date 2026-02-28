@@ -20,6 +20,7 @@ export interface CustomerUpdatePayload {
   email?: string;
   role?: string;
   phone?: PhoneType;
+  picture?: { baseUrl: string; path: string };
 }
 
 @Injectable({ providedIn: 'root' })

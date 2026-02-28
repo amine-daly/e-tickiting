@@ -252,6 +252,7 @@
             [placeholder]="'TRIPS.MODAL.ORIGIN_PLACEHOLDER' | translate"
             [clearable]="true"
             [ngOptionDisabled]="'disabled'"
+            (change)="onOriginChange($event)"
           >
             <ng-template ng-label-tmp let-item="item">{{
               item.city
@@ -263,6 +264,8 @@
           <div *ngIf="isInvalid('originId')" class="text-danger small">
             {{ "TRIPS.MODAL.ERRORS.ORIGIN_REQUIRED" | translate }}
           </div>
+          <!-- Origin sub-places (pickup points) -->
+          <ng-container *ngTemplateOutlet="subPlacePanel; context: { entries: originSubPlaces, loading: loadingOriginSP }"></ng-container>
         </div>
 
         <!-- Destination Selection -->
@@ -279,6 +282,7 @@
             [placeholder]="'TRIPS.MODAL.DESTINATION_PLACEHOLDER' | translate"
             [clearable]="true"
             [ngOptionDisabled]="'disabled'"
+            (change)="onDestinationChange($event)"
           >
             <ng-template ng-label-tmp let-item="item">{{
               item.city
@@ -290,6 +294,8 @@
           <div *ngIf="isInvalid('destinationId')" class="text-danger small">
             {{ "TRIPS.MODAL.ERRORS.DESTINATION_REQUIRED" | translate }}
           </div>
+          <!-- Destination sub-places (pickup points) -->
+          <ng-container *ngTemplateOutlet="subPlacePanel; context: { entries: destinationSubPlaces, loading: loadingDestSP }"></ng-container>
         </div>
 
         <!-- Total Price Input -->
@@ -328,7 +334,7 @@
               (cdkDropListDropped)="dropStop($event)"
             >
               <li
-                class="list-group-item d-flex justify-content-between align-items-center"
+                class="list-group-item"
                 *ngFor="
                   let stopCtrl of stopsFormArray.controls;
                   let idx = index
@@ -336,7 +342,7 @@
                 [formGroupName]="idx"
                 cdkDrag
               >
-                <div class="w-100 d-flex gap-2 align-items-center">
+                <div class="d-flex gap-2 align-items-center">
                   <ng-select
                     class="flex-grow-1"
                     [items]="availablePlacesForStops[idx] || []"
@@ -345,6 +351,7 @@
                     formControlName="placeId"
                     [clearable]="true"
                     [placeholder]="'TRIPS.MODAL.STOP_PLACEHOLDER' | translate"
+                    (change)="onStopPlaceChange(idx, $event)"
                   >
                     <ng-template ng-label-tmp let-item="item">{{
                       item.city
@@ -392,6 +399,8 @@
                     </button>
                   </div>
                 </div>
+                <!-- Stop sub-places (pickup points) -->
+                <ng-container *ngTemplateOutlet="subPlacePanel; context: { entries: stopsSubPlaces[idx] || [], loading: loadingStopSP[idx] }"></ng-container>
               </li>
             </ul>
             <button
@@ -473,5 +482,51 @@
         </button>
       </div>
     </form>
+  </ng-template>
+
+  <!-- Reusable sub-place (pickup points) panel template -->
+  <ng-template #subPlacePanel let-entries="entries" let-loading="loading">
+    <div *ngIf="entries?.length || loading" class="ms-2 mt-2 border-start border-2 border-primary-subtle ps-3 pb-1">
+      <div class="d-flex align-items-center gap-2 mb-2">
+        <span class="small fw-semibold text-muted">
+          {{ "TRIPS.MODAL.PICKUP_POINTS" | translate }}
+        </span>
+        <span *ngIf="loading" class="spinner-border spinner-border-sm text-primary"></span>
+      </div>
+      <div *ngFor="let sp of entries" class="d-flex align-items-center gap-2 mb-2">
+        <i class="ki-duotone ki-geolocation fs-6 text-primary">
+          <span class="path1"></span>
+          <span class="path2"></span>
+        </i>
+        <span class="small flex-grow-1 text-truncate" [title]="sp.subPlace?.pickupInstructions || sp.subPlace?.address">
+          {{ sp.subPlace?.address || sp.subPlace?.id }}
+        </span>
+        <input
+          class="form-control form-control-sm"
+          style="max-width: 220px"
+          type="text"
+          [placeholder]="'TRIPS.MODAL.PICKUP_TIME_PLACEHOLDER' | translate"
+          mwlFlatpickr
+          [(ngModel)]="sp.scheduledTime"
+          [ngModelOptions]="{standalone: true}"
+          [altInput]="true"
+          [convertModelValue]="true"
+          [enableTime]="true"
+          [altFormat]="'F j, h:i K'"
+          [dateFormat]="'Y-m-d H:i'"
+          [maxDate]="dateOptions?.maxDate"
+          [minDate]="dateOptions?.minDate"
+          (ngModelChange)="onSubPlaceTimeChange()"
+        />
+        <a
+          *ngIf="sp.scheduledTime"
+          (click)="clearSubPlaceTime(sp)"
+          class="cursor-pointer"
+          [title]="'TRIPS.MODAL.CLEAR_DATE' | translate"
+        >
+          <app-keenicon name="close" class="fs-4"></app-keenicon>
+        </a>
+      </div>
+    </div>
   </ng-template>
 </div>

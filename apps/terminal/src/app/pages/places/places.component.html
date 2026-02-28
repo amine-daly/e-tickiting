@@ -36,7 +36,9 @@
                       class="form-control"
                       [(ngModel)]="placesSearch"
                       (ngModelChange)="onPlacesSearchChange()"
-                      placeholder="{{ 'COMMON.LABEL.SEARCH' | translate }}"
+                      placeholder="{{
+                        'COMMON.LABEL.SEARCH_BY_CITY' | translate
+                      }}"
                     />
                   </div>
 
@@ -143,8 +145,7 @@
                               +{{ p.subPlaces.length - 3 }}
                               {{
                                 "PLACES.SUBPLACES.MORE"
-                                  | translate
-                                    : { count: p.subPlaces.length - 3 }
+                                  | translate: { count: p.subPlaces.length - 3 }
                               }}
                             </span>
                           </ng-container>
@@ -223,7 +224,9 @@
                       class="form-control"
                       [ngModel]="placesService.subPlacesSearchString"
                       (ngModelChange)="subPlacesSearchInput$.next($event)"
-                      placeholder="{{ 'COMMON.LABEL.SEARCH' | translate }}"
+                      placeholder="{{
+                        'COMMON.LABEL.SEARCH_BY_CITY' | translate
+                      }}"
                     />
                   </div>
 
@@ -270,9 +273,6 @@
                       <th class="min-w-120px">
                         {{ "PLACES.SUBPLACES.PARENT_CITY" | translate }}
                       </th>
-                      <th class="min-w-80px">
-                        {{ "COMMON.LABEL.DEFAULT" | translate }}
-                      </th>
                       <th class="min-w-100px text-end">
                         {{ "COMMON.LABEL.ACTIONS" | translate }}
                       </th>
@@ -298,18 +298,6 @@
                         >
                       </td>
                       <td>{{ sp.parentCity || "-" }}</td>
-                      <td>
-                        <span
-                          *ngIf="sp.isDefault"
-                          class="badge badge-light-success"
-                          >{{ "COMMON.LABEL.YES" | translate }}</span
-                        >
-                        <span
-                          *ngIf="!sp.isDefault"
-                          class="badge badge-light-danger"
-                          >{{ "COMMON.LABEL.NO" | translate }}</span
-                        >
-                      </td>
                       <td>
                         <div class="d-flex justify-content-end flex-shrink-0">
                           <button
@@ -543,36 +531,17 @@
           ></textarea>
         </div>
 
-        <!-- Is Default -->
-        <div class="mb-3 form-check">
-          <input
-            type="checkbox"
-            class="form-check-input"
-            formControlName="isDefault"
-            id="isDefaultSubPlace"
-          />
-          <label class="form-check-label" for="isDefaultSubPlace">{{
-            "COMMON.LABEL.IS_DEFAULT" | translate
-          }}</label>
-        </div>
-
         <!-- Location (Map) -->
         <div class="mb-3">
           <label>{{ "PLACES.MODAL.LOCATION_LABEL" | translate }}</label>
           <div class="text-muted small mb-2">
             {{ "PLACES.MODAL.LOCATION_HELP" | translate }}
           </div>
-          <google-map
-            class="place-map"
-            [center]="subPlacePosition || { lat: 33.886917, lng: 9.537499 }"
-            [zoom]="subPlacePosition ? 12 : 4"
-            (mapClick)="pickSubPlaceAddress($event)"
-          >
-            <map-marker
-              *ngIf="subPlacePosition"
-              [position]="subPlacePosition"
-            ></map-marker>
-          </google-map>
+          <div
+            #subPlaceMapContainer
+            class="places-map-modal"
+            aria-label="Sub-place map"
+          ></div>
         </div>
       </div>
       <div class="modal-footer">

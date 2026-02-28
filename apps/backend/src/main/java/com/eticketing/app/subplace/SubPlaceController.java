@@ -37,9 +37,18 @@ public class SubPlaceController {
             @RequestParam(defaultValue = "10") int limit) {
         Page<SubPlaceType> p;
         if (posId != null && !posId.isBlank()) {
-            p = (searchString != null && !searchString.isBlank())
-                    ? repo.findByTargetPosAndAddressLike(posId, searchString, PageRequest.of(page, limit))
-                    : repo.findByTargetPos(posId, PageRequest.of(page, limit));
+            if (searchString != null && !searchString.isBlank()) {
+                // Search by parent CITY name within the target scope
+                Page<PlaceType> parents = placeRepo.findByTargetPosAndKindAndCityLike(
+                        posId, PlaceType.PlaceKind.CITY, searchString, PageRequest.of(page, limit));
+                var parentIds = parents.getContent().stream().map(PlaceType::getId).toList();
+                if (parentIds.isEmpty()) {
+                    return new Paginated<>(List.of(), 0, true);
+                }
+                p = repo.findByParentIdIn(parentIds, PageRequest.of(page, limit));
+            } else {
+                p = repo.findByTargetPos(posId, PageRequest.of(page, limit));
+            }
         } else {
             p = (searchString != null && !searchString.isBlank())
                     ? repo.findByAddressIgnoreCaseContaining(searchString, PageRequest.of(page, limit))
@@ -88,10 +97,11 @@ public class SubPlaceController {
         p.setAddress(req.address());
         p.setLocation(req.location());
         p.setPickupInstructions(req.pickupInstructions());
-        p.setIsDefault(req.isDefault());
         p.setParentId(req.parentId());
-        // Inherit target scope from parent city if available
-        if (parent.getTarget() != null && parent.getTarget().getPos() != null) {
+        // Prefer explicit target in request, otherwise inherit from parent
+        if (req.target() != null && req.target().pos() != null && !req.target().pos().isBlank()) {
+            p.setTarget(new SubPlaceType.TargetType(req.target().pos()));
+        } else if (parent.getTarget() != null && parent.getTarget().getPos() != null) {
             p.setTarget(new SubPlaceType.TargetType(parent.getTarget().getPos()));
         }
         // Server-managed timestamps
@@ -118,9 +128,6 @@ public class SubPlaceController {
         if (req.pickupInstructions() != null) {
             p.setPickupInstructions(req.pickupInstructions());
         }
-        if (req.isDefault() != null) {
-            p.setIsDefault(req.isDefault());
-        }
         if (req.parentId() != null) {
             // Validate new parent
             if (!placeRepo.existsById(req.parentId())) {
@@ -132,6 +139,10 @@ public class SubPlaceController {
             if (parent != null && parent.getTarget() != null && parent.getTarget().getPos() != null) {
                 p.setTarget(new SubPlaceType.TargetType(parent.getTarget().getPos()));
             }
+        }
+        // Allow explicit target update
+        if (req.target() != null && req.target().pos() != null && !req.target().pos().isBlank()) {
+            p.setTarget(new SubPlaceType.TargetType(req.target().pos()));
         }
         // Server-managed timestamps
         p.setUpdatedAt(Instant.now());

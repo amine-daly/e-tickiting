@@ -23,7 +23,12 @@ import {
 } from 'rxjs';
 
 import { TripType as TripType, TripStatus } from '../../core/models/trip.model';
-import { TripService, TripUpdatePayload, StopInput } from './trip.service';
+import {
+  TripService,
+  TripUpdatePayload,
+  StopInput,
+  SubPlaceInput,
+} from './trip.service';
 import { KeeniconComponent } from 'src/app/_metronic/shared/keenicon/keenicon.component';
 import { AlertService } from '../../core/services/alert.service';
 import { PlacesService } from '../places/places.service';
@@ -35,7 +40,8 @@ import {
 } from 'angularx-flatpickr';
 import { TranslateModule, TranslateService } from '@ngx-translate/core';
 import { CdkDragDrop, DragDropModule } from '@angular/cdk/drag-drop';
-import { PlaceType } from '../../core/models/place-type';
+import { PlaceType, SubPlaceType } from '../../core/models/place-type';
+import { SubPlacesService } from '../sub-places/sub-places.service';
 import { FormHelper } from 'src/app/core/helpers/form-helper';
 
 @Component({
@@ -86,6 +92,26 @@ export class TripListComponent implements OnInit, OnDestroy {
   // Flatpickr options for departure date (min today, max +14 days)
   dateOptions: any = {};
 
+  // ─── Sub-place selection state per route point ────────────────────
+  /** Tracks sub-place selections for the origin city */
+  originSubPlaces: Array<{ subPlace: SubPlaceType; scheduledTime: string }> =
+    [];
+  /** Tracks sub-place selections for each intermediate stop (indexed) */
+  stopsSubPlaces: Array<
+    Array<{ subPlace: SubPlaceType; scheduledTime: string }>
+  > = [];
+  /** Tracks sub-place selections for the destination city */
+  destinationSubPlaces: Array<{
+    subPlace: SubPlaceType;
+    scheduledTime: string;
+  }> = [];
+  /** Loading flags */
+  loadingOriginSP = false;
+  loadingDestSP = false;
+  loadingStopSP: boolean[] = [];
+  /** Snapshot of pickup points when modal opened (for change detection) */
+  private initialPickupPayload: SubPlaceInput[] = [];
+
   statusOptions: Array<{ value: TripStatus; labelKey: string }> = [
     { value: TripStatus.SCHEDULED, labelKey: 'TRIPS.STATUS.SCHEDULED' },
     { value: TripStatus.COMPLETED, labelKey: 'TRIPS.STATUS.COMPLETED' },
@@ -112,6 +138,7 @@ export class TripListComponent implements OnInit, OnDestroy {
     private tripService: TripService,
     private translate: TranslateService,
     private placesService: PlacesService,
+    private subPlacesService: SubPlacesService,
   ) {}
 
   ngOnInit(): void {
@@ -175,7 +202,14 @@ export class TripListComponent implements OnInit, OnDestroy {
   openTripModal(modal: any, trip: TripType | null): void {
     this.placesService.getPlaces().subscribe();
     this.selectedTrip = trip;
-    // Build stops form array from existing trip stops (each stop has placeId, rank, fare)
+
+    // Reset sub-place state
+    this.originSubPlaces = [];
+    this.destinationSubPlaces = [];
+    this.stopsSubPlaces = [];
+    this.loadingStopSP = [];
+
+    // Build stops form array (placeId + fare only)
     const stopsControls = trip?.stops?.length
       ? trip.stops.map((s) =>
           this.fb.group({
@@ -203,7 +237,6 @@ export class TripListComponent implements OnInit, OnDestroy {
 
     // Configure date picker bounds: min = today (start of day), max = today + 14 days
     const today = new Date();
-    // Set time to 00:00 for min date
     const minDate = new Date(
       today.getFullYear(),
       today.getMonth(),
@@ -218,18 +251,54 @@ export class TripListComponent implements OnInit, OnDestroy {
       minDate,
       maxDate,
     };
+
+    // Store initial pickup points for change detection
+    this.initialPickupPayload = this.buildPickupPointsPayload();
     this.initialValues = this.form.value;
     this.formChangesSub?.unsubscribe();
     this.formChangesSub = this.form.valueChanges
       .pipe(takeUntil(this.unsubscribeAll))
-      .subscribe((values) => {
-        this.isButtonDisabled = isEqual(this.initialValues, values);
+      .subscribe(() => {
+        this.checkFormChanges();
         this.recomputeAvailablePlaces();
       });
 
     // Compute initial options
     this.recomputeAvailablePlaces();
 
+    // Load sub-places for existing trip route points
+    if (trip?.originId) {
+      this.loadSubPlacesForRoutePoint(
+        'origin',
+        trip.originId,
+        -1,
+        trip.pickupPoints,
+      );
+    }
+    if (trip?.destinationId) {
+      this.loadSubPlacesForRoutePoint(
+        'destination',
+        trip.destinationId,
+        -1,
+        trip.pickupPoints,
+      );
+    }
+    if (trip?.stops?.length) {
+      trip.stops.forEach((s, i) => {
+        this.stopsSubPlaces[i] = [];
+        this.loadingStopSP[i] = false;
+        if (s.placeId) {
+          this.loadSubPlacesForRoutePoint(
+            'stop',
+            s.placeId,
+            i,
+            trip.pickupPoints,
+          );
+        }
+      });
+    }
+
+    // Take snapshot of initial pickup points AFTER loading (async; will re-snapshot in callback)
     this.modalService.open(modal, { size: 'lg', centered: true });
   }
 
@@ -252,7 +321,7 @@ export class TripListComponent implements OnInit, OnDestroy {
       return;
     }
 
-    // Build stops payload from the FormArray (each stop has placeId, fare)
+    // Build stops payload from the FormArray (placeId + fare only)
     const stopsRaw = (this.stopsFormArray.value || []) as Array<{
       placeId: string;
       fare: number;
@@ -265,6 +334,9 @@ export class TripListComponent implements OnInit, OnDestroy {
         fare: s.fare ?? 0,
       }));
 
+    // Collect selected sub-places with scheduled times
+    const pickupPoints = this.buildPickupPointsPayload();
+
     const payload: any = {
       originId: current?.originId,
       destinationId: current?.destinationId,
@@ -272,6 +344,7 @@ export class TripListComponent implements OnInit, OnDestroy {
       totalPrice: current?.totalPrice,
       totalPlaces: current?.totalPlaces,
       stops,
+      pickupPoints,
     };
 
     const args = this.selectedTrip
@@ -394,18 +467,24 @@ export class TripListComponent implements OnInit, OnDestroy {
 
   addStopField() {
     const fa = this.stopsFormArray;
+    const idx = fa.length;
     fa.push(
       this.fb.group({
         placeId: [],
         fare: [0],
       }),
     );
+    this.stopsSubPlaces[idx] = [];
+    this.loadingStopSP[idx] = false;
     this.recomputeAvailablePlaces();
   }
 
   removeStop(idx: number): void {
     const fa = this.stopsFormArray;
     fa.removeAt(idx);
+    this.stopsSubPlaces.splice(idx, 1);
+    this.loadingStopSP.splice(idx, 1);
+    this.checkFormChanges();
     this.recomputeAvailablePlaces();
   }
 
@@ -421,6 +500,11 @@ export class TripListComponent implements OnInit, OnDestroy {
         fare: [val?.fare || 0],
       }),
     );
+    // Move sub-place arrays accordingly
+    const spArr = this.stopsSubPlaces.splice(idx, 1)[0] || [];
+    this.stopsSubPlaces.splice(idx - 1, 0, spArr);
+    const ldArr = this.loadingStopSP.splice(idx, 1)[0] ?? false;
+    this.loadingStopSP.splice(idx - 1, 0, ldArr);
     this.recomputeAvailablePlaces();
   }
 
@@ -436,6 +520,11 @@ export class TripListComponent implements OnInit, OnDestroy {
         fare: [val?.fare || 0],
       }),
     );
+    // Move sub-place arrays accordingly
+    const spArr = this.stopsSubPlaces.splice(idx, 1)[0] || [];
+    this.stopsSubPlaces.splice(idx + 1, 0, spArr);
+    const ldArr = this.loadingStopSP.splice(idx, 1)[0] ?? false;
+    this.loadingStopSP.splice(idx + 1, 0, ldArr);
     this.recomputeAvailablePlaces();
   }
 
@@ -450,6 +539,11 @@ export class TripListComponent implements OnInit, OnDestroy {
         fare: [val?.fare || 0],
       }),
     );
+    // Move sub-place arrays accordingly
+    const spArr = this.stopsSubPlaces.splice(event.previousIndex, 1)[0] || [];
+    this.stopsSubPlaces.splice(event.currentIndex, 0, spArr);
+    const ldArr = this.loadingStopSP.splice(event.previousIndex, 1)[0] ?? false;
+    this.loadingStopSP.splice(event.currentIndex, 0, ldArr);
     this.recomputeAvailablePlaces();
   }
 
@@ -538,6 +632,140 @@ export class TripListComponent implements OnInit, OnDestroy {
         p.id !== curr && (p.id === originId || selectedStops.has(p.id));
       return { ...p, disabled };
     });
+  }
+
+  // ─── Sub-place management ────────────────────────────────────────
+
+  /**
+   * Load sub-places for a route point (origin, stop, or destination).
+   * Pre-fills scheduledTime from existing pickupPoints when editing.
+   */
+  loadSubPlacesForRoutePoint(
+    role: 'origin' | 'stop' | 'destination',
+    placeId: string,
+    stopIdx: number,
+    existingPickupPoints?: Array<{
+      subPlaceId: string;
+      scheduledTime?: string;
+    }>,
+  ): void {
+    if (!placeId) {
+      this.setRoutePointSubPlaces(role, stopIdx, []);
+      return;
+    }
+
+    this.setLoadingFlag(role, stopIdx, true);
+    const sub = this.subPlacesService.getSubPlacesByParent(placeId).subscribe({
+      next: (sps) => {
+        const selections = (sps || []).map((sp) => ({
+          subPlace: sp,
+          scheduledTime:
+            this.findExistingTime(sp.id, existingPickupPoints) || '',
+        }));
+        this.setRoutePointSubPlaces(role, stopIdx, selections);
+        this.setLoadingFlag(role, stopIdx, false);
+        // Re-snapshot initial pickup points after first load (editing)
+        if (existingPickupPoints?.length) {
+          this.initialPickupPayload = this.buildPickupPointsPayload();
+        }
+      },
+      error: () => this.setLoadingFlag(role, stopIdx, false),
+    });
+    this.subscriptions.add(sub);
+  }
+
+  /** Called when origin city selection changes */
+  onOriginChange(place: PlaceType): void {
+    this.loadSubPlacesForRoutePoint('origin', place?.id, -1);
+  }
+
+  /** Called when destination city selection changes */
+  onDestinationChange(place: PlaceType): void {
+    this.loadSubPlacesForRoutePoint('destination', place?.id, -1);
+  }
+
+  /** Called when a stop's city selection changes */
+  onStopPlaceChange(stopIdx: number, placeId: string): void {
+    this.loadSubPlacesForRoutePoint('stop', placeId, stopIdx);
+  }
+
+  /** Called when any sub-place time changes */
+  onSubPlaceTimeChange(): void {
+    this.checkFormChanges();
+  }
+
+  /** Clear a sub-place's scheduled time */
+  clearSubPlaceTime(entry: {
+    subPlace: SubPlaceType;
+    scheduledTime: string;
+  }): void {
+    entry.scheduledTime = '';
+    this.checkFormChanges();
+  }
+
+  /** Build the pickupPoints payload from all sub-place selections */
+  buildPickupPointsPayload(): SubPlaceInput[] {
+    const all = [
+      ...this.originSubPlaces,
+      ...this.stopsSubPlaces.flat(),
+      ...this.destinationSubPlaces,
+    ];
+    return all
+      .filter((s) => !!s.scheduledTime)
+      .map((s) => ({
+        subPlaceId: s.subPlace.id!,
+        scheduledTime: s.scheduledTime,
+      }));
+  }
+
+  /** Unified change detection for form + pickup points */
+  private checkFormChanges(): void {
+    const formChanged = !isEqual(this.initialValues, this.form.value);
+    const ppChanged = !isEqual(
+      this.buildPickupPointsPayload(),
+      this.initialPickupPayload,
+    );
+    this.isButtonDisabled = !formChanged && !ppChanged;
+  }
+
+  private setRoutePointSubPlaces(
+    role: 'origin' | 'stop' | 'destination',
+    stopIdx: number,
+    selections: Array<{ subPlace: SubPlaceType; scheduledTime: string }>,
+  ): void {
+    if (role === 'origin') {
+      this.originSubPlaces = selections;
+    } else if (role === 'destination') {
+      this.destinationSubPlaces = selections;
+    } else {
+      this.stopsSubPlaces[stopIdx] = selections;
+    }
+  }
+
+  private setLoadingFlag(
+    role: 'origin' | 'stop' | 'destination',
+    stopIdx: number,
+    loading: boolean,
+  ): void {
+    if (role === 'origin') {
+      this.loadingOriginSP = loading;
+    } else if (role === 'destination') {
+      this.loadingDestSP = loading;
+    } else {
+      this.loadingStopSP[stopIdx] = loading;
+    }
+  }
+
+  private findExistingTime(
+    subPlaceId: string | undefined,
+    existingPickupPoints?: Array<{
+      subPlaceId: string;
+      scheduledTime?: string;
+    }>,
+  ): string {
+    if (!subPlaceId || !existingPickupPoints) return '';
+    const pp = existingPickupPoints.find((p) => p?.subPlaceId === subPlaceId);
+    return pp?.scheduledTime || '';
   }
 
   ngOnDestroy(): void {

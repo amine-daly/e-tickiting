@@ -6,6 +6,7 @@
     },
     "LABEL": {
       "NAME": "Nom",
+      "SEARCH_BY_CITY": "Rechercher par ville",
       "ADDRESS": "Adresse",
       "EMAIL": "E-mail",
       "PHONE": "Téléphone",
@@ -216,6 +217,8 @@
       "FARE_PLACEHOLDER": "Tarif",
       "ADD_STOP": "Ajouter un arrêt",
       "STOPS_HINT": "Ajoutez des arrêts intermédiaires si le trajet comporte plusieurs étapes. Faites glisser pour réorganiser.",
+      "PICKUP_POINTS": "Points de prise en charge",
+      "PICKUP_TIME_PLACEHOLDER": "Choisir l'heure prévue",
       "DEPARTURE_DATE_LABEL": "Date de départ",
       "DEPARTURE_DATE_PLACEHOLDER": "Choisissez une date de départ",
       "CLEAR_DATE": "Effacer la date",

@@ -62,6 +62,13 @@ public class TripType {
     private List<StopType> stops;
 
     /**
+     * Selected sub-places (pickup/dropoff points) for this trip with per-trip scheduled times.
+     * Each entry references a SubPlace and carries the departure/arrival time at that point.
+     */
+    @JsonProperty("pickupPoints")
+    private List<TripSubPlaceType> pickupPoints;
+
+    /**
      * Departure datetime (ISO 8601)
      */
     @NotNull
@@ -154,6 +161,14 @@ public class TripType {
 
     public void setStops(List<StopType> stops) {
         this.stops = stops;
+    }
+
+    public List<TripSubPlaceType> getPickupPoints() {
+        return pickupPoints;
+    }
+
+    public void setPickupPoints(List<TripSubPlaceType> pickupPoints) {
+        this.pickupPoints = pickupPoints;
     }
 
     public OffsetDateTime getDepartureDate() {

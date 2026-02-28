@@ -20,4 +20,6 @@ public interface SubPlaceRepository extends MongoRepository<SubPlaceType, String
 
     @Query("{ 'target.pos': ?0, 'address': { $regex: ?1, $options: 'i' } }")
     Page<SubPlaceType> findByTargetPosAndAddressLike(String posId, String address, Pageable pageable);
+
+    Page<SubPlaceType> findByParentIdIn(List<String> parentIds, Pageable pageable);
 }

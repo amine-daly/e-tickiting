@@ -40,9 +40,6 @@ public class SubPlaceType {
     @JsonProperty("pickupInstructions")
     private String pickupInstructions;
 
-    @JsonProperty("isDefault")
-    private Boolean isDefault;
-
     /**
      * Optional POS scope; typically inherited from parent city place.
      */
@@ -120,14 +117,6 @@ public class SubPlaceType {
 
     public void setPickupInstructions(String pickupInstructions) {
         this.pickupInstructions = pickupInstructions;
-    }
-
-    public Boolean getIsDefault() {
-        return isDefault;
-    }
-
-    public void setIsDefault(Boolean isDefault) {
-        this.isDefault = isDefault;
     }
 
     public TargetType getTarget() {

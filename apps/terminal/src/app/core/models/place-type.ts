@@ -18,7 +18,6 @@ export interface SubPlaceType {
   kind?: PlaceKindEnum;
   location?: LonLatType;
   pickupInstructions?: string;
-  isDefault?: boolean;
   /** Parent place ID (for linking back to the city) */
   parentId?: string;
   /** Parent city name (for display purposes) */

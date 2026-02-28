@@ -212,6 +212,23 @@ public class UserController {
                         phone.setNumber(phoneMap.get("number").toString());
                     }
                     ReflectionUtils.setField(field, user, phone);
+                } else if (value != null && field.getType().getName().equals("com.eticketing.app.common.PictureType")) {
+                    Map<String, Object> pictureMap = (Map<String, Object>) value;
+                    var picture = user.getPicture();
+                    if (picture == null) {
+                        try {
+                            picture = (com.eticketing.app.common.PictureType) field.getType().getDeclaredConstructor().newInstance();
+                        } catch (Exception e) {
+                            throw new RuntimeException(e);
+                        }
+                    }
+                    if (pictureMap.get("baseUrl") != null) {
+                        picture.setBaseUrl(pictureMap.get("baseUrl").toString());
+                    }
+                    if (pictureMap.get("path") != null) {
+                        picture.setPath(pictureMap.get("path").toString());
+                    }
+                    ReflectionUtils.setField(field, user, picture);
                 } else {
                     ReflectionUtils.setField(field, user, value);
                 }

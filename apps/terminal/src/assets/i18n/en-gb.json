@@ -6,6 +6,7 @@
     },
     "LABEL": {
       "NAME": "Name",
+      "SEARCH_BY_CITY": "Search by city",
       "ADDRESS": "Address",
       "EMAIL": "Email",
       "PHONE": "Phone",
@@ -216,6 +217,8 @@
       "FARE_PLACEHOLDER": "Fare",
       "ADD_STOP": "Add stop",
       "STOPS_HINT": "Add intermediate stops if the route has multiple segments. Drag to reorder.",
+      "PICKUP_POINTS": "Pickup/Dropoff points",
+      "PICKUP_TIME_PLACEHOLDER": "Pick scheduled time",
       "DEPARTURE_DATE_LABEL": "Departure date",
       "DEPARTURE_DATE_PLACEHOLDER": "Pick a departure date",
       "CLEAR_DATE": "Clear date",

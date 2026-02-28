@@ -1,11 +1,14 @@
 .places-header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 1rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
 }
 
 .places-map-modal {
-    height: 240px !important;
-    width: 100% !important;
+  height: 240px !important;
+  width: 100% !important;
+}
+.list-group-item {
+  background: inherit;
 }

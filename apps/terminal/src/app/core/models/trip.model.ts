@@ -30,6 +30,22 @@ export interface StopType {
   place?: PlaceType; // Expanded place from backend
 }
 
+/** Per-trip sub-place selection with scheduled time */
+export interface TripSubPlaceInput {
+  subPlaceId: string;
+  scheduledTime?: string; // ISO datetime
+}
+
+/** Expanded pickup point returned by the backend */
+export interface ExpandedPickupPoint {
+  subPlaceId: string;
+  scheduledTime?: string;
+  address?: string;
+  location?: { coordinates: [number, number] };
+  pickupInstructions?: string;
+  parentId?: string;
+}
+
 /** Extended place with state, country, and sub-places (pickup/dropoff points) */
 export interface TripPlaceType {
   id?: string;
@@ -50,6 +66,7 @@ export interface TripType {
   origin?: TripPlaceType;
   destination?: TripPlaceType;
   stops?: StopType[]; // Intermediate stops with placeId, rank, fare
+  pickupPoints?: TripSubPlaceInput[]; // Selected sub-places with per-trip scheduled times
   departureDate: string; // ISO datetime with timezone
   totalPrice: number;
   totalPlaces: number;

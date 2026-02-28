@@ -17,12 +17,19 @@ export interface StopInput {
   fare?: number;
 }
 
+// Sub-place input for per-trip pickup/dropoff point scheduling
+export interface SubPlaceInput {
+  subPlaceId: string;
+  scheduledTime?: string; // ISO datetime
+}
+
 export interface TripCreatePayload {
   agencyId?: string | null;
   originId: string;
   destinationId: string;
   totalPrice: number;
   stops?: StopInput[];
+  pickupPoints?: SubPlaceInput[];
   departureDate: string;
   totalPlaces: number;
   status?: TripStatus | null;
@@ -34,6 +41,7 @@ export interface TripUpdatePayload {
   destinationId?: string | null;
   totalPrice?: number | null;
   stops?: StopInput[] | null;
+  pickupPoints?: SubPlaceInput[] | null;
   departureDate?: string | null;
   totalPlaces?: number | null;
   status?: TripStatus | null;

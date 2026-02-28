@@ -3,14 +3,11 @@
     <div class="d-flex flex-wrap flex-sm-nowrap mb-3">
       <div class="me-7 mb-4">
         <div
+          (click)="upload()"
           class="symbol symbol-100px symbol-lg-160px symbol-fixed position-relative"
         >
           <img
-            [src]="
-              user?.picture?.baseUrl && user?.picture?.path
-                ? user.picture.baseUrl + '/' + user.picture.path
-                : defaultAvatar
-            "
+            [src]="getProfileImageUrl(user)"
             [alt]="user?.firstName + ' ' + user?.lastName"
           />
           <div
@@ -53,25 +50,22 @@
                   name="profile-circle"
                   class="fs-4 me-1"
                 ></app-keenicon>
-                Developer
+                {{ "CUSTOMERS.ROLES." + user?.role | translate }}
               </a>
               <a
                 class="d-flex align-items-center text-gray-400 text-hover-primary me-5 mb-2 cursor-pointer"
               >
-                <app-keenicon
-                  name="geolocation"
-                  class="fs-4 me-1"
-                ></app-keenicon>
-                SF, Bay Area
+                <app-keenicon name="phone" class="fs-4 me-1"></app-keenicon>
+                + {{ user?.phone?.countryCode }} {{ user?.phone?.number }}
               </a>
               <a
                 class="d-flex align-items-center text-gray-400 text-hover-primary mb-2 cursor-pointer"
               >
                 <app-keenicon
-                  name="geolocation"
+                  name="message-text"
                   class="fs-4 me-1"
                 ></app-keenicon>
-                max&#64;kt.com
+                {{ user?.email }}
               </a>
             </div>
           </div>

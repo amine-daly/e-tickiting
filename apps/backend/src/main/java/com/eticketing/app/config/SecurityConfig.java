@@ -34,6 +34,7 @@ public class SecurityConfig {
                 .requestMatchers(HttpMethod.GET, "/api/places", "/api/places/*").permitAll()
                 .requestMatchers(HttpMethod.PUT, "/api/trip/*/seats", "/api/trips/*/seats").permitAll()
                 .requestMatchers(HttpMethod.POST, "/api/trip/*/seats/generate", "/api/trips/*/seats/generate").permitAll()
+                .requestMatchers("/api/files", "/api/files/**").permitAll()
                 .requestMatchers("/api/trip/**", "/api/trips/**").permitAll()
                 .requestMatchers("/api/health", "/v3/api-docs/**", "/swagger-ui.html", "/swagger-ui/**", "/api/auth/**").permitAll()
                 .anyRequest().authenticated()

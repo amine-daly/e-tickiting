@@ -93,11 +93,6 @@ public class TripController {
         }
 
         for (SubPlaceType sp : list) {
-            if (Boolean.TRUE.equals(sp.getIsDefault()) && sp.getLocation() != null) {
-                return sp.getLocation();
-            }
-        }
-        for (SubPlaceType sp : list) {
             if (sp.getLocation() != null) {
                 return sp.getLocation();
             }
@@ -154,6 +149,21 @@ public class TripController {
         stopsList.sort(Comparator.comparing(s -> s.getRank() == null ? Integer.MAX_VALUE : s.getRank()));
         toSave.setStops(stopsList);
 
+        // Process pickup points (selected sub-places with per-trip scheduled times)
+        List<TripSubPlaceType> pickupPointsList = new ArrayList<>();
+        if (payload.pickupPoints() != null) {
+            for (SubPlaceInput spi : payload.pickupPoints()) {
+                if (spi.subPlaceId() == null || spi.subPlaceId().isBlank()) continue;
+                TripSubPlaceType pp = new TripSubPlaceType();
+                pp.setSubPlaceId(spi.subPlaceId());
+                if (spi.scheduledTime() != null) {
+                    pp.setScheduledTime(spi.scheduledTime().withOffsetSameInstant(ZoneOffset.UTC));
+                }
+                pickupPointsList.add(pp);
+            }
+        }
+        toSave.setPickupPoints(pickupPointsList);
+
         if (payload.departureDate() != null) {
             toSave.setDepartureDate(payload.departureDate().withOffsetSameInstant(ZoneOffset.UTC));
         }
@@ -181,6 +191,7 @@ public class TripController {
             @NotNull String destinationId,
             @NotNull BigDecimal totalPrice,
             List<StopInput> stops,
+            List<SubPlaceInput> pickupPoints,
             OffsetDateTime departureDate,
             int totalPlaces,
             TripStatusEnum status
@@ -192,6 +203,13 @@ public class TripController {
             @NotNull String placeId,
             Integer rank,
             BigDecimal fare
+            ) {
+
+    }
+
+    public record SubPlaceInput(
+            @NotNull String subPlaceId,
+            OffsetDateTime scheduledTime
             ) {
 
     }
@@ -371,11 +389,35 @@ public class TripController {
                             fare = new BigDecimal(s);
                         }
                         stop.setFare(fare);
+
                         stopsList.add(stop);
                     }
                 }
                 stopsList.sort(Comparator.comparing(s -> s.getRank() == null ? Integer.MAX_VALUE : s.getRank()));
                 trip.setStops(stopsList);
+            }
+        }
+
+        // Handle pickupPoints (selected sub-places with per-trip scheduled times)
+        if (updates.containsKey("pickupPoints") && updates.get("pickupPoints") != null) {
+            Object val = updates.get("pickupPoints");
+            if (val instanceof List<?> list) {
+                List<TripSubPlaceType> ppList = new ArrayList<>();
+                for (Object raw : list) {
+                    if (raw instanceof Map m) {
+                        String spId = m.get("subPlaceId") != null ? m.get("subPlaceId").toString() : null;
+                        if (spId == null || spId.isBlank()) continue;
+                        TripSubPlaceType pp = new TripSubPlaceType();
+                        pp.setSubPlaceId(spId);
+                        Object stObj = m.get("scheduledTime");
+                        if (stObj != null) {
+                            var dt = OffsetDateTime.parse(stObj.toString());
+                            pp.setScheduledTime(dt.withOffsetSameInstant(ZoneOffset.UTC));
+                        }
+                        ppList.add(pp);
+                    }
+                }
+                trip.setPickupPoints(ppList);
             }
         }
 
@@ -609,10 +651,34 @@ public class TripController {
                 stopMap.put("placeId", stop.getPlaceId());
                 stopMap.put("rank", stop.getRank());
                 stopMap.put("fare", stop.getFare());
-                // Expand place
                 PlaceType place = stop.getPlaceId() != null ? placeRepository.findById(stop.getPlaceId()).orElse(null) : null;
-                stopMap.put("place", buildPlaceView(place, false));
+                stopMap.put("place", buildPlaceView(place, true));
                 expandedStops.add(stopMap);
+            }
+        }
+
+        // Expand pickupPoints with sub-place details
+        List<Map<String, Object>> expandedPickupPoints = new ArrayList<>();
+        if (trip.getPickupPoints() != null) {
+            for (TripSubPlaceType pp : trip.getPickupPoints()) {
+                Map<String, Object> ppMap = new LinkedHashMap<>();
+                ppMap.put("subPlaceId", pp.getSubPlaceId());
+                ppMap.put("scheduledTime", pp.getScheduledTime() == null
+                        ? null : pp.getScheduledTime().format(DateTimeFormatter.ISO_OFFSET_DATE_TIME));
+                SubPlaceType sp = pp.getSubPlaceId() != null
+                        ? subPlaceRepository.findById(pp.getSubPlaceId()).orElse(null) : null;
+                if (sp != null) {
+                    ppMap.put("address", sp.getAddress());
+                    ppMap.put("location", sp.getLocation());
+                    ppMap.put("pickupInstructions", sp.getPickupInstructions());
+                    ppMap.put("parentId", sp.getParentId());
+                } else {
+                    ppMap.put("address", null);
+                    ppMap.put("location", null);
+                    ppMap.put("pickupInstructions", null);
+                    ppMap.put("parentId", null);
+                }
+                expandedPickupPoints.add(ppMap);
             }
         }
 
@@ -625,6 +691,7 @@ public class TripController {
         response.put("origin", buildPlaceView(origin, true));
         response.put("destination", buildPlaceView(destination, true));
         response.put("stops", expandedStops);
+        response.put("pickupPoints", expandedPickupPoints);
         response.put(
                 "departureDate",
                 trip.getDepartureDate() == null
@@ -695,7 +762,6 @@ public class TripController {
                 spView.put("address", sp.getAddress());
                 spView.put("location", sp.getLocation());
                 spView.put("pickupInstructions", sp.getPickupInstructions());
-                spView.put("isDefault", sp.getIsDefault());
                 return spView;
             }).toList();
             view.put("places", placesView);

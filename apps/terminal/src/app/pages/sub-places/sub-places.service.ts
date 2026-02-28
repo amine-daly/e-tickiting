@@ -17,7 +17,6 @@ export interface SubPlaceCreatePayload {
   address?: string;
   location?: LonLatType;
   pickupInstructions?: string;
-  isDefault?: boolean;
   parentId: string;
 }
 
@@ -25,7 +24,6 @@ export interface SubPlaceUpdatePayload {
   address?: string;
   location?: LonLatType;
   pickupInstructions?: string;
-  isDefault?: boolean;
   parentId?: string;
 }
 
@@ -76,6 +74,10 @@ export class SubPlacesService {
   }
 
   getSubPlacesByParent(parentId: string): Observable<SubPlaceType[]> {
+    console.log(
+      '🚀 ~ SubPlacesService ~ getSubPlacesByParent ~ parentId:',
+      parentId,
+    );
     return this.http.get<SubPlaceType[]>(
       `${this.apiBase}/places/${parentId}/places`,
     );
@@ -86,11 +88,16 @@ export class SubPlacesService {
   }
 
   createSubPlace(payload: SubPlaceCreatePayload): Observable<SubPlaceType> {
-    return this.http.post<SubPlaceType>(this.baseUrl, payload).pipe(
-      tap((created) => {
-        this.subPlaces.next([...this.subPlaces.value, created]);
-      }),
-    );
+    return this.http
+      .post<SubPlaceType>(this.baseUrl, {
+        ...payload,
+        target: { pos: localStorage.getItem('posId') },
+      })
+      .pipe(
+        tap((created) => {
+          this.subPlaces.next([...this.subPlaces.value, created]);
+        }),
+      );
   }
 
   updateSubPlace(

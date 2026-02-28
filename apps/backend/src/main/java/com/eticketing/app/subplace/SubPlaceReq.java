@@ -6,8 +6,10 @@ public record SubPlaceReq(
         String address,
         LonLatType location,
         String pickupInstructions,
-        Boolean isDefault,
-        String parentId
+        String parentId,
+        TargetReq target
         ) {
+
+    public record TargetReq(String pos) {}
 
 }

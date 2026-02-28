@@ -5,6 +5,8 @@ import {
   Component,
   TemplateRef,
   ChangeDetectorRef,
+  ElementRef,
+  ViewChild,
 } from '@angular/core';
 import {
   FormGroup,
@@ -20,7 +22,7 @@ import {
   NgbNavModule,
 } from '@ng-bootstrap/ng-bootstrap';
 import { NgSelectModule } from '@ng-select/ng-select';
-import { GoogleMapsModule } from '@angular/google-maps';
+import * as L from 'leaflet';
 import {
   Subject,
   Subscription,
@@ -63,7 +65,6 @@ import { IPagination } from 'src/app/core/models/paginate-model';
   imports: [
     CommonModule,
     TranslateModule,
-    GoogleMapsModule,
     NgSelectModule,
     ReactiveFormsModule,
     FormsModule,
@@ -80,6 +81,12 @@ export class PlacesComponent implements OnInit, OnDestroy {
   private selectedSubPlace: SubPlaceType | null = null;
   private destroy$: Subject<void> = new Subject<void>();
   private initialValues: PlaceCreatePayload | PlaceUpdatePayload | null = null;
+
+  // Leaflet map for sub-place modal
+  @ViewChild('subPlaceMapContainer')
+  subPlaceMapContainer?: ElementRef<HTMLDivElement>;
+  private subPlaceMap: L.Map | null = null;
+  private subPlaceMarker: L.Marker | null = null;
 
   private statesCountry: CountryType;
   private countriesQuery = '';
@@ -105,7 +112,7 @@ export class PlacesComponent implements OnInit, OnDestroy {
   subPlacesError: string | null = null;
   places$ = this.placesService.places$;
   subPlaces$ = this.subPlacesService.subPlaces$;
-  subPlacePosition: google.maps.LatLngLiteral | null = null;
+  subPlacePosition: { lat: number; lng: number } | null = null;
 
   // For dropdowns
   countries: CountryType[] = [];
@@ -133,7 +140,7 @@ export class PlacesComponent implements OnInit, OnDestroy {
     private modalService: NgbModal,
     private translate: TranslateService,
     public placesService: PlacesService,
-    public subPlacesService: SubPlacesService
+    public subPlacesService: SubPlacesService,
   ) {
     this.statesSearchInput$
       .pipe(
@@ -145,7 +152,7 @@ export class PlacesComponent implements OnInit, OnDestroy {
           this.states = [];
           this.placesService.statesSearchString = searchString;
           return this.placesService.getStatesByCountry(this.statesCountry?.id);
-        })
+        }),
       )
       .subscribe(() => {
         this.cd.markForCheck();
@@ -160,7 +167,7 @@ export class PlacesComponent implements OnInit, OnDestroy {
           this.countries = [];
           this.placesService.countriesSearchString = searchString;
           return this.placesService.getCountries();
-        })
+        }),
       )
       .subscribe(() => {
         this.cd.markForCheck();
@@ -176,7 +183,7 @@ export class PlacesComponent implements OnInit, OnDestroy {
           this.loading = true;
           this.placesService.placesSearchString = searchString;
           return this.placesService.getPlaces();
-        })
+        }),
       )
       .subscribe(() => {
         this.loading = false;
@@ -192,7 +199,7 @@ export class PlacesComponent implements OnInit, OnDestroy {
           this.subPlacesService.pageIndex = 0;
           this.subPlacesService.searchString = searchString;
           this.loadSubPlaces();
-        })
+        }),
       )
       .subscribe();
 
@@ -229,7 +236,7 @@ export class PlacesComponent implements OnInit, OnDestroy {
             ((this.placesService.placesPageIndex || 0) + 1) *
               this.placesService.placesPageLimit -
               1,
-            pagination.length - 1
+            pagination.length - 1,
           ),
         };
         this.cd.markForCheck();
@@ -251,7 +258,7 @@ export class PlacesComponent implements OnInit, OnDestroy {
             ((this.subPlacesService.pageIndex || 0) + 1) *
               this.subPlacesService.pageLimit -
               1,
-            pagination.length - 1
+            pagination.length - 1,
           ),
         };
         this.cd.markForCheck();
@@ -318,7 +325,7 @@ export class PlacesComponent implements OnInit, OnDestroy {
   // ========== SubPlace Modal ==========
   openSubPlaceModal(
     subPlaceModal: TemplateRef<any>,
-    subPlace?: SubPlaceType
+    subPlace?: SubPlaceType,
   ): void {
     // Ensure parent places are loaded for the dropdown
     // Initialize parent places infinite list (clear and load first page)
@@ -346,6 +353,10 @@ export class PlacesComponent implements OnInit, OnDestroy {
     this.isSubPlaceButtonDisabled = true;
     this.subscribeToSubPlaceFormChanges();
     this.modalService.open(subPlaceModal, { size: 'lg' });
+    setTimeout(() => {
+      this.initSubPlaceMap();
+      this.subPlaceMap?.invalidateSize();
+    }, 100);
     this.cd.markForCheck();
   }
 
@@ -366,7 +377,7 @@ export class PlacesComponent implements OnInit, OnDestroy {
 
     const changes = FormHelper.getChangedValues(
       this.subPlaceForm.value,
-      this.initialValues
+      this.initialValues,
     );
 
     const isEdit = !!this.selectedSubPlace?.id;
@@ -382,7 +393,7 @@ export class PlacesComponent implements OnInit, OnDestroy {
       } as SubPlaceUpdatePayload;
       request$ = this.subPlacesService.updateSubPlace(
         this.selectedSubPlace!.id!,
-        payload
+        payload,
       );
     } else {
       // Ensure parentId is always sent when creating
@@ -403,8 +414,8 @@ export class PlacesComponent implements OnInit, OnDestroy {
           this.translateFn(
             isEdit
               ? 'PLACES.SUBPLACES.MESSAGES.UPDATE_SUCCESS'
-              : 'PLACES.SUBPLACES.MESSAGES.CREATE_SUCCESS'
-          )
+              : 'PLACES.SUBPLACES.MESSAGES.CREATE_SUCCESS',
+          ),
         );
         modal?.close();
       },
@@ -413,8 +424,8 @@ export class PlacesComponent implements OnInit, OnDestroy {
           this.translateFn(
             isEdit
               ? 'PLACES.SUBPLACES.MESSAGES.UPDATE_ERROR'
-              : 'PLACES.SUBPLACES.MESSAGES.CREATE_ERROR'
-          )
+              : 'PLACES.SUBPLACES.MESSAGES.CREATE_ERROR',
+          ),
         );
         this.isSubPlaceButtonDisabled = false;
       },
@@ -440,12 +451,12 @@ export class PlacesComponent implements OnInit, OnDestroy {
           .subscribe({
             next: () => {
               this.alert.success(
-                this.translateFn('PLACES.SUBPLACES.MESSAGES.DELETE_SUCCESS')
+                this.translateFn('PLACES.SUBPLACES.MESSAGES.DELETE_SUCCESS'),
               );
             },
             error: () =>
               this.alert.error(
-                this.translateFn('PLACES.SUBPLACES.MESSAGES.DELETE_ERROR')
+                this.translateFn('PLACES.SUBPLACES.MESSAGES.DELETE_ERROR'),
               ),
           });
         this.subscriptions.add(sub);
@@ -470,14 +481,76 @@ export class PlacesComponent implements OnInit, OnDestroy {
     this.subscriptions.add(sub);
   }
 
-  pickSubPlaceAddress(event: google.maps.MapMouseEvent): void {
-    if (!event.latLng) {
+  private initSubPlaceMap(): void {
+    if (!this.subPlaceMapContainer?.nativeElement) {
       return;
     }
-    const coords = event.latLng;
-    this.subPlacePosition = { lat: coords.lat(), lng: coords.lng() };
+
+    if (this.subPlaceMap) {
+      this.subPlaceMap.remove();
+      this.subPlaceMap = null;
+      this.subPlaceMarker = null;
+    }
+
+    const defaultLat = 33.886917;
+    const defaultLng = 9.537499;
+    const center = this.subPlacePosition ?? {
+      lat: defaultLat,
+      lng: defaultLng,
+    };
+    const zoom = this.subPlacePosition ? 12 : 4;
+
+    this.subPlaceMap = L.map(this.subPlaceMapContainer.nativeElement).setView(
+      [center.lat, center.lng],
+      zoom,
+    );
+
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution: '© OpenStreetMap contributors',
+    }).addTo(this.subPlaceMap);
+
+    delete (L.Icon.Default.prototype as any)._getIconUrl;
+    L.Icon.Default.mergeOptions({
+      iconRetinaUrl: 'assets/media/leaflet/marker-icon-2x.png',
+      iconUrl: 'assets/media/leaflet/marker-icon.png',
+      shadowUrl: 'assets/media/leaflet/marker-shadow.png',
+    });
+
+    this.subPlaceMap.on('click', (e: L.LeafletMouseEvent) => {
+      this.setSubPlaceMarker(e.latlng.lat, e.latlng.lng);
+      this.updateSubPlaceCoordinates(e.latlng.lat, e.latlng.lng);
+    });
+
+    if (this.subPlacePosition) {
+      this.setSubPlaceMarker(
+        this.subPlacePosition.lat,
+        this.subPlacePosition.lng,
+      );
+    }
+  }
+
+  private setSubPlaceMarker(lat: number, lng: number): void {
+    if (!this.subPlaceMap) {
+      return;
+    }
+    if (this.subPlaceMarker) {
+      this.subPlaceMarker.setLatLng([lat, lng]);
+      return;
+    }
+    this.subPlaceMarker = L.marker([lat, lng], { draggable: true }).addTo(
+      this.subPlaceMap,
+    );
+    this.subPlaceMarker.on('dragend', () => {
+      const pos = this.subPlaceMarker?.getLatLng();
+      if (!pos) return;
+      this.updateSubPlaceCoordinates(pos.lat, pos.lng);
+    });
+  }
+
+  private updateSubPlaceCoordinates(lat: number, lng: number): void {
+    this.subPlacePosition = { lat, lng };
     const control = this.subPlaceForm.get('location');
-    control?.setValue({ coordinates: [coords.lng(), coords.lat()] });
+    control?.setValue({ coordinates: [lng, lat] });
     control?.markAsDirty();
     control?.markAsTouched();
   }
@@ -499,7 +572,6 @@ export class PlacesComponent implements OnInit, OnDestroy {
       parentId: [subPlace?.parentId || ''],
       address: [subPlace?.address || ''],
       pickupInstructions: [subPlace?.pickupInstructions || ''],
-      isDefault: [subPlace?.isDefault || false],
       location: [subPlace?.location || null],
     });
   }
@@ -513,7 +585,7 @@ export class PlacesComponent implements OnInit, OnDestroy {
     const changes = {
       ...FormHelper.getChangedValues(
         omit(this.form.value, 'state', 'country'),
-        omit(initial, 'state', 'country')
+        omit(initial, 'state', 'country'),
       ),
       ...(this.form.value.state?.id !== initial.state?.id
         ? { stateId: this.form.value.state?.id }
@@ -528,7 +600,7 @@ export class PlacesComponent implements OnInit, OnDestroy {
     const request$ = isEdit
       ? this.placesService.updatePlace(
           this.selectedPlace!.id!,
-          changes as PlaceUpdatePayload
+          changes as PlaceUpdatePayload,
         )
       : this.placesService.createPlace(changes as PlaceCreatePayload);
 
@@ -540,8 +612,8 @@ export class PlacesComponent implements OnInit, OnDestroy {
           this.translateFn(
             isEdit
               ? 'PLACES.MESSAGES.UPDATE_SUCCESS'
-              : 'PLACES.MESSAGES.CREATE_SUCCESS'
-          )
+              : 'PLACES.MESSAGES.CREATE_SUCCESS',
+          ),
         );
         modal?.close();
       },
@@ -550,8 +622,8 @@ export class PlacesComponent implements OnInit, OnDestroy {
           this.translateFn(
             isEdit
               ? 'PLACES.MESSAGES.UPDATE_ERROR'
-              : 'PLACES.MESSAGES.CREATE_ERROR'
-          )
+              : 'PLACES.MESSAGES.CREATE_ERROR',
+          ),
         );
         this.isButtonDisabled = false;
       },
@@ -667,7 +739,7 @@ export class PlacesComponent implements OnInit, OnDestroy {
         const sub = this.placesService.deletePlace(place.id).subscribe({
           next: () =>
             this.alert.success(
-              this.translateFn('PLACES.MESSAGES.DELETE_SUCCESS')
+              this.translateFn('PLACES.MESSAGES.DELETE_SUCCESS'),
             ),
           error: () =>
             this.alert.error(this.translateFn('PLACES.MESSAGES.DELETE_ERROR')),
@@ -718,5 +790,10 @@ export class PlacesComponent implements OnInit, OnDestroy {
     this.states = [];
     this.placesService.parentPlacesPageIndex = 0;
     this.placesService.infinitePlaces$ = null;
+    if (this.subPlaceMap) {
+      this.subPlaceMap.remove();
+      this.subPlaceMap = null;
+      this.subPlaceMarker = null;
+    }
   }
 }
