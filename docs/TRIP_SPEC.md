@@ -80,11 +80,26 @@ interface Trip {
 ## 3. Enums
 
 ```typescript
-type TripStatus = "SCHEDULED" | "ACTIVE" | "COMPLETED" | "CANCELLED";
+enum TripStatus {
+  SCHEDULED = "SCHEDULED",
+  ACTIVE = "ACTIVE",
+  COMPLETED = "COMPLETED",
+  CANCELLED = "CANCELLED",
+}
 
-type TicketStatus = "PENDING" | "CONFIRMED" | "EXPIRED" | "CANCELLED";
+enum TicketStatus {
+  PENDING = "PENDING",
+  CONFIRMED = "CONFIRMED",
+  EXPIRED = "EXPIRED",
+  CANCELLED = "CANCELLED",
+}
 
-type RefundStatus = "REQUESTED" | "APPROVED" | "COMPLETED" | "REJECTED";
+enum RefundStatus {
+  REQUESTED = "REQUESTED",
+  APPROVED = "APPROVED",
+  COMPLETED = "COMPLETED",
+  REJECTED = "REJECTED",
+}
 ```
 
 ---
@@ -147,7 +162,10 @@ interface DropoffPoint {
 }
 ```
 
-> If no pickup/dropoff point is defined for a stop, the stop itself is the boarding/alighting point.
+> Pickup and dropoff points are MANDATORY — every commercial stop must have at least one entry.
+> `boardingAllowed = true` → at least one `PickupPoint` required for this `placeId`
+> `droppingAllowed = true` → at least one `DropoffPoint` required for this `placeId`
+> Trip creation is blocked if any commercial stop is missing its required pickup or dropoff point.
 
 ---
 
@@ -381,16 +399,18 @@ CANCELLED ──→ terminal    No further transitions.
 
 ## 13. Error Codes
 
-| Code                                             | Trigger                                             |
-| ------------------------------------------------ | --------------------------------------------------- |
-| `STOP_REMOVAL_BLOCKED_EXPRESS_DEPENDENCY`        | Removing a stop that breaks an express fare chain   |
-| `BUS_REASSIGNMENT_BLOCKED_INSUFFICIENT_CAPACITY` | New bus totalSeats < MAX(bookedSeats)               |
-| `SEGMENT_CAPACITY_EXCEEDED`                      | CAS update returned 0 rows — no seats available     |
-| `TICKET_IDEMPOTENCY_REPLAY`                      | Booking request replayed — existing ticket returned |
-| `INVALID_EXPRESS_FARE_CHAIN`                     | segmentsCovered does not form a continuous chain    |
-| `INVALID_STOP_SEQUENCE`                          | sequence not strictly ascending or duplicate        |
-| `INVALID_TIMELINE`                               | Stop timestamps not strictly increasing             |
-| `MAX_SEATS_BELOW_BOOKED`                         | Attempt to set maxSeats below current bookedSeats   |
+| Code                                             | Trigger                                                          |
+| ------------------------------------------------ | ---------------------------------------------------------------- |
+| `STOP_REMOVAL_BLOCKED_EXPRESS_DEPENDENCY`        | Removing a stop that breaks an express fare chain                |
+| `BUS_REASSIGNMENT_BLOCKED_INSUFFICIENT_CAPACITY` | New bus totalSeats < MAX(bookedSeats)                            |
+| `SEGMENT_CAPACITY_EXCEEDED`                      | CAS update returned 0 rows — no seats available                  |
+| `TICKET_IDEMPOTENCY_REPLAY`                      | Booking request replayed — existing ticket returned              |
+| `INVALID_EXPRESS_FARE_CHAIN`                     | segmentsCovered does not form a continuous chain                 |
+| `INVALID_STOP_SEQUENCE`                          | sequence not strictly ascending or duplicate                     |
+| `INVALID_TIMELINE`                               | Stop timestamps not strictly increasing                          |
+| `MAX_SEATS_BELOW_BOOKED`                         | Attempt to set maxSeats below current bookedSeats                |
+| `MISSING_PICKUP_POINT`                           | A stop with `boardingAllowed = true` has no PickupPoint defined  |
+| `MISSING_DROPOFF_POINT`                          | A stop with `droppingAllowed = true` has no DropoffPoint defined |
 
 ---
 
@@ -566,3 +586,10 @@ Two express fares: full journey + partial journey (Sfax → Tunis)
 - Use `stopId` — the canonical field name is `placeId`
 - Add `totalSeats` to `trip.bus` — it is a pure reference, no snapshot needed
 - Query trips or tickets without scoping by `target.pos` — platform is a marketplace
+
+## 16. Shared Models Pattern
+
+- One shared file: src/app/core/models/shared.model.ts
+- Any type reused across more than one entity belongs in shared.model.ts
+- Never redeclare shared types inside entity model files
+- Always import from shared.model.ts when the type is not entity-specific
