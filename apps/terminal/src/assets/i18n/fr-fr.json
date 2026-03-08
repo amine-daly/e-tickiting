@@ -495,5 +495,55 @@
         "NO_ACCOUNT": "Aucun compte trouvé."
       }
     }
+  },
+  "MENU": {
+    "DASHBOARD": "Tableau de bord",
+    "BUSES": "Bus"
+  },
+  "BUSES": {
+    "TITLE": "Bus",
+    "ADD_BUTTON": "Ajouter un bus",
+    "LOADING": "Chargement des bus...",
+    "EMPTY": "Aucun bus trouvé.",
+    "LABEL": {
+      "SEATS": "places"
+    },
+    "AMENITY": {
+      "WIFI": "WiFi",
+      "POWER_OUTLET": "Prise électrique",
+      "TV": "TV",
+      "SNACKS": "Collations",
+      "AC": "Climatisation",
+      "TOILET": "Toilettes",
+      "LUGGAGE": "Bagages",
+      "USB": "USB"
+    },
+    "FORM": {
+      "ADD_TITLE": "Ajouter un bus",
+      "EDIT_TITLE": "Modifier le bus",
+      "NAME": "Nom du bus",
+      "NAME_PLACEHOLDER": "Saisir le nom du bus",
+      "TOTAL_SEATS": "Nombre total de places",
+      "TOTAL_SEATS_PLACEHOLDER": "Saisir la capacité totale",
+      "AMENITIES": "Équipements",
+      "AMENITIES_PLACEHOLDER": "Sélectionner les équipements",
+      "PICTURES": "Photos",
+      "ERRORS": {
+        "NAME_REQUIRED": "Le nom du bus est requis.",
+        "TOTAL_SEATS_REQUIRED": "Le nombre de places doit être au moins 1."
+      }
+    },
+    "MESSAGES": {
+      "CREATE_SUCCESS": "Bus créé avec succès.",
+      "CREATE_ERROR": "Impossible de créer le bus.",
+      "UPDATE_SUCCESS": "Bus mis à jour avec succès.",
+      "UPDATE_ERROR": "Impossible de mettre à jour le bus.",
+      "DELETE_SUCCESS": "Bus supprimé avec succès.",
+      "DELETE_ERROR": "Impossible de supprimer le bus.",
+      "LOAD_ERROR": "Impossible de charger les données du bus.",
+      "UPLOAD_ERROR": "Impossible de télécharger l'image.",
+      "SEATS_LOCKED": "Le nombre de places ne peut pas être modifié tant que le bus est dans un voyage programmé ou actif.",
+      "BUS_IN_ACTIVE_TRIP": "Ce bus ne peut pas être supprimé car il est dans un voyage programmé ou actif."
+    }
   }
 }

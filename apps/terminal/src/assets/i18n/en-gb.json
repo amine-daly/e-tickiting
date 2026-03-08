@@ -495,5 +495,55 @@
         "NO_ACCOUNT": "No account found."
       }
     }
+  },
+  "MENU": {
+    "DASHBOARD": "Dashboard",
+    "BUSES": "Buses"
+  },
+  "BUSES": {
+    "TITLE": "Buses",
+    "ADD_BUTTON": "Add bus",
+    "LOADING": "Loading buses...",
+    "EMPTY": "No buses found.",
+    "LABEL": {
+      "SEATS": "seats"
+    },
+    "AMENITY": {
+      "WIFI": "WiFi",
+      "POWER_OUTLET": "Power Outlet",
+      "TV": "TV",
+      "SNACKS": "Snacks",
+      "AC": "AC",
+      "TOILET": "Toilet",
+      "LUGGAGE": "Luggage",
+      "USB": "USB"
+    },
+    "FORM": {
+      "ADD_TITLE": "Add bus",
+      "EDIT_TITLE": "Edit bus",
+      "NAME": "Bus name",
+      "NAME_PLACEHOLDER": "Enter bus name",
+      "TOTAL_SEATS": "Total seats",
+      "TOTAL_SEATS_PLACEHOLDER": "Enter total seat capacity",
+      "AMENITIES": "Amenities",
+      "AMENITIES_PLACEHOLDER": "Select amenities",
+      "PICTURES": "Pictures",
+      "ERRORS": {
+        "NAME_REQUIRED": "Bus name is required.",
+        "TOTAL_SEATS_REQUIRED": "Total seats must be at least 1."
+      }
+    },
+    "MESSAGES": {
+      "CREATE_SUCCESS": "Bus created successfully.",
+      "CREATE_ERROR": "Unable to create the bus.",
+      "UPDATE_SUCCESS": "Bus updated successfully.",
+      "UPDATE_ERROR": "Unable to update the bus.",
+      "DELETE_SUCCESS": "Bus deleted successfully.",
+      "DELETE_ERROR": "Unable to delete the bus.",
+      "LOAD_ERROR": "Unable to load bus data.",
+      "UPLOAD_ERROR": "Unable to upload image.",
+      "SEATS_LOCKED": "Total seats cannot be changed while bus is in a scheduled or active trip.",
+      "BUS_IN_ACTIVE_TRIP": "This bus cannot be deleted because it is in a scheduled or active trip."
+    }
   }
 }

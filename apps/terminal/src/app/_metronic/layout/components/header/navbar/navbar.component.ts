@@ -1,4 +1,10 @@
-import { Component, Input, OnInit, OnDestroy } from '@angular/core';
+import {
+  Component,
+  Input,
+  OnInit,
+  OnDestroy,
+  ChangeDetectorRef,
+} from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Subject, takeUntil } from 'rxjs';
 import { NgbDropdownModule } from '@ng-bootstrap/ng-bootstrap';
@@ -47,7 +53,10 @@ export class NavbarComponent implements OnInit, OnDestroy {
   currentUser: UserType | null = null;
   private destroy$ = new Subject<void>();
 
-  constructor(private authService: AuthService) {}
+  constructor(
+    private authService: AuthService,
+    private cdr: ChangeDetectorRef,
+  ) {}
 
   ngOnInit(): void {
     // Subscribe to current POS
@@ -71,6 +80,7 @@ export class NavbarComponent implements OnInit, OnDestroy {
       .pipe(takeUntil(this.destroy$))
       .subscribe((user) => {
         this.currentUser = user;
+        this.cdr.markForCheck();
       });
   }
 

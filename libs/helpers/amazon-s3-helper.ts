@@ -1,5 +1,3 @@
-import { Injectable } from "@angular/core";
-
 export interface AmazonUploadApiResponse {
   baseUrl?: string;
   path?: string;
@@ -15,7 +13,6 @@ export interface AmazonUploadResult {
   key?: string;
 }
 
-@Injectable({ providedIn: "root" })
 export class AmazonS3Helper {
   createObjectKey(
     posId: string | null | undefined,
@@ -50,9 +47,7 @@ export class AmazonS3Helper {
     };
   }
 
-  deleteFileFromAws(
-    key: string | null | undefined,
-  ): Promise<any> | null {
+  deleteFileFromAws(key: string | null | undefined): Promise<any> | null {
     if (!key || !key.trim()) {
       return null;
     }

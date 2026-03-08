@@ -25,6 +25,10 @@ const Routing: Routes = [
     loadChildren: () => import('./team/team.routes').then((m) => m.teamRoutes),
   },
   {
+    path: 'buses',
+    loadChildren: () => import('./buses/buses.routes').then((m) => m.busRoutes),
+  },
+  {
     path: 'trips',
     loadChildren: () =>
       import('./trip/trip-list.routes').then((m) => m.tripRoutes),

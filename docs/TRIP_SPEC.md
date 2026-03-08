@@ -174,6 +174,7 @@ interface DropoffPoint {
 ```typescript
 interface Segment {
   segmentId: string; // system-generated
+  sequence: number; // strictly ascending, unique per trip
   fromPlaceId: string; // start commercial stop
   toPlaceId: string; // end commercial stop
   departureTime: string; // UTC, derived from stopSchedule
@@ -222,8 +223,8 @@ interface ExpressFare {
   validFrom: string | null; // null = active immediately
   validUntil: string | null; // null = no expiry
   active: boolean;
-  totalDistanceKm: number; // DERIVED: sum of covered segment distanceKm
-  totalDurationMinutes: number; // DERIVED: sum of covered segment durationMinutes
+  totalDistanceKm and totalDurationMinutes are COMPUTED at read time
+  from segmentsCovered - NOT stored in DB to avoid sync issues
   // NO maxSeats — express fares have zero inventory
   // NO bookedSeats — inventory tracked in segments only
 }
@@ -246,6 +247,8 @@ interface Ticket {
   tripId: string;
   segmentIds: string[]; // segments this ticket covers
   expressId?: string; // if express fare was applied
+  pickupPointId: string; // MANDATORY - where passenger boards
+  dropoffPointId: string; // MANDATORY - where passenger drops
   passengerId: string;
   appliedPrice: number; // snapshot at booking time — NEVER changes
   currency: string; // snapshot of trip.currency at booking time
@@ -328,6 +331,8 @@ WHERE segmentId IN refund.segmentsRefunded
 
 ```
 1. User selects journey (fromPlaceId → toPlaceId)
+  + 1.5. User selects pickupPoint (from available points at fromPlaceId)
+  + 1.6. User selects dropoffPoint (from available points at toPlaceId)
 2. System resolves segment chain or matching express fare
 3. Atomic CAS: bookedSeats + qty <= maxSeats for ALL segments in chain
    └─ Fails → return "no seats available", no ticket created
@@ -394,6 +399,10 @@ CANCELLED ──→ terminal    No further transitions.
 | departureDate / currency      | ✅ Free    | ❌ Blocked   | Cannot change after tickets exist                                                                                         |
 | Remove any stop               | ✅ Free    | ❌ Blocked   | Blocked if referenced by segment or express fare                                                                          |
 | Add / remove segments         | ❌ Blocked | ❌ Blocked   | Segments frozen at creation — create new trip if route changes                                                            |
+| Add/deactivate pickup/dropoff | ✅ Free    | ✅ Allowed   | Always allowed                                                                                                            |
+
+- Note: Deactivating a point does NOT affect existing CONFIRMED tickets
+- (ticket stores pickupPointId/dropoffPointId snapshot)
 
 ---
 

@@ -2,19 +2,18 @@ import { isEqual } from 'lodash';
 
 export class FormHelper {
   static getChangedValues(current: any, initial: any): any {
+    if (Array.isArray(current)) {
+      return isEqual(current, initial) ? [] : current;
+    }
+
     const changed: any = Array.isArray(current) ? [] : {};
     Object.keys(current).forEach((key) => {
       const currentVal = current[key];
       const initialVal = initial[key];
 
       if (Array.isArray(currentVal) && Array.isArray(initialVal)) {
-        const nested = FormHelper.getChangedValues(currentVal, initialVal);
-        if (
-          Array.isArray(nested)
-            ? nested.length > 0
-            : Object.keys(nested).length > 0
-        ) {
-          changed[key] = nested;
+        if (!isEqual(currentVal, initialVal)) {
+          changed[key] = currentVal;
         }
         return;
       }

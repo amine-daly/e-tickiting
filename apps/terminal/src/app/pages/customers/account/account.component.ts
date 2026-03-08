@@ -5,14 +5,16 @@ import { EMPTY, from, of } from 'rxjs';
 import { catchError, map, switchMap, take } from 'rxjs/operators';
 import { KeeniconComponent } from 'src/app/_metronic/shared/keenicon/keenicon.component';
 import { CustomersService } from '../customers.service';
-import { TranslateModule } from '@ngx-translate/core';
+import { TranslateModule, TranslateService } from '@ngx-translate/core';
 import { UserType } from 'src/app/core/models/user-type';
 import { AmazonS3Helper } from '../../../../../../../libs/helpers/amazon-s3-helper';
+import { AlertService } from 'src/app/core/services/alert.service';
 
 @Component({
   selector: 'app-account',
   standalone: true,
   imports: [CommonModule, RouterModule, KeeniconComponent, TranslateModule],
+  providers: [AmazonS3Helper],
   templateUrl: './account.component.html',
 })
 export class AccountComponent {
@@ -20,7 +22,9 @@ export class AccountComponent {
   defaultAvatar = 'assets/placeholders/avatar-1.svg';
 
   constructor(
+    private alert: AlertService,
     private cdr: ChangeDetectorRef,
+    private translate: TranslateService,
     private amazonS3Helper: AmazonS3Helper,
     private customersService: CustomersService,
   ) {}
@@ -83,9 +87,18 @@ export class AccountComponent {
             ),
           ),
         )
-        .subscribe((updatedUser) => {
-          this.customersService.user$ = updatedUser;
-          this.cdr.markForCheck();
+        .subscribe({
+          next: () => {
+            this.alert.success('Succès', 'Profil mis à jour.');
+            this.cdr.markForCheck();
+          },
+          error: (err) => {
+            this.alert.error(
+              'Échec',
+              err?.error?.message || 'Une erreur est survenue.',
+            );
+            this.cdr.markForCheck();
+          },
         });
     };
 
