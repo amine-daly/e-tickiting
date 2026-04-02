@@ -43,7 +43,7 @@ export class BusService {
   list(searchString = ''): Observable<BusType[]> {
     this.loading.next(true);
     const params = new HttpParams()
-      .set('posId', localStorage.getItem('posId') || '')
+      .set('companyId', localStorage.getItem('companyId') || '')
       .set('searchString', searchString)
       .set('page', this.pageIndex)
       .set('limit', this.pageLimit);

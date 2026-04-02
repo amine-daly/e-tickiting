@@ -1,16 +1,14 @@
 import { CommonModule } from '@angular/common';
 import { Component, OnInit, OnDestroy } from '@angular/core';
-import { HttpClient } from '@angular/common/http';
-import { map } from 'lodash';
+import { Input } from '@angular/core';
 import { NgbActiveModal } from '@ng-bootstrap/ng-bootstrap';
 import { Subject, takeUntil } from 'rxjs';
 import { TranslateModule, TranslateService } from '@ngx-translate/core';
 
-import { BusinessProfileService } from '../../business-profile/business-profile/business-profile.service';
+import { AccountsService } from 'src/app/core/services/accounts.service';
 import { AlertService } from 'src/app/core/services/alert.service';
-import { PointOfSaleType } from 'src/app/core/models/account.model';
-import { environment } from 'src/environments/environment';
-import { AuthService } from 'src/app/modules/auth';
+import { AccountType } from 'src/app/core/models/account.model';
+import { CompanyType } from 'src/app/core/models/company.model';
 
 @Component({
   selector: 'app-delete-pos-modal',
@@ -20,54 +18,48 @@ import { AuthService } from 'src/app/modules/auth';
   styleUrls: ['./delete-pos-modal.component.scss'],
 })
 export class DeletePosModalComponent implements OnInit, OnDestroy {
-  posList: PointOfSaleType[] = [];
+  @Input() accounts: AccountType[] = [];
+
+  accountTargets: AccountType[] = [];
   isLoading = false;
   deletingId: string | null = null;
   private destroy$ = new Subject<void>();
 
   constructor(
     public activeModal: NgbActiveModal,
-    private profileService: BusinessProfileService,
+    private accountsService: AccountsService,
     private alert: AlertService,
     private translate: TranslateService,
-    private http: HttpClient,
-    private authService: AuthService,
   ) {}
 
   ngOnInit(): void {
-    this.authService.accounts$
-      .pipe(takeUntil(this.destroy$))
-      .subscribe((accounts) => {
-        console.log(
-          '🚀 ~ DeletePosModalComponent ~ ngOnInit ~ accounts:',
-          accounts,
-        );
-        this.posList = map(accounts, 'target.pos');
-        console.log(
-          '🚀 ~ NavbarComponent ~ ngOnInit ~ this.posList:',
-          this.posList,
-        );
-      });
+    this.accountTargets = (this.accounts || []).filter(
+      (account) => !!account?.target?.company?.id,
+    );
   }
 
-  deletePos(pos: PointOfSaleType): void {
-    if (!pos?.id || this.deletingId) return;
+  getCompany(account: AccountType): CompanyType | undefined {
+    return account?.target?.company;
+  }
 
-    this.deletingId = pos.id;
+  deleteAssignment(account: AccountType): void {
+    if (!account?.id || this.deletingId) return;
 
-    this.profileService.deletePos(pos.id).subscribe({
+    this.deletingId = account.id;
+
+    this.accountsService.deleteAccount(account.id).subscribe({
       next: () => {
         this.alert.success(
-          this.translate.instant('DASHBOARD.POS.MESSAGES.DELETE_SUCCESS'),
+          this.translate.instant('DASHBOARD.ASSIGN.MESSAGES.SUCCESS'),
         );
-        // Remove from list
-        this.posList = this.posList.filter((p) => p.id !== pos.id);
+        this.accountTargets = this.accountTargets.filter(
+          (item) => item.id !== account.id,
+        );
         this.deletingId = null;
       },
-      error: (err) => {
+      error: () => {
         this.alert.error(
-          err?.error?.message ||
-            this.translate.instant('DASHBOARD.POS.MESSAGES.DELETE_ERROR'),
+          this.translate.instant('DASHBOARD.ASSIGN.MESSAGES.ERROR'),
         );
         this.deletingId = null;
       },

@@ -13,26 +13,23 @@ import { Subject, Subscription } from 'rxjs';
 import {
   debounceTime,
   distinctUntilChanged,
-  map as rxMap,
   switchMap,
   takeUntil,
 } from 'rxjs/operators';
-import { isEqual, map } from 'lodash';
+import { isEqual } from 'lodash';
 import { NgSelectModule } from '@ng-select/ng-select';
 
 import { PermissionsService } from '../../permissions/permissions.service';
-import { BusinessProfileService } from '../../business-profile/business-profile/business-profile.service';
+import { CompanyService } from '../../companies/company.service';
 import { AccountsService } from 'src/app/core/services/accounts.service';
 import { AlertService } from 'src/app/core/services/alert.service';
-import {
-  PointOfSaleType,
-  AccountType,
-} from 'src/app/core/models/account.model';
+import { AccountType } from 'src/app/core/models/account.model';
 import {
   PermissionDefinitionType,
   PermissionPermissionsType,
+  PermissionType,
 } from 'src/app/core/models/permission-type';
-import { AuthService } from 'src/app/modules/auth';
+import { CompanyType } from 'src/app/core/models/company.model';
 
 @Component({
   selector: 'app-assign-customer-modal',
@@ -48,8 +45,6 @@ import { AuthService } from 'src/app/modules/auth';
   styleUrls: ['./assign-customer-modal.component.scss'],
 })
 export class AssignCustomerModalComponent implements OnInit, OnDestroy {
-  private unsubscribeAll = new Subject<void>();
-
   @Input() account?: AccountType;
   @Input() accounts: AccountType[] = [];
 
@@ -58,10 +53,13 @@ export class AssignCustomerModalComponent implements OnInit, OnDestroy {
   isSubmitting = false;
   isButtonDisabled = true;
 
-  // Data - POS
-  posList: PointOfSaleType[] = [];
-  filteredPosList: PointOfSaleType[] = [];
-  posLoading = false;
+  // Data - Companies
+  companyList: CompanyType[] = [];
+  filteredCompanyList: CompanyType[] = [];
+  companyLoading = false;
+  targetPermissions: PermissionType[] = [];
+  permissionsLoading = false;
+  roleViewMode: 'choose' | 'add' = 'choose';
 
   // Data - Permission definitions for creating new permission
   permissionDefinitions: PermissionDefinitionType[] = [];
@@ -70,32 +68,26 @@ export class AssignCustomerModalComponent implements OnInit, OnDestroy {
   private formChangesSub?: Subscription;
   private initialValues: any;
   private destroy$ = new Subject<void>();
-  private posSearchInput$ = new Subject<string>();
+  private companySearchInput$ = new Subject<string>();
 
   constructor(
     public activeModal: NgbActiveModal,
     private fb: FormBuilder,
     private permissionsService: PermissionsService,
-    private businessProfileService: BusinessProfileService,
+    private companyService: CompanyService,
     private accountsService: AccountsService,
     private alert: AlertService,
     private translate: TranslateService,
-    private authService: AuthService,
   ) {
     this.assignForm = this.buildForm();
   }
 
   ngOnInit(): void {
     this.loadPermissionDefinitions();
-    this.setupPosSearch();
-    this.authService.accounts$
-      .pipe(
-        takeUntil(this.unsubscribeAll),
-        rxMap((accounts) => {
-          this.posList = map(accounts, (account) => account?.target?.pos);
-        }),
-      )
-      .subscribe();
+    this.setupCompanySearch();
+    this.setupCompanySelection();
+    this.applyRoleModeValidators();
+    this.onCompanySearch('');
 
     this.initialValues = this.assignForm.getRawValue();
     this.formChangesSub = this.assignForm.valueChanges.subscribe(() => {
@@ -112,45 +104,82 @@ export class AssignCustomerModalComponent implements OnInit, OnDestroy {
 
   private buildForm(): FormGroup {
     return this.fb.group({
-      pos: [null, [Validators.required]],
+      company: [null, [Validators.required]],
+      selectedPermission: [null],
       permissionName: ['', [Validators.required, Validators.pattern(/\S+/)]],
       permissions: this.fb.array([]),
     });
   }
 
-  private setupPosSearch(): void {
-    this.posSearchInput$
+  private setupCompanySelection(): void {
+    this.assignForm
+      .get('company')
+      ?.valueChanges.pipe(takeUntil(this.destroy$))
+      .subscribe((company: CompanyType | null) => {
+        this.onCompanySelected(company);
+      });
+  }
+
+  private onCompanySelected(company: CompanyType | null): void {
+    this.targetPermissions = [];
+    this.assignForm.get('selectedPermission')?.setValue(null);
+    this.showChooseRoleView();
+
+    if (!company?.id) {
+      return;
+    }
+
+    this.permissionsLoading = true;
+    this.permissionsService
+      .getPermissionsByTarget(company.id)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (permissions) => {
+          this.targetPermissions = permissions || [];
+          this.permissionsLoading = false;
+        },
+        error: () => {
+          this.targetPermissions = [];
+          this.permissionsLoading = false;
+        },
+      });
+  }
+
+  private setupCompanySearch(): void {
+    this.companySearchInput$
       .pipe(
         takeUntil(this.destroy$),
         debounceTime(300),
         distinctUntilChanged(),
         switchMap((searchString) => {
-          this.posLoading = true;
-          return this.businessProfileService.searchPos(searchString, 50);
+          this.companyLoading = true;
+          this.companyService.pageIndex = 0;
+          this.companyService.pageLimit = 100;
+          return this.companyService.list(searchString);
         }),
       )
       .subscribe({
-        next: (posList) => {
-          this.posList = posList;
-          this.applyPosFilter();
-          this.posLoading = false;
+        next: (companyList) => {
+          this.companyList = companyList || [];
+          this.applyCompanyFilter();
+          this.companyLoading = false;
         },
         error: () => {
-          this.posLoading = false;
+          this.companyLoading = false;
         },
       });
   }
 
-  private applyPosFilter(): void {
-    // Get already assigned POS IDs from accounts
-    const assignedPosIds = new Set(
+  private applyCompanyFilter(): void {
+    // Get already assigned company IDs from accounts
+    const assignedCompanyIds = new Set(
       this.accounts
-        .map((acc) => acc.target?.pos?.id)
+        .map((acc) => acc.target?.company?.id)
         .filter((id): id is string => !!id),
     );
-    // Filter out already assigned POS
-    this.filteredPosList = this.posList.filter(
-      (pos) => !assignedPosIds.has(pos.id || ''),
+    // Filter out already assigned companies
+    this.filteredCompanyList = this.companyList.filter(
+      (company) => !assignedCompanyIds.has(company.id || ''),
     );
   }
 
@@ -209,8 +238,44 @@ export class AssignCustomerModalComponent implements OnInit, OnDestroy {
     return !!(grant?.read || grant?.create || grant?.update);
   }
 
-  onPosSearch(term: string): void {
-    this.posSearchInput$.next(term);
+  permissionsCount(permissions?: PermissionPermissionsType[]): number {
+    if (!permissions?.length) {
+      return 0;
+    }
+    return permissions.filter((grant) => this.hasAnyGrant(grant)).length;
+  }
+
+  onCompanySearch(term: string): void {
+    this.companySearchInput$.next(term);
+  }
+
+  showAddPermissionView(): void {
+    this.roleViewMode = 'add';
+    this.applyRoleModeValidators();
+  }
+
+  showChooseRoleView(): void {
+    this.roleViewMode = 'choose';
+    this.applyRoleModeValidators();
+  }
+
+  private applyRoleModeValidators(): void {
+    const selectedPermissionControl = this.assignForm.get('selectedPermission');
+    const permissionNameControl = this.assignForm.get('permissionName');
+
+    if (this.roleViewMode === 'choose') {
+      selectedPermissionControl?.setValidators([Validators.required]);
+      permissionNameControl?.clearValidators();
+    } else {
+      selectedPermissionControl?.clearValidators();
+      permissionNameControl?.setValidators([
+        Validators.required,
+        Validators.pattern(/\S+/),
+      ]);
+    }
+
+    selectedPermissionControl?.updateValueAndValidity({ emitEvent: false });
+    permissionNameControl?.updateValueAndValidity({ emitEvent: false });
   }
 
   isInvalid(controlName: string): boolean {
@@ -219,7 +284,7 @@ export class AssignCustomerModalComponent implements OnInit, OnDestroy {
   }
 
   nextTab(): void {
-    if (this.activeTab === 1 && this.assignForm.get('pos')?.valid) {
+    if (this.activeTab === 1 && this.assignForm.get('company')?.valid) {
       this.activeTab = 2;
     }
   }
@@ -231,6 +296,10 @@ export class AssignCustomerModalComponent implements OnInit, OnDestroy {
   }
 
   submit(): void {
+    if (this.isSubmitting) {
+      return;
+    }
+
     if (this.assignForm.invalid) {
       this.assignForm.markAllAsTouched();
       return;
@@ -246,6 +315,17 @@ export class AssignCustomerModalComponent implements OnInit, OnDestroy {
     this.isSubmitting = true;
     const formValue = this.assignForm.getRawValue();
 
+    if (this.roleViewMode === 'choose') {
+      const selectedPermissionId = formValue.selectedPermission?.id;
+      if (!selectedPermissionId) {
+        this.assignForm.get('selectedPermission')?.markAsTouched();
+        this.isSubmitting = false;
+        return;
+      }
+      this.createAccountWithTarget(formValue.company, selectedPermissionId);
+      return;
+    }
+
     // Step 1: Create the permission first
     const permissionPayload = this.buildPermissionPayload(formValue);
 
@@ -254,13 +334,12 @@ export class AssignCustomerModalComponent implements OnInit, OnDestroy {
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: (createdPermission) => {
-          // Step 2: Create new account with POS and permission
-          this.createAccountWithTarget(formValue.pos, createdPermission.id);
+          // Step 2: Create new account with company and permission
+          this.createAccountWithTarget(formValue.company, createdPermission.id);
         },
-        error: (err) => {
+        error: () => {
           this.alert.error(
-            err?.error?.message ||
-              this.translate.instant('DASHBOARD.ASSIGN.MESSAGES.ERROR'),
+            this.translate.instant('DASHBOARD.ASSIGN.MESSAGES.ERROR'),
           );
           this.isSubmitting = false;
         },
@@ -268,7 +347,8 @@ export class AssignCustomerModalComponent implements OnInit, OnDestroy {
   }
 
   private buildPermissionPayload(formValue: any): any {
-    const posId = formValue.pos?.id || localStorage.getItem('posId');
+    const companyId =
+      formValue.company?.id || localStorage.getItem('companyId');
     const grants = (formValue.permissions ?? [])
       .map((item: any) => {
         const permissionId = item?.permission?.id;
@@ -287,19 +367,18 @@ export class AssignCustomerModalComponent implements OnInit, OnDestroy {
     return {
       name: formValue.permissionName,
       permissions: grants,
-      target: posId ? { pos: posId } : undefined,
+      target: companyId ? { company: companyId } : undefined,
     };
   }
 
   private createAccountWithTarget(
-    pos: PointOfSaleType,
+    company: CompanyType,
     permissionId: string,
   ): void {
     const payload = {
-      posId: pos?.id!,
+      companyId: company?.id!,
       permissionId: permissionId,
     };
-
     this.accountsService
       .addTargetToAccount(this.account!.id!, payload)
       .pipe(takeUntil(this.destroy$))
@@ -310,14 +389,25 @@ export class AssignCustomerModalComponent implements OnInit, OnDestroy {
           );
           this.activeModal.close(newAccount);
         },
-        error: (err) => {
+        error: () => {
           this.alert.error(
-            err?.error?.message ||
-              this.translate.instant('DASHBOARD.ASSIGN.MESSAGES.ERROR'),
+            this.translate.instant('DASHBOARD.ASSIGN.MESSAGES.ERROR'),
           );
           this.isSubmitting = false;
         },
       });
+  }
+
+  canSubmit(): boolean {
+    if (!this.assignForm.get('company')?.valid || this.isSubmitting) {
+      return false;
+    }
+
+    if (this.roleViewMode === 'choose') {
+      return !!this.assignForm.get('selectedPermission')?.valid;
+    }
+
+    return !this.isButtonDisabled && this.assignForm.valid;
   }
 
   ngOnDestroy(): void {

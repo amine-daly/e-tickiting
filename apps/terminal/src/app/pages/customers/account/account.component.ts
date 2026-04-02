@@ -9,6 +9,7 @@ import { TranslateModule, TranslateService } from '@ngx-translate/core';
 import { UserType } from 'src/app/core/models/user-type';
 import { AmazonS3Helper } from '../../../../../../../libs/helpers/amazon-s3-helper';
 import { AlertService } from 'src/app/core/services/alert.service';
+import { resolveUserErrorMessage } from 'src/app/core/helpers/user-error-message.helper';
 
 @Component({
   selector: 'app-account',
@@ -93,9 +94,23 @@ export class AccountComponent {
             this.cdr.markForCheck();
           },
           error: (err) => {
+            const safeMessage = resolveUserErrorMessage(
+              err,
+              [
+                {
+                  pattern: /maximum upload size exceeded|payload too large|file.*too.*large/i,
+                  message: 'Le fichier est trop volumineux.',
+                },
+                {
+                  pattern: /access denied|forbidden|unauthorized/i,
+                  message: 'Action non autorisee.',
+                },
+              ],
+              'Une erreur est survenue.',
+            );
             this.alert.error(
               'Échec',
-              err?.error?.message || 'Une erreur est survenue.',
+              safeMessage,
             );
             this.cdr.markForCheck();
           },

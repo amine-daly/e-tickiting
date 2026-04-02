@@ -11,6 +11,8 @@ import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
 
+import com.eticketing.app.company.CompanyRepository;
+import com.eticketing.app.company.CompanyType;
 import com.eticketing.app.place.PlaceType;
 import com.eticketing.app.place.PlaceRepository;
 import com.eticketing.app.pos.PointOfSaleType;
@@ -31,6 +33,7 @@ public class TicketDocumentService {
     private final TripTypeRepository tripRepository;
     private final UserTypeRepository userRepository;
     private final PointOfSaleRepository posRepository;
+    private final CompanyRepository companyRepository;
     private final PlaceRepository placeRepository;
     private final TicketTemplateEngine templateEngine;
     private final TicketQrCodeService qrCodeService;
@@ -38,12 +41,14 @@ public class TicketDocumentService {
     public TicketDocumentService(TripTypeRepository tripRepository,
             UserTypeRepository userRepository,
             PointOfSaleRepository posRepository,
+            CompanyRepository companyRepository,
             PlaceRepository placeRepository,
             TicketTemplateEngine templateEngine,
             TicketQrCodeService qrCodeService) {
         this.tripRepository = tripRepository;
         this.userRepository = userRepository;
         this.posRepository = posRepository;
+        this.companyRepository = companyRepository;
         this.placeRepository = placeRepository;
         this.templateEngine = templateEngine;
         this.qrCodeService = qrCodeService;
@@ -61,6 +66,9 @@ public class TicketDocumentService {
         // Get POS for company info (replaced Agency)
         String posId = trip.getTarget() != null ? trip.getTarget().getPos() : null;
         PointOfSaleType pos = posId != null ? posRepository.findById(posId).orElse(null) : null;
+        CompanyType company = pos != null && pos.getCompanyId() != null
+                ? companyRepository.findById(pos.getCompanyId()).orElse(null)
+                : null;
 
         // Get origin and destination directly from trip
         String originId = trip.getOriginId();
@@ -95,7 +103,9 @@ public class TicketDocumentService {
         String reference = ticket.getReference();
         String qrCodeDataUri = qrCodeService.generateDataUri(reference);
         String qrCodeUrl = qrCodeService.generatePublicUrl(reference);
-        String template = pos != null && pos.getEmailTemplate() != null ? pos.getEmailTemplate() : TicketTemplateDefaults.defaultTemplate();
+        String template = company != null && company.getEmailTemplate() != null
+                ? company.getEmailTemplate()
+                : TicketTemplateDefaults.defaultTemplate();
 
         Map<String, Object> context = new HashMap<>();
         context.put("reference", reference);

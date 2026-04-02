@@ -14,6 +14,7 @@ import { TranslateModule } from '@ngx-translate/core';
 import { RoleEnum } from 'src/app/core/models/user-type';
 import { CustomersService } from '../../customers.service';
 import { FormHelper } from 'src/app/core/helpers/form-helper';
+import { resolveUserErrorMessage } from 'src/app/core/helpers/user-error-message.helper';
 
 @Component({
   selector: 'app-settings',
@@ -89,10 +90,24 @@ export class SettingsComponent implements OnInit, OnDestroy {
       },
       error: (err) => {
         this.isSaving = false;
+        const safeMessage = resolveUserErrorMessage(
+          err,
+          [
+            {
+              pattern: /duplicate|already exist|already used|email/i,
+              message: 'Cette adresse e-mail est deja utilisee.',
+            },
+            {
+              pattern: /validation|invalid|constraint/i,
+              message: 'Certains champs sont invalides.',
+            },
+          ],
+          'Une erreur est survenue.',
+        );
         this.showAlert(
           'error',
           'Échec',
-          err?.error?.message || 'Une erreur est survenue.',
+          safeMessage,
         );
         this.cdr.markForCheck();
       },

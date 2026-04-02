@@ -8,6 +8,7 @@ import jakarta.validation.constraints.NotBlank;
 import org.springframework.data.annotation.CreatedDate;
 import org.springframework.data.annotation.Id;
 import org.springframework.data.annotation.LastModifiedDate;
+import org.springframework.data.mongodb.core.index.CompoundIndex;
 import org.springframework.data.mongodb.core.mapping.Document;
 
 import java.time.Instant;
@@ -17,11 +18,21 @@ import java.time.Instant;
  * are sold.
  */
 @Document("pointofsales")
+@CompoundIndex(name = "companyId_idx", def = "{ 'companyId': 1 }")
 public class PointOfSaleType {
 
     @Id
     @JsonProperty("id")
     private String id;
+
+    /**
+     * Reference to the owning Company.
+     */
+    @JsonProperty("companyId")
+    private String companyId;
+
+    @JsonProperty("active")
+    private boolean active = true;
 
     @NotBlank
     @JsonProperty("title")
@@ -45,18 +56,6 @@ public class PointOfSaleType {
     @JsonProperty("email")
     private String email;
 
-    /**
-     * Reference to currency ID
-     */
-    @JsonProperty("currencyId")
-    private String currencyId;
-
-    /**
-     * HTML email template for ticket confirmations
-     */
-    @JsonProperty("emailTemplate")
-    private String emailTemplate;
-
     @CreatedDate
     @JsonProperty("createdAt")
     private Instant createdAt;
@@ -68,9 +67,8 @@ public class PointOfSaleType {
     public PointOfSaleType() {
     }
 
-    public PointOfSaleType(String title, String currencyId) {
+    public PointOfSaleType(String title) {
         this.title = title;
-        this.currencyId = currencyId;
     }
 
     // Getters and Setters
@@ -80,6 +78,22 @@ public class PointOfSaleType {
 
     public void setId(String id) {
         this.id = id;
+    }
+
+    public String getCompanyId() {
+        return companyId;
+    }
+
+    public void setCompanyId(String companyId) {
+        this.companyId = companyId;
+    }
+
+    public boolean isActive() {
+        return active;
+    }
+
+    public void setActive(boolean active) {
+        this.active = active;
     }
 
     public String getTitle() {
@@ -128,22 +142,6 @@ public class PointOfSaleType {
 
     public void setEmail(String email) {
         this.email = email;
-    }
-
-    public String getCurrencyId() {
-        return currencyId;
-    }
-
-    public void setCurrencyId(String currencyId) {
-        this.currencyId = currencyId;
-    }
-
-    public String getEmailTemplate() {
-        return emailTemplate;
-    }
-
-    public void setEmailTemplate(String emailTemplate) {
-        this.emailTemplate = emailTemplate;
     }
 
     public Instant getCreatedAt() {

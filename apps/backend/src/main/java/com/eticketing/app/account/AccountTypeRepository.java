@@ -11,9 +11,9 @@ public interface AccountTypeRepository extends MongoRepository<AccountType, Stri
 
     List<AccountType> findByUserId(String userId);
 
-    @Query("{ 'target.pos.id': ?0 }")
-    List<AccountType> findByTargetPosId(String posId);
+    @Query("{ 'target.company.id': ?0 }")
+    List<AccountType> findByTargetCompanyId(String companyId);
 
-    @Query("{ 'target.pos.id': ?0 }")
-    Page<AccountType> findByTargetPosId(String posId, Pageable pageable);
+    @Query("{ 'target.company.id': ?0 }")
+    Page<AccountType> findByTargetCompanyId(String companyId, Pageable pageable);
 }

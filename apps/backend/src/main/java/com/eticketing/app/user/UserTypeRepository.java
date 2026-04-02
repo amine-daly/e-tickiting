@@ -20,4 +20,10 @@ public interface UserTypeRepository extends MongoRepository<UserType, String> {
      */
     @Query("{ 'target.pos': ?0 }")
     Page<UserType> findByTargetPos(String posId, Pageable pageable);
+
+    /**
+     * Find users by target Company ID
+     */
+    @Query("{ 'target.company': ?0 }")
+    Page<UserType> findByTargetCompany(String companyId, Pageable pageable);
 }

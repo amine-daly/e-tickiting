@@ -22,20 +22,20 @@
           {{ "DASHBOARD.ASSIGN.TAB_CUSTOMER" | translate }}
         </a>
         <ng-template ngbNavContent>
-          <!--begin::Customer/POS Selection-->
+          <!--begin::Customer/Company Selection-->
           <div class="py-4">
             <label class="form-label required">{{
               "DASHBOARD.ASSIGN.CHOOSE_POS" | translate
             }}</label>
             <ng-select
-              formControlName="pos"
-              [items]="filteredPosList"
-              [loading]="posLoading"
+              formControlName="company"
+              [items]="filteredCompanyList"
+              [loading]="companyLoading"
               [searchable]="true"
               [clearable]="true"
-              bindLabel="title"
+              bindLabel="name"
               placeholder="{{ 'DASHBOARD.ASSIGN.POS_PLACEHOLDER' | translate }}"
-              (search)="onPosSearch($event.term)"
+              (search)="onCompanySearch($event.term)"
             >
               <ng-template ng-option-tmp let-item="item">
                 <div class="d-flex align-items-center">
@@ -43,29 +43,29 @@
                     <img
                       *ngIf="item.picture?.baseUrl && item.picture?.path"
                       [src]="item.picture.baseUrl + '/' + item.picture.path"
-                      alt="POS"
+                      alt="Company"
                     />
                     <span
                       *ngIf="!item.picture?.baseUrl || !item.picture?.path"
                       class="symbol-label bg-light-primary text-primary fw-bold"
                     >
-                      {{ item.title?.charAt(0) | uppercase }}
+                      {{ item.name?.charAt(0) | uppercase }}
                     </span>
                   </div>
                   <div>
-                    <div class="fw-bold">{{ item.title }}</div>
-                    <div *ngIf="item.subtitle" class="text-muted small">
-                      {{ item.subtitle }}
+                    <div class="fw-bold">{{ item.name }}</div>
+                    <div *ngIf="item.legalName" class="text-muted small">
+                      {{ item.legalName }}
                     </div>
                   </div>
                 </div>
               </ng-template>
             </ng-select>
-            <div *ngIf="isInvalid('pos')" class="text-danger small mt-1">
+            <div *ngIf="isInvalid('company')" class="text-danger small mt-1">
               {{ "DASHBOARD.ASSIGN.ERRORS.POS_REQUIRED" | translate }}
             </div>
           </div>
-          <!--end::Customer/POS Selection-->
+          <!--end::Customer/Company Selection-->
         </ng-template>
       </li>
 
@@ -73,120 +73,190 @@
         <a
           ngbNavLink
           class="cursor-pointer"
-          [class.disabled]="!assignForm.get('pos')?.valid"
+          [class.disabled]="!assignForm.get('company')?.valid"
         >
           {{ "DASHBOARD.ASSIGN.TAB_PERMISSION" | translate }}
         </a>
         <ng-template ngbNavContent>
-          <!--begin::Permission Creation-->
+          <!--begin::Role Selection/Creation-->
           <div class="py-4">
-            <!--begin::Permission Name-->
-            <div class="mb-4">
-              <label class="form-label">
-                {{ "PERMISSIONS.MODAL.ROLE_NAME" | translate }}
-                <span class="text-danger">*</span>
-              </label>
-              <input
-                class="form-control"
-                formControlName="permissionName"
-                [placeholder]="
-                  'PERMISSIONS.MODAL.ROLE_NAME_PLACEHOLDER' | translate
-                "
-              />
-              <div
-                *ngIf="isInvalid('permissionName')"
-                class="text-danger small"
-              >
-                {{ "PERMISSIONS.MODAL.ERRORS.NAME_REQUIRED" | translate }}
-              </div>
-            </div>
-            <!--end::Permission Name-->
-
-            <!--begin::Grants Header-->
-            <div class="d-flex justify-content-between align-items-center mb-3">
-              <h5 class="mb-0">
-                {{ "PERMISSIONS.SECTION_TITLE" | translate }}
-              </h5>
+            <div class="d-flex justify-content-end mb-4">
               <button
+                *ngIf="roleViewMode === 'choose'"
                 type="button"
                 class="btn btn-sm btn-light-primary"
-                (click)="toggleCheckAll()"
+                (click)="showAddPermissionView()"
               >
-                {{ "PERMISSIONS.CHECK_ALL" | translate }}
+                {{ "PERMISSIONS.ADD_BUTTON" | translate }}
+              </button>
+              <button
+                *ngIf="roleViewMode === 'add'"
+                type="button"
+                class="btn btn-sm btn-light-primary"
+                (click)="showChooseRoleView()"
+              >
+                {{ "DASHBOARD.ASSIGN.CHOOSE_ROLE_BUTTON" | translate }}
               </button>
             </div>
-            <!--end::Grants Header-->
 
-            <!--begin::Loading-->
-            <div *ngIf="definitionsLoading" class="text-center py-4">
-              <span class="spinner-border spinner-border-sm"></span>
-            </div>
-            <!--end::Loading-->
-
-            <!--begin::Grants List-->
-            <div
-              *ngIf="!definitionsLoading"
-              class="permission-modal-list mh-300px scroll-y"
-              formArrayName="permissions"
-            >
-              <div
-                *ngFor="let role of permissionsArray.controls; let i = index"
-                [formGroupName]="i"
-                class="row align-items-center mb-3"
-              >
-                <div class="col-md-4">
-                  <span class="fw-semibold">
-                    {{
-                      role.get("permission")?.value?.name ||
-                        role.get("permission")?.value?.code
-                    }}
-                  </span>
+            <ng-container *ngIf="roleViewMode === 'choose'">
+              <div class="mb-4">
+                <label class="form-label required">
+                  {{ "DASHBOARD.ASSIGN.CHOOSE_ROLE_BUTTON" | translate }}
+                </label>
+                <ng-select
+                  formControlName="selectedPermission"
+                  [items]="targetPermissions"
+                  [loading]="permissionsLoading"
+                  [searchable]="true"
+                  [clearable]="true"
+                  bindLabel="name"
+                  [placeholder]="
+                    'DASHBOARD.ASSIGN.PERMISSION_PLACEHOLDER' | translate
+                  "
+                >
+                  <ng-template ng-option-tmp let-item="item">
+                    <div class="d-flex flex-column">
+                      <span class="fw-semibold">{{ item.name }}</span>
+                      <span class="text-muted small">
+                        {{
+                          "PERMISSIONS.TOTAL_GRANTS"
+                            | translate
+                              : { count: permissionsCount(item.permissions) }
+                        }}
+                      </span>
+                    </div>
+                  </ng-template>
+                </ng-select>
+                <div
+                  *ngIf="isInvalid('selectedPermission')"
+                  class="text-danger small mt-1"
+                >
+                  {{
+                    "DASHBOARD.ASSIGN.ERRORS.PERMISSION_REQUIRED" | translate
+                  }}
                 </div>
-                <div class="col-md-8">
-                  <div class="d-flex flex-wrap gap-4">
-                    <label
-                      class="form-check form-check-custom form-check-solid"
-                    >
-                      <input
-                        class="form-check-input"
-                        type="checkbox"
-                        formControlName="read"
-                      />
-                      <span class="form-check-label">
-                        {{ "PERMISSIONS.READ" | translate }}
-                      </span>
-                    </label>
-                    <label
-                      class="form-check form-check-custom form-check-solid"
-                    >
-                      <input
-                        class="form-check-input"
-                        type="checkbox"
-                        formControlName="update"
-                      />
-                      <span class="form-check-label">
-                        {{ "PERMISSIONS.WRITE" | translate }}
-                      </span>
-                    </label>
-                    <label
-                      class="form-check form-check-custom form-check-solid"
-                    >
-                      <input
-                        class="form-check-input"
-                        type="checkbox"
-                        formControlName="create"
-                      />
-                      <span class="form-check-label">
-                        {{ "PERMISSIONS.CREATE" | translate }}
-                      </span>
-                    </label>
+              </div>
+
+              <div
+                *ngIf="!permissionsLoading && !targetPermissions.length"
+                class="text-muted small"
+              >
+                {{ "DASHBOARD.ASSIGN.NO_PERMISSIONS" | translate }}
+              </div>
+            </ng-container>
+
+            <ng-container *ngIf="roleViewMode === 'add'">
+              <!--begin::Permission Name-->
+              <div class="mb-4">
+                <label class="form-label">
+                  {{ "PERMISSIONS.MODAL.ROLE_NAME" | translate }}
+                  <span class="text-danger">*</span>
+                </label>
+                <input
+                  class="form-control"
+                  formControlName="permissionName"
+                  [placeholder]="
+                    'PERMISSIONS.MODAL.ROLE_NAME_PLACEHOLDER' | translate
+                  "
+                />
+                <div
+                  *ngIf="isInvalid('permissionName')"
+                  class="text-danger small"
+                >
+                  {{ "PERMISSIONS.MODAL.ERRORS.NAME_REQUIRED" | translate }}
+                </div>
+              </div>
+              <!--end::Permission Name-->
+
+              <!--begin::Grants Header-->
+              <div
+                class="d-flex justify-content-between align-items-center mb-3"
+              >
+                <h5 class="mb-0">
+                  {{ "PERMISSIONS.SECTION_TITLE" | translate }}
+                </h5>
+                <button
+                  type="button"
+                  class="btn btn-sm btn-light-primary"
+                  (click)="toggleCheckAll()"
+                >
+                  {{ "PERMISSIONS.CHECK_ALL" | translate }}
+                </button>
+              </div>
+              <!--end::Grants Header-->
+
+              <!--begin::Loading-->
+              <div *ngIf="definitionsLoading" class="text-center py-4">
+                <span class="spinner-border spinner-border-sm"></span>
+              </div>
+              <!--end::Loading-->
+
+              <!--begin::Grants List-->
+              <div
+                *ngIf="!definitionsLoading"
+                class="permission-modal-list mh-300px scroll-y"
+                formArrayName="permissions"
+              >
+                <div
+                  *ngFor="let role of permissionsArray.controls; let i = index"
+                  [formGroupName]="i"
+                  class="row align-items-center mb-3"
+                >
+                  <div class="col-md-4">
+                    <span class="fw-semibold">
+                      {{
+                        role.get("permission")?.value?.name ||
+                          role.get("permission")?.value?.code
+                      }}
+                    </span>
+                  </div>
+                  <div class="col-md-8">
+                    <div class="d-flex flex-wrap gap-4">
+                      <label
+                        class="form-check form-check-custom form-check-solid"
+                      >
+                        <input
+                          class="form-check-input"
+                          type="checkbox"
+                          formControlName="read"
+                        />
+                        <span class="form-check-label">
+                          {{ "PERMISSIONS.READ" | translate }}
+                        </span>
+                      </label>
+                      <label
+                        class="form-check form-check-custom form-check-solid"
+                      >
+                        <input
+                          class="form-check-input"
+                          type="checkbox"
+                          formControlName="update"
+                        />
+                        <span class="form-check-label">
+                          {{ "PERMISSIONS.WRITE" | translate }}
+                        </span>
+                      </label>
+                      <label
+                        class="form-check form-check-custom form-check-solid"
+                      >
+                        <input
+                          class="form-check-input"
+                          type="checkbox"
+                          formControlName="create"
+                        />
+                        <span class="form-check-label">
+                          {{ "PERMISSIONS.CREATE" | translate }}
+                        </span>
+                      </label>
+                    </div>
                   </div>
                 </div>
               </div>
-            </div>
-            <!--end::Grants List-->
+              <!--end::Grants List-->
+            </ng-container>
           </div>
-          <!--end::Permission Creation-->
+          <!--end::Role Selection/Creation-->
         </ng-template>
       </li>
     </ul>
@@ -195,7 +265,16 @@
   </div>
 
   <div class="modal-footer">
-    <button type="button" class="btn btn-light me-3" (click)="dismiss()">
+    <button
+      *ngIf="activeTab === 2"
+      type="button"
+      class="btn btn-info me-3"
+      (click)="prevTab()"
+    >
+      {{ "COMMON.BUTTON.BACK" | translate }}
+    </button>
+
+    <button type="button" class="btn btn-light-danger me-3" (click)="dismiss()">
       {{ "COMMON.BUTTON.CANCEL" | translate }}
     </button>
 
@@ -203,7 +282,7 @@
       *ngIf="activeTab === 1"
       type="button"
       class="btn btn-primary"
-      [disabled]="!assignForm.get('pos')?.valid"
+      [disabled]="!assignForm.get('company')?.valid"
       (click)="nextTab()"
     >
       {{ "COMMON.BUTTON.CONTINUE" | translate }}
@@ -217,9 +296,11 @@
       *ngIf="activeTab === 2"
       type="submit"
       class="btn btn-success"
-      [disabled]="isButtonDisabled || assignForm.invalid || isSubmitting"
+      [disabled]="!canSubmit()"
     >
-      <span *ngIf="!isSubmitting">{{ "COMMON.BUTTON.SAVE" | translate }}</span>
+      <span *ngIf="!isSubmitting">{{
+        "DASHBOARD.ACTIONS.ASSIGN_CUSTOMER" | translate
+      }}</span>
       <span
         *ngIf="isSubmitting"
         class="spinner-border spinner-border-sm"

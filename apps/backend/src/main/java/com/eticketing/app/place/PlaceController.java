@@ -21,7 +21,7 @@ import java.util.List;
 public class PlaceController {
 
     // ========== Request/Response DTOs ==========
-    public record TargetReq(String pos) {
+    public record TargetReq(String company, String pos) {
 
     }
 
@@ -49,10 +49,10 @@ public class PlaceController {
         }
     }
 
-    public record TargetRes(String pos) {
+    public record TargetRes(String company, String pos) {
 
         static TargetRes from(PlaceType.TargetType t) {
-            return t == null ? null : new TargetRes(t.getPos());
+            return t == null ? null : new TargetRes(t.getCompany(), t.getPos());
         }
     }
 
@@ -174,7 +174,7 @@ public class PlaceController {
         p.setStateId(req.stateId());
         p.setCountryId(req.countryId());
         if (req.target() != null && req.target().pos() != null && !req.target().pos().isBlank()) {
-            p.setTarget(new PlaceType.TargetType(req.target().pos()));
+            p.setTarget(new PlaceType.TargetType(req.target().company(), req.target().pos()));
         }
         // Server-managed timestamps
         Instant now = Instant.now();

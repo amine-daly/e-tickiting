@@ -1,5 +1,5 @@
 export interface TargetType {
-  pos: string;
+  company: string;
 }
 
 export interface Picture {

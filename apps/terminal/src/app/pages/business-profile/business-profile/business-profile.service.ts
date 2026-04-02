@@ -71,7 +71,7 @@ export class BusinessProfileService {
   ): Observable<PointOfSaleType> {
     return this.http.put<PointOfSaleType>(`${this.posUrl}/${id}`, payload).pipe(
       map((data) => {
-        this.authService.pos$ = data;
+        this.authService.company$ = data;
         return data;
       }),
     );

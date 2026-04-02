@@ -1,11 +1,12 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { Observable } from 'rxjs';
+import { map, Observable, switchMap, take } from 'rxjs';
 import { environment } from 'src/environments/environment';
 import { AccountType } from '../models/account.model';
+import { AuthService } from 'src/app/modules/auth';
 
 export interface AddTargetPayload {
-  posId: string;
+  companyId: string;
   permissionId?: string;
 }
 
@@ -13,7 +14,10 @@ export interface AddTargetPayload {
 export class AccountsService {
   private apiBase = `${environment.apiBase}/accounts`;
 
-  constructor(private http: HttpClient) {}
+  constructor(
+    private http: HttpClient,
+    private authService: AuthService,
+  ) {}
 
   /**
    * Get current user's accounts
@@ -30,16 +34,28 @@ export class AccountsService {
   }
 
   /**
-   * Create a new account linked to a POS for the same user as the source account.
+   * Create a new account linked to a company for the same user as the source account.
    * This does NOT update the existing account - it creates a new one.
    */
   addTargetToAccount(
     accountId: string,
     payload: AddTargetPayload,
   ): Observable<AccountType> {
-    return this.http.post<AccountType>(
-      `${this.apiBase}/${accountId}/target`,
-      payload,
+    return this.authService.accounts$.pipe(
+      take(1),
+      switchMap((accounts) => {
+        return this.http
+          .post<AccountType>(`${this.apiBase}/${accountId}/target`, payload)
+          .pipe(
+            map((res) => {
+              if (res) {
+                this.authService.accounts$ = [...accounts, res];
+                return res;
+              }
+              throw new Error('Failed to create account target');
+            }),
+          );
+      }),
     );
   }
 
@@ -47,6 +63,16 @@ export class AccountsService {
    * Delete an account
    */
   deleteAccount(id: string): Observable<void> {
-    return this.http.delete<void>(`${this.apiBase}/${id}`);
+    return this.http.delete<void>(`${this.apiBase}/${id}`).pipe(
+      switchMap(() => {
+        return this.authService.accounts$.pipe(
+          take(1),
+          map((accounts) => {
+            const updatedAccounts = accounts.filter((acc) => acc.id !== id);
+            this.authService.accounts$ = updatedAccounts;
+          }),
+        );
+      }),
+    );
   }
 }

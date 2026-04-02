@@ -135,75 +135,77 @@ export class BusinessProfileComponent implements OnInit, OnDestroy {
 
   ngOnInit(): void {
     // Subscribe to pos changes
-    this.authService.pos$.pipe(takeUntil(this.destroy$)).subscribe((pos) => {
-      this.pos = pos;
-      if (pos) {
-        // Overview form
-        this.overviewForm = this.fb.group({
-          title: [pos.title || '', Validators.required],
-          subtitle: [pos.subtitle || ''],
-          email: [pos.email || '', [Validators.email]],
-          phone: this.fb.group({
-            countryCode: [pos.phone?.countryCode || ''],
-            number: [pos.phone?.number || ''],
-          }),
-          currencyId: [pos?.currency?.id || ''],
-          picture: this.fb.group({
-            path: [pos.picture?.path || ''],
-            baseUrl: [pos.picture?.baseUrl || ''],
-          }),
-          emailTemplate: [pos.emailTemplate || ''],
-        });
-        this.overviewInitValues = this.overviewForm.value;
-        this.overviewForm.valueChanges
-          .pipe(takeUntil(this.destroy$))
-          .subscribe((values) => {
-            this.overviewButtonDisabled = isEqual(
-              values,
-              this.overviewInitValues,
-            );
-            this.cdr.markForCheck();
+    this.authService.company$
+      .pipe(takeUntil(this.destroy$))
+      .subscribe((pos) => {
+        this.pos = pos;
+        if (pos) {
+          // Overview form
+          this.overviewForm = this.fb.group({
+            title: [pos.title || '', Validators.required],
+            subtitle: [pos.subtitle || ''],
+            email: [pos.email || '', [Validators.email]],
+            phone: this.fb.group({
+              countryCode: [pos.phone?.countryCode || ''],
+              number: [pos.phone?.number || ''],
+            }),
+            currencyId: [pos?.currency?.id || ''],
+            picture: this.fb.group({
+              path: [pos.picture?.path || ''],
+              baseUrl: [pos.picture?.baseUrl || ''],
+            }),
+            emailTemplate: [pos.emailTemplate || ''],
           });
-        // Location form
-        this.locationForm = this.fb.group({
-          addressLine: [pos.location?.addressLine || ''],
-          city: [pos.location?.city || ''],
-          country: [pos.location?.country || ''],
-          state: [pos.location?.state || ''],
-          zipCode: [pos.location?.zipCode || ''],
-          location: this.fb.group({
-            lng: [pos.location?.location?.lng || null],
-            lat: [pos.location?.location?.lat || null],
-          }),
-        });
-        // follow settings pattern: capture initial values and track changes to enable save button
-        this.locationInitValues = this.locationForm.value;
-        this.locationForm.valueChanges
-          .pipe(takeUntil(this.destroy$))
-          .subscribe((values) => {
-            this.locationButtonDisabled = isEqual(
-              values,
-              this.locationInitValues,
-            );
-            this.cdr.markForCheck();
-          });
-        this.locationForm
-          .get('country')
-          ?.valueChanges.pipe(takeUntil(this.destroy$))
-          .subscribe((country) => {
-            if (country) {
-              this.selectedCountryId = country.id;
-              this.locationForm.patchValue(
-                { state: undefined },
-                { emitEvent: false },
+          this.overviewInitValues = this.overviewForm.value;
+          this.overviewForm.valueChanges
+            .pipe(takeUntil(this.destroy$))
+            .subscribe((values) => {
+              this.overviewButtonDisabled = isEqual(
+                values,
+                this.overviewInitValues,
               );
-            } else {
-              this.placesService.resetStates();
-              this.states = [];
-            }
+              this.cdr.markForCheck();
+            });
+          // Location form
+          this.locationForm = this.fb.group({
+            addressLine: [pos.location?.addressLine || ''],
+            city: [pos.location?.city || ''],
+            country: [pos.location?.country || ''],
+            state: [pos.location?.state || ''],
+            zipCode: [pos.location?.zipCode || ''],
+            location: this.fb.group({
+              lng: [pos.location?.location?.lng || null],
+              lat: [pos.location?.location?.lat || null],
+            }),
           });
-      }
-    });
+          // follow settings pattern: capture initial values and track changes to enable save button
+          this.locationInitValues = this.locationForm.value;
+          this.locationForm.valueChanges
+            .pipe(takeUntil(this.destroy$))
+            .subscribe((values) => {
+              this.locationButtonDisabled = isEqual(
+                values,
+                this.locationInitValues,
+              );
+              this.cdr.markForCheck();
+            });
+          this.locationForm
+            .get('country')
+            ?.valueChanges.pipe(takeUntil(this.destroy$))
+            .subscribe((country) => {
+              if (country) {
+                this.selectedCountryId = country.id;
+                this.locationForm.patchValue(
+                  { state: undefined },
+                  { emitEvent: false },
+                );
+              } else {
+                this.placesService.resetStates();
+                this.states = [];
+              }
+            });
+        }
+      });
 
     this.placesService.states$
       .pipe(takeUntil(this.destroy$))

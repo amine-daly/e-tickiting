@@ -56,6 +56,9 @@ public class SubPlaceType {
 
     public static class TargetType {
 
+        @JsonProperty("company")
+        private String company;
+
         @JsonProperty("pos")
         private String pos;
 
@@ -64,6 +67,19 @@ public class SubPlaceType {
 
         public TargetType(String pos) {
             this.pos = pos;
+        }
+
+        public TargetType(String company, String pos) {
+            this.company = company;
+            this.pos = pos;
+        }
+
+        public String getCompany() {
+            return company;
+        }
+
+        public void setCompany(String company) {
+            this.company = company;
         }
 
         public String getPos() {

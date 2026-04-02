@@ -1,0 +1,135 @@
+<app-toolbar [appToolbarLayout]="'classic'">
+  <div toolbar-actions>
+    <button
+      class="btn btn-sm fw-bold btn-secondary me-3"
+      [routerLink]="['/companies', companyId, 'edit']"
+    >
+      <i class="ki-duotone ki-arrow-left fs-2"></i>
+      {{ "COMMON.BUTTON.BACK" | translate }}
+    </button>
+    <a class="btn btn-sm fw-bold btn-primary" [routerLink]="['create']">
+      <i class="ki-duotone ki-plus fs-2"></i>
+      {{ "POS.LIST.ADD" | translate }}
+    </a>
+  </div>
+</app-toolbar>
+
+<div class="card">
+  <div class="card-header border-0 pt-6">
+    <div class="card-title">
+      <div class="d-flex align-items-center position-relative my-1">
+        <i class="ki-duotone ki-magnifier fs-3 position-absolute ms-5">
+          <span class="path1"></span>
+          <span class="path2"></span>
+        </i>
+        <input
+          type="text"
+          class="form-control form-control-solid w-250px ps-13"
+          [placeholder]="'COMMON.LABEL.SEARCH' | translate"
+          (input)="onSearch($event)"
+        />
+      </div>
+    </div>
+  </div>
+
+  <div class="card-body py-4">
+    <div *ngIf="loading" class="d-flex justify-content-center py-10">
+      <span class="spinner-border text-primary"></span>
+    </div>
+
+    <div
+      *ngIf="!loading && posList.length === 0"
+      class="text-center text-muted py-10"
+    >
+      {{ "POS.LIST.EMPTY" | translate }}
+    </div>
+
+    <div *ngIf="!loading && posList.length > 0" class="table-responsive">
+      <table class="table align-middle table-row-dashed fs-6 gy-5">
+        <thead>
+          <tr class="text-start text-muted fw-bold fs-7 text-uppercase gs-0">
+            <th class="min-w-50px">{{ "POS.LABEL.PICTURE" | translate }}</th>
+            <th class="min-w-125px">{{ "POS.LABEL.TITLE" | translate }}</th>
+            <th class="min-w-125px">{{ "POS.LABEL.EMAIL" | translate }}</th>
+            <th class="min-w-80px">{{ "POS.LABEL.ACTIVE" | translate }}</th>
+            <th class="text-end min-w-100px">
+              {{ "COMMON.LABEL.ACTIONS" | translate }}
+            </th>
+          </tr>
+        </thead>
+        <tbody class="text-gray-600 fw-semibold">
+          <tr *ngFor="let pos of posList">
+            <td>
+              <img
+                [src]="getPictureUrl(pos)"
+                class="w-35px h-35px rounded"
+                alt=""
+              />
+            </td>
+            <td>
+              <span class="text-dark fw-bold text-hover-primary">{{
+                pos.title
+              }}</span>
+              <span *ngIf="pos.subtitle" class="text-muted d-block fs-7">{{
+                pos.subtitle
+              }}</span>
+            </td>
+            <td>
+              {{ pos.email || ("COMMON.LABEL.NOT_AVAILABLE" | translate) }}
+            </td>
+            <td>
+              <span
+                class="badge"
+                [ngClass]="
+                  pos.active !== false
+                    ? 'badge-light-success'
+                    : 'badge-light-danger'
+                "
+              >
+                {{
+                  (pos.active !== false
+                    ? "COMMON.STATUS.ACTIVE"
+                    : "COMMON.STATUS.INACTIVE"
+                  ) | translate
+                }}
+              </span>
+            </td>
+            <td class="text-end">
+              <a
+                class="btn btn-icon btn-bg-light btn-active-color-primary btn-sm me-1"
+                [routerLink]="[pos.id, 'edit']"
+                [title]="'COMMON.BUTTON.EDIT' | translate"
+              >
+                <i class="ki-duotone ki-pencil fs-3">
+                  <span class="path1"></span>
+                  <span class="path2"></span>
+                </i>
+              </a>
+              <button
+                class="btn btn-icon btn-bg-light btn-active-color-danger btn-sm"
+                (click)="deletePos(pos)"
+                [title]="'COMMON.BUTTON.DELETE' | translate"
+              >
+                <i class="ki-duotone ki-trash fs-3">
+                  <span class="path1"></span>
+                  <span class="path2"></span>
+                  <span class="path3"></span>
+                  <span class="path4"></span>
+                  <span class="path5"></span>
+                </i>
+              </button>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <app-pagination
+      *ngIf="pagination"
+      [page]="page"
+      [pageSize]="pageSize"
+      [total]="pagination.length"
+      (pageChange)="onPageChange($event)"
+    ></app-pagination>
+  </div>
+</div>

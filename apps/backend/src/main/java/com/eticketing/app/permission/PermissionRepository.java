@@ -8,5 +8,5 @@ public interface PermissionRepository extends MongoRepository<PermissionType, St
 
     Page<PermissionType> findByNameIgnoreCaseContaining(String name, Pageable pageable);
 
-    Page<PermissionType> findByTargetPosId(String posId, Pageable pageable);
+    Page<PermissionType> findByTargetCompanyId(String companyId, Pageable pageable);
 }

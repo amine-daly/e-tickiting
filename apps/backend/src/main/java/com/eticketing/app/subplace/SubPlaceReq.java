@@ -10,6 +10,8 @@ public record SubPlaceReq(
         TargetReq target
         ) {
 
-    public record TargetReq(String pos) {}
+    public record TargetReq(String company, String pos) {
+
+    }
 
 }

@@ -10,10 +10,7 @@ import {
 } from 'rxjs';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
 
-import {
-  AccountType,
-  PointOfSaleType,
-} from 'src/app/core/models/account.model';
+import { AccountType } from 'src/app/core/models/account.model';
 import { Router } from '@angular/router';
 import { environment } from 'src/environments/environment';
 import { AppsEnum, UserType } from 'src/app/core/models/user-type';
@@ -31,8 +28,7 @@ export class AuthService {
   private authenticated: BehaviorSubject<boolean> =
     new BehaviorSubject<boolean>(false);
 
-  private pos: BehaviorSubject<PointOfSaleType> =
-    new BehaviorSubject<PointOfSaleType>(null);
+  private company: BehaviorSubject<any> = new BehaviorSubject<any>(null);
   private accounts: BehaviorSubject<AccountType[]> = new BehaviorSubject<
     AccountType[]
   >([]);
@@ -48,15 +44,18 @@ export class AuthService {
     return this.currentUser.asObservable();
   }
 
-  get pos$(): Observable<PointOfSaleType> {
-    return this.pos.asObservable();
+  get company$(): Observable<any> {
+    return this.company.asObservable();
   }
-  set pos$(value: any) {
-    this.pos.next(value);
+  set company$(value: any) {
+    this.company.next(value);
   }
 
   get accounts$(): Observable<AccountType[]> {
     return this.accounts.asObservable();
+  }
+  set accounts$(value: any) {
+    this.accounts.next(value);
   }
 
   get isLoading$(): Observable<boolean> {
@@ -105,9 +104,11 @@ export class AuthService {
         }),
         map((accounts) => {
           this.accounts.next(accounts);
-          const pos = accounts[0].target?.pos;
-          this.pos.next(pos);
-          localStorage.setItem('posId', pos.id);
+          const company = accounts?.[0]?.target?.company;
+          this.company.next(company || null);
+          if (company?.id) {
+            localStorage.setItem('companyId', company.id);
+          }
           return accounts;
         }),
       );
@@ -116,6 +117,7 @@ export class AuthService {
   logout() {
     localStorage.removeItem('currentUserId');
     localStorage.removeItem('accessToken');
+    localStorage.removeItem('companyId');
     this.currentUser.next(null as unknown as UserType);
     this.authenticated.next(false);
     this.router.navigateByUrl('/auth/login');
@@ -135,26 +137,30 @@ export class AuthService {
             this.logout();
             this.authenticated.next(false);
           }
-          return this.getCurrentAccount(true);
+          return this.getCurrentAccount();
         }),
       );
   }
 
-  getCurrentAccount(assignhAccount = false): Observable<AccountType[]> {
+  getCurrentAccount(): Observable<AccountType[]> {
     return this.http
       .get<AccountType[]>(`${API_CURRENT_ACCOUNT_URL}/current`)
       .pipe(
         map((accounts) => {
-          if (assignhAccount) {
-            this.accounts.next(accounts);
-            const user = accounts[0].user;
-            this.currentUser.next(user);
-            const posId = localStorage.getItem('posId');
-            const account = find(
-              accounts,
-              (account: AccountType) => account?.target?.pos?.id === posId,
-            );
-            this.pos.next(account?.target?.pos);
+          this.accounts.next(accounts);
+          const user = accounts?.[0]?.user;
+          this.currentUser.next(user);
+          const companyId = localStorage.getItem('companyId');
+          const account = find(
+            accounts,
+            (account: AccountType) =>
+              account?.target?.company?.id === companyId,
+          );
+          const selectedCompany =
+            account?.target?.company || accounts?.[0]?.target?.company || null;
+          this.company.next(selectedCompany);
+          if (selectedCompany?.id) {
+            localStorage.setItem('companyId', selectedCompany.id);
           }
           this.accounts.next(accounts);
           return accounts;

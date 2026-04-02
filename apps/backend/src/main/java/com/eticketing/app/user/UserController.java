@@ -44,10 +44,10 @@ public class UserController {
         }
     }
 
-    public record TargetRes(String pos) {
+    public record TargetRes(String company, String pos) {
 
         static TargetRes from(UserType.TargetType t) {
-            return t == null ? null : new TargetRes(t.getPos());
+            return t == null ? null : new TargetRes(t.getCompany(), t.getPos());
         }
     }
 
@@ -133,9 +133,14 @@ public class UserController {
         // Handle target if provided
         if (data.get("target") instanceof Map) {
             Map<String, Object> targetMap = (Map<String, Object>) data.get("target");
-            if (targetMap.get("pos") != null) {
-                user.setTarget(new UserType.TargetType(targetMap.get("pos").toString()));
+            var target = new UserType.TargetType();
+            if (targetMap.get("company") != null) {
+                target.setCompany(targetMap.get("company").toString());
             }
+            if (targetMap.get("pos") != null) {
+                target.setPos(targetMap.get("pos").toString());
+            }
+            user.setTarget(target);
         }
         users.save(user);
         // Create response: include createdAt only
@@ -143,20 +148,38 @@ public class UserController {
     }
 
     /**
-     * GET /api/users/by-target?posId=xxx Returns users scoped to a specific
-     * POS.
+     * GET /api/users/by-target?companyId=xxx Returns users scoped to a specific
+     * Company.
      */
     @GetMapping("/by-target")
-    @Operation(summary = "Get users by POS ID")
+    @Operation(summary = "Get users by Company ID")
     public Paginated<UserRes> byTarget(
-            @RequestParam String posId,
+            @RequestParam String companyId,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int limit) {
-        if (posId == null || posId.isBlank()) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "posId is required");
+        if (companyId == null || companyId.isBlank()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "companyId is required");
         }
-        Page<UserType> p = users.findByTargetPos(posId, PageRequest.of(page, limit));
+        Page<UserType> p = users.findByTargetCompany(companyId, PageRequest.of(page, limit));
         // Fetch response: include both timestamps
+        var list = p.getContent().stream().map(u -> UserRes.from(u)).toList();
+        return new Paginated<>(list, p.getTotalElements(), p.isLast());
+    }
+
+    /**
+     * GET /api/users/by-company?companyId=xxx Returns users scoped to a
+     * specific Company.
+     */
+    @GetMapping("/by-company")
+    @Operation(summary = "Get users by Company ID")
+    public Paginated<UserRes> byCompany(
+            @RequestParam String companyId,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int limit) {
+        if (companyId == null || companyId.isBlank()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "companyId is required");
+        }
+        Page<UserType> p = users.findByTargetCompany(companyId, PageRequest.of(page, limit));
         var list = p.getContent().stream().map(u -> UserRes.from(u)).toList();
         return new Paginated<>(list, p.getTotalElements(), p.isLast());
     }
@@ -177,7 +200,8 @@ public class UserController {
         if (authUserOpt.isEmpty()) {
             throw new UnauthorizedException("Authentication subject not found");
         }
-        boolean isAdmin = authUserOpt.get().getRole().name().equals("ADMIN");
+        boolean isAdmin = authUserOpt.get().getRole().name().equals("ADMIN")
+                || authUserOpt.get().getRole().name().equals("PLATFORM_ADMIN");
         boolean isSelf = authUserOpt.get().getId() != null && authUserOpt.get().getId().equals(id);
         if (!isAdmin && !isSelf) {
             throw new ForbiddenException("Not allowed to update this user");
@@ -229,6 +253,19 @@ public class UserController {
                         picture.setPath(pictureMap.get("path").toString());
                     }
                     ReflectionUtils.setField(field, user, picture);
+                } else if (value != null && field.getType().getName().equals("com.eticketing.app.user.UserType$TargetType")) {
+                    Map<String, Object> targetMap = (Map<String, Object>) value;
+                    var target = user.getTarget();
+                    if (target == null) {
+                        target = new UserType.TargetType();
+                    }
+                    if (targetMap.get("company") != null) {
+                        target.setCompany(targetMap.get("company").toString());
+                    }
+                    if (targetMap.get("pos") != null) {
+                        target.setPos(targetMap.get("pos").toString());
+                    }
+                    ReflectionUtils.setField(field, user, target);
                 } else {
                     ReflectionUtils.setField(field, user, value);
                 }

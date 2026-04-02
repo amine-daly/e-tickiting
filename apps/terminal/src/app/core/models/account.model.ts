@@ -2,6 +2,7 @@ import { UserType, PhoneType } from './user-type';
 import { PermissionType } from './permission-type';
 import { CountryType } from './country-type';
 import { StateType } from './state-type';
+import { CompanyType } from './company.model';
 
 export interface RegisterAccountForTargetPayload {
   firstName: string;
@@ -10,7 +11,7 @@ export interface RegisterAccountForTargetPayload {
   phone?: PhoneType;
   password: string;
   role?: string;
-  posId: string;
+  companyId: string;
   permissionId?: string;
 }
 
@@ -37,6 +38,8 @@ export interface AddressType {
 
 export interface PointOfSaleType {
   id?: string;
+  companyId?: string;
+  active?: boolean;
   title?: string;
   subtitle?: string;
   picture?: PictureType | null;
@@ -51,10 +54,12 @@ export interface PointOfSaleType {
 
 export interface AccountTarget {
   pos?: PointOfSaleType;
+  company?: CompanyType;
 }
 
 export interface TargetAciInput {
   pos?: string;
+  company?: string;
 }
 
 export interface CurrencyType {

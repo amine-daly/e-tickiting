@@ -305,8 +305,9 @@ export class PermissionsComponent implements OnInit, OnDestroy {
   }
 
   private toPayload(formValue: any): PermissionInput {
-    const posId =
-      localStorage.getItem('posId') || this.selectedPermission?.target?.pos?.id;
+    const companyId =
+      localStorage.getItem('companyId') ||
+      this.selectedPermission?.target?.company?.id;
 
     const grants = (formValue.permissions ?? [])
       .map((item: any) => {
@@ -326,7 +327,7 @@ export class PermissionsComponent implements OnInit, OnDestroy {
     return {
       name: formValue.name,
       permissions: grants,
-      target: posId ? { pos: posId } : undefined,
+      target: companyId ? { company: companyId } : undefined,
     };
   }
 

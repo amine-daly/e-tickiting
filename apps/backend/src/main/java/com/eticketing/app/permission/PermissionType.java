@@ -22,7 +22,7 @@ import java.util.List;
  */
 @Document("permissions")
 @CompoundIndexes({
-    @CompoundIndex(name = "name_pos_idx", def = "{ 'name': 1, 'target.pos.id': 1 }", unique = false)
+    @CompoundIndex(name = "name_company_idx", def = "{ 'name': 1, 'target.company.id': 1 }", unique = false)
 })
 public class PermissionType {
 
@@ -164,18 +164,18 @@ public class PermissionType {
 
     public static class TargetType {
 
-        @JsonProperty("pos")
-        private IdRef pos;
+        @JsonProperty("company")
+        private IdRef company;
 
         public TargetType() {
         }
 
-        public IdRef getPos() {
-            return pos;
+        public IdRef getCompany() {
+            return company;
         }
 
-        public void setPos(IdRef pos) {
-            this.pos = pos;
+        public void setCompany(IdRef company) {
+            this.company = company;
         }
 
         public static class IdRef {

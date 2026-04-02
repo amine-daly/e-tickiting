@@ -153,7 +153,9 @@ public class TripController {
         List<TripSubPlaceType> pickupPointsList = new ArrayList<>();
         if (payload.pickupPoints() != null) {
             for (SubPlaceInput spi : payload.pickupPoints()) {
-                if (spi.subPlaceId() == null || spi.subPlaceId().isBlank()) continue;
+                if (spi.subPlaceId() == null || spi.subPlaceId().isBlank()) {
+                    continue;
+                }
                 TripSubPlaceType pp = new TripSubPlaceType();
                 pp.setSubPlaceId(spi.subPlaceId());
                 if (spi.scheduledTime() != null) {
@@ -335,6 +337,9 @@ public class TripController {
             Object targetObj = updates.get("target");
             if (targetObj instanceof Map targetMap) {
                 TargetInput target = new TargetInput();
+                if (targetMap.get("company") != null) {
+                    target.setCompany(targetMap.get("company").toString());
+                }
                 if (targetMap.get("pos") != null) {
                     target.setPos(targetMap.get("pos").toString());
                 }
@@ -406,7 +411,9 @@ public class TripController {
                 for (Object raw : list) {
                     if (raw instanceof Map m) {
                         String spId = m.get("subPlaceId") != null ? m.get("subPlaceId").toString() : null;
-                        if (spId == null || spId.isBlank()) continue;
+                        if (spId == null || spId.isBlank()) {
+                            continue;
+                        }
                         TripSubPlaceType pp = new TripSubPlaceType();
                         pp.setSubPlaceId(spId);
                         Object stObj = m.get("scheduledTime");

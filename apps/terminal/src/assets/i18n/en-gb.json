@@ -2,7 +2,8 @@
   "COMMON": {
     "STATUS": {
       "ACTIVE": "Active",
-      "INACTIVE": "Inactive"
+      "INACTIVE": "Inactive",
+      "SUSPENDED": "Suspended"
     },
     "LABEL": {
       "NAME": "Name",
@@ -37,11 +38,13 @@
       "DEFAULT": "Default",
       "YES": "Yes",
       "NO": "No",
-      "SEARCH": "Search..."
+      "SEARCH": "Search...",
+      "NOT_AVAILABLE": "N/A"
     },
     "BUTTON": {
       "SAVE": "Save",
       "VIEW_PROFILE": "View profile",
+      "BACK": "Back",
       "CANCEL": "Cancel",
       "UPDATE": "Update",
       "RESET": "Reset",
@@ -49,6 +52,9 @@
       "EXPORT": "Export",
       "EDIT": "Edit",
       "DELETE": "Delete",
+      "CREATE": "Create",
+      "WAIT": "Please wait...",
+      "UPLOAD": "Upload",
       "CLOSE": "Close",
       "CONTINUE": "Continue"
     },
@@ -63,6 +69,10 @@
     "MESSAGES": {
       "GENERIC_ERROR": "Something went wrong. Please try again."
     },
+    "VALIDATION": {
+      "REQUIRED": "This field is required."
+    },
+    "FORM_INVALID": "Please complete the required fields.",
     "LANGUAGE": "Language"
   },
   "AGENCIES": {
@@ -483,11 +493,14 @@
       "TAB_PERMISSION": "Role",
       "CHOOSE_POS": "Choose Customer*",
       "POS_PLACEHOLDER": "Choose Customer",
+      "CHOOSE_ROLE_BUTTON": "Choose Role",
       "CHOOSE_PERMISSION": "Permission (optional)",
       "PERMISSION_PLACEHOLDER": "Select a permission role",
       "PERMISSION_HELP": "Leave empty to use default permissions.",
+      "NO_PERMISSIONS": "No roles found for this customer. Click Add permission to create one.",
       "ERRORS": {
-        "POS_REQUIRED": "Please select a customer."
+        "POS_REQUIRED": "Please select a customer.",
+        "PERMISSION_REQUIRED": "Please select a role."
       },
       "MESSAGES": {
         "SUCCESS": "Customer assigned successfully.",
@@ -496,9 +509,81 @@
       }
     }
   },
+  "COMPANIES": {
+    "TITLE": "Companies",
+    "ADD_BUTTON": "Add company",
+    "EMPTY": "No companies found.",
+    "LABEL": {
+      "NAME": "Company name",
+      "LEGAL_NAME": "Legal name",
+      "TAX_ID": "Tax ID",
+      "STATUS": "Status",
+      "FEE": "Platform fee (%)",
+      "CONTACT": "Contact",
+      "PICTURE": "Picture",
+      "LOGO": "Logo",
+      "BANK_ACCOUNT": "Bank account",
+      "BANK_NAME": "Bank name",
+      "ACCOUNT_HOLDER": "Account holder",
+      "IBAN": "IBAN",
+      "EMAIL": "Email",
+      "PHONE": "Phone",
+      "CURRENCY": "Currency",
+      "EMAIL_TEMPLATE": "Email template"
+    },
+    "FORM": {
+      "CREATE_TITLE": "Create company",
+      "EDIT_TITLE": "Edit company",
+      "SELECT_CURRENCY": "Select currency"
+    },
+    "MESSAGES": {
+      "CREATE_SUCCESS": "Company created successfully.",
+      "UPDATE_SUCCESS": "Company updated successfully.",
+      "DELETE_SUCCESS": "Company deleted successfully.",
+      "DELETE_ERROR": "Unable to delete company.",
+      "STATUS_UPDATED": "Company status updated successfully.",
+      "STATUS_ERROR": "Unable to update company status.",
+      "HAS_ACTIVE_POS": "This company cannot be deleted because it still has POS.",
+      "SAVE_ERROR": "Unable to save company."
+    }
+  },
+  "POS": {
+    "TITLE": "Points of sale",
+    "LABEL": {
+      "TITLE": "Title",
+      "SUBTITLE": "Subtitle",
+      "EMAIL": "Email",
+      "EMAIL_TEMPLATE": "Email template",
+      "PICTURE": "Picture",
+      "PHONE": "Phone",
+      "LOCATION": "Location",
+      "CURRENCY": "Currency",
+      "ACTIVE": "Active",
+      "COUNTRY_CODE": "Country code",
+      "NUMBER": "Number",
+      "ZIP_CODE": "ZIP code"
+    },
+    "LIST": {
+      "TITLE": "Points of sale",
+      "ADD": "Add POS",
+      "EMPTY": "No POS found."
+    },
+    "FORM": {
+      "CREATE_TITLE": "Create POS",
+      "EDIT_TITLE": "Edit POS",
+      "CREATED": "POS created successfully.",
+      "UPDATED": "POS updated successfully."
+    },
+    "MESSAGES": {
+      "CONFIRM_DELETE": "Do you want to delete this POS?",
+      "DELETE_SUCCESS": "POS deleted successfully.",
+      "DELETE_ERROR": "Unable to delete POS."
+    }
+  },
   "MENU": {
     "DASHBOARD": "Dashboard",
-    "BUSES": "Buses"
+    "BUSES": "Buses",
+    "COMPANIES": "Companies"
   },
   "BUSES": {
     "TITLE": "Buses",

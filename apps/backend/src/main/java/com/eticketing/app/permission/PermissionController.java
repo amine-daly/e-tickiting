@@ -16,17 +16,17 @@ import java.util.List;
 /**
  * Permission roles CRUD.
  *
- * Project scope: ONLY POS target is supported (no wholesaler/manufacturer).
+ * Project scope: ONLY Company target is supported.
  *
  * Input: { "name": "POS Manager", "permissions": [ { "permission":
  * "<permissionDefinitionId>", "read": true, "create": true, "update": true } ],
- * "target": { "pos": "<posId>" } }
+ * "target": { "company": "<companyId>" } }
  *
  * Output expands permission definition to {id,name,code} and omits timestamps.
  */
 @RestController
 @RequestMapping("/api/permissions")
-@Tag(name = "Permissions", description = "Permission roles (name + grants + POS target)")
+@Tag(name = "Permissions", description = "Permission roles (name + grants + company target)")
 public class PermissionController {
 
     // ===== Request DTOs =====
@@ -34,7 +34,7 @@ public class PermissionController {
 
     }
 
-    public record TargetInput(String pos) {
+    public record TargetInput(String company) {
 
     }
 
@@ -58,7 +58,7 @@ public class PermissionController {
 
     }
 
-    public record TargetRes(IdRefRes pos) {
+    public record TargetRes(IdRefRes company) {
 
     }
 
@@ -95,8 +95,8 @@ public class PermissionController {
         }
 
         TargetRes targetRes = null;
-        if (role.getTarget() != null && role.getTarget().getPos() != null) {
-            targetRes = new TargetRes(new IdRefRes(role.getTarget().getPos().getId()));
+        if (role.getTarget() != null && role.getTarget().getCompany() != null) {
+            targetRes = new TargetRes(new IdRefRes(role.getTarget().getCompany().getId()));
         }
 
         return new PermissionRes(
@@ -114,8 +114,8 @@ public class PermissionController {
             return null;
         }
         PermissionType.TargetType t = new PermissionType.TargetType();
-        if (input.pos() != null && !input.pos().isBlank()) {
-            t.setPos(new PermissionType.TargetType.IdRef(input.pos()));
+        if (input.company() != null && !input.company().isBlank()) {
+            t.setCompany(new PermissionType.TargetType.IdRef(input.company()));
         }
         return t;
     }
@@ -144,15 +144,15 @@ public class PermissionController {
     }
 
     @GetMapping("/by-target")
-    @Operation(summary = "Get permission roles by POS target")
+    @Operation(summary = "Get permission roles by company target")
     public Paginated<PermissionRes> byTarget(
-            @RequestParam String posId,
+            @RequestParam String companyId,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "50") int limit) {
-        if (posId == null || posId.isBlank()) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "posId is required");
+        if (companyId == null || companyId.isBlank()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "companyId is required");
         }
-        Page<PermissionType> p = permissionRepo.findByTargetPosId(posId, PageRequest.of(page, limit));
+        Page<PermissionType> p = permissionRepo.findByTargetCompanyId(companyId, PageRequest.of(page, limit));
         // Fetch response: include both timestamps
         var list = p.getContent().stream().map(role -> toRes(role)).toList();
         return new Paginated<>(list, p.getTotalElements(), p.isLast());

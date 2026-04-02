@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy } from '@angular/core';
+import { Component, OnInit, OnDestroy, Input } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import {
   FormBuilder,
@@ -10,20 +10,29 @@ import { NgbActiveModal } from '@ng-bootstrap/ng-bootstrap';
 import { TranslateModule, TranslateService } from '@ngx-translate/core';
 import { Subscription } from 'rxjs';
 import { isEqual } from 'lodash';
+import { NgSelectModule } from '@ng-select/ng-select';
 
-import { BusinessProfileService } from '../../business-profile/business-profile/business-profile.service';
+import { CompanyService } from '../../companies/company.service';
+import { AccountsService } from 'src/app/core/services/accounts.service';
 import { AlertService } from 'src/app/core/services/alert.service';
-import { FormHelper } from 'src/app/core/helpers/form-helper';
+import { CompanyType } from 'src/app/core/models/company.model';
+import { AccountType } from 'src/app/core/models/account.model';
 
 @Component({
   selector: 'app-add-pos-modal',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule, TranslateModule],
+  imports: [CommonModule, ReactiveFormsModule, TranslateModule, NgSelectModule],
   templateUrl: './add-pos-modal.component.html',
   styleUrls: ['./add-pos-modal.component.scss'],
 })
 export class AddPosModalComponent implements OnInit, OnDestroy {
+  @Input() account?: AccountType;
+  @Input() accounts: AccountType[] = [];
+
   posForm: FormGroup;
+  companyList: CompanyType[] = [];
+  filteredCompanyList: CompanyType[] = [];
+  loadingCompanies = false;
   isSubmitting = false;
   isButtonDisabled = true;
   private formChangesSub?: Subscription;
@@ -32,7 +41,8 @@ export class AddPosModalComponent implements OnInit, OnDestroy {
   constructor(
     public activeModal: NgbActiveModal,
     private fb: FormBuilder,
-    private profileService: BusinessProfileService,
+    private companyService: CompanyService,
+    private accountsService: AccountsService,
     private alert: AlertService,
     private translate: TranslateService,
   ) {
@@ -40,21 +50,39 @@ export class AddPosModalComponent implements OnInit, OnDestroy {
   }
 
   ngOnInit(): void {
+    this.loadCompanies();
     this.initialValues = this.posForm.value;
     this.formChangesSub = this.posForm.valueChanges.subscribe((values) => {
       this.isButtonDisabled = isEqual(values, this.initialValues);
     });
   }
 
+  private loadCompanies(): void {
+    this.loadingCompanies = true;
+    this.companyService.pageIndex = 0;
+    this.companyService.pageLimit = 100;
+    this.companyService.list('').subscribe({
+      next: (companies) => {
+        this.companyList = companies || [];
+        const assignedCompanyIds = new Set(
+          (this.accounts || [])
+            .map((item) => item?.target?.company?.id)
+            .filter((id): id is string => !!id),
+        );
+        this.filteredCompanyList = this.companyList.filter(
+          (company) => !assignedCompanyIds.has(company.id || ''),
+        );
+        this.loadingCompanies = false;
+      },
+      error: () => {
+        this.loadingCompanies = false;
+      },
+    });
+  }
+
   private buildForm(): FormGroup {
     return this.fb.group({
-      title: ['', [Validators.required]],
-      subtitle: [''],
-      email: ['', [Validators.email]],
-      picture: this.fb.group({
-        baseUrl: [''],
-        path: [''],
-      }),
+      company: [null, [Validators.required]],
     });
   }
 
@@ -69,34 +97,33 @@ export class AddPosModalComponent implements OnInit, OnDestroy {
       return;
     }
 
-    const current = this.posForm.value;
-    const changes = FormHelper.getChangedValues(
-      current,
-      this.initialValues || {},
-    );
-
-    if (Object.keys(changes).length === 0) {
-      this.posForm.markAllAsTouched();
+    if (!this.account?.id || !this.posForm.value?.company?.id) {
+      this.alert.error(
+        this.translate.instant('DASHBOARD.ASSIGN.MESSAGES.NO_ACCOUNT'),
+      );
       return;
     }
 
     this.isSubmitting = true;
 
-    this.profileService.createPos(changes).subscribe({
-      next: (createdPos) => {
-        this.alert.success(
-          this.translate.instant('DASHBOARD.POS.MESSAGES.CREATE_SUCCESS'),
-        );
-        this.activeModal.close(createdPos);
-      },
-      error: (err) => {
-        this.alert.error(
-          err?.error?.message ||
-            this.translate.instant('DASHBOARD.POS.MESSAGES.CREATE_ERROR'),
-        );
-        this.isSubmitting = false;
-      },
-    });
+    this.accountsService
+      .addTargetToAccount(this.account.id, {
+        companyId: this.posForm.value.company.id,
+      })
+      .subscribe({
+        next: (createdAccount) => {
+          this.alert.success(
+            this.translate.instant('DASHBOARD.ASSIGN.MESSAGES.SUCCESS'),
+          );
+          this.activeModal.close(createdAccount);
+        },
+        error: () => {
+          this.alert.error(
+            this.translate.instant('DASHBOARD.ASSIGN.MESSAGES.ERROR'),
+          );
+          this.isSubmitting = false;
+        },
+      });
   }
 
   ngOnDestroy(): void {

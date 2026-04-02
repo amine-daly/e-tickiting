@@ -12,7 +12,7 @@ export interface UserType {
   role: RoleEnum;
   picture?: any | null;
   app?: string | null;
-  target?: { pos?: { id?: string } } | null;
+  target?: { company?: { id?: string }; pos?: { id?: string } } | null;
   createdAt?: string; // ISO date string
   updatedAt?: string; // ISO date string
 }

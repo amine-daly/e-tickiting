@@ -7,6 +7,7 @@ import { first } from 'rxjs/operators';
 import { AuthService } from '../../services/auth.service';
 import { AlertService } from '../../../../core/services/alert.service';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
+import { resolveUserErrorMessage } from 'src/app/core/helpers/user-error-message.helper';
 
 @Component({
   selector: 'app-login',
@@ -29,7 +30,7 @@ export class LoginComponent implements OnInit, OnDestroy {
     private authService: AuthService,
     private route: ActivatedRoute,
     private router: Router,
-    private alert: AlertService
+    private alert: AlertService,
   ) {
     // redirect to home if already logged in
     if (this.authService.currentUser$) {
@@ -91,10 +92,17 @@ export class LoginComponent implements OnInit, OnDestroy {
         },
         error: (err) => {
           this.hasError = true;
-          const msg =
-            err?.error?.message ||
-            err?.message ||
-            'Please check your credentials and try again.';
+          const msg = resolveUserErrorMessage(
+            err,
+            [
+              {
+                pattern:
+                  /invalid|credential|unauthorized|forbidden|password|email|account/i,
+                message: 'Please check your credentials and try again.',
+              },
+            ],
+            'Please check your credentials and try again.',
+          );
           this.alert.error('Login failed', msg);
         },
       });

@@ -17,51 +17,63 @@
 
   <!--begin::Empty State-->
   <div
-    *ngIf="!isLoading && !posList.length"
+    *ngIf="!isLoading && !accountTargets.length"
     class="text-center py-10 text-muted"
   >
     {{ "DASHBOARD.POS.NO_CUSTOMERS" | translate }}
   </div>
   <!--end::Empty State-->
 
-  <!--begin::POS List-->
-  <div *ngIf="!isLoading && posList.length" class="mh-400px scroll-y">
+  <!--begin::Company List-->
+  <div *ngIf="!isLoading && accountTargets.length" class="mh-400px scroll-y">
     <div
-      *ngFor="let pos of posList"
+      *ngFor="let account of accountTargets"
       class="d-flex align-items-center justify-content-between px-5 py-4 border-bottom border-gray-200"
     >
-      <!--begin::POS Info-->
+      <!--begin::Company Info-->
       <div class="d-flex align-items-center">
         <div class="symbol symbol-40px symbol-circle me-4">
           <img
-            *ngIf="pos?.picture?.baseUrl && pos?.picture?.path"
-            [src]="pos?.picture.baseUrl + '/' + pos?.picture.path"
-            alt="POS"
+            *ngIf="
+              getCompany(account)?.picture?.baseUrl &&
+              getCompany(account)?.picture?.path
+            "
+            [src]="
+              getCompany(account)?.picture?.baseUrl +
+              '/' +
+              getCompany(account)?.picture?.path
+            "
+            alt="Company"
           />
           <span
-            *ngIf="!pos?.picture?.baseUrl || !pos?.picture?.path"
+            *ngIf="
+              !getCompany(account)?.picture?.baseUrl ||
+              !getCompany(account)?.picture?.path
+            "
             class="symbol-label bg-light-primary text-primary fw-bold fs-6"
           >
-            {{ pos?.title?.charAt(0) | uppercase }}
+            {{ getCompany(account)?.name?.charAt(0) | uppercase }}
           </span>
         </div>
         <div>
-          <div class="fw-bold text-gray-800">{{ pos?.title }}</div>
-          <div *ngIf="pos?.subtitle" class="text-muted small">
-            {{ pos?.subtitle }}
+          <div class="fw-bold text-gray-800">
+            {{ getCompany(account)?.name }}
+          </div>
+          <div *ngIf="getCompany(account)?.legalName" class="text-muted small">
+            {{ getCompany(account)?.legalName }}
           </div>
         </div>
       </div>
-      <!--end::POS Info-->
+      <!--end::Company Info-->
 
       <!--begin::Delete Button-->
       <button
         type="button"
         class="btn btn-icon btn-sm btn-light-danger"
-        [disabled]="deletingId === pos?.id || posList?.length === 1"
-        (click)="deletePos(pos)"
+        [disabled]="deletingId === account?.id || accountTargets?.length === 1"
+        (click)="deleteAssignment(account)"
       >
-        <span *ngIf="deletingId !== pos?.id">
+        <span *ngIf="deletingId !== account?.id">
           <i class="ki-duotone ki-trash fs-4">
             <span class="path1"></span>
             <span class="path2"></span>
@@ -71,14 +83,14 @@
           </i>
         </span>
         <span
-          *ngIf="deletingId === pos?.id"
+          *ngIf="deletingId === account?.id"
           class="spinner-border spinner-border-sm"
         ></span>
       </button>
       <!--end::Delete Button-->
     </div>
   </div>
-  <!--end::POS List-->
+  <!--end::Company List-->
 </div>
 
 <div class="modal-footer">

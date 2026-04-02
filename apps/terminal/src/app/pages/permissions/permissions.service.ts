@@ -56,15 +56,19 @@ export class PermissionsService {
     }).pipe(finalize(() => this.loadingSubject.next(false)));
   }
 
-  getPermissions(): Observable<PermissionType[]> {
-    const posId = localStorage.getItem('posId');
-    const url = posId
-      ? `${API_PERMISSIONS_URL}/by-target?posId=${encodeURIComponent(posId)}`
+  getPermissions(companyId?: string): Observable<PermissionType[]> {
+    const scopedCompanyId = companyId || localStorage.getItem('companyId');
+    const url = scopedCompanyId
+      ? `${API_PERMISSIONS_URL}/by-target?companyId=${encodeURIComponent(scopedCompanyId)}`
       : API_PERMISSIONS_URL;
     return this.http.get<Paginated<PermissionType>>(url).pipe(
       map((data) => data?.objects ?? []),
       tap((permissions) => this.permissions.next(permissions)),
     );
+  }
+
+  getPermissionsByTarget(companyId: string): Observable<PermissionType[]> {
+    return this.getPermissions(companyId);
   }
 
   getPermissionDefinitions(): Observable<PermissionDefinitionType[]> {

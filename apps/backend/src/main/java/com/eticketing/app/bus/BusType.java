@@ -24,7 +24,7 @@ import java.util.List;
  * Trip references bus by {@code busId} only — {@code totalSeats} is read live.
  */
 @Document("buses")
-@CompoundIndex(name = "target_pos_idx", def = "{ 'target.pos': 1 }")
+@CompoundIndex(name = "target_company_idx", def = "{ 'target.company': 1 }")
 @Data
 @NoArgsConstructor
 @AllArgsConstructor

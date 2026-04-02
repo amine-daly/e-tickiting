@@ -17,6 +17,7 @@ export interface PermissionPermissionsType {
 
 export interface PermissionTarget {
   pos?: { id?: string };
+  company?: { id?: string };
 }
 
 export interface PermissionType {

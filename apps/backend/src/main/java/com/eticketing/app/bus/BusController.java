@@ -21,19 +21,20 @@ import java.util.Map;
 
 /**
  * REST controller for Bus fleet management. All list operations are scoped by
- * {@code target.pos}.
+ * {@code target.company}.
  */
 @RestController
 @RequestMapping("/api/buses")
 @RequiredArgsConstructor
-@Tag(name = "Buses", description = "Bus fleet management (scoped by target.pos)")
+@Tag(name = "Buses", description = "Bus fleet management (scoped by target.company)")
 public class BusController {
 
     private final BusService busService;
 
     /* ═══════ Request DTOs ═══════ */
     public record TargetReq(
-            @NotBlank String pos
+            @NotBlank String company,
+            String pos
             ) {
 
     }
@@ -72,10 +73,10 @@ public class BusController {
     }
 
     /* ═══════ Response DTOs ═══════ */
-    public record TargetRes(String pos) {
+    public record TargetRes(String company, String pos) {
 
         static TargetRes from(TargetInput t) {
-            return t == null ? null : new TargetRes(t.getPos());
+            return t == null ? null : new TargetRes(t.getCompany(), t.getPos());
         }
     }
 
@@ -120,14 +121,14 @@ public class BusController {
 
     /* ═══════ Endpoints ═══════ */
     @GetMapping
-    @Operation(summary = "List buses by POS", description = "Paginated list scoped by target.pos")
+    @Operation(summary = "List buses by company", description = "Paginated list scoped by target.company")
     public PaginateResponseType<BusRes> list(
-            @RequestParam String posId,
+            @RequestParam String companyId,
             @RequestParam(defaultValue = "") String searchString,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int limit) {
 
-        var result = busService.list(posId, searchString, page, limit);
+        var result = busService.list(companyId, searchString, page, limit);
         var items = result.getContent().stream().map(BusRes::from).toList();
         return new PaginateResponseType<>(items, result.getTotalElements(), result.isLast());
     }
@@ -169,7 +170,7 @@ public class BusController {
     private BusType toEntity(BusCreateReq req) {
         return BusType.builder()
                 .name(req.name())
-                .target(new TargetInput(req.target().pos()))
+                .target(new TargetInput(req.target().company(), req.target().pos()))
                 .totalSeats(req.totalSeats())
                 .amenities(req.amenities() != null ? req.amenities() : List.of())
                 .media(toMedia(req.media()))

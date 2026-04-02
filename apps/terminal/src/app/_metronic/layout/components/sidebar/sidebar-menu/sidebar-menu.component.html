@@ -27,7 +27,7 @@
         <span class="menu-icon">
           <app-keenicon name="element-11" class="fs-2"></app-keenicon>
         </span>
-        <span class="menu-title" translate="MENU.DASHBOARD">Dashboard</span>
+        <span class="menu-title"> {{ "MENU.DASHBOARD" | translate }} </span>
       </a>
     </div>
 
@@ -324,6 +324,19 @@
           <app-keenicon name="lock" class="fs-2"></app-keenicon>
         </span>
         <span class="menu-title">Permissions</span>
+      </a>
+    </div>
+
+    <div class="menu-item">
+      <a
+        class="menu-link without-sub"
+        routerLink="/companies"
+        routerLinkActive="active"
+      >
+        <span class="menu-icon">
+          <app-keenicon name="shop" class="fs-2"></app-keenicon>
+        </span>
+        <span class="menu-title">Companies</span>
       </a>
     </div>
 

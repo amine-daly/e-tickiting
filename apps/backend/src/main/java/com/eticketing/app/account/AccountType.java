@@ -1,6 +1,6 @@
 package com.eticketing.app.account;
 
-import com.eticketing.app.pos.PointOfSaleType;
+import com.eticketing.app.company.CompanyType;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import org.springframework.data.annotation.CreatedDate;
 import org.springframework.data.annotation.LastModifiedDate;
@@ -12,12 +12,16 @@ import org.springframework.data.mongodb.core.mapping.Document;
 import java.time.Instant;
 
 /**
- * Account entity - links a user to a target (POS) with a permission set. A user
- * can have multiple accounts (one per POS they have access to).
+ * Account entity - links a user to a target (Company) with a permission set. A
+ * user can have multiple accounts (one per Company they have access to).
  */
 @Document("accounts")
 @CompoundIndexes({
-    @CompoundIndex(name = "user_pos_idx", def = "{ 'userId': 1, 'target.pos.id': 1 }", unique = true)
+    @CompoundIndex(
+            name = "user_company_idx",
+            def = "{ 'userId': 1, 'target.company.id': 1 }",
+            unique = true
+    )
 })
 public class AccountType {
 
@@ -38,7 +42,7 @@ public class AccountType {
     private String permissionId;
 
     /**
-     * Embedded target with POS reference
+     * Embedded target with Company reference.
      */
     @JsonProperty("target")
     private TargetType target;
@@ -109,26 +113,26 @@ public class AccountType {
     }
 
     /**
-     * Embedded target type containing POS reference.
+     * Embedded target type containing Company reference.
      */
     public static class TargetType {
 
-        @JsonProperty("pos")
-        private PointOfSaleType pos;
+        @JsonProperty("company")
+        private CompanyType company;
 
         public TargetType() {
         }
 
-        public TargetType(PointOfSaleType pos) {
-            this.pos = pos;
+        public TargetType(CompanyType company) {
+            this.company = company;
         }
 
-        public PointOfSaleType getPos() {
-            return pos;
+        public CompanyType getCompany() {
+            return company;
         }
 
-        public void setPos(PointOfSaleType pos) {
-            this.pos = pos;
+        public void setCompany(CompanyType company) {
+            this.company = company;
         }
 
     }

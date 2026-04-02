@@ -125,7 +125,7 @@ export class AddMemberModalComponent implements OnInit, OnDestroy {
     }
 
     this.isSubmitting = true;
-    const posId = localStorage.getItem('posId') || '';
+    const companyId = localStorage.getItem('companyId') || '';
 
     // Single API call to create user and account
     const payload = {
@@ -135,7 +135,7 @@ export class AddMemberModalComponent implements OnInit, OnDestroy {
       phone: current.phone,
       password: current.password,
       role: RoleEnum.MANAGER,
-      posId,
+      companyId,
       permissionId: current.permissionId || undefined,
     };
 

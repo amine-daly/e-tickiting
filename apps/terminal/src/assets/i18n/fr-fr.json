@@ -2,7 +2,8 @@
   "COMMON": {
     "STATUS": {
       "ACTIVE": "Actif",
-      "INACTIVE": "Inactif"
+      "INACTIVE": "Inactif",
+      "SUSPENDED": "Suspendu"
     },
     "LABEL": {
       "NAME": "Nom",
@@ -37,11 +38,13 @@
       "DEFAULT": "Par défaut",
       "YES": "Oui",
       "NO": "Non",
-      "SEARCH": "Rechercher..."
+      "SEARCH": "Rechercher...",
+      "NOT_AVAILABLE": "N/D"
     },
     "BUTTON": {
       "SAVE": "Enregistrer",
       "VIEW_PROFILE": "Voir le profil",
+      "BACK": "Retour",
       "CANCEL": "Annuler",
       "UPDATE": "Mettre à jour",
       "RESET": "Réinitialiser",
@@ -49,6 +52,9 @@
       "EXPORT": "Exporter",
       "EDIT": "Modifier",
       "DELETE": "Supprimer",
+      "CREATE": "Créer",
+      "WAIT": "Veuillez patienter...",
+      "UPLOAD": "Téléverser",
       "CLOSE": "Fermer",
       "CONTINUE": "Continuer"
     },
@@ -63,6 +69,10 @@
     "MESSAGES": {
       "GENERIC_ERROR": "Une erreur est survenue. Veuillez réessayer."
     },
+    "VALIDATION": {
+      "REQUIRED": "Ce champ est obligatoire."
+    },
+    "FORM_INVALID": "Veuillez compléter les champs obligatoires.",
     "LANGUAGE": "Langue"
   },
   "AGENCIES": {
@@ -483,11 +493,14 @@
       "TAB_PERMISSION": "Rôle",
       "CHOOSE_POS": "Choisir un client*",
       "POS_PLACEHOLDER": "Choisir un client",
+      "CHOOSE_ROLE_BUTTON": "Choisir un rôle",
       "CHOOSE_PERMISSION": "Permission (optionnel)",
       "PERMISSION_PLACEHOLDER": "Sélectionner un rôle de permission",
       "PERMISSION_HELP": "Laissez vide pour utiliser les permissions par défaut.",
+      "NO_PERMISSIONS": "Aucun rôle trouvé pour ce client. Cliquez sur Ajouter une permission pour en créer un.",
       "ERRORS": {
-        "POS_REQUIRED": "Veuillez sélectionner un client."
+        "POS_REQUIRED": "Veuillez sélectionner un client.",
+        "PERMISSION_REQUIRED": "Veuillez sélectionner un rôle."
       },
       "MESSAGES": {
         "SUCCESS": "Client assigné avec succès.",
@@ -496,9 +509,81 @@
       }
     }
   },
+  "COMPANIES": {
+    "TITLE": "Sociétés",
+    "ADD_BUTTON": "Ajouter une société",
+    "EMPTY": "Aucune société trouvée.",
+    "LABEL": {
+      "NAME": "Nom de la société",
+      "LEGAL_NAME": "Raison sociale",
+      "TAX_ID": "Matricule fiscal",
+      "STATUS": "Statut",
+      "FEE": "Commission plateforme (%)",
+      "CONTACT": "Contact",
+      "PICTURE": "Image",
+      "LOGO": "Logo",
+      "BANK_ACCOUNT": "Compte bancaire",
+      "BANK_NAME": "Banque",
+      "ACCOUNT_HOLDER": "Titulaire du compte",
+      "IBAN": "IBAN",
+      "EMAIL": "E-mail",
+      "PHONE": "Téléphone",
+      "CURRENCY": "Devise",
+      "EMAIL_TEMPLATE": "Modèle d'e-mail"
+    },
+    "FORM": {
+      "CREATE_TITLE": "Créer une société",
+      "EDIT_TITLE": "Modifier la société",
+      "SELECT_CURRENCY": "Sélectionner une devise"
+    },
+    "MESSAGES": {
+      "CREATE_SUCCESS": "Société créée avec succès.",
+      "UPDATE_SUCCESS": "Société mise à jour avec succès.",
+      "DELETE_SUCCESS": "Société supprimée avec succès.",
+      "DELETE_ERROR": "Impossible de supprimer la société.",
+      "STATUS_UPDATED": "Statut de la société mis à jour.",
+      "STATUS_ERROR": "Impossible de mettre à jour le statut de la société.",
+      "HAS_ACTIVE_POS": "Cette société ne peut pas être supprimée car elle possède encore des points de vente.",
+      "SAVE_ERROR": "Impossible d'enregistrer la société."
+    }
+  },
+  "POS": {
+    "TITLE": "Points de vente",
+    "LABEL": {
+      "TITLE": "Titre",
+      "SUBTITLE": "Sous-titre",
+      "EMAIL": "E-mail",
+      "EMAIL_TEMPLATE": "Modèle d'e-mail",
+      "PICTURE": "Image",
+      "PHONE": "Téléphone",
+      "LOCATION": "Adresse",
+      "CURRENCY": "Devise",
+      "ACTIVE": "Actif",
+      "COUNTRY_CODE": "Indicatif pays",
+      "NUMBER": "Numéro",
+      "ZIP_CODE": "Code postal"
+    },
+    "LIST": {
+      "TITLE": "Points de vente",
+      "ADD": "Ajouter un point de vente",
+      "EMPTY": "Aucun point de vente trouvé."
+    },
+    "FORM": {
+      "CREATE_TITLE": "Créer un point de vente",
+      "EDIT_TITLE": "Modifier le point de vente",
+      "CREATED": "Point de vente créé avec succès.",
+      "UPDATED": "Point de vente mis à jour avec succès."
+    },
+    "MESSAGES": {
+      "CONFIRM_DELETE": "Voulez-vous supprimer ce point de vente ?",
+      "DELETE_SUCCESS": "Point de vente supprimé avec succès.",
+      "DELETE_ERROR": "Impossible de supprimer le point de vente."
+    }
+  },
   "MENU": {
     "DASHBOARD": "Tableau de bord",
-    "BUSES": "Bus"
+    "BUSES": "Bus",
+    "COMPANIES": "Sociétés"
   },
   "BUSES": {
     "TITLE": "Bus",

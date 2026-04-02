@@ -5,7 +5,6 @@ import com.eticketing.app.common.AddressType;
 import com.eticketing.app.common.LonLatType;
 import com.eticketing.app.common.PictureType;
 import com.eticketing.app.country.CountryRepository;
-import com.eticketing.app.currency.CurrencyRepository;
 import com.eticketing.app.state.StateRepository;
 import com.eticketing.app.user.PhoneType;
 import io.swagger.v3.oas.annotations.Operation;
@@ -42,19 +41,14 @@ public class PointOfSaleController {
     }
 
     public record PosReq(
+            String companyId,
             String title,
             String subtitle,
             PictureReq picture,
             AddressReq location,
             PhoneType phone,
-            String email,
-            String currencyId,
-            String emailTemplate
+            String email
             ) {
-
-    }
-
-    public record CurrencyRes(String id, String name, String code, String iconFlag) {
 
     }
 
@@ -80,14 +74,14 @@ public class PointOfSaleController {
 
     public record PosRes(
             String id,
+            String companyId,
+            boolean active,
             String title,
             String subtitle,
             PictureRes picture,
             AddressRes location,
             PhoneType phone,
             String email,
-            CurrencyRes currency,
-            String emailTemplate,
             Instant createdAt,
             Instant updatedAt
             ) {
@@ -100,20 +94,17 @@ public class PointOfSaleController {
 
     private final PointOfSaleRepository repo;
     private final AccountTypeRepository accountRepo;
-    private final CurrencyRepository currencyRepo;
     private final StateRepository stateRepo;
     private final CountryRepository countryRepo;
 
     public PointOfSaleController(
             PointOfSaleRepository repo,
             AccountTypeRepository accountRepo,
-            CurrencyRepository currencyRepo,
             StateRepository stateRepo,
             CountryRepository countryRepo
     ) {
         this.repo = repo;
         this.accountRepo = accountRepo;
-        this.currencyRepo = currencyRepo;
         this.stateRepo = stateRepo;
         this.countryRepo = countryRepo;
     }
@@ -145,13 +136,6 @@ public class PointOfSaleController {
     }
 
     private PosRes toRes(PointOfSaleType pos) {
-        CurrencyRes currencyRes = null;
-        if (pos.getCurrencyId() != null) {
-            currencyRes = currencyRepo.findById(pos.getCurrencyId())
-                    .map(c -> new CurrencyRes(c.getId(), c.getName(), c.getCode(), c.getIconFlag()))
-                    .orElse(null);
-        }
-
         AddressRes locationRes = null;
         if (pos.getLocation() != null) {
             locationRes = toAddressRes(pos.getLocation());
@@ -164,14 +148,14 @@ public class PointOfSaleController {
 
         return new PosRes(
                 pos.getId(),
+                pos.getCompanyId(),
+                pos.isActive(),
                 pos.getTitle(),
                 pos.getSubtitle(),
                 pictureRes,
                 locationRes,
                 pos.getPhone(),
                 pos.getEmail(),
-                currencyRes,
-                pos.getEmailTemplate(),
                 pos.getCreatedAt(),
                 pos.getUpdatedAt()
         );
@@ -290,12 +274,22 @@ public class PointOfSaleController {
     @Operation(summary = "List all POS (paginated)")
     public Paginated<PosRes> list(
             @RequestParam(defaultValue = "") String searchString,
+            @RequestParam(required = false) String companyId,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int limit) {
-        Page<PointOfSaleType> p = (searchString == null || searchString.isBlank())
-                ? repo.findAll(PageRequest.of(page, limit))
-                : repo.findByTitleIgnoreCaseContaining(searchString, PageRequest.of(page, limit));
-        // Fetch response: include both timestamps
+        Page<PointOfSaleType> p;
+        boolean hasSearch = searchString != null && !searchString.isBlank();
+        boolean hasCompany = companyId != null && !companyId.isBlank();
+
+        if (hasCompany && hasSearch) {
+            p = repo.findByCompanyIdAndTitleLike(companyId, searchString, PageRequest.of(page, limit));
+        } else if (hasCompany) {
+            p = repo.findByCompanyId(companyId, PageRequest.of(page, limit));
+        } else if (hasSearch) {
+            p = repo.findByTitleIgnoreCaseContaining(searchString, PageRequest.of(page, limit));
+        } else {
+            p = repo.findAll(PageRequest.of(page, limit));
+        }
         var list = p.getContent().stream().map(pos -> toRes(pos)).toList();
         return new Paginated<>(list, p.getTotalElements(), p.isLast());
     }
@@ -317,12 +311,11 @@ public class PointOfSaleController {
         }
 
         PointOfSaleType pos = new PointOfSaleType();
+        pos.setCompanyId(req.companyId());
         pos.setTitle(req.title());
         pos.setSubtitle(req.subtitle());
-        pos.setCurrencyId(req.currencyId());
         pos.setPhone(req.phone());
         pos.setEmail(req.email());
-        pos.setEmailTemplate(req.emailTemplate());
         // Server-managed timestamps
         Instant now = Instant.now();
         pos.setCreatedAt(now);
@@ -351,17 +344,11 @@ public class PointOfSaleController {
         if (req.subtitle() != null) {
             pos.setSubtitle(req.subtitle());
         }
-        if (req.currencyId() != null) {
-            pos.setCurrencyId(req.currencyId());
-        }
         if (req.phone() != null) {
             pos.setPhone(mergePhone(pos.getPhone(), req.phone()));
         }
         if (req.email() != null) {
             pos.setEmail(req.email());
-        }
-        if (req.emailTemplate() != null) {
-            pos.setEmailTemplate(req.emailTemplate());
         }
         if (req.picture() != null) {
             pos.setPicture(mergePicture(pos.getPicture(), req.picture()));
@@ -378,11 +365,6 @@ public class PointOfSaleController {
     @DeleteMapping("/{id}")
     @Operation(summary = "Delete a POS")
     public ResponseEntity<Void> delete(@PathVariable String id) {
-        // Delete related accounts first
-        var accounts = accountRepo.findByTargetPosId(id);
-        if (accounts != null && !accounts.isEmpty()) {
-            accountRepo.deleteAll(accounts);
-        }
         repo.deleteById(id);
         return ResponseEntity.noContent().build();
     }

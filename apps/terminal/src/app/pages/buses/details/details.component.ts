@@ -2,25 +2,25 @@ import { Component, OnInit, OnDestroy, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import {
   FormArray,
-  FormBuilder,
   FormGroup,
-  ReactiveFormsModule,
   Validators,
+  FormBuilder,
+  ReactiveFormsModule,
 } from '@angular/forms';
-import { ActivatedRoute, Router, RouterModule } from '@angular/router';
-import { TranslateModule, TranslateService } from '@ngx-translate/core';
-import { NgSelectModule } from '@ng-select/ng-select';
-import { Subject, from } from 'rxjs';
-import { map, finalize, takeUntil } from 'rxjs/operators';
 import { isEqual } from 'lodash';
+import { Subject, from } from 'rxjs';
+import { NgSelectModule } from '@ng-select/ng-select';
+import { Router, RouterModule } from '@angular/router';
+import { map, finalize, takeUntil } from 'rxjs/operators';
+import { TranslateModule, TranslateService } from '@ngx-translate/core';
 
 import { BusService } from '../bus.service';
-import { AlertService } from 'src/app/core/services/alert.service';
+import { Picture } from 'src/app/core/models/shared.model';
 import { FormHelper } from 'src/app/core/helpers/form-helper';
+import { AlertService } from 'src/app/core/services/alert.service';
+import { AmenityEnum, BusType } from 'src/app/core/models/bus.model';
 import { PageInfoService } from 'src/app/_metronic/layout/core/page-info.service';
 import { ToolbarComponent } from 'src/app/_metronic/layout/components/toolbar/toolbar.component';
-import { AmenityEnum, BusType } from 'src/app/core/models/bus.model';
-import { Picture } from 'src/app/core/models/shared.model';
 import { AmazonS3Helper } from '../../../../../../../libs/helpers/amazon-s3-helper';
 
 @Component({
@@ -77,7 +77,6 @@ export class BusDetailsComponent implements OnInit, OnDestroy {
   }
 
   constructor(
-    private route: ActivatedRoute,
     private router: Router,
     private fb: FormBuilder,
     private alert: AlertService,
@@ -165,10 +164,10 @@ export class BusDetailsComponent implements OnInit, OnDestroy {
       this.uploadPreviewUrl = URL.createObjectURL(file);
       this.isUploading = true;
       this.cdr.markForCheck();
-      const posId = localStorage.getItem('posId');
+      const companyId = localStorage.getItem('companyId');
       const { objectKey, request$ } = this.amazonS3Helper.uploadS3Aws(
         file,
-        posId,
+        companyId,
       );
 
       from(request$)
@@ -208,6 +207,8 @@ export class BusDetailsComponent implements OnInit, OnDestroy {
             this.alert.error(
               this.translate.instant('BUSES.MESSAGES.UPLOAD_ERROR'),
             );
+            this.isUploading = false;
+            this.cdr.markForCheck();
           },
         });
     };
@@ -274,11 +275,11 @@ export class BusDetailsComponent implements OnInit, OnDestroy {
     }
 
     this.isSubmitting = true;
-    const posId = localStorage.getItem('posId') || '';
+    const companyId = localStorage.getItem('companyId') || '';
 
     const request$ = this.bus
       ? this.busService.update(this.bus.id!, changes)
-      : this.busService.create({ ...changes, target: { pos: posId } });
+      : this.busService.create({ ...changes, target: { company: companyId } });
 
     request$.pipe(takeUntil(this.destroy$)).subscribe({
       next: () => {
@@ -302,6 +303,7 @@ export class BusDetailsComponent implements OnInit, OnDestroy {
         }
         this.alert.error(message);
         this.isSubmitting = false;
+        this.cdr.markForCheck();
       },
     });
   }

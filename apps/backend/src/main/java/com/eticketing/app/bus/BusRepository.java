@@ -8,19 +8,19 @@ import org.springframework.data.mongodb.repository.Query;
 public interface BusRepository extends MongoRepository<BusType, String> {
 
     /**
-     * Find buses scoped to a specific POS.
+     * Find buses scoped to a specific company.
      */
-    @Query("{ 'target.pos': ?0 }")
-    Page<BusType> findByTargetPos(String pos, Pageable pageable);
+    @Query("{ 'target.company': ?0 }")
+    Page<BusType> findByTargetCompany(String companyId, Pageable pageable);
 
     /**
-     * Find buses scoped to a POS with case-insensitive name search.
+     * Find buses scoped to a company with case-insensitive name search.
      */
-    @Query("{ 'target.pos': ?0, 'name': { $regex: ?1, $options: 'i' } }")
-    Page<BusType> findByTargetPosAndNameLike(String pos, String name, Pageable pageable);
+    @Query("{ 'target.company': ?0, 'name': { $regex: ?1, $options: 'i' } }")
+    Page<BusType> findByTargetCompanyAndNameLike(String companyId, String name, Pageable pageable);
 
     /**
-     * Check if any bus exists for the given POS.
+     * Check if any bus exists for the given company.
      */
-    boolean existsByTargetPos(String pos);
+    boolean existsByTargetCompany(String companyId);
 }

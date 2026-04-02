@@ -19,10 +19,8 @@ import { AddPosModalComponent } from './add-pos-modal/add-pos-modal.component';
 import { DeletePosModalComponent } from './delete-pos-modal/delete-pos-modal.component';
 import { AssignCustomerModalComponent } from './assign-customer-modal/assign-customer-modal.component';
 import { AuthService } from 'src/app/modules/auth';
-import {
-  PointOfSaleType,
-  AccountType,
-} from 'src/app/core/models/account.model';
+import { AccountType } from 'src/app/core/models/account.model';
+import { CompanyType } from 'src/app/core/models/company.model';
 import { RoleEnum } from 'src/app/core/models/user-type';
 import { Subject, takeUntil } from 'rxjs';
 
@@ -56,7 +54,7 @@ export class DashboardComponent {
   };
   @ViewChild('modal') private modalComponent: ModalComponent;
 
-  currentPos: PointOfSaleType | null = null;
+  currentCompany: CompanyType | null = null;
   currentAccount: AccountType | null = null;
   accounts: AccountType[] = [];
   isAdmin = false;
@@ -65,10 +63,12 @@ export class DashboardComponent {
     private modalService: NgbModal,
     private authService: AuthService,
   ) {
-    // Subscribe to current POS
-    this.authService.pos$.pipe(takeUntil(this.destroy$)).subscribe((pos) => {
-      this.currentPos = pos;
-    });
+    // Subscribe to current company
+    this.authService.company$
+      .pipe(takeUntil(this.destroy$))
+      .subscribe((pos) => {
+        this.currentCompany = pos;
+      });
     // Subscribe to accounts and get first account + full list
     this.authService.accounts$
       .pipe(takeUntil(this.destroy$))
@@ -89,10 +89,12 @@ export class DashboardComponent {
   }
 
   openAddPosModal(): void {
-    this.modalService.open(AddPosModalComponent, {
+    const modalRef = this.modalService.open(AddPosModalComponent, {
       centered: true,
       size: 'md',
     });
+    modalRef.componentInstance.account = this.currentAccount;
+    modalRef.componentInstance.accounts = this.accounts;
   }
 
   openDeletePosModal(): void {
@@ -100,7 +102,7 @@ export class DashboardComponent {
       centered: true,
       size: 'md',
     });
-    modalRef.componentInstance.pos = this.currentPos;
+    modalRef.componentInstance.accounts = this.accounts;
     modalRef.result.then(
       (result) => {
         if (result) {

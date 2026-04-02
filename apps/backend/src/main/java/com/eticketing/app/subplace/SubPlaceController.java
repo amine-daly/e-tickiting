@@ -100,9 +100,9 @@ public class SubPlaceController {
         p.setParentId(req.parentId());
         // Prefer explicit target in request, otherwise inherit from parent
         if (req.target() != null && req.target().pos() != null && !req.target().pos().isBlank()) {
-            p.setTarget(new SubPlaceType.TargetType(req.target().pos()));
+            p.setTarget(new SubPlaceType.TargetType(req.target().company(), req.target().pos()));
         } else if (parent.getTarget() != null && parent.getTarget().getPos() != null) {
-            p.setTarget(new SubPlaceType.TargetType(parent.getTarget().getPos()));
+            p.setTarget(new SubPlaceType.TargetType(parent.getTarget().getCompany(), parent.getTarget().getPos()));
         }
         // Server-managed timestamps
         Instant now = Instant.now();
@@ -137,12 +137,12 @@ public class SubPlaceController {
             // Inherit target scope from new parent
             PlaceType parent = placeRepo.findById(req.parentId()).orElse(null);
             if (parent != null && parent.getTarget() != null && parent.getTarget().getPos() != null) {
-                p.setTarget(new SubPlaceType.TargetType(parent.getTarget().getPos()));
+                p.setTarget(new SubPlaceType.TargetType(parent.getTarget().getCompany(), parent.getTarget().getPos()));
             }
         }
         // Allow explicit target update
         if (req.target() != null && req.target().pos() != null && !req.target().pos().isBlank()) {
-            p.setTarget(new SubPlaceType.TargetType(req.target().pos()));
+            p.setTarget(new SubPlaceType.TargetType(req.target().company(), req.target().pos()));
         }
         // Server-managed timestamps
         p.setUpdatedAt(Instant.now());

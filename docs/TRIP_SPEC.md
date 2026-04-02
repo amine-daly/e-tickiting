@@ -19,14 +19,25 @@
 
 ## 1.1 Marketplace Scoping
 
-Every entity on the platform is scoped to a `target: { pos }`.
-All queries must always filter by `target.pos` — operators cannot see each other's data.
+The platform now uses a company + POS model.
 
-| Entity   | target field | Meaning                           |
-| -------- | ------------ | --------------------------------- |
-| `Bus`    | `target.pos` | Which operator owns this bus      |
-| `Trip`   | `target.pos` | Which operator sells this trip    |
-| `Ticket` | `target.pos` | Which POS the booking was made on |
+- `company` is the business ownership boundary
+- `pos` is the operational selling / attribution boundary inside that company
+
+Not every entity stores both fields:
+
+- Bus ownership is company-scoped
+- Trip ownership is company-scoped
+- Ticket attribution stores both company and POS
+
+All marketplace ownership queries must always filter by `target.company`.
+Operational ticket queries may additionally filter by `target.pos` when the use case is POS-specific.
+
+| Entity   | target field                    | Meaning                                                   |
+| -------- | ------------------------------- | --------------------------------------------------------- |
+| `Bus`    | `target.company`                | Which company owns this bus                               |
+| `Trip`   | `target.company`                | Which company owns / sells this trip                      |
+| `Ticket` | `target.company` + `target.pos` | Which company sold the ticket and which POS originated it |
 
 ---
 
@@ -36,7 +47,7 @@ All queries must always filter by `target.pos` — operators cannot see each oth
 interface Trip {
   // Layer 1 — Identity
   tripId: string; // system-generated
-  target: { pos: string }; // point of sale
+  target: { company: string }; // owning company
   departureDate: string; // ISO date, must be future, UTC
   timezone: string; // MANDATORY — IANA e.g. "Africa/Tunis"
   status: TripStatus; // default: SCHEDULED
@@ -61,10 +72,10 @@ interface Trip {
   // Layer 5 — Stop Schedule
   stopSchedule: Stop[];
 
-  // Layer 6 — Pickup Points (optional per commercial stop)
+  // Layer 6 — Pickup Points (required per commercial stop)
   pickupPoints: PickupPoint[];
 
-  // Layer 7 — Dropoff Points (optional per commercial stop)
+  // Layer 7 — Dropoff Points (required per commercial stop)
   dropoffPoints: DropoffPoint[];
 
   // Layer 8 — Segments (inventory layer, frozen after creation)
@@ -245,6 +256,10 @@ interface ExpressFare {
 interface Ticket {
   ticketId: string;
   tripId: string;
+  target: {
+    company: string; // owning company of the trip
+    pos: string; // original POS attribution for the sale / reservation
+  };
   segmentIds: string[]; // segments this ticket covers
   expressId?: string; // if express fare was applied
   pickupPointId: string; // MANDATORY - where passenger boards
@@ -260,6 +275,8 @@ interface Ticket {
   cancelledAt?: string;
 }
 ```
+
+> `Ticket.target.pos` captures the original operational POS attribution and should not be overwritten later if payment is completed by another POS in the same company.
 
 ### Ticket State Machine
 
@@ -336,7 +353,7 @@ WHERE segmentId IN refund.segmentsRefunded
 2. System resolves segment chain or matching express fare
 3. Atomic CAS: bookedSeats + qty <= maxSeats for ALL segments in chain
    └─ Fails → return "no seats available", no ticket created
-4. Create Ticket { status: PENDING, expiresAt: now() + seatHoldMinutes }
+4. Create Ticket { target: { company, pos }, status: PENDING, expiresAt: now() + seatHoldMinutes }
    └─ DB error → rollback CAS decrement
 5. Start expiry timer
 6. User completes payment
@@ -431,7 +448,7 @@ Two express fares: full journey + partial journey (Sfax → Tunis)
 ```json
 {
   "tripId": "TRIP_2025_04_15_DJE_TUN_01",
-  "target": { "pos": "POS_ID_TN_MAIN" },
+  "target": { "company": "cmp_id" },
   "departureDate": "2025-04-15",
   "timezone": "Africa/Tunis",
   "status": "SCHEDULED",
@@ -515,6 +532,7 @@ Two express fares: full journey + partial journey (Sfax → Tunis)
   "segments": [
     {
       "segmentId": "SEG_DJE_SFX",
+      "sequence": 1,
       "fromPlaceId": "PLACE_DJERBA",
       "toPlaceId": "PLACE_SFAX",
       "departureTime": "2025-04-15T06:00:00Z",
@@ -527,6 +545,7 @@ Two express fares: full journey + partial journey (Sfax → Tunis)
     },
     {
       "segmentId": "SEG_SFX_SOU",
+      "sequence": 2,
       "fromPlaceId": "PLACE_SFAX",
       "toPlaceId": "PLACE_SOUSSE",
       "departureTime": "2025-04-15T08:45:00Z",
@@ -539,6 +558,7 @@ Two express fares: full journey + partial journey (Sfax → Tunis)
     },
     {
       "segmentId": "SEG_SOU_TUN",
+      "sequence": 3,
       "fromPlaceId": "PLACE_SOUSSE",
       "toPlaceId": "PLACE_TUNIS",
       "departureTime": "2025-04-15T10:45:00Z",
@@ -594,7 +614,8 @@ Two express fares: full journey + partial journey (Sfax → Tunis)
 - Allow bus reassignment without checking MAX(bookedSeats) across all segments
 - Use `stopId` — the canonical field name is `placeId`
 - Add `totalSeats` to `trip.bus` — it is a pure reference, no snapshot needed
-- Query trips or tickets without scoping by `target.pos` — platform is a marketplace
+- Query trips without scoping by `target.company` — platform ownership is company-scoped
+- Query POS ticket work without respecting `target.company` and, when needed, `target.pos`
 
 ## 16. Shared Models Pattern
 

@@ -27,6 +27,11 @@ import java.time.Instant;
             def = "{ 'email': 1, 'app': 1 }",
             unique = true,
             partialFilter = "{ 'email': { $exists: true }, 'app': { $exists: true } }"
+    ),
+    @CompoundIndex(
+            name = "target_company_idx",
+            def = "{ 'target.company': 1 }",
+            partialFilter = "{ 'target.company': { $exists: true } }"
     )
 })
 
@@ -60,6 +65,7 @@ public class UserType {
 
     public static class TargetType {
 
+        private String company;
         private String pos;
 
         public TargetType() {
@@ -67,6 +73,19 @@ public class UserType {
 
         public TargetType(String pos) {
             this.pos = pos;
+        }
+
+        public TargetType(String company, String pos) {
+            this.company = company;
+            this.pos = pos;
+        }
+
+        public String getCompany() {
+            return company;
+        }
+
+        public void setCompany(String company) {
+            this.company = company;
         }
 
         public String getPos() {

@@ -43,12 +43,6 @@ const Routing: Routes = [
     loadChildren: () =>
       import('./customers/customers.routes').then((m) => m.customersRoutes),
   },
-
-  {
-    path: 'customers',
-    loadChildren: () =>
-      import('./customers/customers.routes').then((m) => m.customersRoutes),
-  },
   {
     path: 'permissions',
     loadChildren: () =>
@@ -57,10 +51,9 @@ const Routing: Routes = [
       ),
   },
   {
-    path: 'crafted/pages/profile',
+    path: 'companies',
     loadChildren: () =>
-      import('../modules/profile/profile.module').then((m) => m.ProfileModule),
-    data: { layout: 'light-sidebar' },
+      import('./companies/companies.routes').then((m) => m.companyRoutes),
   },
   {
     path: 'crafted/widgets',

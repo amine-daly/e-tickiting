@@ -25,12 +25,12 @@ public class BusService {
     private final MongoTemplate mongoTemplate;
 
     /* ───── Queries ───── */
-    public Page<BusType> list(String posId, String searchString, int page, int limit) {
+    public Page<BusType> list(String companyId, String searchString, int page, int limit) {
         var pageable = PageRequest.of(page, limit);
         if (searchString != null && !searchString.isBlank()) {
-            return busRepository.findByTargetPosAndNameLike(posId, searchString, pageable);
+            return busRepository.findByTargetCompanyAndNameLike(companyId, searchString, pageable);
         }
-        return busRepository.findByTargetPos(posId, pageable);
+        return busRepository.findByTargetCompany(companyId, pageable);
     }
 
     public BusType getById(String id) {

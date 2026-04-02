@@ -41,7 +41,7 @@ export class TeamService {
   getAccountsByTarget(): Observable<AccountType[]> {
     this.loading.next(true);
     const params = new HttpParams()
-      .set('posId', localStorage.getItem('posId'))
+      .set('companyId', localStorage.getItem('companyId'))
       .set('page', this.pageIndex)
       .set('limit', this.pageLimit);
     return this.http
@@ -78,7 +78,7 @@ export class TeamService {
   createAccount(payload: {
     userId: string;
     permissionId?: string;
-    target: { posId: string };
+    target: { companyId: string };
   }): Observable<AccountType> {
     return this.http.post<AccountType>(`${this.baseUrl}`, payload).pipe(
       tap(({ data }: any) => {

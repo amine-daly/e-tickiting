@@ -15,10 +15,8 @@ import { ThemeModeSwitcherComponent } from '../../../../partials/layout/theme-mo
 import { UserInnerComponent } from '../../../../partials/layout/extras/dropdown-inner/user-inner/user-inner.component';
 import { KeeniconComponent } from 'src/app/_metronic/shared/keenicon/keenicon.component';
 import { AuthService } from 'src/app/modules/auth';
-import {
-  PointOfSaleType,
-  AccountType,
-} from 'src/app/core/models/account.model';
+import { AccountType } from 'src/app/core/models/account.model';
+import { CompanyType } from 'src/app/core/models/company.model';
 import { UserType } from 'src/app/core/models/user-type';
 
 @Component({
@@ -47,8 +45,8 @@ export class NavbarComponent implements OnInit, OnDestroy {
   userAvatarClass: string = 'symbol-35px symbol-md-40px';
   btnIconClass: string = 'fs-2 fs-md-1';
 
-  // POS selector
-  currentPos: PointOfSaleType | null = null;
+  // Company selector
+  currentCompany: CompanyType | null = null;
   accounts: AccountType[] = [];
   currentUser: UserType | null = null;
   private destroy$ = new Subject<void>();
@@ -59,20 +57,19 @@ export class NavbarComponent implements OnInit, OnDestroy {
   ) {}
 
   ngOnInit(): void {
-    // Subscribe to current POS
-    this.authService.pos$.pipe(takeUntil(this.destroy$)).subscribe((pos) => {
-      this.currentPos = pos;
-    });
+    // Subscribe to current company
+    this.authService.company$
+      .pipe(takeUntil(this.destroy$))
+      .subscribe((company) => {
+        this.currentCompany = company;
+      });
 
     // Subscribe to accounts list
     this.authService.accounts$
       .pipe(takeUntil(this.destroy$))
       .subscribe((accounts) => {
         this.accounts = accounts || [];
-        console.log(
-          '🚀 ~ NavbarComponent ~ ngOnInit ~ this.accounts:',
-          this.accounts,
-        );
+        this.cdr.markForCheck();
       });
 
     // Subscribe to current user
@@ -84,11 +81,11 @@ export class NavbarComponent implements OnInit, OnDestroy {
       });
   }
 
-  selectPos(account: AccountType): void {
-    const pos = account.target?.pos;
-    if (pos?.id) {
-      localStorage.setItem('posId', pos.id);
-      this.authService.pos$ = pos;
+  selectCompany(account: AccountType): void {
+    const company = account.target?.company;
+    if (company?.id) {
+      localStorage.setItem('companyId', company.id);
+      this.authService.company$ = company;
       window.location.reload();
     }
   }
