@@ -1,7 +1,10 @@
-// Clean filter input for searching trips
+import { TripStatusEnum } from './trip.model';
+
 export interface TripFilterInput {
-  originId?: string;
-  destinationId?: string;
-  date?: string; // ISO date string (yyyy-MM-dd)
-  agencyId?: string;
+  status?: TripStatusEnum;
+  departureDateFrom?: string;
+  departureDateTo?: string;
+  searchTerm?: string;
+  page?: number;
+  size?: number;
 }

@@ -241,7 +241,8 @@ dto.setName(bus.getName());
 dtos.add(dto);
 }
 
-using markForCheck() is mandatory specially on async data and subscription and file uploading and deleting
+- using markForCheck() is mandatory specially on async data and subscription and file uploading and deleting
+- for date picker always use mwlFlatpickr
 
 // ✅ GOOD - Using libraries (Backend)
 if (StringUtils.isBlank(str)) { }

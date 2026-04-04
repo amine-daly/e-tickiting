@@ -1,0 +1,421 @@
+<app-toolbar [appToolbarLayout]="'classic'">
+  <div toolbar-actions>
+    <button class="btn btn-sm fw-bold btn-light me-2" routerLink="/trips">
+      <i class="ki-duotone ki-arrow-left fs-4"
+        ><span class="path1"></span><span class="path2"></span
+      ></i>
+      {{ "COMMON.BUTTON.BACK" | translate }}
+    </button>
+  </div>
+</app-toolbar>
+
+<ng-container *ngIf="trip; else loadingTpl">
+  <!-- ─── HEADER CARD ─────────────────────────────────── -->
+  <div class="card mb-6">
+    <div class="card-body">
+      <div
+        class="d-flex flex-wrap justify-content-between align-items-start gap-4"
+      >
+        <div>
+          <h3 class="fw-bolder mb-2">
+            {{ "TRIPS.EDIT" | translate }}
+            <span class="badge ms-2" [ngClass]="statusBadgeClass[trip.status]">
+              {{ statusLabelMap[trip.status] | translate }}
+            </span>
+          </h3>
+          <div class="d-flex flex-wrap gap-4 text-muted fs-7">
+            <span>
+              <i class="ki-duotone ki-calendar fs-6 me-1"
+                ><span class="path1"></span><span class="path2"></span
+              ></i>
+              {{ trip.departureDate | date: "yyyy-MM-dd HH:mm" }}
+            </span>
+            <span>
+              <i class="ki-duotone ki-time fs-6 me-1"
+                ><span class="path1"></span><span class="path2"></span
+              ></i>
+              {{ trip.timezone }}
+            </span>
+            <span>
+              <i class="ki-duotone ki-bus fs-6 me-1"
+                ><span class="path1"></span><span class="path2"></span
+                ><span class="path3"></span><span class="path4"></span
+              ></i>
+              {{ trip.bus?.busId || "-" }}
+            </span>
+            <span>
+              <i class="ki-duotone ki-dollar fs-6 me-1"
+                ><span class="path1"></span><span class="path2"></span
+              ></i>
+              {{ trip.currency }}
+            </span>
+            <span>
+              {{ "TRIPS.FIELDS.SEAT_HOLD_MINUTES" | translate }}:
+              {{ trip.seatHoldMinutes }}
+            </span>
+          </div>
+        </div>
+
+        <!-- Status action buttons -->
+        <div class="d-flex gap-2">
+          <button
+            *ngIf="canPublish"
+            class="btn btn-sm btn-success"
+            [disabled]="isTransitioning"
+            (click)="transitionStatus(TripStatusEnum.ACTIVE)"
+          >
+            <i class="ki-duotone ki-check-circle fs-4 me-1"
+              ><span class="path1"></span><span class="path2"></span
+            ></i>
+            {{ "TRIPS.ACTIONS.PUBLISH" | translate }}
+          </button>
+          <button
+            *ngIf="canComplete"
+            class="btn btn-sm btn-info"
+            [disabled]="isTransitioning"
+            (click)="transitionStatus(TripStatusEnum.COMPLETED)"
+          >
+            <i class="ki-duotone ki-flag fs-4 me-1"
+              ><span class="path1"></span><span class="path2"></span
+            ></i>
+            {{ "TRIPS.ACTIONS.COMPLETE" | translate }}
+          </button>
+          <button
+            *ngIf="canCancel"
+            class="btn btn-sm btn-danger"
+            [disabled]="isTransitioning"
+            (click)="transitionStatus(TripStatusEnum.CANCELLED)"
+          >
+            <i class="ki-duotone ki-cross-circle fs-4 me-1"
+              ><span class="path1"></span><span class="path2"></span
+            ></i>
+            {{
+              trip.status === TripStatusEnum.ACTIVE
+                ? ("TRIPS.ACTIONS.EMERGENCY_CANCEL" | translate)
+                : ("TRIPS.ACTIONS.CANCEL" | translate)
+            }}
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ─── STOP SCHEDULE ────────────────────────────────── -->
+  <div class="card mb-6">
+    <div class="card-header">
+      <h3 class="card-title fw-bold">{{ "TRIPS.STOPS.TITLE" | translate }}</h3>
+    </div>
+    <div class="card-body py-4">
+      <div *ngIf="!sortedStops.length" class="text-muted text-center py-5">
+        {{ "TRIPS.EMPTY" | translate }}
+      </div>
+      <div *ngIf="sortedStops.length" class="timeline-label">
+        <div
+          *ngFor="let stop of sortedStops; let i = index; let last = last"
+          class="timeline-item d-flex align-items-start mb-4"
+        >
+          <div class="timeline-badge me-4 mt-1">
+            <span
+              class="badge"
+              [ngClass]="getStopTypeClass(stop, i, sortedStops.length)"
+            >
+              {{ stop.sequence }}
+            </span>
+          </div>
+          <div class="flex-grow-1">
+            <div class="d-flex flex-wrap align-items-center gap-3">
+              <span class="fw-bold text-dark">{{ stop.placeId }}</span>
+              <span
+                class="badge badge-sm"
+                [ngClass]="getStopTypeClass(stop, i, sortedStops.length)"
+              >
+                {{ getStopType(stop, i, sortedStops.length) }}
+              </span>
+              <span
+                *ngIf="stop.boardingAllowed"
+                class="badge badge-sm badge-light-success"
+              >
+                {{ "TRIPS.STOPS.BOARDING_ALLOWED" | translate }}
+              </span>
+              <span
+                *ngIf="stop.droppingAllowed"
+                class="badge badge-sm badge-light-warning"
+              >
+                {{ "TRIPS.STOPS.DROPPING_ALLOWED" | translate }}
+              </span>
+            </div>
+            <div class="text-muted fs-7 mt-1">
+              <span *ngIf="stop.arrivalTime">
+                {{ "TRIPS.STOPS.ARRIVAL_TIME" | translate }}:
+                {{ stop.arrivalTime | date: "HH:mm" }}
+              </span>
+              <span *ngIf="stop.arrivalTime && stop.departureTime" class="mx-2"
+                >|</span
+              >
+              <span *ngIf="stop.departureTime">
+                {{ "TRIPS.STOPS.DEPARTURE_TIME" | translate }}:
+                {{ stop.departureTime | date: "HH:mm" }}
+              </span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ─── SEGMENTS ──────────────────────────────────────── -->
+  <div class="card mb-6">
+    <div class="card-header">
+      <h3 class="card-title fw-bold">
+        {{ "TRIPS.SEGMENTS.TITLE" | translate }}
+      </h3>
+    </div>
+    <div class="card-body py-4">
+      <div *ngIf="!sortedSegments.length" class="text-muted text-center py-5">
+        -
+      </div>
+      <div *ngIf="sortedSegments.length" class="table-responsive">
+        <table
+          class="table table-row-dashed table-row-gray-200 align-middle gs-0 gy-3"
+        >
+          <thead>
+            <tr class="fw-bolder text-muted fs-7">
+              <th>#</th>
+              <th>{{ "TRIPS.SEGMENTS.FROM" | translate }}</th>
+              <th>{{ "TRIPS.SEGMENTS.TO" | translate }}</th>
+              <th class="text-center">
+                {{ "TRIPS.SEGMENTS.MAX_SEATS" | translate }}
+              </th>
+              <th class="text-center">
+                {{ "TRIPS.SEGMENTS.BOOKED_SEATS" | translate }}
+              </th>
+              <th class="text-end">
+                {{ "TRIPS.SEGMENTS.BASE_PRICE" | translate }}
+              </th>
+              <th class="text-end">
+                {{ "TRIPS.SEGMENTS.DISTANCE_KM" | translate }}
+              </th>
+              <th class="text-end">
+                {{ "TRIPS.SEGMENTS.DURATION_MIN" | translate }}
+              </th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let seg of sortedSegments">
+              <td class="text-muted">{{ seg.sequence }}</td>
+              <td class="fw-semibold">{{ seg.fromPlaceId }}</td>
+              <td class="fw-semibold">{{ seg.toPlaceId }}</td>
+              <td class="text-center">{{ seg.maxSeats }}</td>
+              <td class="text-center">
+                <span
+                  [ngClass]="
+                    seg.bookedSeats >= seg.maxSeats
+                      ? 'text-danger fw-bold'
+                      : 'text-dark'
+                  "
+                >
+                  {{ seg.bookedSeats }}
+                </span>
+              </td>
+              <td class="text-end">
+                {{ seg.basePrice | number: "1.2-2" }} {{ trip.currency }}
+              </td>
+              <td class="text-end">{{ seg.distanceKm | number: "1.1-1" }}</td>
+              <td class="text-end">{{ seg.durationMinutes }}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- ─── EXPRESS FARES ─────────────────────────────────── -->
+  <div class="card mb-6" *ngIf="activeFares.length">
+    <div class="card-header">
+      <h3 class="card-title fw-bold">
+        {{ "TRIPS.EXPRESS_FARES.TITLE" | translate }}
+      </h3>
+    </div>
+    <div class="card-body py-4">
+      <div class="table-responsive">
+        <table
+          class="table table-row-dashed table-row-gray-200 align-middle gs-0 gy-3"
+        >
+          <thead>
+            <tr class="fw-bolder text-muted fs-7">
+              <th>{{ "TRIPS.SEGMENTS.FROM" | translate }}</th>
+              <th>{{ "TRIPS.SEGMENTS.TO" | translate }}</th>
+              <th>{{ "TRIPS.EXPRESS_FARES.SEGMENTS_COVERED" | translate }}</th>
+              <th class="text-end">
+                {{ "TRIPS.EXPRESS_FARES.PRICE" | translate }}
+              </th>
+              <th>{{ "TRIPS.EXPRESS_FARES.VALID_FROM" | translate }}</th>
+              <th>{{ "TRIPS.EXPRESS_FARES.VALID_UNTIL" | translate }}</th>
+              <th class="text-center">
+                {{ "TRIPS.EXPRESS_FARES.ACTIVE" | translate }}
+              </th>
+              <th class="text-end">
+                {{ "TRIPS.EXPRESS_FARES.TOTAL_DISTANCE" | translate }}
+              </th>
+              <th class="text-end">
+                {{ "TRIPS.EXPRESS_FARES.TOTAL_DURATION" | translate }}
+              </th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let fare of activeFares">
+              <td class="fw-semibold">{{ fare.fromPlaceId }}</td>
+              <td class="fw-semibold">{{ fare.toPlaceId }}</td>
+              <td>{{ fare.segmentsCovered?.length || 0 }}</td>
+              <td class="text-end fw-bold">
+                {{ fare.price | number: "1.2-2" }} {{ trip.currency }}
+              </td>
+              <td>
+                {{
+                  fare.validFrom ? (fare.validFrom | date: "yyyy-MM-dd") : "-"
+                }}
+              </td>
+              <td>
+                {{
+                  fare.validUntil ? (fare.validUntil | date: "yyyy-MM-dd") : "-"
+                }}
+              </td>
+              <td class="text-center">
+                <span
+                  class="badge"
+                  [ngClass]="
+                    fare.active ? 'badge-light-success' : 'badge-light-danger'
+                  "
+                >
+                  {{
+                    fare.active
+                      ? ("COMMON.LABEL.YES" | translate)
+                      : ("COMMON.LABEL.NO" | translate)
+                  }}
+                </span>
+              </td>
+              <td class="text-end">
+                {{ fare.totalDistanceKm | number: "1.1-1" }}
+              </td>
+              <td class="text-end">{{ fare.totalDurationMinutes }}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- ─── PICKUP POINTS ─────────────────────────────────── -->
+  <div class="card mb-6" *ngIf="trip.pickupPoints?.length">
+    <div class="card-header">
+      <h3 class="card-title fw-bold">
+        {{ "TRIPS.PICKUP_POINTS.TITLE" | translate }}
+      </h3>
+    </div>
+    <div class="card-body py-4">
+      <div *ngFor="let placeId of objectKeys(pickupsByPlace)" class="mb-4">
+        <h6 class="fw-bold text-muted mb-2">
+          <i class="ki-duotone ki-geolocation fs-5 me-1"
+            ><span class="path1"></span><span class="path2"></span
+          ></i>
+          {{ placeId }}
+        </h6>
+        <div class="table-responsive">
+          <table
+            class="table table-row-dashed table-row-gray-200 align-middle gs-0 gy-2"
+          >
+            <thead>
+              <tr class="fw-semibold text-muted fs-7">
+                <th>{{ "TRIPS.PICKUP_POINTS.ADDRESS" | translate }}</th>
+                <th>{{ "TRIPS.PICKUP_POINTS.SCHEDULED_TIME" | translate }}</th>
+                <th class="text-center">
+                  {{ "TRIPS.PICKUP_POINTS.ACTIVE" | translate }}
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let pp of pickupsByPlace[placeId]">
+                <td>{{ pp.address }}</td>
+                <td>{{ pp.scheduledDepartureTime | date: "HH:mm" }}</td>
+                <td class="text-center">
+                  <span
+                    class="badge"
+                    [ngClass]="
+                      pp.active ? 'badge-light-success' : 'badge-light-danger'
+                    "
+                  >
+                    {{
+                      pp.active
+                        ? ("COMMON.LABEL.YES" | translate)
+                        : ("COMMON.LABEL.NO" | translate)
+                    }}
+                  </span>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ─── DROPOFF POINTS ────────────────────────────────── -->
+  <div class="card mb-6" *ngIf="trip.dropoffPoints?.length">
+    <div class="card-header">
+      <h3 class="card-title fw-bold">
+        {{ "TRIPS.DROPOFF_POINTS.TITLE" | translate }}
+      </h3>
+    </div>
+    <div class="card-body py-4">
+      <div *ngFor="let placeId of objectKeys(dropoffsByPlace)" class="mb-4">
+        <h6 class="fw-bold text-muted mb-2">
+          <i class="ki-duotone ki-geolocation fs-5 me-1"
+            ><span class="path1"></span><span class="path2"></span
+          ></i>
+          {{ placeId }}
+        </h6>
+        <div class="table-responsive">
+          <table
+            class="table table-row-dashed table-row-gray-200 align-middle gs-0 gy-2"
+          >
+            <thead>
+              <tr class="fw-semibold text-muted fs-7">
+                <th>{{ "TRIPS.DROPOFF_POINTS.ADDRESS" | translate }}</th>
+                <th>{{ "TRIPS.DROPOFF_POINTS.SCHEDULED_TIME" | translate }}</th>
+                <th class="text-center">
+                  {{ "TRIPS.DROPOFF_POINTS.ACTIVE" | translate }}
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let dp of dropoffsByPlace[placeId]">
+                <td>{{ dp.address }}</td>
+                <td>{{ dp.scheduledArrivalTime | date: "HH:mm" }}</td>
+                <td class="text-center">
+                  <span
+                    class="badge"
+                    [ngClass]="
+                      dp.active ? 'badge-light-success' : 'badge-light-danger'
+                    "
+                  >
+                    {{
+                      dp.active
+                        ? ("COMMON.LABEL.YES" | translate)
+                        : ("COMMON.LABEL.NO" | translate)
+                    }}
+                  </span>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+</ng-container>
+
+<ng-template #loadingTpl>
+  <div class="d-flex justify-content-center py-15">
+    <span class="spinner-border spinner-border-lg text-primary"></span>
+  </div>
+</ng-template>

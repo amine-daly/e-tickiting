@@ -56,7 +56,8 @@
       "WAIT": "Please wait...",
       "UPLOAD": "Upload",
       "CLOSE": "Close",
-      "CONTINUE": "Continue"
+      "CONTINUE": "Continue",
+      "NEXT": "Next"
     },
     "CURRENCY": {
       "TND": "TND"
@@ -187,27 +188,96 @@
     "ADD_BUTTON": "Add trip",
     "LOADING": "Loading trips...",
     "EMPTY": "No trips available.",
+    "EDIT": "Trip details",
     "LABEL": {
       "ROUTE": "Route"
     },
     "STATUS": {
       "SCHEDULED": "Scheduled",
+      "ACTIVE": "Active",
       "COMPLETED": "Completed",
       "CANCELLED": "Cancelled"
+    },
+    "FIELDS": {
+      "DEPARTURE_DATE": "Departure date",
+      "SEGMENTS": "Segments",
+      "BUS": "Bus",
+      "CURRENCY": "Currency",
+      "SEAT_HOLD_MINUTES": "Seat hold (min)"
+    },
+    "FILTERS": {
+      "STATUS": "Filter by status",
+      "SEARCH": "Search trips..."
+    },
+    "STOPS": {
+      "TITLE": "Stop schedule",
+      "BOARDING_ALLOWED": "Boarding",
+      "DROPPING_ALLOWED": "Dropping",
+      "ARRIVAL_TIME": "Arrival",
+      "DEPARTURE_TIME": "Departure",
+      "TYPES": {
+        "ORIGIN": "Origin",
+        "DESTINATION": "Destination",
+        "INTERMEDIATE": "Intermediate",
+        "TECHNICAL": "Technical stop"
+      }
+    },
+    "SEGMENTS": {
+      "TITLE": "Segments",
+      "FROM": "From",
+      "TO": "To",
+      "MAX_SEATS": "Capacity",
+      "BOOKED_SEATS": "Booked",
+      "BASE_PRICE": "Base price",
+      "DISTANCE_KM": "Distance (km)",
+      "DURATION_MIN": "Duration (min)"
+    },
+    "EXPRESS_FARES": {
+      "TITLE": "Express fares",
+      "SEGMENTS_COVERED": "Segments",
+      "PRICE": "Price",
+      "VALID_FROM": "Valid from",
+      "VALID_UNTIL": "Valid until",
+      "ACTIVE": "Active",
+      "TOTAL_DISTANCE": "Total km",
+      "TOTAL_DURATION": "Total min"
+    },
+    "PICKUP_POINTS": {
+      "TITLE": "Pickup points",
+      "ADDRESS": "Address",
+      "SCHEDULED_TIME": "Scheduled time",
+      "ACTIVE": "Active"
+    },
+    "DROPOFF_POINTS": {
+      "TITLE": "Drop-off points",
+      "ADDRESS": "Address",
+      "SCHEDULED_TIME": "Scheduled time",
+      "ACTIVE": "Active"
+    },
+    "ACTIONS": {
+      "PUBLISH": "Publish",
+      "COMPLETE": "Complete",
+      "CANCEL": "Cancel trip",
+      "EMERGENCY_CANCEL": "Emergency cancel"
     },
     "MESSAGES": {
       "STATUS_CONFIRM_TITLE": "Change trip status",
       "STATUS_CONFIRM_TEXT": "Do you want to set this trip to {{status}}?",
       "STATUS_CONFIRM_OK": "Yes, change it",
+      "STATUS_UPDATED": "Trip status updated successfully.",
       "STATUS_UPDATE_SUCCESS": "Trip status updated successfully.",
       "STATUS_UPDATE_ERROR": "Unable to update the trip status.",
+      "PUBLISH_CONFIRM": "This will make the trip visible to passengers. Continue?",
+      "CANCEL_CONFIRM": "This will cancel the trip. Continue?",
+      "EMERGENCY_CANCEL_CONFIRM": "This is an active trip! Emergency cancellation may affect booked passengers. Continue?",
       "LOAD_ERROR": "Unable to load trips. Please try again later.",
       "SAVE_SUCCESS": "Trip saved successfully.",
       "SAVE_ERROR": "Unable to save the trip.",
       "UNRECOGNIZED_FIELD": "Invalid request field: {{field}}.",
-      "TOTAL_PLACES_SEATMAP_MISMATCH": "Total places must match the seat map size ({{total}}).",
       "DELETE_SUCCESS": "Trip deleted successfully.",
-      "DELETE_ERROR": "Unable to delete the trip."
+      "DELETE_ERROR": "Unable to delete the trip.",
+      "DELETE_CONFIRM_TITLE": "Delete trip?",
+      "DELETE_CONFIRM_TEXT": "This action cannot be undone."
     },
     "TOOLTIP": {
       "OCCUPANCY": "Booked: {{booked}} / {{total}}"
@@ -261,6 +331,76 @@
       "SAVE_SUCCESS": "Fare updated successfully.",
       "SAVE_ERROR": "Unable to update fare.",
       "PRICE_INVALID": "Enter a valid fare price."
+    },
+    "CREATE": {
+      "TITLE": "Create trip",
+      "NEXT": "Next",
+      "PREVIOUS": "Previous",
+      "SUBMIT": "Create trip",
+      "STEPS": {
+        "BASIC_INFO": "Basic info",
+        "STOP_SCHEDULE": "Stops",
+        "SEGMENTS": "Segments",
+        "PICKUP_DROPOFF": "Pickup / Drop-off",
+        "EXPRESS_FARES": "Express fares",
+        "REVIEW": "Review"
+      },
+      "BASIC": {
+        "BUS_PLACEHOLDER": "Select a bus",
+        "SEATS": "seats",
+        "DATE_PLACEHOLDER": "Pick departure date & time",
+        "TIMEZONE": "Timezone",
+        "TIMEZONE_PLACEHOLDER": "Select timezone",
+        "CURRENCY": "Currency",
+        "CURRENCY_PLACEHOLDER": "Select currency",
+        "SEAT_HOLD_PLACEHOLDER": "Minutes"
+      },
+      "STOPS": {
+        "ADD": "Add stop",
+        "STOP_LABEL": "Stop",
+        "PLACE": "City",
+        "PLACE_PLACEHOLDER": "Select a city",
+        "MOVE_UP": "Move up",
+        "MOVE_DOWN": "Move down",
+        "REMOVE": "Remove",
+        "MIN_STOPS": "At least 2 stops are required (origin and destination)."
+      },
+      "SEGMENTS": {
+        "AUTO_GENERATED": "Segments are auto-generated from consecutive commercial stops.",
+        "NO_SEGMENTS": "Add at least 2 commercial stops to generate segments.",
+        "DURATION_PLACEHOLDER": "Optional"
+      },
+      "PICKUP": {
+        "ADD": "Add pickup point",
+        "PLACE": "City",
+        "PLACE_PLACEHOLDER": "Select city",
+        "ADDRESS_PLACEHOLDER": "Street address",
+        "EMPTY": "No pickup points added. This step is optional."
+      },
+      "DROPOFF": {
+        "ADD": "Add drop-off point",
+        "PLACE": "City",
+        "PLACE_PLACEHOLDER": "Select city",
+        "ADDRESS_PLACEHOLDER": "Street address",
+        "EMPTY": "No drop-off points added. This step is optional."
+      },
+      "EXPRESS": {
+        "ADD": "Add express fare",
+        "SEGMENTS_PLACEHOLDER": "Select segments",
+        "PRICE_PLACEHOLDER": "Price",
+        "HINT": "Express fares are optional. They allow passengers to book multi-segment journeys at a special price.",
+        "EMPTY": "No express fares added. This step is optional."
+      },
+      "REVIEW": {
+        "TITLE": "Review your trip before submitting"
+      },
+      "ERRORS": {
+        "BUS_REQUIRED": "Bus is required.",
+        "DATE_REQUIRED": "Departure date is required.",
+        "TIMEZONE_REQUIRED": "Timezone is required.",
+        "CURRENCY_REQUIRED": "Currency is required.",
+        "SEAT_HOLD_REQUIRED": "Seat hold minutes is required."
+      }
     }
   },
   "TICKETS": {
@@ -273,18 +413,26 @@
       "AGENCY": "Agency",
       "SEATS": "Seats",
       "AMOUNT": "Amount",
-      "CREATED_AT": "Created at"
+      "CREATED_AT": "Created at",
+      "TICKET_ID": "Ticket ID",
+      "TRIP": "Trip",
+      "EXPIRES": "Expires"
+    },
+    "FILTERS": {
+      "ALL": "All statuses"
     },
     "ACTIONS": {
       "SEND_EMAIL": "Send ticket email",
-      "VIEW_DETAILS": "View details"
+      "VIEW_DETAILS": "View details",
+      "CONFIRM": "Confirm",
+      "CANCEL": "Cancel"
     },
     "MODAL": {
       "TITLE": "Ticket {{reference}}"
     },
     "STATUS": {
-      "BOOKED": "Booked",
-      "PAID": "Paid",
+      "PENDING": "Pending",
+      "CONFIRMED": "Confirmed",
       "CANCELLED": "Cancelled",
       "EXPIRED": "Expired"
     },
@@ -296,12 +444,39 @@
       "STATUS_CONFIRM_OK": "Yes, change it",
       "STATUS_SUCCESS": "Ticket status updated successfully.",
       "STATUS_ERROR": "Unable to update the ticket status.",
+      "CONFIRM_TEXT": "Are you sure you want to confirm this ticket?",
+      "CANCEL_TEXT": "Are you sure you want to cancel this ticket?",
       "EMAIL_CONFIRM_TITLE": "Send ticket email",
       "EMAIL_CONFIRM_TEXT": "Send the ticket to {{email}}?",
       "EMAIL_CONFIRM_OK": "Yes, send it",
       "EMAIL_SUCCESS_TITLE": "Email sent",
       "EMAIL_SUCCESS_TEXT": "The ticket email was sent to {{email}}.",
       "EMAIL_ERROR": "Unable to send the ticket email."
+    },
+    "SELL": {
+      "TITLE": "Sell Ticket",
+      "STEP_CUSTOMER": "Customer",
+      "STEP_TRIP": "Trip",
+      "STEP_REVIEW": "Review & Book",
+      "SEARCH_CUSTOMER": "Search Customer",
+      "CUSTOMER_PLACEHOLDER": "Type name, email or phone...",
+      "SELECT_TRIP": "Select a Trip",
+      "NO_TRIPS": "No active trips found.",
+      "STOPS": "stops",
+      "SEGMENTS": "segments",
+      "REVIEW": "Review & Confirm",
+      "CUSTOMER_LABEL": "Customer",
+      "TRIP_LABEL": "Trip",
+      "PICKUP": "Pickup Point",
+      "DROPOFF": "Dropoff Point",
+      "PRICE_LABEL": "Price",
+      "BOOKING": "Booking...",
+      "CONFIRM": "Confirm Booking",
+      "SUCCESS": "Booking created successfully!",
+      "ERROR": "Unable to create booking. Please try again.",
+      "SUCCESS_TITLE": "Booking Confirmed",
+      "TICKET_ID": "Ticket ID",
+      "GO_TO_TICKETS": "Go to Tickets"
     }
   },
   "CUSTOMERS": {

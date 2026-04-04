@@ -5,7 +5,6 @@ import { TripService } from './trip.service';
 import {
   TripSearchParams,
   TripType,
-  TripDestinationForm,
 } from '../../../core/models/trip.model';
 import { PlacesService } from '../../home/home.service';
 
@@ -18,24 +17,28 @@ export class TripResolver implements Resolve<TripType[]> {
 
   resolve(route: ActivatedRouteSnapshot): Observable<TripType[]> {
     const params: TripSearchParams = {
-      originId: route.queryParamMap.get('originId') || '',
-      destinationId: route.queryParamMap.get('destinationId') || '',
+      originPlaceId: route.queryParamMap.get('originPlaceId') || undefined,
+      destinationPlaceId: route.queryParamMap.get('destinationPlaceId') || undefined,
       ...(route.queryParamMap.get('date')
-        ? { date: route.queryParamMap.get('date') }
+        ? { date: route.queryParamMap.get('date')! }
         : {}),
     };
 
-    // Fetch both places by ID, then assign to selectedDestination$
-    forkJoin({
-      origin: this.placesService.getPlaceById(params.originId),
-      destination: this.placesService.getPlaceById(params.destinationId),
-    }).subscribe(({ origin, destination }) => {
-      this.tripService.selectedDestination$ = {
-        origin,
-        destination,
-        ...(params.date ? { date: params.date } : {}),
-      };
-    });
+    const originId = params.originPlaceId;
+    const destId = params.destinationPlaceId;
+
+    if (originId && destId) {
+      forkJoin({
+        origin: this.placesService.getPlaceById(originId),
+        destination: this.placesService.getPlaceById(destId),
+      }).subscribe(({ origin, destination }) => {
+        this.tripService.selectedDestination$ = {
+          origin,
+          destination,
+          ...(params.date ? { date: params.date } : {}),
+        };
+      });
+    }
 
     return this.tripService.searchTrips(params);
   }

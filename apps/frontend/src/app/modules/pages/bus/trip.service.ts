@@ -1,6 +1,6 @@
 import { BehaviorSubject, map, Observable } from 'rxjs';
 import { Injectable } from '@angular/core';
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpParams } from '@angular/common/http';
 
 import { environment } from '../../../environments/environment';
 import {
@@ -12,12 +12,16 @@ import {
 @Injectable({ providedIn: 'root' })
 export class TripService {
   private baseUrl = `${environment.apiBase}/trips`;
-  private trip = new BehaviorSubject<TripType>(null);
+  private trip = new BehaviorSubject<TripType | null>(null);
   private allTrips = new BehaviorSubject<TripType[]>([]);
   private filtredTrips = new BehaviorSubject<TripType[]>([]);
   private selectedDestination = new BehaviorSubject<TripDestinationForm | null>(
     null
   );
+
+  get trip$(): Observable<TripType | null> {
+    return this.trip.asObservable();
+  }
 
   get selectedDestination$(): Observable<TripDestinationForm | null> {
     return this.selectedDestination.asObservable();
@@ -38,35 +42,45 @@ export class TripService {
 
   getTripById(id: string): Observable<TripType> {
     return this.http.get<TripType>(`${this.baseUrl}/${id}`).pipe(
-      map((data: any) => {
+      map((data: TripType) => {
         this.trip.next(data);
-        console.log(
-          '🚀 ~ TripService ~ getTripById ~ this.trip:',
-          this.trip.value
-        );
         return data;
       })
     );
   }
 
   getTrips(): Observable<TripType[]> {
-    return this.http.get<any>(`${this.baseUrl}/search`, {}).pipe(
-      map((data: any) => {
-        this.allTrips.next(data.objects);
-        return data.objects;
+    return this.http.get<TripType[]>(`${this.baseUrl}/search`, {}).pipe(
+      map((data: TripType[]) => {
+        this.allTrips.next(data);
+        return data;
       })
     );
   }
 
-  searchTrips(params: TripSearchParams): Observable<any> {
+  searchTrips(params: TripSearchParams): Observable<TripType[]> {
+    let httpParams = new HttpParams();
+    if (params.originPlaceId) {
+      httpParams = httpParams.set('originPlaceId', params.originPlaceId);
+    }
+    if (params.destinationPlaceId) {
+      httpParams = httpParams.set('destinationPlaceId', params.destinationPlaceId);
+    }
+    if (params.date) {
+      httpParams = httpParams.set('date', params.date);
+    }
+    if (params.companyId) {
+      httpParams = httpParams.set('companyId', params.companyId);
+    }
+    if (params.status) {
+      httpParams = httpParams.set('status', params.status);
+    }
     return this.http
-      .get<any>(`${this.baseUrl}/search`, {
-        params: { ...params },
-      })
+      .get<TripType[]>(`${this.baseUrl}/search`, { params: httpParams })
       .pipe(
-        map((data: any) => {
-          this.filtredTrips.next(data.objects);
-          return data.objects;
+        map((data: TripType[]) => {
+          this.filtredTrips.next(data);
+          return data;
         })
       );
   }

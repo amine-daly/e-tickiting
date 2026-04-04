@@ -1,30 +1,28 @@
-<div>
+<div *ngIf="trip">
   <div class="p-3">
     <!-- Bus Image with Back and Share Button -->
     <div class="bus-header position-relative">
-      <img src="img/3.png" alt="Express Lines Bus" class="img-fluid w-100 rounded-3">
+      <img src="img/3.png" alt="Bus" class="img-fluid w-100 rounded-3">
       <div class="overlay"></div>
       <div class="header-controls position-absolute top-0 w-100 p-3 d-flex justify-content-between">
-        <a href="bus-listing.html" class="btn btn-light btn-circle shadow-sm">
+        <a [routerLink]="['/bus-listing']"
+           [queryParams]="{ originPlaceId: originPlaceId, destinationPlaceId: destPlaceId }"
+           class="btn btn-light btn-circle shadow-sm">
           <i class="bi bi-arrow-left"></i>
-        </a>
-        <a href="#" class="btn btn-light btn-circle shadow-sm">
-          <i class="bi bi-share"></i>
         </a>
       </div>
     </div>
+
     <!-- Bus Details -->
     <div class="bus-details mt-3">
       <div class="d-flex justify-content-between align-items-start mb-3">
         <div>
-          <h5 class="fw-bold mb-1">Express Lines</h5>
-          <div class="text-muted">Premium Sleeper</div>
+          <h5 class="fw-bold mb-1">{{ originCity }} → {{ destCity }}</h5>
+          <div class="text-muted">{{ trip.departureDate }}</div>
         </div>
-        <div class="rating-badge">
-          <i class="bi bi-star-fill text-warning me-1"></i>
-          <span>4.8</span>
-        </div>
+        <div class="text-muted small">{{ trip.status }}</div>
       </div>
+
       <!-- Journey Details -->
       <div class="journey-details bg-primary-light p-3 rounded-3 mb-3">
         <div class="d-flex">
@@ -34,129 +32,89 @@
             <div class="arrival-stop"></div>
           </div>
           <div class="journey-info flex-grow-1">
-            <div class="mb-3">
-              <div class="fw-bold">New York Central Station</div>
-              <div class="text-muted small">Jun 15, 07:00 AM</div>
-            </div>
-            <div>
-              <div class="fw-bold">Boston South Station</div>
-              <div class="text-muted small">Jun 15, 11:30 AM</div>
+            <div class="mb-3" *ngFor="let stop of trip.stopSchedule; let first = first; let last = last">
+              <ng-container *ngIf="first || last">
+                <div class="fw-bold">{{ getPlaceName(stop.placeId) }}</div>
+                <div class="text-muted small">{{ first ? stop.departureTime : stop.arrivalTime }}</div>
+              </ng-container>
             </div>
           </div>
           <div class="journey-duration text-center">
             <div class="small text-muted">Duration</div>
-            <div class="fw-bold">4h 30m</div>
+            <div class="fw-bold">{{ duration }}m</div>
           </div>
         </div>
       </div>
-      <!-- Amenities -->
-      <div class="mb-3">
-        <h6 class="fw-bold mb-2">Amenities</h6>
-        <div class="d-flex flex-wrap gap-2">
-          <div class="amenity-item">
-            <i class="bi bi-wifi"></i>
-            <span>WiFi</span>
-          </div>
-          <div class="amenity-item">
-            <i class="bi bi-plug"></i>
-            <span>Power Outlet</span>
-          </div>
-          <div class="amenity-item">
-            <i class="bi bi-tv"></i>
-            <span>TV</span>
-          </div>
-          <div class="amenity-item">
-            <i class="bi bi-cup-hot"></i>
-            <span>Snacks</span>
-          </div>
-          <div class="amenity-item">
-            <i class="bi bi-snow2"></i>
-            <span>AC</span>
-          </div>
-          <div class="amenity-item">
-            <i class="bi bi-water"></i>
-            <span>Toilet</span>
-          </div>
-          <div class="amenity-item">
-            <i class="bi bi-bag-check"></i>
-            <span>Luggage</span>
-          </div>
-          <div class="amenity-item">
-            <i class="bi bi-recycle"></i>
-            <span>USB</span>
+
+      <!-- Stop Schedule -->
+      <div class="mb-3" *ngIf="trip.stopSchedule?.length > 2">
+        <h6 class="fw-bold mb-2">All Stops</h6>
+        <div class="list-group list-group-flush">
+          <div class="list-group-item px-0 d-flex justify-content-between"
+               *ngFor="let stop of trip.stopSchedule; let i = index">
+            <div>
+              <span class="fw-medium">{{ getPlaceName(stop.placeId) }}</span>
+              <span class="badge bg-info-subtle text-info ms-2" *ngIf="stop.boardingAllowed">Boarding</span>
+              <span class="badge bg-warning-subtle text-warning ms-2" *ngIf="stop.droppingAllowed">Dropping</span>
+            </div>
+            <div class="text-muted small">
+              <span *ngIf="stop.arrivalTime">Arr {{ stop.arrivalTime }}</span>
+              <span *ngIf="stop.departureTime" class="ms-2">Dep {{ stop.departureTime }}</span>
+            </div>
           </div>
         </div>
       </div>
-      <!-- Bus Photos -->
-      <div class="mb-3">
-        <h6 class="fw-bold mb-2">Bus Photos</h6>
-        <div class="bus-photos d-flex gap-2 overflow-auto pb-2">
-          <img src="img/p1.png" class="bus-photo-thumb rounded-3" alt="Bus Interior">
-          <img src="img/p2.png" class="bus-photo-thumb rounded-3" alt="Bus Seat">
-          <img src="img/p3.png" class="bus-photo-thumb rounded-3" alt="Coach">
-          <img src="img/p4.png" class="bus-photo-thumb rounded-3" alt="Luxury Bus">
-        </div>
-      </div>
+
       <!-- Pickup Points -->
-      <div class="mb-3">
+      <div class="mb-3" *ngIf="activePickups.length">
         <h6 class="fw-bold mb-2">Pickup Points</h6>
         <div class="pickup-points">
-          <div class="pickup-point d-flex align-items-center mb-2">
+          <div class="pickup-point d-flex align-items-center mb-2"
+               *ngFor="let p of activePickups; let i = index"
+               (click)="selectPickup(p)"
+               [class.bg-primary-light]="selectedPickup?.pointId === p.pointId"
+               style="cursor:pointer; border-radius: 8px; padding: 8px;">
             <div class="pickup-radio me-2">
-              <input type="radio" class="form-check-input" name="pickupPoint" id="pickup1" checked>
+              <input type="radio" class="form-check-input" name="pickupPoint"
+                     [id]="'pickup' + i"
+                     [checked]="selectedPickup?.pointId === p.pointId">
             </div>
             <div class="flex-grow-1">
-              <label for="pickup1" class="form-check-label fw-medium mb-0 d-block">New York Central Station</label>
-              <div class="text-muted small">Gate 5, Platform B</div>
+              <label [for]="'pickup' + i" class="form-check-label fw-medium mb-0 d-block">{{ p.address }}</label>
+              <div class="text-muted small">{{ getPlaceName(p.placeId) }}</div>
             </div>
             <div class="text-end">
-              <div class="text-muted small">07:00 AM</div>
-            </div>
-          </div>
-          <div class="pickup-point d-flex align-items-center">
-            <div class="pickup-radio me-2">
-              <input type="radio" class="form-check-input" name="pickupPoint" id="pickup2">
-            </div>
-            <div class="flex-grow-1">
-              <label for="pickup2" class="form-check-label fw-medium mb-0 d-block">Grand Central Terminal</label>
-              <div class="text-muted small">Bus Bay 3</div>
-            </div>
-            <div class="text-end">
-              <div class="text-muted small">07:15 AM</div>
+              <div class="text-muted small">{{ p.scheduledDepartureTime }}</div>
             </div>
           </div>
         </div>
       </div>
+
       <!-- Drop-off Points -->
-      <div class="mb-3">
+      <div class="mb-3" *ngIf="activeDropoffs.length">
         <h6 class="fw-bold mb-2">Drop-off Points</h6>
         <div class="dropoff-points">
-          <div class="dropoff-point d-flex align-items-center mb-2">
+          <div class="dropoff-point d-flex align-items-center mb-2"
+               *ngFor="let d of activeDropoffs; let i = index"
+               (click)="selectDropoff(d)"
+               [class.bg-primary-light]="selectedDropoff?.pointId === d.pointId"
+               style="cursor:pointer; border-radius: 8px; padding: 8px;">
             <div class="dropoff-radio me-2">
-              <input type="radio" class="form-check-input" name="dropoffPoint" id="dropoff1" checked>
+              <input type="radio" class="form-check-input" name="dropoffPoint"
+                     [id]="'dropoff' + i"
+                     [checked]="selectedDropoff?.pointId === d.pointId">
             </div>
             <div class="flex-grow-1">
-              <label for="dropoff1" class="form-check-label fw-medium mb-0 d-block">Boston South Station</label>
-              <div class="text-muted small">Main Terminal</div>
+              <label [for]="'dropoff' + i" class="form-check-label fw-medium mb-0 d-block">{{ d.address }}</label>
+              <div class="text-muted small">{{ getPlaceName(d.placeId) }}</div>
             </div>
             <div class="text-end">
-              <div class="text-muted small">11:30 AM</div>
-            </div>
-          </div>
-          <div class="dropoff-point d-flex align-items-center">
-            <div class="dropoff-radio me-2">
-              <input type="radio" class="form-check-input" name="dropoffPoint" id="dropoff2">
-            </div>
-            <div class="flex-grow-1">
-              <label for="dropoff2" class="form-check-label fw-medium mb-0 d-block">Boston Back Bay Station</label>
-              <div class="text-muted small">Exit Gate 2</div>
-            </div>
-            <div class="text-end">
-              <div class="text-muted small">11:45 AM</div>
+              <div class="text-muted small">{{ d.scheduledArrivalTime }}</div>
             </div>
           </div>
         </div>
       </div>
+
       <!-- Cancellation Policy -->
       <div class="mb-3">
         <h6 class="fw-bold mb-2">Cancellation Policy</h6>
@@ -175,62 +133,25 @@
           </div>
         </div>
       </div>
-      <!-- Reviews -->
-      <div class="mb-4">
-        <div class="d-flex justify-content-between align-items-center mb-2">
-          <h6 class="fw-bold mb-0">Reviews</h6>
-        </div>
-        <div class="reviews">
-          <div class="review-item p-3 bg-white rounded-3 mb-2">
-            <div class="d-flex justify-content-between mb-2">
-              <div class="d-flex align-items-center">
-                <div
-                  class="avatar me-2 d-flex align-items-center justify-content-center bg-info-subtle text-info fw-bold fs-24">
-                  J</div>
-                <div>
-                  <div class="fw-medium">John Smith</div>
-                  <div class="text-muted small">June 10, 2025</div>
-                </div>
-              </div>
-              <div class="rating">
-                <i class="bi bi-star-fill text-warning"></i>
-                <span>4.5</span>
-              </div>
-            </div>
-            <p class="mb-0 small">Very comfortable bus with excellent service. The staff was friendly and the bus was
-              right on time. Would definitely travel again.</p>
-          </div>
-          <div class="review-item p-3 bg-white rounded-3">
-            <div class="d-flex justify-content-between mb-2">
-              <div class="d-flex align-items-center">
-                <div
-                  class="avatar me-2 d-flex align-items-center justify-content-center bg-warning-subtle text-warning fw-bold fs-24">
-                  S</div>
-                <div>
-                  <div class="fw-medium">Sarah Johnson</div>
-                  <div class="text-muted small">June 8, 2025</div>
-                </div>
-              </div>
-              <div class="rating">
-                <i class="bi bi-star-fill text-warning"></i>
-                <span>5.0</span>
-              </div>
-            </div>
-            <p class="mb-0 small">Amazing experience! The bus was clean, WiFi worked perfectly, and we arrived ahead of
-              schedule. Highly recommended!</p>
-          </div>
-        </div>
-      </div>
     </div>
   </div>
-  <!-- Bottom Fixed Bar for Price and Book -->
+
+  <!-- Bottom Fixed Bar -->
   <div class="bottom-fixed-bar p-3">
     <div class="d-flex justify-content-between align-items-center gap-3">
       <div class="lh-sm">
-        <div class="fw-bold fs-5 text-primary-color">$45.00</div>
+        <div class="fw-bold fs-5 text-primary-color">{{ displayPrice | number:'1.2-2' }} {{ trip.currency }}</div>
         <div class="text-muted small">per person</div>
       </div>
-      <a routerLink="/seat-select" class="btn btn-app py-2 fw-bold">Select Seats</a>
+      <a [routerLink]="['/seat-select']"
+         [queryParams]="{
+           tripId: trip.id,
+           originPlaceId: originPlaceId,
+           destinationPlaceId: destPlaceId,
+           pickupPointId: selectedPickup?.pointId,
+           dropoffPointId: selectedDropoff?.pointId
+         }"
+         class="btn btn-app py-2 fw-bold">Select Seats</a>
     </div>
   </div>
 </div>

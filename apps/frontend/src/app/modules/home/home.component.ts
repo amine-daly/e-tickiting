@@ -4,32 +4,22 @@ import { RouterLink } from '@angular/router';
 import { SearchCardComponent } from '../../shared/components/search-card/search-card.component';
 import { TripService } from '../pages/bus/trip.service';
 import { RecentSearchesService } from '../../core/services/recent-searches.service';
-import { map as rxMap } from 'rxjs';
-import {
-  isEmpty,
-  flatMap,
-  get,
-  sortBy,
-  map,
-  compact,
-  sumBy,
-  head,
-  forEach,
-  slice,
-  groupBy,
-  maxBy,
-} from 'lodash';
+import { PlacesService } from './home.service';
+import { map as rxMap, combineLatest, of, switchMap } from 'rxjs';
 
 import { TripType } from 'src/app/core/models/trip.model';
+import { PlaceType } from 'src/app/core/models/place-type';
 
 type PopularRouteCard = {
   key: string;
   parentTripId: string;
+  originPlaceId: string;
+  destinationPlaceId: string;
   originLabel: string;
   destinationLabel: string;
   departureDate: string;
   price: number;
-  isOriginal: boolean;
+  currency: string;
 };
 
 @Component({
@@ -43,127 +33,75 @@ export class HomeComponent {
   allTrips$ = this.tripService.allTrips$;
   recentSearches$ = this.recentSearchesService.recentSearches$;
 
-  explicitTrips$ = this.allTrips$.pipe(
-    rxMap((trips) => this.expandTripsToExplicitRoutes(trips))
+  explicitTrips$ = combineLatest([
+    this.allTrips$,
+    this.placesService.places$,
+  ]).pipe(
+    rxMap(([trips, places]) => this.expandTripsToExplicitRoutes(trips, places))
   );
 
   constructor(
     private tripService: TripService,
-    private recentSearchesService: RecentSearchesService
+    private recentSearchesService: RecentSearchesService,
+    private placesService: PlacesService,
   ) {
+    this.placesService.fetchPlaces().subscribe();
     this.tripService.getTrips().subscribe();
-    this.explicitTrips$.subscribe((trips) => {
-      console.log('Expanded trips:', trips);
-    });
   }
 
   private expandTripsToExplicitRoutes(
-    trips: TripType[] | null
+    trips: TripType[] | null,
+    places: PlaceType[],
   ): PopularRouteCard[] {
-    if (isEmpty(trips)) return [];
+    if (!trips?.length) return [];
 
-    return flatMap(trips, (trip) => {
-      // Safe extraction using lodash get or optional chaining
-      const originId = get(trip, 'originId');
-      const destinationId = get(trip, 'destinationId');
+    const placeMap = new Map(places.map((p) => [p.id, p.city || p.id]));
 
-      const originLabel = get(trip, 'origin.city') || originId || '-';
-      const destinationLabel =
-        get(trip, 'destination.city') || destinationId || '-';
+    const cards: PopularRouteCard[] = [];
 
-      const tripTotalPrice = this.parseMoney(get(trip, 'totalPrice'));
+    for (const trip of trips) {
+      const stops = trip.stopSchedule || [];
+      if (!stops.length) continue;
 
-      // Sort stops safely
-      const rawStops = sortBy(trip?.stops || [], ['rank']);
+      const originStop = stops[0];
+      const destStop = stops[stops.length - 1];
+      const originLabel = placeMap.get(originStop.placeId) || originStop.placeId;
+      const destLabel = placeMap.get(destStop.placeId) || destStop.placeId;
 
-      // Original trip card
-      const originalCard: PopularRouteCard = {
-        key: `${trip.id}:original`,
+      // Full-route price from segments
+      const segPrice = (trip.segments || []).reduce((s, seg) => s + (seg.basePrice || 0), 0);
+
+      // Main card: origin → destination
+      cards.push({
+        key: `${trip.id}:full`,
         parentTripId: trip.id,
+        originPlaceId: originStop.placeId,
+        destinationPlaceId: destStop.placeId,
         originLabel,
-        destinationLabel,
-        departureDate: trip?.departureDate as string,
-        price: tripTotalPrice,
-        isOriginal: true,
-      };
+        destinationLabel: destLabel,
+        departureDate: trip.departureDate,
+        price: segPrice,
+        currency: trip.currency || '',
+      });
 
-      // Map stops to points ensuring valid data
-      const stopPoints = compact(
-        map(rawStops, (s) => {
-          const id = s?.placeId ?? s?.destinationId;
-          const label = s?.place?.city || id;
-          const fare = this.parseMoney(s?.fare);
-          return id && label ? { id, label, fare } : null;
-        })
-      );
-
-      // Construct ordered list of all points: Origin -> Stops -> Destination
-      const points = compact([
-        originId ? { id: originId, label: originLabel } : null,
-        ...stopPoints,
-        destinationId ? { id: destinationId, label: destinationLabel } : null,
-      ]);
-
-      if (points.length < 2) return [originalCard];
-
-      // Calculate fares
-      const totalStopsFare = sumBy(stopPoints, 'fare');
-      const lastLegPrice = Math.max(0, tripTotalPrice - totalStopsFare);
-
-      // Generate legs: origin -> stop(i) and origin -> destination
-      const originPoint = head(points);
-      const legs: PopularRouteCard[] = [];
-
-      if (originPoint?.id) {
-        // Iterate over all subsequent points to form legs from origin
-        forEach(slice(points, 1), (to, index) => {
-          if (!to?.id || originPoint.id === to.id) return;
-
-          // If last point (destination), use remaining price; otherwise use stop fare
-          const isFinal = index === points.length - 2; // -2 because we sliced 1 off, so length is N-1
-          const segmentPrice = isFinal
-            ? lastLegPrice
-            : this.parseMoney(to.fare);
-
-          legs.push({
-            key: `${trip.id}:leg:${index + 1}`, // +1 to offset origin
-            parentTripId: trip.id,
-            originLabel: originPoint.label,
-            destinationLabel: to.label,
-            departureDate: trip?.departureDate as string,
-            price: segmentPrice,
-            isOriginal: false,
-          });
+      // Express fare cards (sub-routes)
+      for (const ef of trip.expressFares || []) {
+        if (!ef.active) continue;
+        if (ef.fromPlaceId === originStop.placeId && ef.toPlaceId === destStop.placeId) continue; // skip duplicate of main route
+        cards.push({
+          key: `${trip.id}:ef:${ef.expressId}`,
+          parentTripId: trip.id,
+          originPlaceId: ef.fromPlaceId,
+          destinationPlaceId: ef.toPlaceId,
+          originLabel: placeMap.get(ef.fromPlaceId) || ef.fromPlaceId,
+          destinationLabel: placeMap.get(ef.toPlaceId) || ef.toPlaceId,
+          departureDate: trip.departureDate,
+          price: ef.price,
+          currency: trip.currency || '',
         });
       }
-
-      // Merge and Dedup: Group by Origin-Dest, take max price
-      const grouped = groupBy(
-        [originalCard, ...legs],
-        (c) => `${c.parentTripId}::${c.originLabel}::${c.destinationLabel}`
-      );
-      return compact(
-        map(grouped, (group) => maxBy(group, 'price') as PopularRouteCard)
-      );
-    });
-  }
-
-  private parseMoney(value: any): number {
-    if (value === null || value === undefined) return 0;
-    if (typeof value === 'number') return Number.isFinite(value) ? value : 0;
-    if (typeof value === 'string') {
-      const n = Number(value);
-      return Number.isFinite(n) ? n : 0;
     }
-    // Backend sometimes returns { source, parsedValue }
-    if (typeof value === 'object') {
-      const pv = (value as any)?.parsedValue;
-      if (typeof pv === 'number') return Number.isFinite(pv) ? pv : 0;
-      if (typeof pv === 'string') {
-        const n = Number(pv);
-        return Number.isFinite(n) ? n : 0;
-      }
-    }
-    return 0;
+
+    return cards;
   }
 }

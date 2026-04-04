@@ -1,532 +1,257 @@
-<div>
-  <div class="container py-5">
-    <div class="card">
-      <div class="card-body">
-        <div class="d-flex justify-content-between align-items-center mb-4">
-          <h2 class="mb-0">{{ "TRIPS.TITLE" | translate }}</h2>
-          <div>
-            <button
-              class="btn btn-primary me-2"
-              (click)="openTripModal(tripModal, null)"
-            >
-              {{ "TRIPS.ADD_BUTTON" | translate }}
-            </button>
-          </div>
-        </div>
+<app-toolbar [appToolbarLayout]="'classic'">
+  <div toolbar-actions>
+    <button class="btn btn-sm fw-bold btn-primary" routerLink="/trips/create">
+      <i class="ki-duotone ki-plus fs-2"></i>
+      {{ "TRIPS.CREATE" | translate }}
+    </button>
+  </div>
+</app-toolbar>
 
-        <div *ngIf="loading$ | async" class="text-center my-5">
-          <span class="spinner-border spinner-border-lg"></span>
-          <div>{{ "TRIPS.LOADING" | translate }}</div>
-        </div>
-        <div
-          *ngIf="!(loading$ | async) && !(trips$ | async)?.length"
-          class="alert alert-info"
+<!-- Filters -->
+<div class="card mb-6">
+  <div class="card-body py-4">
+    <div class="row g-3 align-items-end">
+      <!-- Status filter -->
+      <div class="col-md-3">
+        <label class="form-label fw-semibold">{{
+          "TRIPS.FILTERS.STATUS" | translate
+        }}</label>
+        <ng-select
+          [items]="statusFilterOptions"
+          bindLabel="labelKey"
+          bindValue="value"
+          [(ngModel)]="filterStatus"
+          [clearable]="true"
+          [placeholder]="'TRIPS.FILTERS.STATUS' | translate"
+          (change)="applyFilters()"
         >
-          {{ "TRIPS.EMPTY" | translate }}
+          <ng-template ng-label-tmp let-item="item">{{
+            item.labelKey | translate
+          }}</ng-template>
+          <ng-template ng-option-tmp let-item="item">{{
+            item.labelKey | translate
+          }}</ng-template>
+        </ng-select>
+      </div>
+
+      <!-- Search -->
+      <div class="col-md-4">
+        <label class="form-label fw-semibold">{{
+          "TRIPS.FILTERS.SEARCH" | translate
+        }}</label>
+        <div class="input-group">
+          <span class="input-group-text">
+            <i class="ki-duotone ki-magnifier fs-4"
+              ><span class="path1"></span><span class="path2"></span
+            ></i>
+          </span>
+          <input
+            type="text"
+            class="form-control"
+            [(ngModel)]="filterSearch"
+            [placeholder]="'TRIPS.FILTERS.SEARCH' | translate"
+            (keyup.enter)="applyFilters()"
+          />
         </div>
+      </div>
 
-        <div
-          *ngIf="!(loading$ | async) && (trips$ | async)?.length"
-          class="table-responsive"
+      <!-- Actions -->
+      <div class="col-md-3 d-flex gap-2">
+        <button class="btn btn-sm btn-primary" (click)="applyFilters()">
+          <i class="ki-duotone ki-magnifier fs-4"
+            ><span class="path1"></span><span class="path2"></span
+          ></i>
+        </button>
+        <button class="btn btn-sm btn-light" (click)="clearFilters()">
+          <i class="ki-duotone ki-cross fs-4"
+            ><span class="path1"></span><span class="path2"></span
+          ></i>
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Loading -->
+<div *ngIf="loading$ | async" class="d-flex justify-content-center py-10">
+  <span class="spinner-border spinner-border-lg text-primary"></span>
+</div>
+
+<!-- Empty state -->
+<ng-container *ngIf="!(loading$ | async)">
+  <div *ngIf="!(trips$ | async)?.length" class="card">
+    <div
+      class="card-body d-flex flex-column align-items-center justify-content-center py-15"
+    >
+      <i class="ki-duotone ki-route fs-3x text-gray-400 mb-5">
+        <span class="path1"></span><span class="path2"></span
+        ><span class="path3"></span><span class="path4"></span>
+      </i>
+      <div class="fw-bold fs-5 text-muted mb-4">
+        {{ "TRIPS.EMPTY" | translate }}
+      </div>
+      <button class="btn btn-sm btn-primary" routerLink="/trips/create">
+        {{ "TRIPS.CREATE" | translate }}
+      </button>
+    </div>
+  </div>
+
+  <!-- Trip table -->
+  <div *ngIf="(trips$ | async)?.length" class="card">
+    <div class="card-body py-4">
+      <div class="table-responsive">
+        <table
+          class="table table-row-dashed table-row-gray-300 align-middle gs-0 gy-4"
         >
-          <!-- begin::Table -->
-          <table
-            style="margin-bottom: 9rem"
-            class="table table-row-dashed table-row-gray-300 align-middle gs-0 gy-4"
-          >
-            <!-- begin::Table head -->
-            <thead>
-              <tr class="fw-bolder text-muted">
-                <th></th>
-                <th class="min-w-200px">
-                  {{ "TRIPS.LABEL.ROUTE" | translate }}
-                </th>
-                <th class="min-w-120px">
-                  {{ "COMMON.LABEL.DATE" | translate }}
-                </th>
-                <th class="min-w-120px">
-                  {{ "COMMON.LABEL.STATUS" | translate }}
-                </th>
-                <th class="min-w-100px">
-                  {{ "COMMON.LABEL.TOTAL_PRICE" | translate }}
-                </th>
-                <th class="min-w-100px">
-                  {{ "COMMON.LABEL.TOTAL_PLACES" | translate }}
-                </th>
-                <th class="min-w-120px">Occupancy</th>
-                <th class="min-w-100px text-end">
-                  {{ "COMMON.LABEL.ACTIONS" | translate }}
-                </th>
-              </tr>
-            </thead>
-            <!-- end::Table head -->
-            <!-- begin::Table body -->
-            <tbody>
-              <tr *ngFor="let data of trips$ | async; let i = index">
-                <td>
-                  <div
-                    class="form-check form-check-sm form-check-custom form-check-solid"
-                  >
-                    <input
-                      class="form-check-input widget-9-check"
-                      type="checkbox"
-                      [value]="data?.id"
-                    />
-                  </div>
-                </td>
-
-                <td>
-                  <span class="text-dark fw-bolder text-hover-primary fs-6">{{
-                    routePreview(data)
+          <thead>
+            <tr class="fw-bolder text-muted">
+              <th class="min-w-150px">
+                {{ "TRIPS.FIELDS.DEPARTURE_DATE" | translate }}
+              </th>
+              <th class="min-w-200px">{{ "TRIPS.LABEL.ROUTE" | translate }}</th>
+              <th class="min-w-100px">
+                {{ "COMMON.LABEL.STATUS" | translate }}
+              </th>
+              <th class="min-w-100px">
+                {{ "TRIPS.SEGMENTS.TITLE" | translate }}
+              </th>
+              <th class="min-w-100px">{{ "TRIPS.FIELDS.BUS" | translate }}</th>
+              <th class="min-w-100px">
+                {{ "TRIPS.FIELDS.CURRENCY" | translate }}
+              </th>
+              <th class="min-w-120px text-end">
+                {{ "COMMON.LABEL.ACTIONS" | translate }}
+              </th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let trip of trips$ | async">
+              <!-- Departure date -->
+              <td>
+                <div class="d-flex flex-column">
+                  <span class="fw-bold text-dark">{{
+                    trip.departureDate | date: "yyyy-MM-dd"
                   }}</span>
-                </td>
-
-                <td>
-                  <div class="d-flex flex-column gap-1">
-                    <span>
-                      {{ data?.departureDate | date: "yyyy-MM-dd" }}
-                    </span>
-                    <span class="text-muted">
-                      {{ data?.departureDate | date: "HH:mm" }}
-                    </span>
-                  </div>
-                </td>
-                <td>
-                  <span
-                    class="badge"
-                    [ngClass]="{
-                      'badge-light-primary': data?.status === 'SCHEDULED',
-                      'badge-light-success': data?.status === 'COMPLETED',
-                      'badge-light-danger': data?.status === 'CANCELLED',
-                    }"
+                  <span class="text-muted fs-7"
+                    >{{ trip.departureDate | date: "HH:mm" }} ({{
+                      trip.timezone
+                    }})</span
                   >
-                    {{ statusLabelMap[data?.status] | translate }}
-                  </span>
-                </td>
-                <td>
-                  {{ data?.totalPrice | number: "1.3-3" }}
-                  {{ "COMMON.CURRENCY.TND" | translate }}
-                </td>
-                <td>{{ data?.totalPlaces }}</td>
-                <td>
-                  <ng-container *ngIf="data?.totalPlaces; else noCapacity">
-                    <div
-                      class="progress"
-                      style="height: 18px"
-                      [ngbTooltip]="
-                        'TRIPS.TOOLTIP.OCCUPANCY'
-                          | translate
-                            : {
-                                booked:
-                                  data?.totalPlaces -
-                                    (data?.availableSeats || 0) || 0,
-                                total: data?.totalPlaces,
-                              }
-                      "
-                      placement="top"
-                    >
-                      <div
-                        class="progress-bar"
-                        role="progressbar"
-                        [style.width.%]="
-                          ((data?.totalPlaces - (data?.availableSeats || 0)) /
-                            data?.totalPlaces) *
-                          100
-                        "
-                        [attr.aria-valuenow]="
-                          ((data?.totalPlaces - (data?.availableSeats || 0)) /
-                            data?.totalPlaces) *
-                          100
-                        "
-                        aria-valuemin="0"
-                        aria-valuemax="100"
-                      >
-                        {{
-                          ((data?.totalPlaces - (data?.availableSeats || 0)) /
-                            data?.totalPlaces) *
-                            100 | number: "1.0-0"
-                        }}%
-                      </div>
-                    </div>
-                  </ng-container>
-                  <ng-template #noCapacity>
-                    <span class="text-muted">-</span>
-                  </ng-template>
-                </td>
-                <td>
-                  <div class="d-flex justify-content-end flex-shrink-0">
-                    <div ngbDropdown class="me-2">
+                </div>
+              </td>
+
+              <!-- Route -->
+              <td>
+                <span class="text-dark fw-bold text-hover-primary fs-6">{{
+                  routePreview(trip)
+                }}</span>
+                <span class="text-muted fs-7 d-block"
+                  >{{ trip.stopSchedule?.length || 0 }}
+                  {{ "TRIPS.STOPS.TITLE" | translate | lowercase }}</span
+                >
+              </td>
+
+              <!-- Status -->
+              <td>
+                <span class="badge" [ngClass]="statusBadgeClass[trip.status]">
+                  {{ statusLabelMap[trip.status] | translate }}
+                </span>
+              </td>
+
+              <!-- Segments count -->
+              <td>
+                <span class="fw-semibold">{{
+                  trip.segments?.length || 0
+                }}</span>
+              </td>
+
+              <!-- Bus -->
+              <td>
+                <span class="text-muted fs-7">{{
+                  trip.bus?.busId || "-"
+                }}</span>
+              </td>
+
+              <!-- Currency -->
+              <td>
+                <span class="text-muted fs-7">{{ trip.currency || "-" }}</span>
+              </td>
+
+              <!-- Actions -->
+              <td>
+                <div class="d-flex justify-content-end flex-shrink-0">
+                  <!-- Status transitions dropdown -->
+                  <ng-container
+                    *ngIf="getAvailableTransitions(trip) as transitions"
+                  >
+                    <div ngbDropdown *ngIf="transitions.length" class="me-1">
                       <button
                         ngbDropdownToggle
-                        class="btn btn-icon btn-active-light-success w-30px h-30px me-3"
+                        class="btn btn-icon btn-active-light-success btn-sm"
                         [class.dropdown-toggle]="false"
+                        [disabled]="statusUpdating[trip.id]"
                       >
-                        <i class="ki-duotone ki-abstract-14 fs-2">
-                          <span class="path1"></span>
-                          <span class="path2"></span>
+                        <span
+                          *ngIf="statusUpdating[trip.id]"
+                          class="spinner-border spinner-border-sm"
+                        ></span>
+                        <i
+                          *ngIf="!statusUpdating[trip.id]"
+                          class="ki-duotone ki-abstract-14 fs-4"
+                        >
+                          <span class="path1"></span><span class="path2"></span>
                         </i>
                       </button>
                       <div ngbDropdownMenu>
                         <button
+                          *ngFor="let t of transitions"
                           type="button"
-                          class="dropdown-item d-flex justify-content-between align-items-center"
-                          *ngFor="let option of statusOptions"
-                          [disabled]="data.status === option.value"
-                          (click)="changeStatus(data, option.value)"
+                          ngbDropdownItem
+                          (click)="changeStatus(trip, t.status)"
                         >
-                          <span>{{ option.labelKey | translate }}</span>
-                          <i
-                            *ngIf="data.status === option.value"
-                            class="ki-duotone ki-check fs-2"
-                          >
-                            <span class="path1"></span>
-                            <span class="path2"></span>
-                          </i>
+                          {{ t.labelKey | translate }}
                         </button>
                       </div>
                     </div>
-                    <button
-                      class="btn btn-icon btn-active-light-primary w-30px h-30px me-3"
-                      (click)="openTripModal(tripModal, data)"
-                    >
-                      <i class="ki-duotone ki-pencil fs-2">
-                        <span class="path1"></span>
-                        <span class="path2"></span>
-                      </i>
-                    </button>
-                    <button
-                      class="btn btn-icon btn-active-light-danger w-30px h-30px me-3"
-                      (click)="deleteTrip(data)"
-                    >
-                      <i class="ki-duotone ki-trash fs-2">
-                        <span class="path1"></span>
-                        <span class="path2"></span>
-                      </i>
-                    </button>
-                  </div>
-                </td>
-              </tr>
-            </tbody>
-            <!-- end::Table body -->
-          </table>
-          <!-- end::Table -->
-        </div>
-        <app-pagination
-          *ngIf="(pagination$ | async)?.length"
-          [page]="page"
-          [pageSize]="pageSize"
-          [total]="(pagination$ | async)?.length || 0"
-          (pageChange)="onPageChange($event)"
-        ></app-pagination>
+                  </ng-container>
+
+                  <!-- View / Edit -->
+                  <a
+                    [routerLink]="['/trips', trip.id]"
+                    class="btn btn-icon btn-active-light-primary btn-sm me-1"
+                    [ngbTooltip]="'TRIPS.EDIT' | translate"
+                  >
+                    <i class="ki-duotone ki-pencil fs-4"
+                      ><span class="path1"></span><span class="path2"></span
+                    ></i>
+                  </a>
+
+                  <!-- Delete -->
+                  <button
+                    *ngIf="canDelete(trip)"
+                    class="btn btn-icon btn-active-light-danger btn-sm"
+                    (click)="deleteTrip(trip)"
+                    [ngbTooltip]="'TRIPS.DELETE' | translate"
+                  >
+                    <i class="ki-duotone ki-trash fs-4"
+                      ><span class="path1"></span><span class="path2"></span
+                    ></i>
+                  </button>
+                </div>
+              </td>
+            </tr>
+          </tbody>
+        </table>
       </div>
+
+      <app-pagination
+        *ngIf="(pagination$ | async)?.length"
+        [page]="page"
+        [pageSize]="pageSize"
+        [total]="(pagination$ | async)?.length || 0"
+        (pageChange)="onPageChange($event)"
+      >
+      </app-pagination>
     </div>
   </div>
-  <ng-template #tripModal let-modal>
-    <div class="modal-header">
-      <h5 class="modal-title">
-        {{
-          (editing ? "TRIPS.MODAL.EDIT_TITLE" : "TRIPS.MODAL.ADD_TITLE")
-            | translate
-        }}
-      </h5>
-      <button
-        type="button"
-        class="btn-close"
-        aria-label="Fermer"
-        (click)="modal.dismiss('Cross click')"
-      ></button>
-    </div>
-    <form [formGroup]="form">
-      <div class="modal-body">
-        <!-- Origin Selection -->
-        <div class="mb-3">
-          <label
-            >{{ "TRIPS.MODAL.ORIGIN" | translate }}
-            <span class="text-danger">*</span></label
-          >
-          <ng-select
-            [items]="originOptions"
-            bindLabel="city"
-            bindValue="id"
-            formControlName="originId"
-            [placeholder]="'TRIPS.MODAL.ORIGIN_PLACEHOLDER' | translate"
-            [clearable]="true"
-            [ngOptionDisabled]="'disabled'"
-            (change)="onOriginChange($event)"
-          >
-            <ng-template ng-label-tmp let-item="item">{{
-              item.city
-            }}</ng-template>
-            <ng-template ng-option-tmp let-item="item">{{
-              item.city
-            }}</ng-template>
-          </ng-select>
-          <div *ngIf="isInvalid('originId')" class="text-danger small">
-            {{ "TRIPS.MODAL.ERRORS.ORIGIN_REQUIRED" | translate }}
-          </div>
-          <!-- Origin sub-places (pickup points) -->
-          <ng-container *ngTemplateOutlet="subPlacePanel; context: { entries: originSubPlaces, loading: loadingOriginSP }"></ng-container>
-        </div>
-
-        <!-- Destination Selection -->
-        <div class="mb-3">
-          <label
-            >{{ "TRIPS.MODAL.DESTINATION" | translate }}
-            <span class="text-danger">*</span></label
-          >
-          <ng-select
-            [items]="destinationOptions"
-            bindLabel="city"
-            bindValue="id"
-            formControlName="destinationId"
-            [placeholder]="'TRIPS.MODAL.DESTINATION_PLACEHOLDER' | translate"
-            [clearable]="true"
-            [ngOptionDisabled]="'disabled'"
-            (change)="onDestinationChange($event)"
-          >
-            <ng-template ng-label-tmp let-item="item">{{
-              item.city
-            }}</ng-template>
-            <ng-template ng-option-tmp let-item="item">{{
-              item.city
-            }}</ng-template>
-          </ng-select>
-          <div *ngIf="isInvalid('destinationId')" class="text-danger small">
-            {{ "TRIPS.MODAL.ERRORS.DESTINATION_REQUIRED" | translate }}
-          </div>
-          <!-- Destination sub-places (pickup points) -->
-          <ng-container *ngTemplateOutlet="subPlacePanel; context: { entries: destinationSubPlaces, loading: loadingDestSP }"></ng-container>
-        </div>
-
-        <!-- Total Price Input -->
-        <div class="mb-3">
-          <label
-            >{{ "TRIPS.MODAL.TOTAL_PRICE" | translate }}
-            <span class="text-danger">*</span></label
-          >
-          <div class="input-group">
-            <input
-              class="form-control"
-              type="number"
-              min="0"
-              step="0.001"
-              formControlName="totalPrice"
-            />
-            <span class="input-group-text">{{
-              "COMMON.CURRENCY.TND" | translate
-            }}</span>
-          </div>
-          <div *ngIf="isInvalid('totalPrice')" class="text-danger small">
-            {{ "TRIPS.MODAL.ERRORS.PRICE_REQUIRED" | translate }}
-          </div>
-        </div>
-
-        <!-- Intermediate Stops (Optional) -->
-        <div class="mb-3">
-          <label>{{ "TRIPS.MODAL.STOPS" | translate }}</label>
-          <p class="small text-muted mb-2">
-            {{ "TRIPS.MODAL.STOPS_HINT" | translate }}
-          </p>
-          <div formArrayName="stops">
-            <ul
-              cdkDropList
-              class="list-group mt-2"
-              (cdkDropListDropped)="dropStop($event)"
-            >
-              <li
-                class="list-group-item"
-                *ngFor="
-                  let stopCtrl of stopsFormArray.controls;
-                  let idx = index
-                "
-                [formGroupName]="idx"
-                cdkDrag
-              >
-                <div class="d-flex gap-2 align-items-center">
-                  <ng-select
-                    class="flex-grow-1"
-                    [items]="availablePlacesForStops[idx] || []"
-                    bindLabel="city"
-                    bindValue="id"
-                    formControlName="placeId"
-                    [clearable]="true"
-                    [placeholder]="'TRIPS.MODAL.STOP_PLACEHOLDER' | translate"
-                    (change)="onStopPlaceChange(idx, $event)"
-                  >
-                    <ng-template ng-label-tmp let-item="item">{{
-                      item.city
-                    }}</ng-template>
-                    <ng-template ng-option-tmp let-item="item">{{
-                      item.city
-                    }}</ng-template>
-                  </ng-select>
-                  <div class="input-group" style="width: 150px">
-                    <input
-                      type="number"
-                      class="form-control"
-                      min="0"
-                      step="0.001"
-                      formControlName="fare"
-                      [placeholder]="'TRIPS.MODAL.FARE_PLACEHOLDER' | translate"
-                    />
-                    <span class="input-group-text">{{
-                      "COMMON.CURRENCY.TND" | translate
-                    }}</span>
-                  </div>
-                  <div class="btn-group">
-                    <button
-                      class="btn btn-sm btn-outline-secondary"
-                      type="button"
-                      (click)="moveStopUp(idx)"
-                      [disabled]="idx === 0"
-                    >
-                      ↑
-                    </button>
-                    <button
-                      class="btn btn-sm btn-outline-secondary"
-                      type="button"
-                      (click)="moveStopDown(idx)"
-                      [disabled]="idx === stopsFormArray.length - 1"
-                    >
-                      ↓
-                    </button>
-                    <button
-                      class="btn btn-sm btn-danger"
-                      type="button"
-                      (click)="removeStop(idx)"
-                    >
-                      ✕
-                    </button>
-                  </div>
-                </div>
-                <!-- Stop sub-places (pickup points) -->
-                <ng-container *ngTemplateOutlet="subPlacePanel; context: { entries: stopsSubPlaces[idx] || [], loading: loadingStopSP[idx] }"></ng-container>
-              </li>
-            </ul>
-            <button
-              type="button"
-              (click)="addStopField()"
-              class="btn btn-sm btn-secondary mt-2"
-            >
-              {{ "TRIPS.MODAL.ADD_STOP" | translate }}
-            </button>
-          </div>
-        </div>
-
-        <div class="mb-3">
-          <label
-            >{{ "TRIPS.MODAL.DEPARTURE_DATE_LABEL" | translate }}
-            <span class="text-danger">*</span></label
-          >
-          <div class="input-group d-flex align-items-center">
-            <input
-              class="form-control flatpickr-input"
-              type="text"
-              [placeholder]="
-                'TRIPS.MODAL.DEPARTURE_DATE_PLACEHOLDER' | translate
-              "
-              mwlFlatpickr
-              [altInput]="true"
-              [convertModelValue]="true"
-              [enableTime]="true"
-              [altFormat]="'F j, Y h:i K'"
-              [dateFormat]="'Y-m-d H:i'"
-              [maxDate]="dateOptions?.maxDate"
-              [minDate]="dateOptions?.minDate"
-              formControlName="departureDate"
-            />
-            <a
-              *ngIf="form.get('departureDate').value"
-              (click)="form.get('departureDate').setValue('')"
-              class="ms-2"
-              [title]="'TRIPS.MODAL.CLEAR_DATE' | translate"
-            >
-              <app-keenicon name="close" class="fs-3"></app-keenicon>
-            </a>
-          </div>
-          <div *ngIf="isInvalid('departureDate')" class="text-danger small">
-            {{ "TRIPS.MODAL.ERRORS.DEPARTURE_REQUIRED" | translate }}
-          </div>
-        </div>
-        <div class="mb-3">
-          <label
-            >{{ "TRIPS.MODAL.TOTAL_PLACES" | translate }}
-            <span class="text-danger">*</span></label
-          >
-          <input
-            class="form-control"
-            type="number"
-            min="0"
-            formControlName="totalPlaces"
-          />
-          <div *ngIf="isInvalid('totalPlaces')" class="text-danger small">
-            {{ "TRIPS.MODAL.ERRORS.TOTAL_PLACES_REQUIRED" | translate }}
-          </div>
-        </div>
-      </div>
-      <div class="modal-footer">
-        <button
-          type="button"
-          (click)="submit(modal)"
-          class="btn btn-primary"
-          [disabled]="form.invalid || isButtonDisabled"
-        >
-          {{ "COMMON.BUTTON.SAVE" | translate }}
-        </button>
-        <button
-          type="button"
-          class="btn btn-secondary"
-          (click)="modal.dismiss('Cross click')"
-        >
-          {{ "COMMON.BUTTON.CANCEL" | translate }}
-        </button>
-      </div>
-    </form>
-  </ng-template>
-
-  <!-- Reusable sub-place (pickup points) panel template -->
-  <ng-template #subPlacePanel let-entries="entries" let-loading="loading">
-    <div *ngIf="entries?.length || loading" class="ms-2 mt-2 border-start border-2 border-primary-subtle ps-3 pb-1">
-      <div class="d-flex align-items-center gap-2 mb-2">
-        <span class="small fw-semibold text-muted">
-          {{ "TRIPS.MODAL.PICKUP_POINTS" | translate }}
-        </span>
-        <span *ngIf="loading" class="spinner-border spinner-border-sm text-primary"></span>
-      </div>
-      <div *ngFor="let sp of entries" class="d-flex align-items-center gap-2 mb-2">
-        <i class="ki-duotone ki-geolocation fs-6 text-primary">
-          <span class="path1"></span>
-          <span class="path2"></span>
-        </i>
-        <span class="small flex-grow-1 text-truncate" [title]="sp.subPlace?.pickupInstructions || sp.subPlace?.address">
-          {{ sp.subPlace?.address || sp.subPlace?.id }}
-        </span>
-        <input
-          class="form-control form-control-sm"
-          style="max-width: 220px"
-          type="text"
-          [placeholder]="'TRIPS.MODAL.PICKUP_TIME_PLACEHOLDER' | translate"
-          mwlFlatpickr
-          [(ngModel)]="sp.scheduledTime"
-          [ngModelOptions]="{standalone: true}"
-          [altInput]="true"
-          [convertModelValue]="true"
-          [enableTime]="true"
-          [altFormat]="'F j, h:i K'"
-          [dateFormat]="'Y-m-d H:i'"
-          [maxDate]="dateOptions?.maxDate"
-          [minDate]="dateOptions?.minDate"
-          (ngModelChange)="onSubPlaceTimeChange()"
-        />
-        <a
-          *ngIf="sp.scheduledTime"
-          (click)="clearSubPlaceTime(sp)"
-          class="cursor-pointer"
-          [title]="'TRIPS.MODAL.CLEAR_DATE' | translate"
-        >
-          <app-keenicon name="close" class="fs-4"></app-keenicon>
-        </a>
-      </div>
-    </div>
-  </ng-template>
-</div>
+</ng-container>

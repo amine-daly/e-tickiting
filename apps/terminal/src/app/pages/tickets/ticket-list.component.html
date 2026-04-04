@@ -3,6 +3,26 @@
         <div class="card-body">
             <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-3">
                 <h2 class="mb-0">{{ 'TICKETS.TITLE' | translate }}</h2>
+                <a routerLink="/tickets/sell" class="btn btn-sm fw-bold btn-primary">
+                    {{ 'TICKETS.SELL.TITLE' | translate }}
+                </a>
+            </div>
+
+            <!-- Filters -->
+            <div class="row g-3 align-items-end mb-4">
+                <div class="col-md-3">
+                    <label class="form-label fw-semibold">{{ 'COMMON.LABEL.STATUS' | translate }}</label>
+                    <ng-select [(ngModel)]="filterStatus"
+                               [items]="statusFilterOptions"
+                               bindLabel="labelKey"
+                               bindValue="value"
+                               [clearable]="true"
+                               [placeholder]="'TICKETS.FILTERS.ALL' | translate"
+                               (change)="applyFilters()">
+                        <ng-template ng-label-tmp let-item="item">{{ item.labelKey | translate }}</ng-template>
+                        <ng-template ng-option-tmp let-item="item">{{ item.labelKey | translate }}</ng-template>
+                    </ng-select>
+                </div>
             </div>
 
             <div *ngIf="loading$ | async" class="text-center my-5">
@@ -12,16 +32,14 @@
 
             <ng-container *ngIf="!(loading$ | async) && (tickets$ | async)?.length">
                 <div class="table-responsive">
-                    <table style="margin-bottom: 9rem;"
-                        class="table table-row-dashed table-row-gray-300 align-middle gs-0 gy-4">
+                    <table class="table table-row-dashed table-row-gray-300 align-middle gs-0 gy-4">
                         <thead>
                             <tr class="fw-bolder text-muted">
-                                <th class="min-w-150px">{{ 'COMMON.LABEL.REFERENCE' | translate }}</th>
-                                <th class="min-w-200px">{{ 'TICKETS.LABEL.PASSENGER' | translate }}</th>
-                                <th class="min-w-120px">{{ 'TICKETS.LABEL.AGENCY' | translate }}</th>
-                                <th class="min-w-120px">{{ 'COMMON.LABEL.STATUS' | translate }}</th>
-                                <th class="min-w-180px">{{ 'TICKETS.LABEL.SEATS' | translate }}</th>
+                                <th class="min-w-120px">{{ 'TICKETS.LABEL.TICKET_ID' | translate }}</th>
+                                <th class="min-w-120px">{{ 'TICKETS.LABEL.TRIP' | translate }}</th>
+                                <th class="min-w-100px">{{ 'COMMON.LABEL.STATUS' | translate }}</th>
                                 <th class="min-w-120px">{{ 'TICKETS.LABEL.AMOUNT' | translate }}</th>
+                                <th class="min-w-120px">{{ 'TICKETS.LABEL.EXPIRES' | translate }}</th>
                                 <th class="min-w-150px">{{ 'TICKETS.LABEL.CREATED_AT' | translate }}</th>
                                 <th class="min-w-150px text-end">{{ 'COMMON.LABEL.ACTIONS' | translate }}</th>
                             </tr>
@@ -29,15 +47,14 @@
                         <tbody>
                             <tr *ngFor="let ticket of tickets$ | async; trackBy: trackTicket">
                                 <td>
-                                    <div class="fw-bold text-dark">{{ ticket?.reference }}
+                                    <div class="fw-bold text-dark text-truncate" style="max-width: 140px;">
+                                        {{ ticket?.id }}
                                     </div>
                                 </td>
                                 <td>
-                                    <div class="fw-semibold text-dark">{{ getPassengerName(ticket) }}</div>
-                                    <div class="text-muted small">{{ ticket?.user?.email || '—' }}</div>
-                                </td>
-                                <td>
-                                    <div class="fw-semibold text-dark">{{ ticket?.agency?.name || '—' }}</div>
+                                    <div class="fw-semibold text-dark text-truncate" style="max-width: 140px;">
+                                        {{ ticket?.tripId }}
+                                    </div>
                                 </td>
                                 <td>
                                     <span class="badge"
@@ -46,60 +63,58 @@
                                     </span>
                                 </td>
                                 <td>
-                                    <div class="fw-semibold">{{ ticket?.seats?.length || 0 }} {{ 'TICKETS.LABEL.SEATS' |
-                                        translate }}</div>
-                                    <div class="text-muted small text-truncate seats-column">
-                                        {{ seatList(ticket) }}
-                                    </div>
-                                </td>
-                                <td>
                                     <div class="fw-semibold">
-                                        {{ ticket?.totalAmount || ticket?.unitPrice || 0 | number: '1.2-2' }}
-                                        {{ ticket?.currency || ('COMMON.CURRENCY.TND' | translate) }}
+                                        {{ ticket?.appliedPrice || 0 | number: '1.2-2' }}
+                                        {{ ticket?.currency || '' }}
                                     </div>
                                 </td>
                                 <td>
-                                    {{ ticket?.createdAt | date: 'dd-MM-yyyy hh:mm' }}
+                                    <span *ngIf="ticket?.expiresAt">{{ ticket.expiresAt | date: 'dd-MM-yyyy HH:mm' }}</span>
+                                    <span *ngIf="!ticket?.expiresAt" class="text-muted">—</span>
+                                </td>
+                                <td>
+                                    {{ ticket?.createdAt | date: 'dd-MM-yyyy HH:mm' }}
                                 </td>
                                 <td class="text-end">
                                     <div class="d-inline-flex align-items-center">
-                                        <div ngbDropdown class="me-2">
-                                            <button ngbDropdownToggle
-                                                class="btn btn-icon btn-active-light-success w-30px h-30px me-3"
-                                                [class.dropdown-toggle]="false">
-                                                <i class="ki-duotone ki-abstract-14 fs-2">
-                                                    <span class="path1"></span>
-                                                    <span class="path2"></span>
-                                                </i>
-                                            </button>
+                                        <!-- Confirm -->
+                                        <button *ngIf="ticket.status === 'PENDING'"
+                                                (click)="confirmTicket(ticket)"
+                                                [disabled]="statusUpdating[ticket.id]"
+                                                [ngbTooltip]="'TICKETS.ACTIONS.CONFIRM' | translate"
+                                                class="btn btn-icon btn-active-light-success w-30px h-30px me-2">
+                                            <span *ngIf="statusUpdating[ticket.id]"
+                                                  class="spinner-border spinner-border-sm"></span>
+                                            <i *ngIf="!statusUpdating[ticket.id]"
+                                               class="ki-duotone ki-check fs-2">
+                                                <span class="path1"></span><span class="path2"></span>
+                                            </i>
+                                        </button>
 
-                                            <div ngbDropdownMenu>
-                                                <button type="button"
-                                                    class="dropdown-item d-flex justify-content-between align-items-center"
-                                                    *ngFor="let option of statusOptions"
-                                                    [disabled]="ticket.status === option.value"
-                                                    (click)="changeStatus(ticket, option.value)">
-                                                    <span>{{ option.labelKey | translate }}</span>
-                                                    <i *ngIf="ticket.status === option.value"
-                                                        class="ki-duotone ki-check fs-4 text-success">
-                                                        <span class="path1"></span>
-                                                        <span class="path2"></span>
-                                                    </i>
-                                                </button>
-                                            </div>
-                                        </div>
+                                        <!-- Cancel -->
+                                        <button *ngIf="ticket.status === 'PENDING' || ticket.status === 'CONFIRMED'"
+                                                (click)="cancelTicket(ticket)"
+                                                [disabled]="statusUpdating[ticket.id]"
+                                                [ngbTooltip]="'TICKETS.ACTIONS.CANCEL' | translate"
+                                                class="btn btn-icon btn-active-light-danger w-30px h-30px me-2">
+                                            <i class="ki-duotone ki-cross fs-2">
+                                                <span class="path1"></span><span class="path2"></span>
+                                            </i>
+                                        </button>
 
+                                        <!-- Email -->
                                         <button (click)="sendEmail(ticket)" [disabled]="emailSending[ticket.id]"
                                             [ngbTooltip]="'TICKETS.ACTIONS.SEND_EMAIL' | translate"
-                                            class="btn btn-icon btn-active-light-warning w-30px h-30px me-3"
-                                            data-action="edit" data-id="605">
+                                            class="btn btn-icon btn-active-light-warning w-30px h-30px me-2">
                                             <span *ngIf="emailSending[ticket.id]"
                                                 class="spinner-border spinner-border-sm"></span>
-                                            <i class="ki-duotone ki-sms fs-2"><span class="path1"></span><span
+                                            <i *ngIf="!emailSending[ticket.id]"
+                                               class="ki-duotone ki-sms fs-2"><span class="path1"></span><span
                                                     class="path2"></span></i>
                                         </button>
 
-                                        <button class="btn btn-icon btn-active-light-primary w-30px h-30px me-3"
+                                        <!-- Details -->
+                                        <button class="btn btn-icon btn-active-light-primary w-30px h-30px"
                                             (click)="openTicketModal(ticketDetails, ticket)"
                                             [ngbTooltip]="'TICKETS.ACTIONS.VIEW_DETAILS' | translate">
                                             <i class="ki-duotone ki-information fs-2"><span class="path1"></span><span
@@ -111,8 +126,16 @@
                         </tbody>
                     </table>
                 </div>
+
+                <!-- Pagination -->
+                <app-pagination *ngIf="pagination$ | async as pag"
+                    [total]="pag.count"
+                    [pageSize]="pageSize"
+                    [page]="page"
+                    (pageChange)="loadTickets($event)">
+                </app-pagination>
             </ng-container>
-            <div *ngIf="!(tickets$ | async)?.length" class="alert alert-info mb-0">
+            <div *ngIf="!(loading$ | async) && !(tickets$ | async)?.length" class="alert alert-info mb-0">
                 {{ 'TICKETS.EMPTY' | translate }}
             </div>
         </div>
@@ -120,17 +143,15 @@
 
     <ng-template #ticketDetails let-modal>
         <div class="modal-header">
-            <h5 class="modal-title">{{ 'TICKETS.MODAL.TITLE' | translate:{ reference: selectedTicket?.reference } }}
-            </h5>
+            <h5 class="modal-title">{{ 'TICKETS.MODAL.TITLE' | translate }}</h5>
             <button type="button" class="btn-close" [attr.aria-label]="'COMMON.BUTTON.CLOSE' | translate"
                 (click)="modal.dismiss('close')"></button>
         </div>
         <div class="modal-body" *ngIf="selectedTicket as ticket">
             <div class="row g-4">
                 <div class="col-md-6">
-                    <h6 class="text-muted text-uppercase">{{ 'TICKETS.LABEL.PASSENGER' | translate }}</h6>
-                    <p class="mb-1 fw-semibold">{{ getPassengerName(ticket) }}</p>
-                    <p class="mb-0 text-muted small">{{ ticket.user?.email || '—' }}</p>
+                    <h6 class="text-muted text-uppercase">{{ 'TICKETS.LABEL.TICKET_ID' | translate }}</h6>
+                    <p class="mb-0 fw-semibold text-break">{{ ticket.id }}</p>
                 </div>
                 <div class="col-md-6">
                     <h6 class="text-muted text-uppercase">{{ 'COMMON.LABEL.STATUS' | translate }}</h6>
@@ -139,23 +160,30 @@
                     </span>
                 </div>
                 <div class="col-md-6">
+                    <h6 class="text-muted text-uppercase">{{ 'TICKETS.LABEL.TRIP' | translate }}</h6>
+                    <p class="mb-0 text-break">{{ ticket.tripId }}</p>
+                </div>
+                <div class="col-md-6">
                     <h6 class="text-muted text-uppercase">{{ 'TICKETS.LABEL.AMOUNT' | translate }}</h6>
                     <p class="mb-0 fw-semibold">
-                        {{ ticket.totalAmount || ticket.unitPrice || 0 | number: '1.2-2' }}
-                        {{ ticket.currency || ('COMMON.CURRENCY.TND' | translate) }}
+                        {{ ticket.appliedPrice || 0 | number: '1.2-2' }} {{ ticket.currency || '' }}
                     </p>
+                </div>
+                <div class="col-md-6">
+                    <h6 class="text-muted text-uppercase">{{ 'TICKETS.LABEL.PASSENGER' | translate }}</h6>
+                    <p class="mb-0">{{ ticket.passengerId }}</p>
                 </div>
                 <div class="col-md-6">
                     <h6 class="text-muted text-uppercase">{{ 'TICKETS.LABEL.CREATED_AT' | translate }}</h6>
                     <p class="mb-0">{{ ticket.createdAt | date: 'long' }}</p>
                 </div>
-                <div class="col-md-6">
-                    <h6 class="text-muted text-uppercase">{{ 'TICKETS.LABEL.SEATS' | translate }}</h6>
-                    <p class="mb-0">{{ seatList(ticket) }}</p>
+                <div class="col-md-6" *ngIf="ticket.expiresAt">
+                    <h6 class="text-muted text-uppercase">{{ 'TICKETS.LABEL.EXPIRES' | translate }}</h6>
+                    <p class="mb-0">{{ ticket.expiresAt | date: 'long' }}</p>
                 </div>
-                <div class="col-md-6">
-                    <h6 class="text-muted text-uppercase">{{ 'TICKETS.LABEL.AGENCY' | translate }}</h6>
-                    <p class="mb-0">{{ ticket?.agency?.name || '—' }}</p>
+                <div class="col-md-6" *ngIf="ticket.confirmedAt">
+                    <h6 class="text-muted text-uppercase">{{ 'TICKETS.LABEL.CONFIRMED_AT' | translate }}</h6>
+                    <p class="mb-0">{{ ticket.confirmedAt | date: 'long' }}</p>
                 </div>
             </div>
         </div>

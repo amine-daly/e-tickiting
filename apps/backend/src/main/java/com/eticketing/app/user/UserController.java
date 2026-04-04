@@ -8,6 +8,9 @@ import java.util.Map;
 
 import com.eticketing.app.user.UserTypeRepository;
 import com.eticketing.app.user.UserType;
+import org.springframework.data.mongodb.core.MongoTemplate;
+import org.springframework.data.mongodb.core.query.Criteria;
+import org.springframework.data.mongodb.core.query.Query;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -166,6 +169,40 @@ public class UserController {
         return new Paginated<>(list, p.getTotalElements(), p.isLast());
     }
 
+    @GetMapping("/search")
+    @Operation(summary = "Search users by name, email, or phone")
+    public Paginated<UserRes> searchUsers(
+            @RequestParam String q,
+            @RequestParam(required = false) String companyId,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int limit) {
+        if (q == null || q.isBlank()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "q is required");
+        }
+        String escaped = java.util.regex.Pattern.quote(q.trim());
+        Pageable pageable = PageRequest.of(Math.max(page, 0), Math.clamp(limit, 1, 100),
+                Sort.by("lastName").ascending());
+
+        Criteria textMatch = new Criteria().orOperator(
+                Criteria.where("email").regex(escaped, "i"),
+                Criteria.where("phone.number").regex(escaped, "i"),
+                Criteria.where("firstName").regex(escaped, "i"),
+                Criteria.where("lastName").regex(escaped, "i")
+        );
+
+        Query query = new Query(textMatch).with(pageable);
+        if (companyId != null && !companyId.isBlank()) {
+            query.addCriteria(Criteria.where("target.company").is(companyId));
+        }
+
+        List<UserType> results = mongoTemplate.find(query, UserType.class);
+        long total = mongoTemplate.count(Query.of(query).limit(-1).skip(-1), UserType.class);
+        boolean isLast = (page + 1) * limit >= total;
+
+        var list = results.stream().map(UserRes::from).toList();
+        return new Paginated<>(list, total, isLast);
+    }
+
     /**
      * GET /api/users/by-company?companyId=xxx Returns users scoped to a
      * specific Company.
@@ -279,9 +316,11 @@ public class UserController {
     }
 
     private final UserTypeRepository users;
+    private final MongoTemplate mongoTemplate;
 
-    public UserController(UserTypeRepository users) {
+    public UserController(UserTypeRepository users, MongoTemplate mongoTemplate) {
         this.users = users;
+        this.mongoTemplate = mongoTemplate;
     }
 
     @GetMapping

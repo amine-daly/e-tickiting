@@ -1,79 +1,90 @@
-import { PlaceType, SubPlaceType } from 'src/app/core/models/place-type';
-import { CountryType } from './country-type';
-import { StateType } from './state-type';
+import { TargetType } from './shared.model';
 
-export interface AgencyPhone {
-  countryCode: string;
-  number: string;
-}
-
-export interface AgencyType {
-  id?: string;
-  name: string;
-  address: string;
-  email?: string;
-  phone: AgencyPhone;
-  template?: string;
-}
-
-export enum TripStatus {
+export enum TripStatusEnum {
   SCHEDULED = 'SCHEDULED',
+  ACTIVE = 'ACTIVE',
   COMPLETED = 'COMPLETED',
   CANCELLED = 'CANCELLED',
 }
 
-// Intermediate stop with place, rank, and fare
+export interface GeoLocation {
+  latitude: number;
+  longitude: number;
+}
+
+export interface TripBusRef {
+  busId: string;
+}
+
 export interface StopType {
   placeId: string;
-  rank: number;
-  fare: number;
-  place?: PlaceType; // Expanded place from backend
+  sequence: number;
+  arrivalTime: string | null;
+  departureTime: string | null;
+  boardingAllowed: boolean;
+  droppingAllowed: boolean;
 }
 
-/** Per-trip sub-place selection with scheduled time */
-export interface TripSubPlaceInput {
-  subPlaceId: string;
-  scheduledTime?: string; // ISO datetime
+export interface SegmentType {
+  segmentId: string;
+  sequence: number;
+  fromPlaceId: string;
+  toPlaceId: string;
+  departureTime: string;
+  arrivalTime: string;
+  maxSeats: number;
+  bookedSeats: number;
+  basePrice: number;
+  distanceKm: number;
+  durationMinutes: number;
 }
 
-/** Expanded pickup point returned by the backend */
-export interface ExpandedPickupPoint {
-  subPlaceId: string;
-  scheduledTime?: string;
-  address?: string;
-  location?: { coordinates: [number, number] };
-  pickupInstructions?: string;
-  parentId?: string;
+export interface ExpressFareType {
+  expressId: string;
+  fromPlaceId: string;
+  toPlaceId: string;
+  segmentsCovered: string[];
+  price: number;
+  validFrom: string | null;
+  validUntil: string | null;
+  active: boolean;
+  totalDistanceKm?: number;
+  totalDurationMinutes?: number;
 }
 
-/** Extended place with state, country, and sub-places (pickup/dropoff points) */
-export interface TripPlaceType {
-  id?: string;
-  city: string;
-  location?: { coordinates: [number, number] };
-  state?: StateType;
-  country?: CountryType;
-  /** Sub-places (pickup/dropoff points) */
-  places?: SubPlaceType[];
+export interface PickupPointType {
+  pointId: string;
+  placeId: string;
+  address: string;
+  scheduledDepartureTime: string;
+  active: boolean;
+  location?: GeoLocation;
+}
+
+export interface DropoffPointType {
+  pointId: string;
+  placeId: string;
+  address: string;
+  scheduledArrivalTime: string;
+  active: boolean;
+  location?: GeoLocation;
 }
 
 export interface TripType {
   id: string;
-  agency: AgencyType;
-  agencyId?: string;
-  originId: string;
-  destinationId: string;
-  origin?: TripPlaceType;
-  destination?: TripPlaceType;
-  stops?: StopType[]; // Intermediate stops with placeId, rank, fare
-  pickupPoints?: TripSubPlaceInput[]; // Selected sub-places with per-trip scheduled times
-  departureDate: string; // ISO datetime with timezone
-  totalPrice: number;
-  totalPlaces: number;
-  availableSeats: number;
-  seats?: any[];
-  version?: number;
-  status: TripStatus;
+  target: TargetType;
+  departureDate: string;
+  timezone: string;
+  status: TripStatusEnum;
+  bus: TripBusRef;
+  currency: string;
+  seatHoldMinutes: number;
+  stopSchedule: StopType[];
+  pickupPoints: PickupPointType[];
+  dropoffPoints: DropoffPointType[];
+  segments: SegmentType[];
+  expressFares: ExpressFareType[];
   createdAt?: string;
   updatedAt?: string;
+  version?: number;
 }

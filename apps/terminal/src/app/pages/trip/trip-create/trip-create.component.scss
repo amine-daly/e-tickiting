@@ -1,0 +1,27 @@
+:host {
+  display: block;
+}
+
+.nav-pills-custom {
+  flex-wrap: nowrap;
+  overflow-x: auto;
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+
+  &::-webkit-scrollbar {
+    display: none;
+  }
+
+  .nav-item {
+    flex: 0 0 auto;
+  }
+}
+
+.card-bordered {
+  border: 1px solid var(--bs-border-color);
+  transition: border-color 0.2s ease;
+
+  &:hover {
+    border-color: var(--bs-primary);
+  }
+}

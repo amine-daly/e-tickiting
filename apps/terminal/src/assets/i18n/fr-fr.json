@@ -56,7 +56,8 @@
       "WAIT": "Veuillez patienter...",
       "UPLOAD": "Téléverser",
       "CLOSE": "Fermer",
-      "CONTINUE": "Continuer"
+      "CONTINUE": "Continuer",
+      "NEXT": "Suivant"
     },
     "CURRENCY": {
       "TND": "TND"
@@ -187,27 +188,96 @@
     "ADD_BUTTON": "Ajouter un voyage",
     "LOADING": "Chargement des voyages...",
     "EMPTY": "Aucun voyage disponible.",
+    "EDIT": "Détails du voyage",
     "LABEL": {
       "ROUTE": "Trajet"
     },
     "STATUS": {
       "SCHEDULED": "Prévu",
+      "ACTIVE": "Actif",
       "COMPLETED": "Terminé",
       "CANCELLED": "Annulé"
+    },
+    "FIELDS": {
+      "DEPARTURE_DATE": "Date de départ",
+      "SEGMENTS": "Segments",
+      "BUS": "Bus",
+      "CURRENCY": "Devise",
+      "SEAT_HOLD_MINUTES": "Réservation (min)"
+    },
+    "FILTERS": {
+      "STATUS": "Filtrer par statut",
+      "SEARCH": "Rechercher des voyages..."
+    },
+    "STOPS": {
+      "TITLE": "Plan des arrêts",
+      "BOARDING_ALLOWED": "Embarquement",
+      "DROPPING_ALLOWED": "Débarquement",
+      "ARRIVAL_TIME": "Arrivée",
+      "DEPARTURE_TIME": "Départ",
+      "TYPES": {
+        "ORIGIN": "Origine",
+        "DESTINATION": "Destination",
+        "INTERMEDIATE": "Intermédiaire",
+        "TECHNICAL": "Arrêt technique"
+      }
+    },
+    "SEGMENTS": {
+      "TITLE": "Segments",
+      "FROM": "De",
+      "TO": "À",
+      "MAX_SEATS": "Capacité",
+      "BOOKED_SEATS": "Réservés",
+      "BASE_PRICE": "Prix de base",
+      "DISTANCE_KM": "Distance (km)",
+      "DURATION_MIN": "Durée (min)"
+    },
+    "EXPRESS_FARES": {
+      "TITLE": "Tarifs express",
+      "SEGMENTS_COVERED": "Segments",
+      "PRICE": "Prix",
+      "VALID_FROM": "Valide à partir du",
+      "VALID_UNTIL": "Valide jusqu'au",
+      "ACTIVE": "Actif",
+      "TOTAL_DISTANCE": "km total",
+      "TOTAL_DURATION": "min total"
+    },
+    "PICKUP_POINTS": {
+      "TITLE": "Points de ramassage",
+      "ADDRESS": "Adresse",
+      "SCHEDULED_TIME": "Heure prévue",
+      "ACTIVE": "Actif"
+    },
+    "DROPOFF_POINTS": {
+      "TITLE": "Points de dépose",
+      "ADDRESS": "Adresse",
+      "SCHEDULED_TIME": "Heure prévue",
+      "ACTIVE": "Actif"
+    },
+    "ACTIONS": {
+      "PUBLISH": "Publier",
+      "COMPLETE": "Terminer",
+      "CANCEL": "Annuler le voyage",
+      "EMERGENCY_CANCEL": "Annulation d'urgence"
     },
     "MESSAGES": {
       "STATUS_CONFIRM_TITLE": "Modifier le statut du voyage",
       "STATUS_CONFIRM_TEXT": "Voulez-vous définir ce voyage sur {{status}} ?",
       "STATUS_CONFIRM_OK": "Oui, modifier",
+      "STATUS_UPDATED": "Statut du voyage mis à jour.",
       "STATUS_UPDATE_SUCCESS": "Statut du voyage mis à jour.",
       "STATUS_UPDATE_ERROR": "Impossible de mettre à jour le statut du voyage.",
+      "PUBLISH_CONFIRM": "Le voyage sera visible par les passagers. Continuer ?",
+      "CANCEL_CONFIRM": "Le voyage sera annulé. Continuer ?",
+      "EMERGENCY_CANCEL_CONFIRM": "Voyage actif ! L'annulation d'urgence peut impacter les passagers réservés. Continuer ?",
       "LOAD_ERROR": "Impossible de charger les voyages. Réessayez plus tard.",
       "SAVE_SUCCESS": "Voyage enregistré avec succès.",
       "SAVE_ERROR": "Impossible d'enregistrer le voyage.",
-      "TOTAL_PLACES_SEATMAP_MISMATCH": "Le nombre total de places doit correspondre à la taille du plan des sièges ({{total}}).",
       "UNRECOGNIZED_FIELD": "Champ de requête invalide : {{field}}.",
       "DELETE_SUCCESS": "Voyage supprimé avec succès.",
-      "DELETE_ERROR": "Impossible de supprimer le voyage."
+      "DELETE_ERROR": "Impossible de supprimer le voyage.",
+      "DELETE_CONFIRM_TITLE": "Supprimer le voyage ?",
+      "DELETE_CONFIRM_TEXT": "Cette action est irréversible."
     },
     "TOOLTIP": {
       "OCCUPANCY": "Réservés : {{booked}} / {{total}}"
@@ -261,6 +331,76 @@
       "SAVE_SUCCESS": "Tarif mis à jour avec succès.",
       "SAVE_ERROR": "Impossible de mettre à jour le tarif.",
       "PRICE_INVALID": "Entrez un tarif valide."
+    },
+    "CREATE": {
+      "TITLE": "Créer un voyage",
+      "NEXT": "Suivant",
+      "PREVIOUS": "Précédent",
+      "SUBMIT": "Créer le voyage",
+      "STEPS": {
+        "BASIC_INFO": "Infos de base",
+        "STOP_SCHEDULE": "Arrêts",
+        "SEGMENTS": "Segments",
+        "PICKUP_DROPOFF": "Ramassage / Dépose",
+        "EXPRESS_FARES": "Tarifs express",
+        "REVIEW": "Vérification"
+      },
+      "BASIC": {
+        "BUS_PLACEHOLDER": "Sélectionnez un bus",
+        "SEATS": "places",
+        "DATE_PLACEHOLDER": "Choisir la date et l'heure de départ",
+        "TIMEZONE": "Fuseau horaire",
+        "TIMEZONE_PLACEHOLDER": "Sélectionnez le fuseau horaire",
+        "CURRENCY": "Devise",
+        "CURRENCY_PLACEHOLDER": "Sélectionnez la devise",
+        "SEAT_HOLD_PLACEHOLDER": "Minutes"
+      },
+      "STOPS": {
+        "ADD": "Ajouter un arrêt",
+        "STOP_LABEL": "Arrêt",
+        "PLACE": "Ville",
+        "PLACE_PLACEHOLDER": "Sélectionnez une ville",
+        "MOVE_UP": "Monter",
+        "MOVE_DOWN": "Descendre",
+        "REMOVE": "Supprimer",
+        "MIN_STOPS": "Au moins 2 arrêts sont requis (origine et destination)."
+      },
+      "SEGMENTS": {
+        "AUTO_GENERATED": "Les segments sont générés automatiquement à partir des arrêts commerciaux consécutifs.",
+        "NO_SEGMENTS": "Ajoutez au moins 2 arrêts commerciaux pour générer des segments.",
+        "DURATION_PLACEHOLDER": "Optionnel"
+      },
+      "PICKUP": {
+        "ADD": "Ajouter un point de ramassage",
+        "PLACE": "Ville",
+        "PLACE_PLACEHOLDER": "Sélectionnez une ville",
+        "ADDRESS_PLACEHOLDER": "Adresse",
+        "EMPTY": "Aucun point de ramassage ajouté. Cette étape est optionnelle."
+      },
+      "DROPOFF": {
+        "ADD": "Ajouter un point de dépose",
+        "PLACE": "Ville",
+        "PLACE_PLACEHOLDER": "Sélectionnez une ville",
+        "ADDRESS_PLACEHOLDER": "Adresse",
+        "EMPTY": "Aucun point de dépose ajouté. Cette étape est optionnelle."
+      },
+      "EXPRESS": {
+        "ADD": "Ajouter un tarif express",
+        "SEGMENTS_PLACEHOLDER": "Sélectionnez des segments",
+        "PRICE_PLACEHOLDER": "Prix",
+        "HINT": "Les tarifs express sont optionnels. Ils permettent aux passagers de réserver des trajets multi-segments à un prix spécial.",
+        "EMPTY": "Aucun tarif express ajouté. Cette étape est optionnelle."
+      },
+      "REVIEW": {
+        "TITLE": "Vérifiez votre voyage avant de soumettre"
+      },
+      "ERRORS": {
+        "BUS_REQUIRED": "Le bus est obligatoire.",
+        "DATE_REQUIRED": "La date de départ est obligatoire.",
+        "TIMEZONE_REQUIRED": "Le fuseau horaire est obligatoire.",
+        "CURRENCY_REQUIRED": "La devise est obligatoire.",
+        "SEAT_HOLD_REQUIRED": "Le temps de réservation est obligatoire."
+      }
     }
   },
   "TICKETS": {
@@ -273,18 +413,26 @@
       "AGENCY": "Agence",
       "SEATS": "Places",
       "AMOUNT": "Montant",
-      "CREATED_AT": "Créé le"
+      "CREATED_AT": "Créé le",
+      "TICKET_ID": "ID du billet",
+      "TRIP": "Voyage",
+      "EXPIRES": "Expire le"
+    },
+    "FILTERS": {
+      "ALL": "Tous les statuts"
     },
     "ACTIONS": {
       "SEND_EMAIL": "Envoyer le billet par e-mail",
-      "VIEW_DETAILS": "Voir les détails"
+      "VIEW_DETAILS": "Voir les détails",
+      "CONFIRM": "Confirmer",
+      "CANCEL": "Annuler"
     },
     "MODAL": {
       "TITLE": "Billet {{reference}}"
     },
     "STATUS": {
-      "BOOKED": "Réservé",
-      "PAID": "Payé",
+      "PENDING": "En attente",
+      "CONFIRMED": "Confirmé",
       "CANCELLED": "Annulé",
       "EXPIRED": "Expiré"
     },
@@ -296,12 +444,39 @@
       "STATUS_CONFIRM_OK": "Oui, modifier",
       "STATUS_SUCCESS": "Statut du billet mis à jour.",
       "STATUS_ERROR": "Impossible de mettre à jour le statut du billet.",
+      "CONFIRM_TEXT": "Êtes-vous sûr de vouloir confirmer ce billet ?",
+      "CANCEL_TEXT": "Êtes-vous sûr de vouloir annuler ce billet ?",
       "EMAIL_CONFIRM_TITLE": "Envoyer le billet par e-mail",
       "EMAIL_CONFIRM_TEXT": "Envoyer le billet à {{email}} ?",
       "EMAIL_CONFIRM_OK": "Oui, envoyer",
       "EMAIL_SUCCESS_TITLE": "E-mail envoyé",
       "EMAIL_SUCCESS_TEXT": "Le billet a été envoyé à {{email}}.",
       "EMAIL_ERROR": "Impossible d'envoyer le billet."
+    },
+    "SELL": {
+      "TITLE": "Vendre un billet",
+      "STEP_CUSTOMER": "Client",
+      "STEP_TRIP": "Voyage",
+      "STEP_REVIEW": "Vérifier et réserver",
+      "SEARCH_CUSTOMER": "Rechercher un client",
+      "CUSTOMER_PLACEHOLDER": "Tapez un nom, e-mail ou téléphone...",
+      "SELECT_TRIP": "Sélectionner un voyage",
+      "NO_TRIPS": "Aucun voyage actif trouvé.",
+      "STOPS": "arrêts",
+      "SEGMENTS": "segments",
+      "REVIEW": "Vérifier et confirmer",
+      "CUSTOMER_LABEL": "Client",
+      "TRIP_LABEL": "Voyage",
+      "PICKUP": "Point de ramassage",
+      "DROPOFF": "Point de dépose",
+      "PRICE_LABEL": "Prix",
+      "BOOKING": "Réservation en cours...",
+      "CONFIRM": "Confirmer la réservation",
+      "SUCCESS": "Réservation créée avec succès !",
+      "ERROR": "Impossible de créer la réservation. Veuillez réessayer.",
+      "SUCCESS_TITLE": "Réservation confirmée",
+      "TICKET_ID": "ID du billet",
+      "GO_TO_TICKETS": "Voir les billets"
     }
   },
   "CUSTOMERS": {

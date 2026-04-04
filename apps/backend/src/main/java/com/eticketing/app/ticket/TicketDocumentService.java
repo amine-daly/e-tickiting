@@ -1,11 +1,13 @@
 package com.eticketing.app.ticket;
 
 import java.time.Instant;
+import java.time.ZoneId;
+import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Locale;
 import java.util.Map;
-import java.util.stream.Collectors;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -17,8 +19,8 @@ import com.eticketing.app.place.PlaceType;
 import com.eticketing.app.place.PlaceRepository;
 import com.eticketing.app.pos.PointOfSaleType;
 import com.eticketing.app.pos.PointOfSaleRepository;
-import com.eticketing.app.ticket.TicketType.SeatAssignment;
-import com.eticketing.app.ticket.TicketType.TicketUserSnapshot;
+import com.eticketing.app.trip.SegmentType;
+import com.eticketing.app.trip.StopType;
 import com.eticketing.app.trip.TripType;
 import com.eticketing.app.trip.TripTypeRepository;
 import com.eticketing.app.user.UserType;
@@ -60,47 +62,44 @@ public class TicketDocumentService {
         }
         TripType trip = tripRepository.findById(ticket.getTripId())
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Trip not found for ticket"));
-        UserType user = userRepository.findById(ticket.getUserId()).orElse(null);
-        TicketUserSnapshot snapshot = ticket.getUser();
 
-        // Get POS for company info (replaced Agency)
-        String posId = trip.getTarget() != null ? trip.getTarget().getPos() : null;
-        PointOfSaleType pos = posId != null ? posRepository.findById(posId).orElse(null) : null;
-        CompanyType company = pos != null && pos.getCompanyId() != null
-                ? companyRepository.findById(pos.getCompanyId()).orElse(null)
+        // Resolve passenger from passengerId
+        UserType user = ticket.getPassengerId() != null
+                ? userRepository.findById(ticket.getPassengerId()).orElse(null)
                 : null;
 
-        // Get origin and destination directly from trip
-        String originId = trip.getOriginId();
-        String destinationId = trip.getDestinationId();
+        // Get POS for company info
+        String posId = ticket.getTarget() != null ? ticket.getTarget().getPos() : null;
+        PointOfSaleType pos = posId != null ? posRepository.findById(posId).orElse(null) : null;
+        String companyIdValue = ticket.getTarget() != null ? ticket.getTarget().getCompany() : null;
+        CompanyType company = companyIdValue != null
+                ? companyRepository.findById(companyIdValue).orElse(null)
+                : null;
+
+        // Derive origin/destination from ticket segments
+        String originId = resolveOriginPlaceId(trip, ticket);
+        String destinationId = resolveDestinationPlaceId(trip, ticket);
         PlaceType origin = originId != null ? placeRepository.findById(originId).orElse(null) : null;
         PlaceType destination = destinationId != null ? placeRepository.findById(destinationId).orElse(null) : null;
 
-        String passengerFirstName = user != null ? user.getFirstName() : snapshot != null ? snapshot.getFirstName() : null;
-        String passengerLastName = user != null ? user.getLastName() : snapshot != null ? snapshot.getLastName() : null;
-        String passengerName = String.format("%s %s",
-                defaultString(passengerFirstName),
-                defaultString(passengerLastName)).trim();
-        if (passengerName.isBlank()) {
-            passengerName = "Client";
-        }
-        String passengerEmail = user != null ? user.getEmail() : snapshot != null ? snapshot.getEmail() : null;
-        // Use POS for company/agency info
+        String passengerName = user != null
+                ? String.format("%s %s", defaultString(user.getFirstName()), defaultString(user.getLastName())).trim()
+                : "Client";
+        if (passengerName.isBlank()) passengerName = "Client";
+        String passengerEmail = user != null ? user.getEmail() : null;
+
         String agencyName = pos != null ? pos.getTitle() : "Agence";
         String agencyEmail = pos != null ? defaultString(pos.getEmail()) : "";
         String agencyPhone = pos != null && pos.getPhone() != null
                 ? String.format("+%s %s", defaultString(pos.getPhone().getCountryCode()), defaultString(pos.getPhone().getNumber()))
                 : "";
-        String routeLabel = String.format("%s → %s",
+        String routeLabel = String.format("%s > %s",
                 origin != null ? origin.getCity() : defaultString(originId),
                 destination != null ? destination.getCity() : defaultString(destinationId));
-        String seatList = ticket.getSeats() == null || ticket.getSeats().isEmpty()
-                ? "Non assigné"
-                : ticket.getSeats().stream()
-                        .map(this::formatSeat)
-                        .collect(Collectors.joining(", "));
-        String totalAmount = ticket.getTotalAmount() != null ? ticket.getTotalAmount().toPlainString() : "-";
-        String reference = ticket.getReference();
+
+        String totalAmount = ticket.getAppliedPrice() != null ? ticket.getAppliedPrice().toPlainString() : "-";
+        String reference = ticket.getId();
+        int segmentCount = ticket.getSegmentIds() != null ? ticket.getSegmentIds().size() : 0;
         String qrCodeDataUri = qrCodeService.generateDataUri(reference);
         String qrCodeUrl = qrCodeService.generatePublicUrl(reference);
         String template = company != null && company.getEmailTemplate() != null
@@ -112,11 +111,12 @@ public class TicketDocumentService {
         context.put("bookingReference", reference);
         context.put("passengerName", passengerName);
         context.put("passengerEmail", passengerEmail != null ? passengerEmail : "");
-        context.put("seats", seatList);
-        context.put("seatCount", ticket.getSeats().size());
+        context.put("seats", segmentCount + " segment(s)");
+        context.put("seatCount", segmentCount);
         context.put("tripRoute", routeLabel);
-        context.put("tripDate", trip.getDepartureDate() != null ? DATE_FORMAT.format(trip.getDepartureDate()) : "");
-        context.put("tripTime", trip.getDepartureDate() != null ? TIME_FORMAT.format(trip.getDepartureDate()) : "");
+        ZoneId tripZone = trip.getTimezone() != null ? ZoneId.of(trip.getTimezone()) : ZoneOffset.UTC;
+        context.put("tripDate", trip.getDepartureDate() != null ? DATE_FORMAT.format(trip.getDepartureDate().atZone(tripZone)) : "");
+        context.put("tripTime", trip.getDepartureDate() != null ? TIME_FORMAT.format(trip.getDepartureDate().atZone(tripZone)) : "");
         context.put("currency", ticket.getCurrency());
         context.put("totalAmount", totalAmount);
         context.put("status", translateStatus(ticket.getStatus()));
@@ -141,6 +141,32 @@ public class TicketDocumentService {
         return view;
     }
 
+    private String resolveOriginPlaceId(TripType trip, TicketType ticket) {
+        if (ticket.getSegmentIds() == null || ticket.getSegmentIds().isEmpty()) {
+            List<StopType> stops = trip.getStopSchedule();
+            return stops != null && !stops.isEmpty() ? stops.get(0).getPlaceId() : null;
+        }
+        String firstSegId = ticket.getSegmentIds().get(0);
+        return trip.getSegments().stream()
+                .filter(s -> s.getSegmentId().equals(firstSegId))
+                .map(SegmentType::getFromPlaceId)
+                .findFirst()
+                .orElse(null);
+    }
+
+    private String resolveDestinationPlaceId(TripType trip, TicketType ticket) {
+        if (ticket.getSegmentIds() == null || ticket.getSegmentIds().isEmpty()) {
+            List<StopType> stops = trip.getStopSchedule();
+            return stops != null && !stops.isEmpty() ? stops.get(stops.size() - 1).getPlaceId() : null;
+        }
+        String lastSegId = ticket.getSegmentIds().get(ticket.getSegmentIds().size() - 1);
+        return trip.getSegments().stream()
+                .filter(s -> s.getSegmentId().equals(lastSegId))
+                .map(SegmentType::getToPlaceId)
+                .findFirst()
+                .orElse(null);
+    }
+
     private Map<String, Object> buildMetadata(TicketType ticket,
             TripType trip,
             String passengerName,
@@ -152,7 +178,7 @@ public class TicketDocumentService {
         ticketMeta.put("id", ticket.getId());
         ticketMeta.put("status", ticket.getStatus().name());
         ticketMeta.put("reference", reference);
-        ticketMeta.put("totalAmount", ticket.getTotalAmount());
+        ticketMeta.put("appliedPrice", ticket.getAppliedPrice());
         ticketMeta.put("currency", ticket.getCurrency());
 
         Map<String, Object> passengerMeta = new HashMap<>();
@@ -163,10 +189,11 @@ public class TicketDocumentService {
         tripMeta.put("id", trip.getId());
         tripMeta.put("route", routeLabel);
         tripMeta.put("date", trip.getDepartureDate());
-        tripMeta.put("time", trip.getDepartureDate() != null ? trip.getDepartureDate().toLocalTime() : null);
+        tripMeta.put("time", trip.getDepartureDate() != null
+                ? trip.getDepartureDate().atZone(trip.getTimezone() != null ? ZoneId.of(trip.getTimezone()) : ZoneOffset.UTC).toLocalTime()
+                : null);
 
-        // Use POS ID instead of agencyId
-        String posIdValue = trip.getTarget() != null ? trip.getTarget().getPos() : null;
+        String posIdValue = ticket.getTarget() != null ? ticket.getTarget().getPos() : null;
         Map<String, Object> agencyMeta = new HashMap<>();
         agencyMeta.put("id", posIdValue);
         agencyMeta.put("name", agencyName);
@@ -179,33 +206,19 @@ public class TicketDocumentService {
         return metadata;
     }
 
-    private String formatSeat(SeatAssignment seat) {
-        if (seat == null) {
-            return "-";
-        }
-        if (seat.getLabel() != null && !seat.getLabel().isBlank()) {
-            return seat.getLabel();
-        }
-        return String.format("%s-%s", seat.getRow(), seat.getCol());
-    }
-
     private String defaultString(String value) {
         return value != null ? value : "";
     }
 
-    private String translateStatus(TicketType.TicketStatusEnum status) {
+    private String translateStatus(TicketStatusEnum status) {
         if (status == null) {
             return "Inconnu";
         }
         return switch (status) {
-            case BOOKED ->
-                "Réservé";
-            case PAID ->
-                "Payé";
-            case CANCELLED ->
-                "Annulé";
-            case EXPIRED ->
-                "Expiré";
+            case PENDING -> "En attente";
+            case CONFIRMED -> "Confirme";
+            case CANCELLED -> "Annule";
+            case EXPIRED -> "Expire";
         };
     }
 }

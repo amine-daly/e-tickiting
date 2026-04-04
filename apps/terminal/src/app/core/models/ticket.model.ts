@@ -1,37 +1,26 @@
 export enum TicketStatus {
-  BOOKED = 'BOOKED',
-  PAID = 'PAID',
-  CANCELLED = 'CANCELLED',
+  PENDING = 'PENDING',
+  CONFIRMED = 'CONFIRMED',
   EXPIRED = 'EXPIRED',
-}
-
-export interface TicketSeat {
-  row: number;
-  col: number;
-  label?: string | null;
-}
-
-export interface TicketUserSnapshot {
-  id?: string | null;
-  firstName?: string | null;
-  lastName?: string | null;
-  email?: string | null;
+  CANCELLED = 'CANCELLED',
 }
 
 export interface Ticket {
   id: string;
   tripId: string;
-  userId: string;
-  user?: TicketUserSnapshot | null;
-  seats: TicketSeat[];
+  companyId?: string | null;
+  posId?: string | null;
+  segmentIds: string[];
+  expressId?: string | null;
+  pickupPointId?: string | null;
+  dropoffPointId?: string | null;
+  passengerId: string;
+  appliedPrice: number;
+  currency: string;
   status: TicketStatus;
-  unitPrice?: number | null;
-  totalAmount?: number | null;
-  currency?: string | null;
-  bookingReference?: string | null;
-  createdAt?: string | null;
-  updatedAt?: string | null;
+  idempotencyKey?: string | null;
   expiresAt?: string | null;
-  paidAt?: string | null;
+  createdAt?: string | null;
+  confirmedAt?: string | null;
   cancelledAt?: string | null;
 }

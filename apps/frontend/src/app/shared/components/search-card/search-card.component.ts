@@ -104,8 +104,8 @@ export class SearchCardComponent implements OnInit, OnDestroy {
     });
 
     const params: TripSearchParams = {
-      originId: origin.id,
-      destinationId: destination.id,
+      originPlaceId: origin.id,
+      destinationPlaceId: destination.id,
       ...(date ? { date } : {}),
     };
     this.tripService

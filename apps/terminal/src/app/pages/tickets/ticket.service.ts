@@ -1,9 +1,10 @@
 import { Injectable } from '@angular/core';
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpParams } from '@angular/common/http';
 import { BehaviorSubject, Observable, throwError } from 'rxjs';
 import { catchError, finalize, map, tap } from 'rxjs/operators';
 
 import { Ticket, TicketStatus } from '../../core/models/ticket.model';
+import { PaginateResponse } from '../../core/models/paginate-model';
 
 export interface TicketEmailResponse {
   status: string;
@@ -12,9 +13,17 @@ export interface TicketEmailResponse {
 
 @Injectable({ providedIn: 'root' })
 export class TicketService {
-  private readonly baseUrl = '/api/tickets';
+  private readonly ticketsUrl = '/api/tickets';
+  private readonly bookingsUrl = '/api/bookings';
   private loading = new BehaviorSubject<boolean>(false);
   private tickets = new BehaviorSubject<Ticket[]>([]);
+  private pagination = new BehaviorSubject<{ count: number; isLast: boolean }>({
+    count: 0,
+    isLast: true,
+  });
+
+  pageLimit = 10;
+  pageIndex = 0;
 
   get loading$(): Observable<boolean> {
     return this.loading.asObservable();
@@ -24,31 +33,61 @@ export class TicketService {
     return this.tickets.asObservable();
   }
 
-  constructor(private http: HttpClient) {}
-
-  fetchTickets(): Observable<Ticket[]> {
-    this.loading.next(true);
-    return this.http.get<Ticket[]>(this.baseUrl).pipe(
-      tap((tickets) => this.tickets.next(tickets ?? [])),
-      catchError((error) => {
-        this.tickets.next([]);
-        return throwError(() => error);
-      }),
-      finalize(() => this.loading.next(false))
-    );
+  get pagination$(): Observable<{ count: number; isLast: boolean }> {
+    return this.pagination.asObservable();
   }
 
-  updateStatus(id: string, status: TicketStatus): Observable<Ticket> {
+  constructor(private http: HttpClient) {}
+
+  fetchTickets(status?: TicketStatus): Observable<Ticket[]> {
+    const posId = localStorage.getItem('posId');
+    if (!posId) {
+      this.tickets.next([]);
+      return throwError(() => new Error('POS_ID_MISSING'));
+    }
+    this.loading.next(true);
+    let params = new HttpParams()
+      .set('page', this.pageIndex.toString())
+      .set('limit', this.pageLimit.toString());
+    if (status) {
+      params = params.set('status', status);
+    }
     return this.http
-      .put<Ticket>(`${this.baseUrl}/${id}`, { status })
+      .get<PaginateResponse<Ticket>>(`${this.ticketsUrl}/by-pos/${posId}`, { params })
+      .pipe(
+        map((res) => {
+          const objects = Array.isArray(res?.objects) ? res.objects : [];
+          this.tickets.next(objects);
+          this.pagination.next({
+            count: res?.count ?? objects.length,
+            isLast: res?.isLast ?? true,
+          });
+          return objects;
+        }),
+        catchError((error) => {
+          this.tickets.next([]);
+          return throwError(() => error);
+        }),
+        finalize(() => this.loading.next(false))
+      );
+  }
+
+  confirmTicket(ticketId: string): Observable<Ticket> {
+    return this.http
+      .post<Ticket>(`${this.bookingsUrl}/${ticketId}/confirm`, {})
       .pipe(tap((updated) => this.mergeTicket(updated)));
   }
 
-  sendEmail(id: string, email?: string): Observable<TicketEmailResponse> {
-    const payload = email ? { email } : {};
+  cancelTicket(ticketId: string): Observable<Ticket> {
+    return this.http
+      .post<Ticket>(`${this.bookingsUrl}/${ticketId}/cancel`, {})
+      .pipe(tap((updated) => this.mergeTicket(updated)));
+  }
+
+  sendEmail(id: string): Observable<TicketEmailResponse> {
     return this.http.post<TicketEmailResponse>(
-      `${this.baseUrl}/${id}/send-email`,
-      payload
+      `${this.ticketsUrl}/${id}/send-email`,
+      {}
     );
   }
 

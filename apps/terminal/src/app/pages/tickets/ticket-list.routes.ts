@@ -6,4 +6,11 @@ export const ticketsRoutes: Routes = [
     loadComponent: () =>
       import('./ticket-list.component').then((m) => m.TicketListComponent),
   },
+  {
+    path: 'sell',
+    loadComponent: () =>
+      import('./sell-ticket/sell-ticket.component').then(
+        (m) => m.SellTicketComponent
+      ),
+  },
 ];

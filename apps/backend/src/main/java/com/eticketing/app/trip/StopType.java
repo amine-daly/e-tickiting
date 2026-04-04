@@ -1,53 +1,57 @@
 package com.eticketing.app.trip;
 
-import com.fasterxml.jackson.annotation.JsonProperty;
-import java.math.BigDecimal;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+
+import java.time.Instant;
 
 /**
- * Embedded stop within a Trip. Each stop has a place reference, rank (order),
- * and fare.
+ * Embedded stop within a Trip's stopSchedule.
+ * <p>
+ * Stop type is derived from flags — NO {@code isCommercialStop} field:
+ * <ul>
+ * <li>boarding=true + dropping=false → Origin</li>
+ * <li>boarding=false + dropping=true → Destination</li>
+ * <li>boarding=true + dropping=true → Intermediate commercial</li>
+ * <li>boarding=false + dropping=false → Technical stop (skipped in segment
+ * generation)</li>
+ * </ul>
  */
+@Data
+@Builder
+@NoArgsConstructor
+@AllArgsConstructor
 public class StopType {
 
-    @JsonProperty("placeId")
+    /**
+     * Reference to a Place entity.
+     */
     private String placeId;
 
-    @JsonProperty("rank")
-    private Integer rank;
+    /**
+     * Strictly ascending, unique per trip.
+     */
+    private int sequence;
 
-    @JsonProperty("fare")
-    private BigDecimal fare;
+    /**
+     * UTC — null for first stop only.
+     */
+    private Instant arrivalTime;
 
-    public StopType() {
-    }
+    /**
+     * UTC — null for last stop only.
+     */
+    private Instant departureTime;
 
-    public StopType(String placeId, Integer rank, BigDecimal fare) {
-        this.placeId = placeId;
-        this.rank = rank;
-        this.fare = fare;
-    }
+    /**
+     * Whether passengers may board at this stop.
+     */
+    private boolean boardingAllowed;
 
-    public String getPlaceId() {
-        return placeId;
-    }
-
-    public void setPlaceId(String placeId) {
-        this.placeId = placeId;
-    }
-
-    public Integer getRank() {
-        return rank;
-    }
-
-    public void setRank(Integer rank) {
-        this.rank = rank;
-    }
-
-    public BigDecimal getFare() {
-        return fare;
-    }
-
-    public void setFare(BigDecimal fare) {
-        this.fare = fare;
-    }
+    /**
+     * Whether passengers may alight at this stop.
+     */
+    private boolean droppingAllowed;
 }

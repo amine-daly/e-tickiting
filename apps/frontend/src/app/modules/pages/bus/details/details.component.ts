@@ -1,6 +1,18 @@
-import { Component } from '@angular/core';
-import { RouterLink } from '@angular/router';
+import { Component, OnInit, OnDestroy } from '@angular/core';
+import { RouterLink, ActivatedRoute } from '@angular/router';
 import { CommonModule } from '@angular/common';
+import { Subject, takeUntil } from 'rxjs';
+
+import { TripService } from '../trip.service';
+import { PlacesService } from '../../../home/home.service';
+import {
+  TripType,
+  PickupPointType,
+  DropoffPointType,
+  SegmentType,
+  ExpressFareType,
+} from '../../../../core/models/trip.model';
+import { PlaceType } from '../../../../core/models/place-type';
 
 @Component({
   selector: 'app-bus-details',
@@ -9,6 +21,108 @@ import { CommonModule } from '@angular/common';
   templateUrl: './details.component.html',
   styleUrls: ['./details.component.scss'],
 })
-export class BusDetailsComponent {
-  // Static showcase only for now – real bindings will be reintroduced later.
+export class BusDetailsComponent implements OnInit, OnDestroy {
+  private destroy$ = new Subject<void>();
+
+  trip: TripType | null = null;
+  places: PlaceType[] = [];
+  originPlaceId: string | null = null;
+  destPlaceId: string | null = null;
+
+  selectedPickup: PickupPointType | null = null;
+  selectedDropoff: DropoffPointType | null = null;
+
+  displayPrice = 0;
+  duration = 0;
+  originCity = '';
+  destCity = '';
+
+  activePickups: PickupPointType[] = [];
+  activeDropoffs: DropoffPointType[] = [];
+
+  constructor(
+    private route: ActivatedRoute,
+    private tripService: TripService,
+    private placesService: PlacesService,
+  ) {}
+
+  ngOnInit(): void {
+    const tripId = this.route.snapshot.paramMap.get('id')!;
+    this.originPlaceId = this.route.snapshot.queryParamMap.get('originPlaceId');
+    this.destPlaceId = this.route.snapshot.queryParamMap.get('destinationPlaceId');
+
+    this.placesService.fetchPlaces().pipe(takeUntil(this.destroy$)).subscribe((p) => {
+      this.places = p;
+      this.resolveLabels();
+    });
+
+    this.tripService
+      .getTripById(tripId)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe((trip) => {
+        this.trip = trip;
+        this.activePickups = (trip.pickupPoints || []).filter((p) => p.active);
+        this.activeDropoffs = (trip.dropoffPoints || []).filter((p) => p.active);
+        if (this.activePickups.length) this.selectedPickup = this.activePickups[0];
+        if (this.activeDropoffs.length) this.selectedDropoff = this.activeDropoffs[0];
+        this.computePriceAndDuration();
+        this.resolveLabels();
+      });
+  }
+
+  selectPickup(point: PickupPointType): void {
+    this.selectedPickup = point;
+  }
+
+  selectDropoff(point: DropoffPointType): void {
+    this.selectedDropoff = point;
+  }
+
+  getPlaceName(placeId: string): string {
+    return this.places.find((p) => p.id === placeId)?.city || placeId;
+  }
+
+  private resolveLabels(): void {
+    if (!this.trip) return;
+    const originStop = this.trip.stopSchedule?.find(
+      (s) => s.placeId === this.originPlaceId
+    ) || this.trip.stopSchedule?.[0];
+    const destStop = this.trip.stopSchedule?.find(
+      (s) => s.placeId === this.destPlaceId
+    ) || this.trip.stopSchedule?.[this.trip.stopSchedule.length - 1];
+    this.originCity = this.getPlaceName(originStop?.placeId || '');
+    this.destCity = this.getPlaceName(destStop?.placeId || '');
+  }
+
+  private computePriceAndDuration(): void {
+    if (!this.trip) return;
+    const chain = this.getSegmentChain();
+
+    // Check express fare first
+    const express = (this.trip.expressFares || []).find(
+      (f) =>
+        f.fromPlaceId === this.originPlaceId &&
+        f.toPlaceId === this.destPlaceId &&
+        f.active
+    );
+    this.displayPrice = express
+      ? express.price
+      : chain.reduce((s, seg) => s + (seg.basePrice || 0), 0);
+    this.duration = chain.reduce((s, seg) => s + (seg.durationMinutes || 0), 0);
+  }
+
+  private getSegmentChain(): SegmentType[] {
+    if (!this.trip?.segments) return [];
+    const sorted = [...this.trip.segments].sort((a, b) => a.sequence - b.sequence);
+    if (!this.originPlaceId || !this.destPlaceId) return sorted;
+    const startIdx = sorted.findIndex((s) => s.fromPlaceId === this.originPlaceId);
+    const endIdx = sorted.findIndex((s) => s.toPlaceId === this.destPlaceId);
+    if (startIdx < 0 || endIdx < 0 || startIdx > endIdx) return sorted;
+    return sorted.slice(startIdx, endIdx + 1);
+  }
+
+  ngOnDestroy(): void {
+    this.destroy$.next();
+    this.destroy$.complete();
+  }
 }

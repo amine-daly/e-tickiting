@@ -1,61 +1,110 @@
 import { Injectable } from '@angular/core';
-import { HttpClient } from '@angular/common/http';
-import { BehaviorSubject, Observable, throwError } from 'rxjs';
+import { HttpClient, HttpParams } from '@angular/common/http';
+import { BehaviorSubject, Observable, of, throwError } from 'rxjs';
 import { catchError, finalize, map, tap } from 'rxjs/operators';
 
-import { TripType as TripType, TripStatus } from '../../core/models/trip.model';
+import {
+  TripType,
+  TripStatusEnum,
+  PickupPointType,
+  DropoffPointType,
+  ExpressFareType,
+} from '../../core/models/trip.model';
 import { TripFilterInput } from 'src/app/core/models/trip-filter-input.model';
 import {
   IPagination,
   PaginateResponse,
 } from 'src/app/core/models/paginate-model';
 
-// Stop input for creating/updating a trip
+// ────────────────────────────────────────────────
+// Payload interfaces
+// ────────────────────────────────────────────────
 export interface StopInput {
   placeId: string;
-  rank?: number;
-  fare?: number;
+  sequence: number;
+  arrivalTime: string | null;
+  departureTime: string | null;
+  boardingAllowed: boolean;
+  droppingAllowed: boolean;
 }
 
-// Sub-place input for per-trip pickup/dropoff point scheduling
-export interface SubPlaceInput {
-  subPlaceId: string;
-  scheduledTime?: string; // ISO datetime
+export interface SegmentCreateInput {
+  basePrice: number;
+  maxSeats: number;
+  distanceKm: number;
+  durationMinutesOverride?: number;
+}
+
+export interface PickupPointPayload {
+  placeId: string;
+  address: string;
+  scheduledDepartureTime: string;
+  active?: boolean;
+  location?: { latitude: number; longitude: number };
+}
+
+export interface DropoffPointPayload {
+  placeId: string;
+  address: string;
+  scheduledArrivalTime: string;
+  active?: boolean;
+  location?: { latitude: number; longitude: number };
+}
+
+export interface ExpressFareCreateInput {
+  segmentIndices: number[];
+  price: number;
+  validFrom?: string | null;
+  validUntil?: string | null;
+  active?: boolean;
+}
+
+export interface ExpressFarePayload {
+  fromPlaceId: string;
+  toPlaceId: string;
+  segmentsCovered: string[];
+  price: number;
+  validFrom?: string | null;
+  validUntil?: string | null;
+  active?: boolean;
 }
 
 export interface TripCreatePayload {
-  agencyId?: string | null;
-  originId: string;
-  destinationId: string;
-  totalPrice: number;
-  stops?: StopInput[];
-  pickupPoints?: SubPlaceInput[];
+  bus: { busId: string };
   departureDate: string;
-  totalPlaces: number;
-  status?: TripStatus | null;
+  timezone: string;
+  currency: string;
+  seatHoldMinutes: number;
+  stopSchedule: StopInput[];
+  segmentInputs: SegmentCreateInput[];
+  pickupPoints?: PickupPointPayload[];
+  dropoffPoints?: DropoffPointPayload[];
+  expressFares?: ExpressFareCreateInput[];
 }
 
 export interface TripUpdatePayload {
-  agencyId?: string | null;
-  originId?: string | null;
-  destinationId?: string | null;
-  totalPrice?: number | null;
-  stops?: StopInput[] | null;
-  pickupPoints?: SubPlaceInput[] | null;
-  departureDate?: string | null;
-  totalPlaces?: number | null;
-  status?: TripStatus | null;
+  bus?: { busId: string };
+  departureDate?: string;
+  timezone?: string;
+  currency?: string;
+  seatHoldMinutes?: number;
+  stopSchedule?: StopInput[];
 }
 
 @Injectable({ providedIn: 'root' })
 export class TripService {
   private loading = new BehaviorSubject<boolean>(false);
   private trips = new BehaviorSubject<TripType[]>([]);
+  private trip = new BehaviorSubject<TripType>(null);
   private pagination = new BehaviorSubject<IPagination>(null);
   private baseUrl = '/api/trips';
 
   get trips$(): Observable<TripType[]> {
     return this.trips.asObservable();
+  }
+
+  get trip$(): Observable<TripType> {
+    return this.trip.asObservable();
   }
 
   get loading$(): Observable<boolean> {
@@ -71,24 +120,19 @@ export class TripService {
 
   constructor(private http: HttpClient) {}
 
-  getTripById(id: string): Observable<TripType> {
-    return this.http.get<TripType>(`${this.baseUrl}/${id}`);
-  }
-
-  getTrips(filter: TripFilterInput): Observable<TripType[]> {
+  // ─── LIST ────────────────────────────────────────────────
+  list(filter: TripFilterInput = {}): Observable<TripType[]> {
     this.loading.next(true);
-    const params: Record<string, any> = {
-      page: this.pageIndex,
-      limit: this.pageLimit,
-      posId: localStorage.getItem('posId'),
-      ...(filter?.originId ? { originId: filter.originId } : {}),
-      ...(filter?.destinationId ? { destinationId: filter.destinationId } : {}),
-      ...(filter?.date ? { date: filter.date } : {}),
-      ...(filter?.agencyId ? { agencyId: filter.agencyId } : {}),
-    };
+    let params = new HttpParams()
+      .set('page', this.pageIndex)
+      .set('limit', this.pageLimit);
+
+    if (filter.status) {
+      params = params.set('status', filter.status);
+    }
 
     return this.http
-      .get<PaginateResponse<TripType>>(`${this.baseUrl}/search`, { params })
+      .get<PaginateResponse<TripType>>(this.baseUrl, { params })
       .pipe(
         map((data) => {
           const objects = Array.isArray(data?.objects) ? data.objects : [];
@@ -116,119 +160,164 @@ export class TripService {
       );
   }
 
-  createTrip(payload: TripCreatePayload): Observable<TripType> {
+  // ─── GET BY ID ───────────────────────────────────────────
+  getById(id: string): Observable<TripType> {
     return this.http
-      .post<TripType>(`${this.baseUrl}/create`, {
-        ...payload,
-        target: { pos: localStorage.getItem('posId') },
-      })
-      .pipe(
-        map((created: TripType) => {
-          const current = this.trips.value ?? [];
-          const nextList = [...current, created];
-          this.trips.next(nextList);
-
-          const currentPagination =
-            this.pagination.value ??
-            ({
-              length: current.length ?? nextList.length,
-              size: this.pageLimit,
-              page: this.pageIndex,
-              lastPage: 0,
-            } as IPagination);
-          const newLength = (currentPagination.length ?? nextList.length) + 1;
-          const newLastPage = Math.max(
-            0,
-            Math.ceil(newLength / this.pageLimit) - 1,
-          );
-          this.pagination.next({
-            length: newLength,
-            size: this.pageLimit,
-            page: this.pageIndex,
-            lastPage: newLastPage,
-          });
-
-          return created;
-        }),
-      );
+      .get<TripType>(`${this.baseUrl}/${id}`)
+      .pipe(tap((trip) => this.trip.next(trip)));
   }
 
-  generateSeats(id: string): Observable<TripType> {
-    return this.http
-      .post<TripType>(`${this.baseUrl}/${id}/seats/generate`, {})
-      .pipe(
-        map((updated: TripType) => {
-          return updated;
-        }),
-      );
-  }
-
-  updateTrip(id: string, changes: TripUpdatePayload): Observable<TripType> {
-    return this.http
-      .post<TripType>(`${this.baseUrl}/update/${id}`, changes)
-      .pipe(
-        map((updated: TripType) => {
-          const updatedList = (this.trips.value ?? []).map((trip) =>
-            trip.id === id ? { ...trip, ...updated } : trip,
-          );
-          this.trips.next(updatedList);
-
-          const currentPagination =
-            this.pagination.value ??
-            ({
-              length: updatedList.length,
-              size: this.pageLimit,
-              page: this.pageIndex,
-              lastPage: 0,
-            } as IPagination);
-          const newLength = currentPagination.length ?? updatedList.length;
-          const newLastPage = Math.max(
-            0,
-            Math.ceil(newLength / this.pageLimit) - 1,
-          );
-          this.pagination.next({
-            length: newLength,
-            size: this.pageLimit,
-            page: this.pageIndex,
-            lastPage: newLastPage,
-          });
-
-          return updated;
-        }),
-      );
-  }
-
-  deleteTrip(id: string): Observable<void> {
-    return this.http.delete<void>(`${this.baseUrl}/delete/${id}`).pipe(
-      tap(() => {
-        const filtered = (this.trips.value ?? []).filter(
-          (trip) => trip.id !== id,
-        );
-        this.trips.next(filtered);
-
-        const currentPagination =
-          this.pagination.value ??
-          ({
-            length: (this.trips.value ?? filtered).length,
-            size: this.pageLimit,
-            page: this.pageIndex,
-            lastPage: 0,
-          } as IPagination);
-        const newLength = Math.max(
-          0,
-          (currentPagination.length ?? filtered.length + 1) - 1,
-        );
-        const newLastPage = Math.max(
-          0,
-          Math.ceil(newLength / this.pageLimit) - 1,
-        );
-        this.pagination.next({
-          length: newLength,
-          size: this.pageLimit,
-          page: this.pageIndex,
-          lastPage: newLastPage,
-        });
+  // ─── CREATE ──────────────────────────────────────────────
+  create(payload: TripCreatePayload): Observable<TripType> {
+    return this.http.post<TripType>(this.baseUrl, payload).pipe(
+      tap((created) => {
+        const current = this.trips.value ?? [];
+        this.trips.next([created, ...current]);
       }),
     );
+  }
+
+  // ─── UPDATE ──────────────────────────────────────────────
+  update(
+    id: string,
+    changes: Partial<TripUpdatePayload>,
+  ): Observable<TripType> {
+    return this.http.put<TripType>(`${this.baseUrl}/${id}`, changes).pipe(
+      tap((updated) => {
+        this.trip.next(updated);
+        const updatedList = (this.trips.value ?? []).map((t) =>
+          t.id === id ? updated : t,
+        );
+        this.trips.next(updatedList);
+      }),
+    );
+  }
+
+  // ─── DELETE ──────────────────────────────────────────────
+  delete(id: string): Observable<void> {
+    if (!id) return of(undefined);
+    return this.http.delete<void>(`${this.baseUrl}/${id}`).pipe(
+      tap(() => {
+        const filtered = (this.trips.value ?? []).filter((t) => t.id !== id);
+        this.trips.next(filtered);
+      }),
+    );
+  }
+
+  // ─── STATUS TRANSITION ──────────────────────────────────
+  updateStatus(id: string, status: TripStatusEnum): Observable<TripType> {
+    return this.http
+      .patch<TripType>(`${this.baseUrl}/${id}/status`, { status })
+      .pipe(
+        tap((updated) => {
+          this.trip.next(updated);
+          const updatedList = (this.trips.value ?? []).map((t) =>
+            t.id === id ? updated : t,
+          );
+          this.trips.next(updatedList);
+        }),
+      );
+  }
+
+  // ─── SEGMENT FIELD UPDATES ──────────────────────────────
+  updateSegmentPrice(
+    tripId: string,
+    segmentId: string,
+    basePrice: number,
+  ): Observable<TripType> {
+    return this.http
+      .patch<TripType>(
+        `${this.baseUrl}/${tripId}/segments/${segmentId}/price`,
+        { basePrice },
+      )
+      .pipe(tap((updated) => this.trip.next(updated)));
+  }
+
+  updateSegmentMaxSeats(
+    tripId: string,
+    segmentId: string,
+    maxSeats: number,
+  ): Observable<TripType> {
+    return this.http
+      .patch<TripType>(
+        `${this.baseUrl}/${tripId}/segments/${segmentId}/max-seats`,
+        { maxSeats },
+      )
+      .pipe(tap((updated) => this.trip.next(updated)));
+  }
+
+  // ─── EXPRESS FARE SUB-RESOURCE ──────────────────────────
+  addExpressFare(
+    tripId: string,
+    fare: ExpressFarePayload,
+  ): Observable<TripType> {
+    return this.http
+      .post<TripType>(`${this.baseUrl}/${tripId}/express-fares`, fare)
+      .pipe(tap((updated) => this.trip.next(updated)));
+  }
+
+  updateExpressFare(
+    tripId: string,
+    expressId: string,
+    changes: Partial<ExpressFarePayload>,
+  ): Observable<TripType> {
+    return this.http
+      .put<TripType>(
+        `${this.baseUrl}/${tripId}/express-fares/${expressId}`,
+        changes,
+      )
+      .pipe(tap((updated) => this.trip.next(updated)));
+  }
+
+  deleteExpressFare(tripId: string, expressId: string): Observable<TripType> {
+    return this.http
+      .delete<TripType>(`${this.baseUrl}/${tripId}/express-fares/${expressId}`)
+      .pipe(tap((updated) => this.trip.next(updated)));
+  }
+
+  // ─── PICKUP POINT SUB-RESOURCE ──────────────────────────
+  addPickupPoint(
+    tripId: string,
+    point: PickupPointPayload,
+  ): Observable<TripType> {
+    return this.http
+      .post<TripType>(`${this.baseUrl}/${tripId}/pickup-points`, point)
+      .pipe(tap((updated) => this.trip.next(updated)));
+  }
+
+  updatePickupPoint(
+    tripId: string,
+    pointId: string,
+    changes: Partial<PickupPointPayload>,
+  ): Observable<TripType> {
+    return this.http
+      .put<TripType>(
+        `${this.baseUrl}/${tripId}/pickup-points/${pointId}`,
+        changes,
+      )
+      .pipe(tap((updated) => this.trip.next(updated)));
+  }
+
+  // ─── DROPOFF POINT SUB-RESOURCE ─────────────────────────
+  addDropoffPoint(
+    tripId: string,
+    point: DropoffPointPayload,
+  ): Observable<TripType> {
+    return this.http
+      .post<TripType>(`${this.baseUrl}/${tripId}/dropoff-points`, point)
+      .pipe(tap((updated) => this.trip.next(updated)));
+  }
+
+  updateDropoffPoint(
+    tripId: string,
+    pointId: string,
+    changes: Partial<DropoffPointPayload>,
+  ): Observable<TripType> {
+    return this.http
+      .put<TripType>(
+        `${this.baseUrl}/${tripId}/dropoff-points/${pointId}`,
+        changes,
+      )
+      .pipe(tap((updated) => this.trip.next(updated)));
   }
 }

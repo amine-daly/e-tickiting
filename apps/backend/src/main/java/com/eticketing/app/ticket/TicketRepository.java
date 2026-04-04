@@ -5,29 +5,27 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.mongodb.repository.MongoRepository;
 import org.springframework.data.mongodb.repository.Query;
 
+import java.time.Instant;
 import java.util.List;
+import java.util.Optional;
 
 public interface TicketRepository extends MongoRepository<TicketType, String> {
 
-    /**
-     * Find tickets by user ID.
-     */
-    List<TicketType> findByUserId(String userId);
-
-    /**
-     * Find tickets by trip ID.
-     */
     List<TicketType> findByTripId(String tripId);
 
-    /**
-     * Find tickets by target.pos (POS ID) for terminal-scoped queries.
-     */
+    Optional<TicketType> findByIdempotencyKey(String idempotencyKey);
+
     @Query("{ 'target.pos': ?0 }")
     Page<TicketType> findByTargetPos(String posId, Pageable pageable);
 
-    /**
-     * Find tickets by target.pos and status for terminal-scoped queries.
-     */
     @Query("{ 'target.pos': ?0, 'status': ?1 }")
-    Page<TicketType> findByTargetPosAndStatus(String posId, TicketType.TicketStatusEnum status, Pageable pageable);
+    Page<TicketType> findByTargetPosAndStatus(String posId, TicketStatusEnum status, Pageable pageable);
+
+    @Query("{ 'target.company': ?0 }")
+    Page<TicketType> findByTargetCompany(String companyId, Pageable pageable);
+
+    List<TicketType> findByTripIdAndStatus(String tripId, TicketStatusEnum status);
+
+    @Query("{ 'status': 'PENDING', 'expiresAt': { $lt: ?0 } }")
+    List<TicketType> findExpiredPendingTickets(Instant now);
 }

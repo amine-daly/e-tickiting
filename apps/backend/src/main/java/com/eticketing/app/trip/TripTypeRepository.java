@@ -5,37 +5,24 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.mongodb.repository.MongoRepository;
 import org.springframework.data.mongodb.repository.Query;
 
-import java.time.OffsetDateTime;
+import java.util.List;
 
 public interface TripTypeRepository extends MongoRepository<TripType, String> {
 
     /**
-     * Find trips by originId, destinationId and date range.
+     * Paginated list scoped by company.
      */
-    @Query("{ 'originId': ?0, 'destinationId': ?1, 'departureDate': { $gte: ?2, $lt: ?3 } }")
-    Page<TripType> findByOriginAndDestinationAndDateRange(
-            String originId,
-            String destinationId,
-            OffsetDateTime startOfDay,
-            OffsetDateTime endOfDay,
-            Pageable pageable
-    );
+    @Query("{ 'target.company': ?0 }")
+    Page<TripType> findByTargetCompany(String companyId, Pageable pageable);
 
     /**
-     * Find trips by target.pos (POS ID) for terminal-scoped queries.
+     * By company + status.
      */
-    @Query("{ 'target.pos': ?0 }")
-    Page<TripType> findByTargetPos(String posId, Pageable pageable);
+    @Query("{ 'target.company': ?0, 'status': ?1 }")
+    Page<TripType> findByTargetCompanyAndStatus(String companyId, TripStatusEnum status, Pageable pageable);
 
     /**
-     * Find trips by target.pos (POS ID) and date range for terminal-scoped
-     * queries.
+     * Bus lock check — finds trips with a given busId in specified statuses.
      */
-    @Query("{ 'target.pos': ?0, 'departureDate': { $gte: ?1, $lt: ?2 } }")
-    Page<TripType> findByTargetPosAndDateRange(
-            String posId,
-            OffsetDateTime startOfDay,
-            OffsetDateTime endOfDay,
-            Pageable pageable
-    );
+    List<TripType> findByBusBusIdAndStatusIn(String busId, List<TripStatusEnum> statuses);
 }
