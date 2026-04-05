@@ -2,7 +2,7 @@
   <div toolbar-actions>
     <button class="btn btn-sm fw-bold btn-primary" routerLink="/trips/create">
       <i class="ki-duotone ki-plus fs-2"></i>
-      {{ "TRIPS.CREATE" | translate }}
+      {{ "TRIPS.CREATE.TITLE" | translate }}
     </button>
   </div>
 </app-toolbar>
@@ -18,7 +18,7 @@
         }}</label>
         <ng-select
           [items]="statusFilterOptions"
-          bindLabel="labelKey"
+          bindLabel="label"
           bindValue="value"
           [(ngModel)]="filterStatus"
           [clearable]="true"
@@ -26,10 +26,10 @@
           (change)="applyFilters()"
         >
           <ng-template ng-label-tmp let-item="item">{{
-            item.labelKey | translate
+            item.label
           }}</ng-template>
           <ng-template ng-option-tmp let-item="item">{{
-            item.labelKey | translate
+            item.label
           }}</ng-template>
         </ng-select>
       </div>
@@ -91,7 +91,7 @@
         {{ "TRIPS.EMPTY" | translate }}
       </div>
       <button class="btn btn-sm btn-primary" routerLink="/trips/create">
-        {{ "TRIPS.CREATE" | translate }}
+        {{ "TRIPS.CREATE.TITLE" | translate }}
       </button>
     </div>
   </div>
@@ -168,7 +168,7 @@
               <!-- Bus -->
               <td>
                 <span class="text-muted fs-7">{{
-                  trip.bus?.busId || "-"
+                  getBusName(trip.bus?.busId)
                 }}</span>
               </td>
 

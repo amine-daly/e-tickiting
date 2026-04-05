@@ -44,7 +44,7 @@
           [placeholder]="'BUSES.FORM.TOTAL_SEATS_PLACEHOLDER' | translate"
           min="1"
         />
-        <div *ngIf="isInvalid('totalSeats')" class="text-danger small mt-1">
+        <div *ngIf="isInvalid('totalSeats')" class="text-danger mt-1  ">
           {{ "BUSES.FORM.ERRORS.TOTAL_SEATS_REQUIRED" | translate }}
         </div>
         <div *ngIf="seatsLocked" class="text-warning small mt-1">

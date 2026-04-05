@@ -1,8 +1,11 @@
 package com.eticketing.app.trip;
 
+import com.eticketing.app.bus.BusRepository;
 import com.eticketing.app.bus.BusService;
 import com.eticketing.app.bus.BusType;
 import com.eticketing.app.common.TargetInput;
+import com.eticketing.app.place.PlaceRepository;
+import com.eticketing.app.place.PlaceType;
 import com.eticketing.app.ticket.TripCancellationHandler;
 import com.eticketing.app.trip.dto.*;
 import com.eticketing.app.web.error.ApiExceptions.BadRequestException;
@@ -12,6 +15,7 @@ import com.eticketing.app.web.error.ApiExceptions.NotFoundException;
 import lombok.RequiredArgsConstructor;
 
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
@@ -38,6 +42,8 @@ public class TripService {
 
     private final TripTypeRepository tripRepository;
     private final BusService busService;
+    private final BusRepository busRepository;
+    private final PlaceRepository placeRepository;
     private final MongoTemplate mongoTemplate;
     private final TripCancellationHandler tripCancellationHandler;
 
@@ -208,9 +214,9 @@ public class TripService {
         return tripRepository.findByTargetCompany(companyId, pageable);
     }
 
-    public List<TripType> search(String companyId, TripStatusEnum status, LocalDate date,
-                                   String originPlaceId, String destinationPlaceId,
-                                   int page, int limit) {
+    public Page<TripType> search(String companyId, TripStatusEnum status, String searchTerm,
+            LocalDate date, String originPlaceId, String destinationPlaceId,
+            int page, int limit) {
         Pageable pageable = PageRequest.of(
                 Math.max(page, 0),
                 Math.clamp(limit, 1, 100),
@@ -222,6 +228,36 @@ public class TripService {
         }
         if (status != null) {
             q.addCriteria(Criteria.where("status").is(status.toValue()));
+        }
+        if (searchTerm != null && !searchTerm.isBlank()) {
+            String trimmedSearchTerm = searchTerm.trim();
+            List<String> matchingBusIds = busRepository
+                    .findByTargetCompanyAndNameLike(companyId, trimmedSearchTerm, PageRequest.of(0, 100))
+                    .getContent()
+                    .stream()
+                    .map(BusType::getId)
+                    .toList();
+            List<String> matchingPlaceIds = placeRepository
+                    .findByCityIgnoreCaseContaining(trimmedSearchTerm, PageRequest.of(0, 100))
+                    .getContent()
+                    .stream()
+                    .filter(place -> place.getKind() == null || place.getKind() == PlaceType.PlaceKind.CITY)
+                    .map(PlaceType::getId)
+                    .toList();
+
+            List<Criteria> searchCriteria = new ArrayList<>();
+            if (!matchingBusIds.isEmpty()) {
+                searchCriteria.add(Criteria.where("bus.busId").in(matchingBusIds));
+            }
+            if (!matchingPlaceIds.isEmpty()) {
+                searchCriteria.add(Criteria.where("stopSchedule.placeId").in(matchingPlaceIds));
+            }
+
+            if (searchCriteria.isEmpty()) {
+                return new PageImpl<>(List.of(), pageable, 0);
+            }
+
+            q.addCriteria(new Criteria().orOperator(searchCriteria.toArray(Criteria[]::new)));
         }
         if (date != null) {
             Instant start = date.atStartOfDay().toInstant(ZoneOffset.UTC);
@@ -238,6 +274,7 @@ public class TripService {
                     .elemMatch(Criteria.where("placeId").is(destinationPlaceId)
                             .and("droppingAllowed").is(true)));
         }
+        long total = mongoTemplate.count(q, TripType.class);
         q.with(pageable);
 
         List<TripType> results = mongoTemplate.find(q, TripType.class);
@@ -258,7 +295,7 @@ public class TripService {
             }).collect(Collectors.toList());
         }
 
-        return results;
+        return new PageImpl<>(results, pageable, total);
     }
 
     // ════════════════════════════════════════════════════════════════════

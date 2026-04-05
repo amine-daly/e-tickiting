@@ -8,9 +8,20 @@ import {
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
-import { NgSelectComponent } from '@ng-select/ng-select';
+import {
+  NgLabelTemplateDirective,
+  NgOptionTemplateDirective,
+  NgSelectComponent,
+} from '@ng-select/ng-select';
 import { TranslateModule, TranslateService } from '@ngx-translate/core';
-import { Subject, Subscription, debounceTime, distinctUntilChanged, switchMap, of } from 'rxjs';
+import {
+  Subject,
+  Subscription,
+  debounceTime,
+  distinctUntilChanged,
+  switchMap,
+  of,
+} from 'rxjs';
 
 import { AlertService } from '../../../core/services/alert.service';
 import {
@@ -34,7 +45,14 @@ import {
   templateUrl: './sell-ticket.component.html',
   styleUrls: ['./sell-ticket.component.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [CommonModule, FormsModule, NgSelectComponent, TranslateModule],
+  imports: [
+    CommonModule,
+    FormsModule,
+    NgSelectComponent,
+    NgLabelTemplateDirective,
+    NgOptionTemplateDirective,
+    TranslateModule,
+  ],
 })
 export class SellTicketComponent implements OnInit, OnDestroy {
   private destroy$ = new Subject<void>();
@@ -162,14 +180,15 @@ export class SellTicketComponent implements OnInit, OnDestroy {
     this.currency = this.selectedTrip.currency || '';
 
     const express = (this.selectedTrip.expressFares || []).find(
-      (f) => f.fromPlaceId === fromPlaceId && f.toPlaceId === toPlaceId && f.active
+      (f) =>
+        f.fromPlaceId === fromPlaceId && f.toPlaceId === toPlaceId && f.active,
     );
     if (express) {
       this.displayPrice = express.price;
     } else {
       this.displayPrice = (this.selectedTrip.segments || []).reduce(
         (s, seg) => s + (seg.basePrice || 0),
-        0
+        0,
       );
     }
     this.cdr.markForCheck();

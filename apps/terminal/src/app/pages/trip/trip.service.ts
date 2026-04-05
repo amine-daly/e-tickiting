@@ -77,8 +77,8 @@ export interface TripCreatePayload {
   seatHoldMinutes: number;
   stopSchedule: StopInput[];
   segmentInputs: SegmentCreateInput[];
-  pickupPoints?: PickupPointPayload[];
-  dropoffPoints?: DropoffPointPayload[];
+  pickupPoints: PickupPointPayload[];
+  dropoffPoints: DropoffPointPayload[];
   expressFares?: ExpressFareCreateInput[];
 }
 
@@ -126,38 +126,42 @@ export class TripService {
     let params = new HttpParams()
       .set('page', this.pageIndex)
       .set('limit', this.pageLimit);
+    let endpoint = this.baseUrl;
 
     if (filter.status) {
       params = params.set('status', filter.status);
     }
 
-    return this.http
-      .get<PaginateResponse<TripType>>(this.baseUrl, { params })
-      .pipe(
-        map((data) => {
-          const objects = Array.isArray(data?.objects) ? data.objects : [];
-          const count = data?.count ?? objects.length;
-          this.trips.next(objects);
-          this.pagination.next({
-            length: count,
-            size: this.pageLimit,
-            page: this.pageIndex,
-            lastPage: Math.max(0, Math.ceil(count / this.pageLimit) - 1),
-          });
-          return objects;
-        }),
-        catchError((error) => {
-          this.trips.next([]);
-          this.pagination.next({
-            length: 0,
-            size: this.pageLimit,
-            page: this.pageIndex,
-            lastPage: 0,
-          });
-          return throwError(() => error);
-        }),
-        finalize(() => this.loading.next(false)),
-      );
+    if (filter.searchTerm?.trim()) {
+      endpoint = `${this.baseUrl}/search`;
+      params = params.set('searchTerm', filter.searchTerm.trim());
+    }
+
+    return this.http.get<PaginateResponse<TripType>>(endpoint, { params }).pipe(
+      map((data) => {
+        const objects = Array.isArray(data?.objects) ? data.objects : [];
+        const count = data?.count ?? objects.length;
+        this.trips.next(objects);
+        this.pagination.next({
+          length: count,
+          size: this.pageLimit,
+          page: this.pageIndex,
+          lastPage: Math.max(0, Math.ceil(count / this.pageLimit) - 1),
+        });
+        return objects;
+      }),
+      catchError((error) => {
+        this.trips.next([]);
+        this.pagination.next({
+          length: 0,
+          size: this.pageLimit,
+          page: this.pageIndex,
+          lastPage: 0,
+        });
+        return throwError(() => error);
+      }),
+      finalize(() => this.loading.next(false)),
+    );
   }
 
   // ─── GET BY ID ───────────────────────────────────────────

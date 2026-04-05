@@ -9,6 +9,7 @@ import com.eticketing.app.web.error.ApiExceptions.UnauthorizedException;
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 
@@ -36,6 +37,7 @@ public class TripController {
 
     private final TripService tripService;
     private final UserTypeRepository userRepository;
+    private final HttpServletRequest httpServletRequest;
 
     // ════════════════════════════════════════════════════════════════════
     // CRUD
@@ -96,16 +98,30 @@ public class TripController {
     public ResponseEntity<?> searchTrips(
             @RequestParam(required = false) String companyId,
             @RequestParam(required = false) String status,
+            @RequestParam(required = false) String searchTerm,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date,
             @RequestParam(required = false) String originPlaceId,
             @RequestParam(required = false) String destinationPlaceId,
             @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "10") int limit) {
+            @RequestParam(defaultValue = "10") int limit,
+            @AuthenticationPrincipal User principal) {
+        String scopedCompanyId = (companyId != null && !companyId.isBlank())
+                ? companyId
+                : resolveCompanyId(principal);
         TripStatusEnum statusEnum = (status != null && !status.isBlank())
                 ? TripStatusEnum.fromValue(status) : null;
-        var results = tripService.search(companyId, statusEnum, date, originPlaceId, destinationPlaceId, page, limit);
-        var content = results.stream().map(TripResponse::from).toList();
-        return ResponseEntity.ok(content);
+        Page<TripType> result = tripService.search(
+                scopedCompanyId,
+                statusEnum,
+                searchTerm,
+                date,
+                originPlaceId,
+                destinationPlaceId,
+                page,
+                limit);
+        var content = result.getContent().stream().map(TripResponse::from).toList();
+        return ResponseEntity.ok(new PaginateResponseType<>(
+                content, result.getTotalElements(), result.isLast()));
     }
 
     @Operation(summary = "Update a trip")
@@ -279,6 +295,12 @@ public class TripController {
         if (principal == null) {
             throw new UnauthorizedException("Authentication required");
         }
+        // Prefer X-Company-Id header (multi-account: company is on the account, not the user)
+        String headerCompanyId = httpServletRequest.getHeader("X-Company-Id");
+        if (headerCompanyId != null && !headerCompanyId.isBlank()) {
+            return headerCompanyId.trim();
+        }
+        // Fallback: read from user document (single-account legacy)
         UserType user = userRepository.findById(principal.getUsername())
                 .orElseThrow(() -> new UnauthorizedException("User not found"));
         if (user.getTarget() == null || user.getTarget().getCompany() == null) {

@@ -207,6 +207,7 @@
     },
     "FILTERS": {
       "STATUS": "Filtrer par statut",
+      "ALL": "Tous",
       "SEARCH": "Rechercher des voyages..."
     },
     "STOPS": {
@@ -274,6 +275,13 @@
       "SAVE_SUCCESS": "Voyage enregistré avec succès.",
       "SAVE_ERROR": "Impossible d'enregistrer le voyage.",
       "UNRECOGNIZED_FIELD": "Champ de requête invalide : {{field}}.",
+      "BUS_ALREADY_ASSIGNED": "Ce bus est déjà affecté à un voyage programmé ou actif.",
+      "MISSING_PICKUP": "Un arrêt d'embarquement n'a pas de point de ramassage.",
+      "MISSING_DROPOFF": "Un arrêt de débarquement n'a pas de point de dépose.",
+      "MAX_SEATS_ERROR": "La capacité max d'un segment dépasse celle du bus.",
+      "INVALID_TIMELINE": "La chronologie des arrêts est invalide. Vérifiez les horaires.",
+      "INVALID_STOP_SEQUENCE": "La séquence des arrêts est invalide.",
+      "INVALID_EXPRESS_CHAIN": "La chaîne de segments du tarif express est invalide.",
       "DELETE_SUCCESS": "Voyage supprimé avec succès.",
       "DELETE_ERROR": "Impossible de supprimer le voyage.",
       "DELETE_CONFIRM_TITLE": "Supprimer le voyage ?",
@@ -363,7 +371,11 @@
         "MOVE_UP": "Monter",
         "MOVE_DOWN": "Descendre",
         "REMOVE": "Supprimer",
-        "MIN_STOPS": "Au moins 2 arrêts sont requis (origine et destination)."
+        "MIN_STOPS": "Au moins 2 arrêts sont requis (origine et destination).",
+        "ORIGIN_NO_ARRIVAL": "Origine — pas d'heure d'arrivée",
+        "DEST_NO_DEPARTURE": "Destination — pas d'heure de départ",
+        "ALWAYS_ON": "Toujours activé",
+        "ALWAYS_OFF": "Toujours désactivé"
       },
       "SEGMENTS": {
         "AUTO_GENERATED": "Les segments sont générés automatiquement à partir des arrêts commerciaux consécutifs.",
@@ -399,7 +411,19 @@
         "DATE_REQUIRED": "La date de départ est obligatoire.",
         "TIMEZONE_REQUIRED": "Le fuseau horaire est obligatoire.",
         "CURRENCY_REQUIRED": "La devise est obligatoire.",
-        "SEAT_HOLD_REQUIRED": "Le temps de réservation est obligatoire."
+        "SEAT_HOLD_REQUIRED": "Le temps de réservation est obligatoire.",
+        "TIMELINE_TITLE": "Chronologie invalide",
+        "DEPARTURE_BEFORE_ARRIVAL": "Arrêt {{stop}} ({{place}}) : le départ doit être après l'arrivée.",
+        "ARRIVAL_BEFORE_PREVIOUS": "Arrêt {{stop}} ({{place}}) : l'arrivée doit être après le départ de l'arrêt {{prevStop}} ({{prevPlace}}).",
+        "ORIGIN_NO_ARRIVAL": "L'origine ({{place}}) ne doit pas avoir d'heure d'arrivée.",
+        "DEST_NO_DEPARTURE": "La destination ({{place}}) ne doit pas avoir d'heure de départ.",
+        "DROPOFF_BEFORE_PICKUP": "Point de dépose {{dropoff}} : l'heure d'arrivée doit être après le premier départ de ramassage.",
+        "DEPARTURE_DATE_MISMATCH": "L'heure de départ de l'origine doit correspondre ou être après la date de départ globale.",
+        "MIN_COMMERCIAL_STOPS": "Au moins 2 arrêts commerciaux (embarquement ou débarquement) sont nécessaires.",
+        "MAX_SEATS_EXCEEDS_BUS": "La capacité max dépasse celle du bus ({{max}}).",
+        "COVERAGE_TITLE": "Points de ramassage/dépose manquants",
+        "MISSING_PICKUP_FOR_STOP": "La ville {{place}} (arrêt d'embarquement) nécessite au moins un point de ramassage.",
+        "MISSING_DROPOFF_FOR_STOP": "La ville {{place}} (arrêt de débarquement) nécessite au moins un point de dépose."
       }
     }
   },

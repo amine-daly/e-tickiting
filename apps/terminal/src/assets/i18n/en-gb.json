@@ -207,6 +207,7 @@
     },
     "FILTERS": {
       "STATUS": "Filter by status",
+      "ALL": "All",
       "SEARCH": "Search trips..."
     },
     "STOPS": {
@@ -274,6 +275,13 @@
       "SAVE_SUCCESS": "Trip saved successfully.",
       "SAVE_ERROR": "Unable to save the trip.",
       "UNRECOGNIZED_FIELD": "Invalid request field: {{field}}.",
+      "BUS_ALREADY_ASSIGNED": "This bus is already assigned to a scheduled or active trip.",
+      "MISSING_PICKUP": "A boarding stop is missing its pickup point.",
+      "MISSING_DROPOFF": "A dropping stop is missing its drop-off point.",
+      "MAX_SEATS_ERROR": "A segment's max seats exceeds the bus capacity.",
+      "INVALID_TIMELINE": "The stop timeline is invalid. Please review stop times.",
+      "INVALID_STOP_SEQUENCE": "The stop sequence is invalid.",
+      "INVALID_EXPRESS_CHAIN": "The express fare segment chain is invalid.",
       "DELETE_SUCCESS": "Trip deleted successfully.",
       "DELETE_ERROR": "Unable to delete the trip.",
       "DELETE_CONFIRM_TITLE": "Delete trip?",
@@ -363,7 +371,11 @@
         "MOVE_UP": "Move up",
         "MOVE_DOWN": "Move down",
         "REMOVE": "Remove",
-        "MIN_STOPS": "At least 2 stops are required (origin and destination)."
+        "MIN_STOPS": "At least 2 stops are required (origin and destination).",
+        "ORIGIN_NO_ARRIVAL": "Origin — no arrival time",
+        "DEST_NO_DEPARTURE": "Destination — no departure time",
+        "ALWAYS_ON": "Always on",
+        "ALWAYS_OFF": "Always off"
       },
       "SEGMENTS": {
         "AUTO_GENERATED": "Segments are auto-generated from consecutive commercial stops.",
@@ -399,7 +411,19 @@
         "DATE_REQUIRED": "Departure date is required.",
         "TIMEZONE_REQUIRED": "Timezone is required.",
         "CURRENCY_REQUIRED": "Currency is required.",
-        "SEAT_HOLD_REQUIRED": "Seat hold minutes is required."
+        "SEAT_HOLD_REQUIRED": "Seat hold minutes is required.",
+        "TIMELINE_TITLE": "Invalid Timeline",
+        "DEPARTURE_BEFORE_ARRIVAL": "Stop {{stop}} ({{place}}): departure must be after arrival.",
+        "ARRIVAL_BEFORE_PREVIOUS": "Stop {{stop}} ({{place}}): arrival must be after stop {{prevStop}} ({{prevPlace}}) departure.",
+        "ORIGIN_NO_ARRIVAL": "Origin ({{place}}) must not have an arrival time.",
+        "DEST_NO_DEPARTURE": "Destination ({{place}}) must not have a departure time.",
+        "DROPOFF_BEFORE_PICKUP": "Dropoff point {{dropoff}}: scheduled arrival must be after the earliest pickup departure.",
+        "DEPARTURE_DATE_MISMATCH": "Origin departure time must match or be after the global departure date.",
+        "MIN_COMMERCIAL_STOPS": "At least 2 commercial stops (boarding or dropping) are required.",
+        "MAX_SEATS_EXCEEDS_BUS": "Max seats exceeds bus capacity ({{max}}).",
+        "COVERAGE_TITLE": "Missing Pickup/Dropoff Points",
+        "MISSING_PICKUP_FOR_STOP": "City {{place}} (boarding stop) requires at least one pickup point.",
+        "MISSING_DROPOFF_FOR_STOP": "City {{place}} (dropping stop) requires at least one drop-off point."
       }
     }
   },

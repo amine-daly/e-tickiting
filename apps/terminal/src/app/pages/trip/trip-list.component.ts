@@ -13,13 +13,21 @@ import {
   NgbTooltipModule,
 } from '@ng-bootstrap/ng-bootstrap';
 import { Subject, Subscription } from 'rxjs';
-import { finalize } from 'rxjs/operators';
+import { finalize, takeUntil } from 'rxjs/operators';
 import { TranslateModule, TranslateService } from '@ngx-translate/core';
-import { NgSelectComponent } from '@ng-select/ng-select';
+import {
+  NgLabelTemplateDirective,
+  NgOptionTemplateDirective,
+  NgSelectComponent,
+} from '@ng-select/ng-select';
 
 import { TripType, TripStatusEnum } from '../../core/models/trip.model';
 import { TripFilterInput } from '../../core/models/trip-filter-input.model';
 import { TripService } from './trip.service';
+import { BusService } from '../buses/bus.service';
+import { PlacesService } from '../places/places.service';
+import { BusType } from '../../core/models/bus.model';
+import { PlaceType } from '../../core/models/place-type';
 import { AlertService } from '../../core/services/alert.service';
 import { PaginationComponent } from 'src/app/shared/components/pagination/pagination.component';
 import { ToolbarComponent } from 'src/app/_metronic/layout/components/toolbar/toolbar.component';
@@ -33,6 +41,8 @@ import { PageInfoService } from 'src/app/_metronic/layout/core/page-info.service
     RouterLink,
     NgbDropdownModule,
     NgbTooltipModule,
+    NgLabelTemplateDirective,
+    NgOptionTemplateDirective,
     NgSelectComponent,
     TranslateModule,
     PaginationComponent,
@@ -60,15 +70,29 @@ export class TripListComponent implements OnInit, OnDestroy {
 
   statusUpdating: Record<string, boolean> = {};
 
+  places: PlaceType[] = [];
+  buses: BusType[] = [];
+  private placeMap = new Map<string, string>();
+  private busMap = new Map<string, string>();
+
   statusFilterOptions: Array<{
     value: TripStatusEnum | null;
-    labelKey: string;
+    label: string;
   }> = [
-    { value: null, labelKey: 'TRIPS.FILTERS.ALL' },
-    { value: TripStatusEnum.SCHEDULED, labelKey: 'TRIPS.STATUS.SCHEDULED' },
-    { value: TripStatusEnum.ACTIVE, labelKey: 'TRIPS.STATUS.ACTIVE' },
-    { value: TripStatusEnum.COMPLETED, labelKey: 'TRIPS.STATUS.COMPLETED' },
-    { value: TripStatusEnum.CANCELLED, labelKey: 'TRIPS.STATUS.CANCELLED' },
+    { value: null, label: this.t('TRIPS.FILTERS.ALL') },
+    {
+      value: TripStatusEnum.SCHEDULED,
+      label: this.t('TRIPS.STATUS.SCHEDULED'),
+    },
+    { value: TripStatusEnum.ACTIVE, label: this.t('TRIPS.STATUS.ACTIVE') },
+    {
+      value: TripStatusEnum.COMPLETED,
+      label: this.t('TRIPS.STATUS.COMPLETED'),
+    },
+    {
+      value: TripStatusEnum.CANCELLED,
+      label: this.t('TRIPS.STATUS.CANCELLED'),
+    },
   ];
 
   statusLabelMap: Record<TripStatusEnum, string> = {
@@ -87,6 +111,8 @@ export class TripListComponent implements OnInit, OnDestroy {
 
   constructor(
     private tripService: TripService,
+    private busService: BusService,
+    private placesService: PlacesService,
     private alert: AlertService,
     private translate: TranslateService,
     private pageInfo: PageInfoService,
@@ -95,7 +121,32 @@ export class TripListComponent implements OnInit, OnDestroy {
 
   ngOnInit(): void {
     this.pageInfo.setTitle(this.t('TRIPS.TITLE'));
+    this.loadReferenceData();
     this.loadTrips(1);
+  }
+
+  private loadReferenceData(): void {
+    this.placesService.placesPageLimit = 200;
+    this.placesService
+      .getPlaces()
+      .pipe(takeUntil(this.destroy$))
+      .subscribe((places) => {
+        this.places = places;
+        this.placeMap.clear();
+        places.forEach((p) => {
+          if (p.id) this.placeMap.set(p.id, p.city);
+        });
+        this.cdr.markForCheck();
+      });
+    this.busService
+      .list()
+      .pipe(takeUntil(this.destroy$))
+      .subscribe((buses) => {
+        this.buses = buses;
+        this.busMap.clear();
+        buses.forEach((b) => this.busMap.set(b.id, b.name));
+        this.cdr.markForCheck();
+      });
   }
 
   // ─── DATA LOADING ───────────────────────────────────────
@@ -105,6 +156,9 @@ export class TripListComponent implements OnInit, OnDestroy {
     const filter: TripFilterInput = {};
     if (this.filterStatus) {
       filter.status = this.filterStatus;
+    }
+    if (this.filterSearch.trim()) {
+      filter.searchTerm = this.filterSearch.trim();
     }
     const sub = this.tripService.list(filter).subscribe({
       next: () => this.cdr.markForCheck(),
@@ -133,10 +187,20 @@ export class TripListComponent implements OnInit, OnDestroy {
     const stops = [...trip.stopSchedule].sort(
       (a, b) => a.sequence - b.sequence,
     );
-    const first = stops[0]?.placeId ?? '';
-    const last = stops[stops.length - 1]?.placeId ?? '';
+    const first = this.getPlaceName(stops[0]?.placeId);
+    const last = this.getPlaceName(stops[stops.length - 1]?.placeId);
     if (first === last) return first;
     return `${first} → ${last}`;
+  }
+
+  getPlaceName(placeId: string | undefined): string {
+    if (!placeId) return '-';
+    return this.placeMap.get(placeId) ?? placeId;
+  }
+
+  getBusName(busId: string | undefined): string {
+    if (!busId) return '-';
+    return this.busMap.get(busId) ?? busId;
   }
 
   // ─── STATUS ACTION ─────────────────────────────────────

@@ -7,9 +7,11 @@ import {
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import {
+  AbstractControl,
   FormArray,
   FormGroup,
   FormBuilder,
+  FormsModule,
   Validators,
   ReactiveFormsModule,
 } from '@angular/forms';
@@ -17,7 +19,11 @@ import { Router, RouterModule } from '@angular/router';
 import { Subject } from 'rxjs';
 import { takeUntil } from 'rxjs/operators';
 import { TranslateModule, TranslateService } from '@ngx-translate/core';
-import { NgSelectModule } from '@ng-select/ng-select';
+import {
+  NgLabelTemplateDirective,
+  NgOptionTemplateDirective,
+  NgSelectModule,
+} from '@ng-select/ng-select';
 import {
   FlatpickrDirective,
   FlatpickrModule,
@@ -46,11 +52,14 @@ interface SegmentDisplay {
   imports: [
     CommonModule,
     RouterModule,
+    FormsModule,
     ReactiveFormsModule,
     TranslateModule,
     NgSelectModule,
     FlatpickrDirective,
     ToolbarComponent,
+    NgLabelTemplateDirective,
+    NgOptionTemplateDirective,
   ],
   providers: [
     provideFlatpickrDefaults({
@@ -75,6 +84,15 @@ export class TripCreateComponent implements OnInit, OnDestroy {
 
   /** Derived segment display info (for labels in step 3 & 5) */
   segmentDisplays: SegmentDisplay[] = [];
+
+  /** Timeline validation errors (populated when leaving step 1) */
+  timelineErrors: string[] = [];
+
+  /** Pickup/dropoff coverage errors (populated when leaving step 3) */
+  pickupDropoffErrors: string[] = [];
+
+  /** Total seats of the currently selected bus (for maxSeats validation) */
+  selectedBusTotalSeats: number | null = null;
 
   readonly STEPS = [
     'TRIPS.CREATE.STEPS.BASIC_INFO',
@@ -112,6 +130,8 @@ export class TripCreateComponent implements OnInit, OnDestroy {
   ];
 
   readonly flatpickrDatetime = {
+    altInput: true,
+    altFormat: 'F j, Y H:i',
     enableTime: true,
     dateFormat: 'Y-m-d H:i',
     time_24hr: true,
@@ -119,6 +139,8 @@ export class TripCreateComponent implements OnInit, OnDestroy {
   };
 
   readonly flatpickrDate = {
+    altInput: true,
+    altFormat: 'F j, Y',
     enableTime: false,
     dateFormat: 'Y-m-d',
     allowInput: true,
@@ -236,6 +258,20 @@ export class TripCreateComponent implements OnInit, OnDestroy {
     );
   }
 
+  /** Get available places for a stop, excluding places already selected by other stops */
+  availablePlacesForStop(stopIndex: number): PlaceType[] {
+    const selectedIds = this.stopSchedule.controls
+      .map((c, i) => (i !== stopIndex ? c.get('placeId')?.value : null))
+      .filter(Boolean);
+    return this.places.filter((p) => !selectedIds.includes(p.id));
+  }
+
+  /** Clear handler for stop city ng-select */
+  clearStopPlace(stopIndex: number): void {
+    this.stopSchedule.at(stopIndex).get('placeId')?.setValue('');
+    this.cdr.markForCheck();
+  }
+
   isStepValid(step: number): boolean {
     switch (step) {
       case 0: {
@@ -249,11 +285,28 @@ export class TripCreateComponent implements OnInit, OnDestroy {
         );
       }
       case 1:
-        return this.stopSchedule.length >= 2 && this.stopSchedule.valid;
-      case 2:
-        return this.segments.length > 0 && this.segments.valid;
+        return (
+          this.stopSchedule.length >= 2 &&
+          this.stopSchedule.valid &&
+          this.timelineErrors.length === 0
+        );
+      case 2: {
+        if (this.segments.length === 0 || !this.segments.valid) return false;
+        if (this.selectedBusTotalSeats != null) {
+          const segs = this.segments.getRawValue();
+          if (segs.some((s: any) => s.maxSeats > this.selectedBusTotalSeats!))
+            return false;
+        }
+        return true;
+      }
       case 3:
-        return this.pickupPoints.valid && this.dropoffPoints.valid;
+        return (
+          this.pickupPoints.length > 0 &&
+          this.dropoffPoints.length > 0 &&
+          this.pickupPoints.valid &&
+          this.dropoffPoints.valid &&
+          this.pickupDropoffErrors.length === 0
+        );
       case 4:
         return this.expressFares.valid;
       default:
@@ -262,8 +315,41 @@ export class TripCreateComponent implements OnInit, OnDestroy {
   }
 
   nextStep(): void {
+    // When leaving step 0 (basic info), sync departureDate to first stop & track bus
+    if (this.currentStep === 0) {
+      const busId = this.tripForm.get('busId')?.value;
+      const bus = this.buses.find((b) => b.id === busId);
+      this.selectedBusTotalSeats = bus?.totalSeats ?? null;
+      if (this.stopSchedule.length > 0) {
+        this.enforceStopConstraints();
+      }
+    }
+
+    // When leaving step 1 (stops), enforce constraints & validate timeline
+    if (this.currentStep === 1) {
+      this.enforceStopConstraints();
+      this.validateTimeline();
+    }
+
+    // When leaving step 3 (pickup/dropoff), validate coverage + cross-timeline
+    if (this.currentStep === 3) {
+      this.validatePickupDropoffCoverage();
+      if (this.pickupDropoffErrors.length > 0) {
+        this.alert.error(this.pickupDropoffErrors.join('<br>'));
+        return;
+      }
+      const pdErrors = this.validatePickupDropoff();
+      if (pdErrors.length > 0) {
+        this.alert.error(pdErrors.join('<br>'));
+        return;
+      }
+    }
+
     if (!this.isStepValid(this.currentStep)) {
       this.markCurrentStepTouched();
+      if (this.currentStep === 1 && this.timelineErrors.length > 0) {
+        this.alert.error(this.timelineErrors.join('<br>'));
+      }
       return;
     }
 
@@ -320,21 +406,24 @@ export class TripCreateComponent implements OnInit, OnDestroy {
   //  Step 2 — Stop Schedule
   // ══════════════════════════════════════════════════
   addStop(): void {
-    const isFirst = this.stopSchedule.length === 0;
     this.stopSchedule.push(
       this.fb.group({
         placeId: ['', Validators.required],
         arrivalTime: [null],
         departureTime: [null],
-        boardingAllowed: [isFirst],
-        droppingAllowed: [!isFirst],
+        boardingAllowed: [false],
+        droppingAllowed: [false],
       }),
     );
+    this.enforceStopConstraints();
+    this.timelineErrors = [];
     this.cdr.markForCheck();
   }
 
   removeStop(index: number): void {
     this.stopSchedule.removeAt(index);
+    this.enforceStopConstraints();
+    this.timelineErrors = [];
     this.cdr.markForCheck();
   }
 
@@ -347,11 +436,213 @@ export class TripCreateComponent implements OnInit, OnDestroy {
     controls[index] = controls[target];
     controls[target] = tmp;
     this.stopSchedule.updateValueAndValidity();
+    this.enforceStopConstraints();
+    this.timelineErrors = [];
     this.cdr.markForCheck();
+  }
+
+  /**
+   * Enforce origin/destination constraints on first and last stops:
+   * - First stop: arrivalTime = null, boardingAllowed = true, droppingAllowed = false
+   * - Last stop:  departureTime = null, droppingAllowed = true, boardingAllowed = false
+   * Also syncs global departureDate to first stop's departureTime.
+   */
+  private enforceStopConstraints(): void {
+    const len = this.stopSchedule.length;
+    if (len === 0) return;
+
+    // First stop (origin)
+    const first = this.stopSchedule.at(0);
+    first.get('arrivalTime')?.setValue(null, { emitEvent: false });
+    first.get('boardingAllowed')?.setValue(true, { emitEvent: false });
+    first.get('droppingAllowed')?.setValue(false, { emitEvent: false });
+
+    // Sync global departureDate → first stop departureTime
+    const globalDeparture = this.tripForm.get('departureDate')?.value;
+    if (globalDeparture && !first.get('departureTime')?.value) {
+      first
+        .get('departureTime')
+        ?.setValue(globalDeparture, { emitEvent: false });
+    }
+
+    if (len > 1) {
+      // Last stop (destination)
+      const last = this.stopSchedule.at(len - 1);
+      last.get('departureTime')?.setValue(null, { emitEvent: false });
+      last.get('droppingAllowed')?.setValue(true, { emitEvent: false });
+      last.get('boardingAllowed')?.setValue(false, { emitEvent: false });
+    }
   }
 
   getPlaceName(placeId: string): string {
     return this.places.find((p) => p.id === placeId)?.city ?? placeId;
+  }
+
+  // ══════════════════════════════════════════════════
+  //  Timeline validation
+  // ══════════════════════════════════════════════════
+  private validateTimeline(): void {
+    this.timelineErrors = [];
+    const stops = this.stopSchedule.getRawValue();
+    const lastIdx = stops.length - 1;
+
+    for (let i = 0; i < stops.length; i++) {
+      const stop = stops[i];
+      const arrival = stop.arrivalTime
+        ? new Date(stop.arrivalTime).getTime()
+        : null;
+      const departure = stop.departureTime
+        ? new Date(stop.departureTime).getTime()
+        : null;
+      const placeName = this.getPlaceName(stop.placeId);
+
+      // Rule 0a: first stop must NOT have an arrival time
+      if (i === 0 && arrival) {
+        this.timelineErrors.push(
+          this.translate.instant('TRIPS.CREATE.ERRORS.ORIGIN_NO_ARRIVAL', {
+            place: placeName,
+          }),
+        );
+      }
+
+      // Rule 0b: last stop must NOT have a departure time
+      if (i === lastIdx && i > 0 && departure) {
+        this.timelineErrors.push(
+          this.translate.instant('TRIPS.CREATE.ERRORS.DEST_NO_DEPARTURE', {
+            place: placeName,
+          }),
+        );
+      }
+
+      // Rule 0c: first stop departureTime must not be before global departureDate
+      if (i === 0 && departure) {
+        const globalDeparture = this.tripForm.get('departureDate')?.value;
+        if (globalDeparture) {
+          const globalTime = new Date(globalDeparture).getTime();
+          if (departure < globalTime) {
+            this.timelineErrors.push(
+              this.translate.instant(
+                'TRIPS.CREATE.ERRORS.DEPARTURE_DATE_MISMATCH',
+                { place: placeName },
+              ),
+            );
+          }
+        }
+      }
+
+      // Rule 1: departure must be after arrival (within same stop)
+      if (arrival && departure && departure <= arrival) {
+        this.timelineErrors.push(
+          this.translate.instant(
+            'TRIPS.CREATE.ERRORS.DEPARTURE_BEFORE_ARRIVAL',
+            {
+              stop: i + 1,
+              place: placeName,
+            },
+          ),
+        );
+      }
+
+      // Rule 2: arrival must be after previous stop's departure (or arrival)
+      if (i > 0 && arrival) {
+        const prev = stops[i - 1];
+        const prevTime = prev.departureTime
+          ? new Date(prev.departureTime).getTime()
+          : prev.arrivalTime
+            ? new Date(prev.arrivalTime).getTime()
+            : null;
+        if (prevTime && arrival <= prevTime) {
+          this.timelineErrors.push(
+            this.translate.instant(
+              'TRIPS.CREATE.ERRORS.ARRIVAL_BEFORE_PREVIOUS',
+              {
+                stop: i + 1,
+                place: placeName,
+                prevStop: i,
+                prevPlace: this.getPlaceName(prev.placeId),
+              },
+            ),
+          );
+        }
+      }
+    }
+  }
+
+  /**
+   * Validate pickup/dropoff: each dropoff scheduledArrivalTime must be after
+   * the earliest pickup scheduledDepartureTime.
+   */
+  private validatePickupDropoff(): string[] {
+    const errors: string[] = [];
+    const pickups = this.pickupPoints.getRawValue();
+    const dropoffs = this.dropoffPoints.getRawValue();
+
+    if (pickups.length === 0 || dropoffs.length === 0) return errors;
+
+    // Find earliest pickup departure
+    const pickupTimes = pickups
+      .map((p: any) =>
+        p.scheduledDepartureTime
+          ? new Date(p.scheduledDepartureTime).getTime()
+          : null,
+      )
+      .filter((t: number | null): t is number => t !== null);
+    if (pickupTimes.length === 0) return errors;
+
+    const earliestPickup = Math.min(...pickupTimes);
+
+    for (let i = 0; i < dropoffs.length; i++) {
+      const d = dropoffs[i];
+      if (!d.scheduledArrivalTime) continue;
+      const dropoffTime = new Date(d.scheduledArrivalTime).getTime();
+      if (dropoffTime <= earliestPickup) {
+        errors.push(
+          this.translate.instant('TRIPS.CREATE.ERRORS.DROPOFF_BEFORE_PICKUP', {
+            dropoff: i + 1,
+          }),
+        );
+      }
+    }
+    return errors;
+  }
+
+  /**
+   * Validate pickup/dropoff coverage: every boarding stop must have at least
+   * one pickup point with matching placeId, every dropping stop must have at
+   * least one dropoff point with matching placeId.
+   */
+  private validatePickupDropoffCoverage(): void {
+    this.pickupDropoffErrors = [];
+    const stops = this.stopSchedule.getRawValue();
+    const pickups = this.pickupPoints.getRawValue();
+    const dropoffs = this.dropoffPoints.getRawValue();
+
+    stops.forEach((stop: any, i: number) => {
+      if (stop.boardingAllowed) {
+        const hasPickup = pickups.some((p: any) => p.placeId === stop.placeId);
+        if (!hasPickup) {
+          this.pickupDropoffErrors.push(
+            this.translate.instant(
+              'TRIPS.CREATE.ERRORS.MISSING_PICKUP_FOR_STOP',
+              { stop: i + 1, place: this.getPlaceName(stop.placeId) },
+            ),
+          );
+        }
+      }
+      if (stop.droppingAllowed) {
+        const hasDropoff = dropoffs.some(
+          (d: any) => d.placeId === stop.placeId,
+        );
+        if (!hasDropoff) {
+          this.pickupDropoffErrors.push(
+            this.translate.instant(
+              'TRIPS.CREATE.ERRORS.MISSING_DROPOFF_FOR_STOP',
+              { stop: i + 1, place: this.getPlaceName(stop.placeId) },
+            ),
+          );
+        }
+      }
+    });
   }
 
   getBusName(busId: string): string {
@@ -467,7 +758,11 @@ export class TripCreateComponent implements OnInit, OnDestroy {
   addExpressFare(): void {
     this.expressFares.push(
       this.fb.group({
-        segmentIndices: [[], Validators.required],
+        segmentIndices: [
+          [],
+          (c: AbstractControl) =>
+            c.value?.length > 0 ? null : { required: true },
+        ],
         price: [null, [Validators.required, Validators.min(0)]],
         validFrom: [null],
         validUntil: [null],
@@ -503,12 +798,21 @@ export class TripCreateComponent implements OnInit, OnDestroy {
       stopSchedule: raw.stopSchedule.map((s: any, i: number) => ({
         placeId: s.placeId,
         sequence: i,
-        arrivalTime: s.arrivalTime ? this.toISOString(s.arrivalTime) : null,
-        departureTime: s.departureTime
-          ? this.toISOString(s.departureTime)
-          : null,
-        boardingAllowed: s.boardingAllowed,
-        droppingAllowed: s.droppingAllowed,
+        arrivalTime:
+          i === 0
+            ? null
+            : s.arrivalTime
+              ? this.toISOString(s.arrivalTime)
+              : null,
+        departureTime:
+          i === raw.stopSchedule.length - 1
+            ? null
+            : s.departureTime
+              ? this.toISOString(s.departureTime)
+              : null,
+        boardingAllowed: i === 0 ? true : s.boardingAllowed,
+        droppingAllowed:
+          i === raw.stopSchedule.length - 1 ? true : s.droppingAllowed,
       })),
       segmentInputs: raw.segments.map((s: any) => ({
         basePrice: s.basePrice,
@@ -518,32 +822,24 @@ export class TripCreateComponent implements OnInit, OnDestroy {
           ? { durationMinutesOverride: s.durationMinutesOverride }
           : {}),
       })),
-      pickupPoints:
-        raw.pickupPoints.length > 0
-          ? raw.pickupPoints.map((p: any) => ({
-              placeId: p.placeId,
-              address: p.address,
-              scheduledDepartureTime: this.toISOString(
-                p.scheduledDepartureTime,
-              ),
-              active: p.active ?? true,
-              ...(p.latitude && p.longitude
-                ? { location: { latitude: p.latitude, longitude: p.longitude } }
-                : {}),
-            }))
-          : undefined,
-      dropoffPoints:
-        raw.dropoffPoints.length > 0
-          ? raw.dropoffPoints.map((d: any) => ({
-              placeId: d.placeId,
-              address: d.address,
-              scheduledArrivalTime: this.toISOString(d.scheduledArrivalTime),
-              active: d.active ?? true,
-              ...(d.latitude && d.longitude
-                ? { location: { latitude: d.latitude, longitude: d.longitude } }
-                : {}),
-            }))
-          : undefined,
+      pickupPoints: raw.pickupPoints.map((p: any) => ({
+        placeId: p.placeId,
+        address: p.address,
+        scheduledDepartureTime: this.toISOString(p.scheduledDepartureTime),
+        active: p.active ?? true,
+        ...(p.latitude && p.longitude
+          ? { location: { latitude: p.latitude, longitude: p.longitude } }
+          : {}),
+      })),
+      dropoffPoints: raw.dropoffPoints.map((d: any) => ({
+        placeId: d.placeId,
+        address: d.address,
+        scheduledArrivalTime: this.toISOString(d.scheduledArrivalTime),
+        active: d.active ?? true,
+        ...(d.latitude && d.longitude
+          ? { location: { latitude: d.latitude, longitude: d.longitude } }
+          : {}),
+      })),
       expressFares:
         raw.expressFares.length > 0
           ? raw.expressFares.map((f: any) => ({
@@ -574,6 +870,25 @@ export class TripCreateComponent implements OnInit, OnDestroy {
             message = this.translate.instant(
               'TRIPS.MESSAGES.UNRECOGNIZED_FIELD',
               { field },
+            );
+          } else if (backendMsg.includes('MISSING_PICKUP_POINT')) {
+            message = this.translate.instant('TRIPS.MESSAGES.MISSING_PICKUP');
+          } else if (backendMsg.includes('MISSING_DROPOFF_POINT')) {
+            message = this.translate.instant('TRIPS.MESSAGES.MISSING_DROPOFF');
+          } else if (backendMsg.includes('BUS_ALREADY_ASSIGNED')) {
+            message = this.translate.instant(
+              'TRIPS.MESSAGES.BUS_ALREADY_ASSIGNED',
+            );
+          } else if (backendMsg.includes('MAX_SEATS_EXCEEDS')) {
+            message = this.translate.instant('TRIPS.MESSAGES.MAX_SEATS_ERROR');
+          } else if (
+            backendMsg.includes('INVALID_TIMELINE') ||
+            backendMsg.includes('INVALID_STOP_SEQUENCE')
+          ) {
+            message = this.translate.instant('TRIPS.MESSAGES.INVALID_TIMELINE');
+          } else if (backendMsg.includes('INVALID_EXPRESS_FARE_CHAIN')) {
+            message = this.translate.instant(
+              'TRIPS.MESSAGES.INVALID_EXPRESS_CHAIN',
             );
           } else {
             message = this.translate.instant('TRIPS.MESSAGES.SAVE_ERROR');

@@ -41,7 +41,7 @@
                 ><span class="path1"></span><span class="path2"></span
                 ><span class="path3"></span><span class="path4"></span
               ></i>
-              {{ trip.bus?.busId || "-" }}
+              {{ getBusName(trip.bus?.busId) }}
             </span>
             <span>
               <i class="ki-duotone ki-dollar fs-6 me-1"
@@ -119,12 +119,14 @@
               class="badge"
               [ngClass]="getStopTypeClass(stop, i, sortedStops.length)"
             >
-              {{ stop.sequence }}
+              {{ stop.sequence + 1 }}
             </span>
           </div>
           <div class="flex-grow-1">
             <div class="d-flex flex-wrap align-items-center gap-3">
-              <span class="fw-bold text-dark">{{ stop.placeId }}</span>
+              <span class="fw-bold text-dark">{{
+                getPlaceName(stop.placeId)
+              }}</span>
               <span
                 class="badge badge-sm"
                 [ngClass]="getStopTypeClass(stop, i, sortedStops.length)"
@@ -189,13 +191,13 @@
               <th class="text-center">
                 {{ "TRIPS.SEGMENTS.BOOKED_SEATS" | translate }}
               </th>
-              <th class="text-end">
+              <th>
                 {{ "TRIPS.SEGMENTS.BASE_PRICE" | translate }}
               </th>
-              <th class="text-end">
+              <th>
                 {{ "TRIPS.SEGMENTS.DISTANCE_KM" | translate }}
               </th>
-              <th class="text-end">
+              <th>
                 {{ "TRIPS.SEGMENTS.DURATION_MIN" | translate }}
               </th>
             </tr>
@@ -203,8 +205,8 @@
           <tbody>
             <tr *ngFor="let seg of sortedSegments">
               <td class="text-muted">{{ seg.sequence }}</td>
-              <td class="fw-semibold">{{ seg.fromPlaceId }}</td>
-              <td class="fw-semibold">{{ seg.toPlaceId }}</td>
+              <td class="fw-semibold">{{ getPlaceName(seg.fromPlaceId) }}</td>
+              <td class="fw-semibold">{{ getPlaceName(seg.toPlaceId) }}</td>
               <td class="text-center">{{ seg.maxSeats }}</td>
               <td class="text-center">
                 <span
@@ -217,11 +219,9 @@
                   {{ seg.bookedSeats }}
                 </span>
               </td>
-              <td class="text-end">
-                {{ seg.basePrice | number: "1.2-2" }} {{ trip.currency }}
-              </td>
-              <td class="text-end">{{ seg.distanceKm | number: "1.1-1" }}</td>
-              <td class="text-end">{{ seg.durationMinutes }}</td>
+              <td>{{ seg.basePrice | number: "1.2-2" }} {{ trip.currency }}</td>
+              <td>{{ seg.distanceKm | number: "1.1-1" }}</td>
+              <td>{{ seg.durationMinutes }}</td>
             </tr>
           </tbody>
         </table>
@@ -246,7 +246,7 @@
               <th>{{ "TRIPS.SEGMENTS.FROM" | translate }}</th>
               <th>{{ "TRIPS.SEGMENTS.TO" | translate }}</th>
               <th>{{ "TRIPS.EXPRESS_FARES.SEGMENTS_COVERED" | translate }}</th>
-              <th class="text-end">
+              <th>
                 {{ "TRIPS.EXPRESS_FARES.PRICE" | translate }}
               </th>
               <th>{{ "TRIPS.EXPRESS_FARES.VALID_FROM" | translate }}</th>
@@ -254,20 +254,20 @@
               <th class="text-center">
                 {{ "TRIPS.EXPRESS_FARES.ACTIVE" | translate }}
               </th>
-              <th class="text-end">
+              <th>
                 {{ "TRIPS.EXPRESS_FARES.TOTAL_DISTANCE" | translate }}
               </th>
-              <th class="text-end">
+              <th>
                 {{ "TRIPS.EXPRESS_FARES.TOTAL_DURATION" | translate }}
               </th>
             </tr>
           </thead>
           <tbody>
             <tr *ngFor="let fare of activeFares">
-              <td class="fw-semibold">{{ fare.fromPlaceId }}</td>
-              <td class="fw-semibold">{{ fare.toPlaceId }}</td>
+              <td class="fw-semibold">{{ getPlaceName(fare.fromPlaceId) }}</td>
+              <td class="fw-semibold">{{ getPlaceName(fare.toPlaceId) }}</td>
               <td>{{ fare.segmentsCovered?.length || 0 }}</td>
-              <td class="text-end fw-bold">
+              <td class="fw-bold">
                 {{ fare.price | number: "1.2-2" }} {{ trip.currency }}
               </td>
               <td>
@@ -294,10 +294,10 @@
                   }}
                 </span>
               </td>
-              <td class="text-end">
+              <td>
                 {{ fare.totalDistanceKm | number: "1.1-1" }}
               </td>
-              <td class="text-end">{{ fare.totalDurationMinutes }}</td>
+              <td>{{ fare.totalDurationMinutes }}</td>
             </tr>
           </tbody>
         </table>
@@ -318,7 +318,7 @@
           <i class="ki-duotone ki-geolocation fs-5 me-1"
             ><span class="path1"></span><span class="path2"></span
           ></i>
-          {{ placeId }}
+          {{ getPlaceName(placeId) }}
         </h6>
         <div class="table-responsive">
           <table
@@ -328,7 +328,7 @@
               <tr class="fw-semibold text-muted fs-7">
                 <th>{{ "TRIPS.PICKUP_POINTS.ADDRESS" | translate }}</th>
                 <th>{{ "TRIPS.PICKUP_POINTS.SCHEDULED_TIME" | translate }}</th>
-                <th class="text-center">
+                <th>
                   {{ "TRIPS.PICKUP_POINTS.ACTIVE" | translate }}
                 </th>
               </tr>
@@ -337,7 +337,7 @@
               <tr *ngFor="let pp of pickupsByPlace[placeId]">
                 <td>{{ pp.address }}</td>
                 <td>{{ pp.scheduledDepartureTime | date: "HH:mm" }}</td>
-                <td class="text-center">
+                <td>
                   <span
                     class="badge"
                     [ngClass]="
@@ -372,7 +372,7 @@
           <i class="ki-duotone ki-geolocation fs-5 me-1"
             ><span class="path1"></span><span class="path2"></span
           ></i>
-          {{ placeId }}
+          {{ getPlaceName(placeId) }}
         </h6>
         <div class="table-responsive">
           <table
@@ -382,7 +382,7 @@
               <tr class="fw-semibold text-muted fs-7">
                 <th>{{ "TRIPS.DROPOFF_POINTS.ADDRESS" | translate }}</th>
                 <th>{{ "TRIPS.DROPOFF_POINTS.SCHEDULED_TIME" | translate }}</th>
-                <th class="text-center">
+                <th>
                   {{ "TRIPS.DROPOFF_POINTS.ACTIVE" | translate }}
                 </th>
               </tr>
@@ -391,7 +391,7 @@
               <tr *ngFor="let dp of dropoffsByPlace[placeId]">
                 <td>{{ dp.address }}</td>
                 <td>{{ dp.scheduledArrivalTime | date: "HH:mm" }}</td>
-                <td class="text-center">
+                <td>
                   <span
                     class="badge"
                     [ngClass]="
