@@ -23,6 +23,11 @@ import org.springframework.security.core.userdetails.User;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
 
+import com.eticketing.app.place.PlaceRepository;
+import com.eticketing.app.place.PlaceType;
+import com.eticketing.app.trip.PickupPointType;
+import com.eticketing.app.trip.DropoffPointType;
+import com.eticketing.app.trip.SegmentType;
 import com.eticketing.app.trip.TripType;
 import com.eticketing.app.trip.TripTypeRepository;
 import com.eticketing.app.user.RoleEnum;
@@ -30,8 +35,8 @@ import com.eticketing.app.user.UserType;
 import com.eticketing.app.user.UserTypeRepository;
 
 /**
- * Legacy ticket query & management controller.
- * Booking creation is handled by {@link BookingController}.
+ * Legacy ticket query & management controller. Booking creation is handled by
+ * {@link BookingController}.
  */
 @RestController
 @RequestMapping("/api/tickets")
@@ -44,6 +49,8 @@ public class TicketController {
     @Autowired
     private TripTypeRepository tripRepository;
     @Autowired
+    private PlaceRepository placeRepository;
+    @Autowired
     private UserTypeRepository userRepository;
     @Autowired
     private TicketDocumentService ticketDocumentService;
@@ -53,6 +60,7 @@ public class TicketController {
     private SeatReservationService seatReservationService;
 
     public static class SendTicketEmailRequest {
+
         public String email;
     }
 
@@ -111,8 +119,12 @@ public class TicketController {
         if (posId == null || posId.isBlank()) {
             return ResponseEntity.badRequest().body(Map.of("error", "posId is required"));
         }
-        if (page < 0) page = 0;
-        if (limit < 1 || limit > 100) limit = 20;
+        if (page < 0) {
+            page = 0;
+        }
+        if (limit < 1 || limit > 100) {
+            limit = 20;
+        }
 
         org.springframework.data.domain.Pageable pageable = org.springframework.data.domain.PageRequest.of(page, limit,
                 org.springframework.data.domain.Sort.by(org.springframework.data.domain.Sort.Direction.DESC, "createdAt"));
@@ -150,8 +162,7 @@ public class TicketController {
         return ResponseEntity.ok(buildTicketResponse(ticket));
     }
 
-    //  Response builder 
-
+    //  Response builder
     private Map<String, Object> buildTicketResponse(TicketType ticket) {
         TripType trip = tripRepository.findById(ticket.getTripId()).orElse(null);
 
@@ -176,17 +187,60 @@ public class TicketController {
         if (trip != null) {
             payload.put("tripDepartureDate", formatInstant(trip.getDepartureDate()));
             payload.put("tripStatus", trip.getStatus());
+
+            // Enrich with pickup/dropoff place names
+            if (ticket.getPickupPointId() != null && trip.getPickupPoints() != null) {
+                trip.getPickupPoints().stream()
+                        .filter(p -> ticket.getPickupPointId().equals(p.getPointId()))
+                        .findFirst()
+                        .ifPresent(pp -> {
+                            payload.put("pickupAddress", pp.getAddress());
+                            payload.put("pickupPlaceId", pp.getPlaceId());
+                            PlaceType pickupPlace = pp.getPlaceId() != null ? placeRepository.findById(pp.getPlaceId()).orElse(null) : null;
+                            payload.put("pickupCity", pickupPlace != null ? pickupPlace.getCity() : null);
+                        });
+            }
+            if (ticket.getDropoffPointId() != null && trip.getDropoffPoints() != null) {
+                trip.getDropoffPoints().stream()
+                        .filter(d -> ticket.getDropoffPointId().equals(d.getPointId()))
+                        .findFirst()
+                        .ifPresent(dp -> {
+                            payload.put("dropoffAddress", dp.getAddress());
+                            payload.put("dropoffPlaceId", dp.getPlaceId());
+                            PlaceType dropoffPlace = dp.getPlaceId() != null ? placeRepository.findById(dp.getPlaceId()).orElse(null) : null;
+                            payload.put("dropoffCity", dropoffPlace != null ? dropoffPlace.getCity() : null);
+                        });
+            }
+
+            // Enrich with route origin/destination from segments
+            if (ticket.getSegmentIds() != null && !ticket.getSegmentIds().isEmpty() && trip.getSegments() != null) {
+                List<SegmentType> ticketSegments = trip.getSegments().stream()
+                        .filter(s -> ticket.getSegmentIds().contains(s.getSegmentId()))
+                        .sorted((a, b) -> a.getSequence() - b.getSequence())
+                        .toList();
+                if (!ticketSegments.isEmpty()) {
+                    String originPlaceId = ticketSegments.get(0).getFromPlaceId();
+                    String destPlaceId = ticketSegments.get(ticketSegments.size() - 1).getToPlaceId();
+                    PlaceType originPlace = originPlaceId != null ? placeRepository.findById(originPlaceId).orElse(null) : null;
+                    PlaceType destPlace = destPlaceId != null ? placeRepository.findById(destPlaceId).orElse(null) : null;
+                    payload.put("originPlaceId", originPlaceId);
+                    payload.put("originCity", originPlace != null ? originPlace.getCity() : null);
+                    payload.put("destinationPlaceId", destPlaceId);
+                    payload.put("destinationCity", destPlace != null ? destPlace.getCity() : null);
+                }
+            }
         }
         return payload;
     }
 
     private String formatInstant(Instant instant) {
-        if (instant == null) return null;
+        if (instant == null) {
+            return null;
+        }
         return DateTimeFormatter.ISO_OFFSET_DATE_TIME.format(instant.atOffset(ZoneOffset.UTC));
     }
 
-    //  Helpers 
-
+    //  Helpers
     private void responseEmailDelivery(TicketDocumentView documentView, String fallbackEmail) {
         String recipient = resolveRecipientEmail(documentView != null ? documentView.getPassengerEmail() : null, fallbackEmail);
         if (documentView == null || recipient == null || recipient.isBlank()) {
@@ -198,19 +252,29 @@ public class TicketController {
     }
 
     private String resolveRecipientEmail(String preferred, String fallback) {
-        if (preferred != null && !preferred.isBlank()) return preferred;
-        if (fallback != null && !fallback.isBlank()) return fallback;
+        if (preferred != null && !preferred.isBlank()) {
+            return preferred;
+        }
+        if (fallback != null && !fallback.isBlank()) {
+            return fallback;
+        }
         return null;
     }
 
     private boolean canViewTicket(TicketType ticket, User principal) {
-        if (principal == null) return false;
-        if (Objects.equals(principal.getUsername(), ticket.getPassengerId())) return true;
+        if (principal == null) {
+            return false;
+        }
+        if (Objects.equals(principal.getUsername(), ticket.getPassengerId())) {
+            return true;
+        }
         return isAdminOrManager(principal);
     }
 
     private boolean isAdminOrManager(User principal) {
-        if (principal == null) return false;
+        if (principal == null) {
+            return false;
+        }
         return principal.getAuthorities().stream()
                 .map(GrantedAuthority::getAuthority)
                 .anyMatch(auth -> auth.equals("ROLE_" + RoleEnum.ADMIN.name()) || auth.equals("ROLE_" + RoleEnum.MANAGER.name()));

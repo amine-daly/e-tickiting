@@ -37,8 +37,9 @@ public class TripCreateRequest {
     private String timezone;
 
     // ── Layer 3 — Currency ──────────────────────────────────────────────
-    @NotBlank
-    private String currency;
+    @NotNull
+    @Valid
+    private CurrencyInput currency;
 
     // ── Layer 4 — Seat Hold ─────────────────────────────────────────────
     private Integer seatHoldMinutes;
@@ -73,6 +74,13 @@ public class TripCreateRequest {
 
         @NotBlank
         private String busId;
+    }
+
+    @Data
+    public static class CurrencyInput {
+
+        @NotBlank
+        private String currencyId;
     }
 
     @Data

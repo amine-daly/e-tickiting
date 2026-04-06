@@ -2,12 +2,19 @@
   <div class="p-3">
     <!-- Bus Image with Back and Share Button -->
     <div class="bus-header position-relative">
-      <img src="img/3.png" alt="Bus" class="img-fluid w-100 rounded-3">
+      <img src="img/3.png" alt="Bus" class="img-fluid w-100 rounded-3" />
       <div class="overlay"></div>
-      <div class="header-controls position-absolute top-0 w-100 p-3 d-flex justify-content-between">
-        <a [routerLink]="['/bus-listing']"
-           [queryParams]="{ originPlaceId: originPlaceId, destinationPlaceId: destPlaceId }"
-           class="btn btn-light btn-circle shadow-sm">
+      <div
+        class="header-controls position-absolute top-0 w-100 p-3 d-flex justify-content-between"
+      >
+        <a
+          [routerLink]="['/bus-listing']"
+          [queryParams]="{
+            originPlaceId: originPlaceId,
+            destinationPlaceId: destPlaceId,
+          }"
+          class="btn btn-light btn-circle shadow-sm"
+        >
           <i class="bi bi-arrow-left"></i>
         </a>
       </div>
@@ -32,10 +39,19 @@
             <div class="arrival-stop"></div>
           </div>
           <div class="journey-info flex-grow-1">
-            <div class="mb-3" *ngFor="let stop of trip.stopSchedule; let first = first; let last = last">
+            <div
+              class="mb-3"
+              *ngFor="
+                let stop of trip.stopSchedule;
+                let first = first;
+                let last = last
+              "
+            >
               <ng-container *ngIf="first || last">
                 <div class="fw-bold">{{ getPlaceName(stop.placeId) }}</div>
-                <div class="text-muted small">{{ first ? stop.departureTime : stop.arrivalTime }}</div>
+                <div class="text-muted small">
+                  {{ first ? stop.departureTime : stop.arrivalTime }}
+                </div>
               </ng-container>
             </div>
           </div>
@@ -50,16 +66,28 @@
       <div class="mb-3" *ngIf="trip.stopSchedule?.length > 2">
         <h6 class="fw-bold mb-2">All Stops</h6>
         <div class="list-group list-group-flush">
-          <div class="list-group-item px-0 d-flex justify-content-between"
-               *ngFor="let stop of trip.stopSchedule; let i = index">
+          <div
+            class="list-group-item px-0 d-flex justify-content-between"
+            *ngFor="let stop of trip.stopSchedule; let i = index"
+          >
             <div>
               <span class="fw-medium">{{ getPlaceName(stop.placeId) }}</span>
-              <span class="badge bg-info-subtle text-info ms-2" *ngIf="stop.boardingAllowed">Boarding</span>
-              <span class="badge bg-warning-subtle text-warning ms-2" *ngIf="stop.droppingAllowed">Dropping</span>
+              <span
+                class="badge bg-info-subtle text-info ms-2"
+                *ngIf="stop.boardingAllowed"
+                >Boarding</span
+              >
+              <span
+                class="badge bg-warning-subtle text-warning ms-2"
+                *ngIf="stop.droppingAllowed"
+                >Dropping</span
+              >
             </div>
             <div class="text-muted small">
               <span *ngIf="stop.arrivalTime">Arr {{ stop.arrivalTime }}</span>
-              <span *ngIf="stop.departureTime" class="ms-2">Dep {{ stop.departureTime }}</span>
+              <span *ngIf="stop.departureTime" class="ms-2"
+                >Dep {{ stop.departureTime }}</span
+              >
             </div>
           </div>
         </div>
@@ -69,18 +97,28 @@
       <div class="mb-3" *ngIf="activePickups.length">
         <h6 class="fw-bold mb-2">Pickup Points</h6>
         <div class="pickup-points">
-          <div class="pickup-point d-flex align-items-center mb-2"
-               *ngFor="let p of activePickups; let i = index"
-               (click)="selectPickup(p)"
-               [class.bg-primary-light]="selectedPickup?.pointId === p.pointId"
-               style="cursor:pointer; border-radius: 8px; padding: 8px;">
+          <div
+            class="pickup-point d-flex align-items-center mb-2"
+            *ngFor="let p of activePickups; let i = index"
+            (click)="selectPickup(p)"
+            [class.bg-primary-light]="selectedPickup?.pointId === p.pointId"
+            style="cursor: pointer; border-radius: 8px; padding: 8px"
+          >
             <div class="pickup-radio me-2">
-              <input type="radio" class="form-check-input" name="pickupPoint"
-                     [id]="'pickup' + i"
-                     [checked]="selectedPickup?.pointId === p.pointId">
+              <input
+                type="radio"
+                class="form-check-input"
+                name="pickupPoint"
+                [id]="'pickup' + i"
+                [checked]="selectedPickup?.pointId === p.pointId"
+              />
             </div>
             <div class="flex-grow-1">
-              <label [for]="'pickup' + i" class="form-check-label fw-medium mb-0 d-block">{{ p.address }}</label>
+              <label
+                [for]="'pickup' + i"
+                class="form-check-label fw-medium mb-0 d-block"
+                >{{ p.address }}</label
+              >
               <div class="text-muted small">{{ getPlaceName(p.placeId) }}</div>
             </div>
             <div class="text-end">
@@ -94,18 +132,28 @@
       <div class="mb-3" *ngIf="activeDropoffs.length">
         <h6 class="fw-bold mb-2">Drop-off Points</h6>
         <div class="dropoff-points">
-          <div class="dropoff-point d-flex align-items-center mb-2"
-               *ngFor="let d of activeDropoffs; let i = index"
-               (click)="selectDropoff(d)"
-               [class.bg-primary-light]="selectedDropoff?.pointId === d.pointId"
-               style="cursor:pointer; border-radius: 8px; padding: 8px;">
+          <div
+            class="dropoff-point d-flex align-items-center mb-2"
+            *ngFor="let d of activeDropoffs; let i = index"
+            (click)="selectDropoff(d)"
+            [class.bg-primary-light]="selectedDropoff?.pointId === d.pointId"
+            style="cursor: pointer; border-radius: 8px; padding: 8px"
+          >
             <div class="dropoff-radio me-2">
-              <input type="radio" class="form-check-input" name="dropoffPoint"
-                     [id]="'dropoff' + i"
-                     [checked]="selectedDropoff?.pointId === d.pointId">
+              <input
+                type="radio"
+                class="form-check-input"
+                name="dropoffPoint"
+                [id]="'dropoff' + i"
+                [checked]="selectedDropoff?.pointId === d.pointId"
+              />
             </div>
             <div class="flex-grow-1">
-              <label [for]="'dropoff' + i" class="form-check-label fw-medium mb-0 d-block">{{ d.address }}</label>
+              <label
+                [for]="'dropoff' + i"
+                class="form-check-label fw-medium mb-0 d-block"
+                >{{ d.address }}</label
+              >
               <div class="text-muted small">{{ getPlaceName(d.placeId) }}</div>
             </div>
             <div class="text-end">
@@ -121,15 +169,21 @@
         <div class="cancellation-policy">
           <div class="d-flex align-items-center mb-2">
             <div class="cancellation-dot bg-success me-2"></div>
-            <div class="text-muted small">Free cancellation until 24 hours before departure</div>
+            <div class="text-muted small">
+              Free cancellation until 24 hours before departure
+            </div>
           </div>
           <div class="d-flex align-items-center mb-2">
             <div class="cancellation-dot bg-warning me-2"></div>
-            <div class="text-muted small">50% refund between 24 and 12 hours before departure</div>
+            <div class="text-muted small">
+              50% refund between 24 and 12 hours before departure
+            </div>
           </div>
           <div class="d-flex align-items-center">
             <div class="cancellation-dot bg-danger me-2"></div>
-            <div class="text-muted small">No refund within 12 hours of departure</div>
+            <div class="text-muted small">
+              No refund within 12 hours of departure
+            </div>
           </div>
         </div>
       </div>
@@ -140,18 +194,24 @@
   <div class="bottom-fixed-bar p-3">
     <div class="d-flex justify-content-between align-items-center gap-3">
       <div class="lh-sm">
-        <div class="fw-bold fs-5 text-primary-color">{{ displayPrice | number:'1.2-2' }} {{ trip.currency }}</div>
+        <div class="fw-bold fs-5 text-primary-color">
+          {{ displayPrice | number: "1.2-2" }}
+          {{ trip.currency?.code || "-" }}
+        </div>
         <div class="text-muted small">per person</div>
       </div>
-      <a [routerLink]="['/seat-select']"
-         [queryParams]="{
-           tripId: trip.id,
-           originPlaceId: originPlaceId,
-           destinationPlaceId: destPlaceId,
-           pickupPointId: selectedPickup?.pointId,
-           dropoffPointId: selectedDropoff?.pointId
-         }"
-         class="btn btn-app py-2 fw-bold">Select Seats</a>
+      <a
+        [routerLink]="['/seat-select']"
+        [queryParams]="{
+          tripId: trip.id,
+          originPlaceId: originPlaceId,
+          destinationPlaceId: destPlaceId,
+          pickupPointId: selectedPickup?.pointId,
+          dropoffPointId: selectedDropoff?.pointId,
+        }"
+        class="btn btn-app py-2 fw-bold"
+        >Select Seats</a
+      >
     </div>
   </div>
 </div>

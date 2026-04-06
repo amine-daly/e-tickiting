@@ -167,14 +167,14 @@
 
               <!-- Bus -->
               <td>
-                <span class="text-muted fs-7">{{
-                  getBusName(trip.bus?.busId)
-                }}</span>
+                <span class="text-muted fs-7">{{ trip.bus?.name || "-" }}</span>
               </td>
 
               <!-- Currency -->
               <td>
-                <span class="text-muted fs-7">{{ trip.currency || "-" }}</span>
+                <span class="text-muted fs-7">{{
+                  trip.currency?.name || "-"
+                }}</span>
               </td>
 
               <!-- Actions -->

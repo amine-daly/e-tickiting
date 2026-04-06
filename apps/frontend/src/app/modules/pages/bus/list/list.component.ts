@@ -6,8 +6,7 @@ import { SearchCardComponent } from '../../../../shared/components/search-card/s
 import { TripService } from '../trip.service';
 import { PlacesService } from '../../../home/home.service';
 import { Subject, takeUntil, combineLatest, map } from 'rxjs';
-import { TripType, SegmentType, ExpressFareType } from '../../../../core/models/trip.model';
-import { PlaceType } from '../../../../core/models/place-type';
+import { TripType, SegmentType } from '../../../../core/models/trip.model';
 
 @Component({
   selector: 'app-bus-list',
@@ -21,46 +20,52 @@ export class BusListComponent implements OnDestroy {
 
   trips$ = combineLatest([
     this.tripService.filtredTrips$,
-    this.placesService.places$,
     this.route.queryParams.pipe(
       map((q) => ({
         originPlaceId: q['originPlaceId'] || null,
         destinationPlaceId: q['destinationPlaceId'] || null,
-      }))
+      })),
     ),
   ]).pipe(
-    map(([trips, places, query]) => {
+    map(([trips, query]) => {
       return (trips || []).map((trip: TripType) => {
-        const originStop = trip.stopSchedule?.find(
-          (s) => s.placeId === query.originPlaceId && s.boardingAllowed
-        ) || trip.stopSchedule?.[0];
-        const destStop = trip.stopSchedule?.find(
-          (s) => s.placeId === query.destinationPlaceId && s.droppingAllowed
-        ) || trip.stopSchedule?.[trip.stopSchedule.length - 1];
-
-        const originPlace = places.find((p) => p.id === originStop?.placeId);
-        const destPlace = places.find((p) => p.id === destStop?.placeId);
+        const originStop =
+          trip.stopSchedule?.find(
+            (s) => s.placeId === query.originPlaceId && s.boardingAllowed,
+          ) || trip.stopSchedule?.[0];
+        const destStop =
+          trip.stopSchedule?.find(
+            (s) => s.placeId === query.destinationPlaceId && s.droppingAllowed,
+          ) || trip.stopSchedule?.[trip.stopSchedule.length - 1];
 
         const displayPrice = this.computePrice(
           trip,
           query.originPlaceId,
-          query.destinationPlaceId
+          query.destinationPlaceId,
         );
 
-        const duration = this.computeDuration(trip, query.originPlaceId, query.destinationPlaceId);
+        const duration = this.computeDuration(
+          trip,
+          query.originPlaceId,
+          query.destinationPlaceId,
+        );
 
         return {
           ...trip,
-          originCity: originPlace?.city || originStop?.placeId || '-',
-          destCity: destPlace?.city || destStop?.placeId || '-',
+          originCity: originStop?.place?.city || originStop?.placeId || '-',
+          destCity: destStop?.place?.city || destStop?.placeId || '-',
           departureTime: originStop?.departureTime,
           arrivalTime: destStop?.arrivalTime,
           displayPrice,
           duration,
-          availableSeats: this.computeAvailableSeats(trip, query.originPlaceId, query.destinationPlaceId),
+          availableSeats: this.computeAvailableSeats(
+            trip,
+            query.originPlaceId,
+            query.destinationPlaceId,
+          ),
         };
       });
-    })
+    }),
   );
 
   constructor(
@@ -74,37 +79,54 @@ export class BusListComponent implements OnDestroy {
   private computePrice(
     trip: TripType,
     originPlaceId: string | null,
-    destPlaceId: string | null
+    destPlaceId: string | null,
   ): number {
     if (!originPlaceId || !destPlaceId) {
-      return trip.segments?.reduce((sum, s) => sum + (s.basePrice || 0), 0) || 0;
+      return (
+        trip.segments?.reduce((sum, s) => sum + (s.basePrice || 0), 0) || 0
+      );
     }
     // Check express fares first
     const express = (trip.expressFares || []).find(
-      (f) => f.fromPlaceId === originPlaceId && f.toPlaceId === destPlaceId && f.active
+      (f) =>
+        f.fromPlaceId === originPlaceId &&
+        f.toPlaceId === destPlaceId &&
+        f.active,
     );
     if (express) return express.price;
 
     // Fallback: sum segment base prices in the chain
-    const chainSegments = this.getSegmentChain(trip, originPlaceId, destPlaceId);
+    const chainSegments = this.getSegmentChain(
+      trip,
+      originPlaceId,
+      destPlaceId,
+    );
     return chainSegments.reduce((sum, s) => sum + (s.basePrice || 0), 0);
   }
 
   private computeDuration(
     trip: TripType,
     originPlaceId: string | null,
-    destPlaceId: string | null
+    destPlaceId: string | null,
   ): number {
-    const chainSegments = this.getSegmentChain(trip, originPlaceId, destPlaceId);
+    const chainSegments = this.getSegmentChain(
+      trip,
+      originPlaceId,
+      destPlaceId,
+    );
     return chainSegments.reduce((sum, s) => sum + (s.durationMinutes || 0), 0);
   }
 
   private computeAvailableSeats(
     trip: TripType,
     originPlaceId: string | null,
-    destPlaceId: string | null
+    destPlaceId: string | null,
   ): number {
-    const chainSegments = this.getSegmentChain(trip, originPlaceId, destPlaceId);
+    const chainSegments = this.getSegmentChain(
+      trip,
+      originPlaceId,
+      destPlaceId,
+    );
     if (chainSegments.length === 0) return 0;
     return Math.min(...chainSegments.map((s) => s.maxSeats - s.bookedSeats));
   }
@@ -112,9 +134,10 @@ export class BusListComponent implements OnDestroy {
   private getSegmentChain(
     trip: TripType,
     originPlaceId: string | null,
-    destPlaceId: string | null
+    destPlaceId: string | null,
   ): SegmentType[] {
-    if (!originPlaceId || !destPlaceId || !trip.segments) return trip.segments || [];
+    if (!originPlaceId || !destPlaceId || !trip.segments)
+      return trip.segments || [];
     const sorted = [...trip.segments].sort((a, b) => a.sequence - b.sequence);
     const startIdx = sorted.findIndex((s) => s.fromPlaceId === originPlaceId);
     const endIdx = sorted.findIndex((s) => s.toPlaceId === destPlaceId);

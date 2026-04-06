@@ -21,8 +21,8 @@ import java.util.List;
 /**
  * Trip document — the 9-layer schema per TRIP_SPEC.
  * <p>
- * Layers: Identity → Bus ref → Currency → Seat hold → Stop schedule → Pickup
- * points → Dropoff points → Segments → Express fares.
+ * Layers: Identity → Bus ref → Currency ref → Seat hold → Stop schedule →
+ * Pickup points → Dropoff points → Segments → Express fares.
  */
 @Document("trips")
 @CompoundIndexes({
@@ -73,9 +73,10 @@ public class TripType {
 
     // ── Layer 3 — Global Currency ───────────────────────────────────────
     /**
-     * ISO 4217 e.g. "TND". Inherited by ALL price fields.
+     * Currency reference. Display code/name are read live from the Currency
+     * entity.
      */
-    private String currency;
+    private TripCurrency currency;
 
     // ── Layer 4 — Seat Hold ─────────────────────────────────────────────
     /**

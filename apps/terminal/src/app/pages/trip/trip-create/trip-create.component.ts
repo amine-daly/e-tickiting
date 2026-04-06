@@ -4,6 +4,7 @@ import {
   OnDestroy,
   ChangeDetectionStrategy,
   ChangeDetectorRef,
+  inject,
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import {
@@ -33,9 +34,11 @@ import {
 import { TripService, TripCreatePayload } from '../trip.service';
 import { BusService } from '../../buses/bus.service';
 import { PlacesService } from '../../places/places.service';
+import { CurrencyType } from 'src/app/core/models/account.model';
 import { BusType } from 'src/app/core/models/bus.model';
 import { PlaceType } from 'src/app/core/models/place-type';
 import { AlertService } from 'src/app/core/services/alert.service';
+import { CurrencyService } from 'src/app/core/services/currency.service';
 import { PageInfoService } from 'src/app/_metronic/layout/core/page-info.service';
 import { ToolbarComponent } from 'src/app/_metronic/layout/components/toolbar/toolbar.component';
 
@@ -45,6 +48,12 @@ interface SegmentDisplay {
   fromPlaceName: string;
   toPlaceId: string;
   toPlaceName: string;
+}
+
+interface CurrencyOption {
+  id: string;
+  code: string;
+  label: string;
 }
 
 @Component({
@@ -74,6 +83,7 @@ interface SegmentDisplay {
 })
 export class TripCreateComponent implements OnInit, OnDestroy {
   private destroy$ = new Subject<void>();
+  private currencyService = inject(CurrencyService);
 
   tripForm: FormGroup;
   currentStep = 0;
@@ -81,6 +91,7 @@ export class TripCreateComponent implements OnInit, OnDestroy {
 
   buses: BusType[] = [];
   places: PlaceType[] = [];
+  currencies: CurrencyType[] = [];
 
   /** Derived segment display info (for labels in step 3 & 5) */
   segmentDisplays: SegmentDisplay[] = [];
@@ -115,18 +126,6 @@ export class TripCreateComponent implements OnInit, OnDestroy {
     { value: 'America/New_York', label: 'America/New_York (EST)' },
     { value: 'Asia/Dubai', label: 'Asia/Dubai (GST)' },
     { value: 'UTC', label: 'UTC' },
-  ];
-
-  readonly currencies = [
-    { value: 'MAD', label: 'MAD – Moroccan Dirham' },
-    { value: 'EUR', label: 'EUR – Euro' },
-    { value: 'USD', label: 'USD – US Dollar' },
-    { value: 'GBP', label: 'GBP – British Pound' },
-    { value: 'DZD', label: 'DZD – Algerian Dinar' },
-    { value: 'TND', label: 'TND – Tunisian Dinar' },
-    { value: 'EGP', label: 'EGP – Egyptian Pound' },
-    { value: 'XOF', label: 'XOF – CFA Franc' },
-    { value: 'NGN', label: 'NGN – Nigerian Naira' },
   ];
 
   readonly flatpickrDatetime = {
@@ -202,6 +201,7 @@ export class TripCreateComponent implements OnInit, OnDestroy {
     this.buildForm();
     this.loadBuses();
     this.loadPlaces();
+    this.loadCurrencies();
   }
 
   // ══════════════════════════════════════════════════
@@ -213,7 +213,7 @@ export class TripCreateComponent implements OnInit, OnDestroy {
       busId: ['', Validators.required],
       departureDate: [null, Validators.required],
       timezone: ['', Validators.required],
-      currency: ['', Validators.required],
+      currencyId: ['', Validators.required],
       seatHoldMinutes: [15, [Validators.required, Validators.min(1)]],
       // Step 2 — Stops
       stopSchedule: this.fb.array([]),
@@ -244,6 +244,20 @@ export class TripCreateComponent implements OnInit, OnDestroy {
       .pipe(takeUntil(this.destroy$))
       .subscribe((places) => {
         this.places = places;
+        this.cdr.markForCheck();
+      });
+  }
+
+  private loadCurrencies(): void {
+    this.currencyService
+      .listAll()
+      .pipe(takeUntil(this.destroy$))
+      .subscribe((currencies) => {
+        console.log(
+          '🚀 ~ TripCreateComponent ~ loadCurrencies ~ currencies:',
+          currencies,
+        );
+        this.currencies = currencies;
         this.cdr.markForCheck();
       });
   }
@@ -280,7 +294,7 @@ export class TripCreateComponent implements OnInit, OnDestroy {
           f.get('busId')!.valid &&
           f.get('departureDate')!.valid &&
           f.get('timezone')!.valid &&
-          f.get('currency')!.valid &&
+          f.get('currencyId')!.valid &&
           f.get('seatHoldMinutes')!.valid
         );
       }
@@ -382,7 +396,7 @@ export class TripCreateComponent implements OnInit, OnDestroy {
           'busId',
           'departureDate',
           'timezone',
-          'currency',
+          'currencyId',
           'seatHoldMinutes',
         ].forEach((name) => this.tripForm.get(name)?.markAsTouched());
         break;
@@ -648,7 +662,6 @@ export class TripCreateComponent implements OnInit, OnDestroy {
   getBusName(busId: string): string {
     return this.buses.find((b) => b.id === busId)?.name ?? busId;
   }
-
   // ══════════════════════════════════════════════════
   //  Step 3 — Segment auto-generation
   // ══════════════════════════════════════════════════
@@ -793,7 +806,7 @@ export class TripCreateComponent implements OnInit, OnDestroy {
       bus: { busId: raw.busId },
       departureDate: this.toISOString(raw.departureDate),
       timezone: raw.timezone,
-      currency: raw.currency,
+      currency: { currencyId: raw.currencyId },
       seatHoldMinutes: raw.seatHoldMinutes,
       stopSchedule: raw.stopSchedule.map((s: any, i: number) => ({
         placeId: s.placeId,

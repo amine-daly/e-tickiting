@@ -73,7 +73,7 @@ export interface TripCreatePayload {
   bus: { busId: string };
   departureDate: string;
   timezone: string;
-  currency: string;
+  currency: { currencyId: string };
   seatHoldMinutes: number;
   stopSchedule: StopInput[];
   segmentInputs: SegmentCreateInput[];
@@ -86,7 +86,7 @@ export interface TripUpdatePayload {
   bus?: { busId: string };
   departureDate?: string;
   timezone?: string;
-  currency?: string;
+  currency?: { currencyId: string };
   seatHoldMinutes?: number;
   stopSchedule?: StopInput[];
 }

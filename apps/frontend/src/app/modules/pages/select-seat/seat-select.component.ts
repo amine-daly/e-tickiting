@@ -4,14 +4,12 @@ import { CommonModule } from '@angular/common';
 import { Subject, takeUntil, take } from 'rxjs';
 
 import { TripService } from '../bus/trip.service';
-import { PlacesService } from '../../home/home.service';
-import { BookingService, BookingRequest } from '../../../core/services/booking.service';
-import { AuthService } from '../../../core/services/auth.service';
 import {
-  TripType,
-  SegmentType,
-} from '../../../core/models/trip.model';
-import { PlaceType } from '../../../core/models/place-type';
+  BookingService,
+  BookingRequest,
+} from '../../../core/services/booking.service';
+import { AuthService } from '../../../core/services/auth.service';
+import { TripType, SegmentType } from '../../../core/models/trip.model';
 
 @Component({
   selector: 'app-seat-select',
@@ -24,7 +22,6 @@ export class SeatSelectComponent implements OnInit, OnDestroy {
   private destroy$ = new Subject<void>();
 
   trip: TripType | null = null;
-  places: PlaceType[] = [];
   originPlaceId = '';
   destPlaceId = '';
   pickupPointId = '';
@@ -43,7 +40,6 @@ export class SeatSelectComponent implements OnInit, OnDestroy {
     private route: ActivatedRoute,
     private router: Router,
     private tripService: TripService,
-    private placesService: PlacesService,
     private bookingService: BookingService,
     private authService: AuthService,
   ) {}
@@ -55,11 +51,6 @@ export class SeatSelectComponent implements OnInit, OnDestroy {
     this.destPlaceId = qp.get('destinationPlaceId') || '';
     this.pickupPointId = qp.get('pickupPointId') || '';
     this.dropoffPointId = qp.get('dropoffPointId') || '';
-
-    this.placesService.fetchPlaces().pipe(takeUntil(this.destroy$)).subscribe((p) => {
-      this.places = p;
-      this.resolveLabels();
-    });
 
     if (tripId) {
       this.tripService
@@ -118,15 +109,22 @@ export class SeatSelectComponent implements OnInit, OnDestroy {
   }
 
   getPlaceName(placeId: string): string {
-    return this.places.find((p) => p.id === placeId)?.city || placeId;
+    const stop = this.trip?.stopSchedule?.find((s) => s.placeId === placeId);
+    return stop?.place?.city || placeId;
   }
 
   getPickupAddress(): string {
-    return this.trip?.pickupPoints?.find((p) => p.pointId === this.pickupPointId)?.address || '';
+    return (
+      this.trip?.pickupPoints?.find((p) => p.pointId === this.pickupPointId)
+        ?.address || ''
+    );
   }
 
   getDropoffAddress(): string {
-    return this.trip?.dropoffPoints?.find((p) => p.pointId === this.dropoffPointId)?.address || '';
+    return (
+      this.trip?.dropoffPoints?.find((p) => p.pointId === this.dropoffPointId)
+        ?.address || ''
+    );
   }
 
   private resolveLabels(): void {
@@ -142,7 +140,7 @@ export class SeatSelectComponent implements OnInit, OnDestroy {
       (f) =>
         f.fromPlaceId === this.originPlaceId &&
         f.toPlaceId === this.destPlaceId &&
-        f.active
+        f.active,
     );
     this.displayPrice = express
       ? express.price
@@ -155,8 +153,12 @@ export class SeatSelectComponent implements OnInit, OnDestroy {
 
   private getSegmentChain(): SegmentType[] {
     if (!this.trip?.segments) return [];
-    const sorted = [...this.trip.segments].sort((a, b) => a.sequence - b.sequence);
-    const startIdx = sorted.findIndex((s) => s.fromPlaceId === this.originPlaceId);
+    const sorted = [...this.trip.segments].sort(
+      (a, b) => a.sequence - b.sequence,
+    );
+    const startIdx = sorted.findIndex(
+      (s) => s.fromPlaceId === this.originPlaceId,
+    );
     const endIdx = sorted.findIndex((s) => s.toPlaceId === this.destPlaceId);
     if (startIdx < 0 || endIdx < 0 || startIdx > endIdx) return sorted;
     return sorted.slice(startIdx, endIdx + 1);

@@ -1,6 +1,8 @@
 package com.eticketing.app.ticket;
 
 import com.eticketing.app.common.TargetInput;
+import com.eticketing.app.currency.CurrencyRepository;
+import com.eticketing.app.currency.CurrencyType;
 import com.eticketing.app.trip.*;
 import com.eticketing.app.web.error.ApiExceptions.BadRequestException;
 import com.eticketing.app.web.error.ApiExceptions.ConflictException;
@@ -32,6 +34,7 @@ public class BookingService {
     private final TripTypeRepository tripRepository;
     private final TicketRepository ticketRepository;
     private final SeatReservationService seatReservationService;
+    private final CurrencyRepository currencyRepository;
 
     // ════════════════════════════════════════════════════════════════════
     // CREATE BOOKING
@@ -104,6 +107,7 @@ public class BookingService {
         try {
             Instant now = Instant.now();
             Instant expiresAt = now.plusSeconds((long) trip.getSeatHoldMinutes() * 60);
+            String ticketCurrency = resolveTicketCurrency(trip);
 
             TicketType ticket = TicketType.builder()
                     .tripId(tripId)
@@ -114,7 +118,7 @@ public class BookingService {
                     .dropoffPointId(dropoffPointId)
                     .passengerId(passengerId)
                     .appliedPrice(appliedPrice)
-                    .currency(trip.getCurrency())
+                    .currency(ticketCurrency)
                     .status(TicketStatusEnum.PENDING)
                     .idempotencyKey(idempotencyKey)
                     .expiresAt(expiresAt)
@@ -146,6 +150,18 @@ public class BookingService {
         ticket.setStatus(TicketStatusEnum.CONFIRMED);
         ticket.setConfirmedAt(Instant.now());
         return ticketRepository.save(ticket);
+    }
+
+    private String resolveTicketCurrency(TripType trip) {
+        String currencyId = trip.getCurrency() != null ? trip.getCurrency().getCurrencyId() : null;
+        if (currencyId == null || currencyId.isBlank()) {
+            throw new NotFoundException("Trip currency reference is missing for trip: " + trip.getId());
+        }
+
+        CurrencyType currency = currencyRepository.findById(currencyId)
+                .orElseThrow(() -> new NotFoundException("Currency not found: " + currencyId));
+
+        return currency.getCode();
     }
 
     // ════════════════════════════════════════════════════════════════════

@@ -1,3 +1,4 @@
+import { CurrencyType } from './account.model';
 import { TargetType } from './shared.model';
 
 export enum TripStatusEnum {
@@ -12,12 +13,20 @@ export interface GeoLocation {
   longitude: number;
 }
 
-export interface TripBusRef {
+export interface PlaceSummary {
+  id: string;
+  city: string | null;
+}
+
+export interface BusSummary {
   busId: string;
+  name: string | null;
+  totalSeats: number;
 }
 
 export interface StopType {
   placeId: string;
+  place?: PlaceSummary;
   sequence: number;
   arrivalTime: string | null;
   departureTime: string | null;
@@ -29,7 +38,9 @@ export interface SegmentType {
   segmentId: string;
   sequence: number;
   fromPlaceId: string;
+  fromPlace?: PlaceSummary;
   toPlaceId: string;
+  toPlace?: PlaceSummary;
   departureTime: string;
   arrivalTime: string;
   maxSeats: number;
@@ -42,7 +53,9 @@ export interface SegmentType {
 export interface ExpressFareType {
   expressId: string;
   fromPlaceId: string;
+  fromPlace?: PlaceSummary;
   toPlaceId: string;
+  toPlace?: PlaceSummary;
   segmentsCovered: string[];
   price: number;
   validFrom: string | null;
@@ -55,6 +68,7 @@ export interface ExpressFareType {
 export interface PickupPointType {
   pointId: string;
   placeId: string;
+  place?: PlaceSummary;
   address: string;
   scheduledDepartureTime: string;
   active: boolean;
@@ -64,6 +78,7 @@ export interface PickupPointType {
 export interface DropoffPointType {
   pointId: string;
   placeId: string;
+  place?: PlaceSummary;
   address: string;
   scheduledArrivalTime: string;
   active: boolean;
@@ -76,8 +91,8 @@ export interface TripType {
   departureDate: string;
   timezone: string;
   status: TripStatusEnum;
-  bus: TripBusRef;
-  currency: string;
+  bus: BusSummary;
+  currency?: CurrencyType;
   seatHoldMinutes: number;
   stopSchedule: StopType[];
   pickupPoints: PickupPointType[];

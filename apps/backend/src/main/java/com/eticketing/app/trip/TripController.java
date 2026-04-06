@@ -36,6 +36,7 @@ import java.util.Map;
 public class TripController {
 
     private final TripService tripService;
+    private final TripResponseEnricher enricher;
     private final UserTypeRepository userRepository;
     private final HttpServletRequest httpServletRequest;
 
@@ -49,7 +50,7 @@ public class TripController {
             @AuthenticationPrincipal User principal) {
         String companyId = resolveCompanyId(principal);
         TripType trip = tripService.create(req, companyId);
-        return ResponseEntity.status(HttpStatus.CREATED).body(TripResponse.from(trip));
+        return ResponseEntity.status(HttpStatus.CREATED).body(enricher.enrich(trip));
     }
 
     @Operation(summary = "Get a trip by ID")
@@ -59,7 +60,7 @@ public class TripController {
             @AuthenticationPrincipal User principal) {
         String companyId = resolveCompanyId(principal);
         TripType trip = tripService.getById(id, companyId);
-        return ResponseEntity.ok(TripResponse.from(trip));
+        return ResponseEntity.ok(enricher.enrich(trip));
     }
 
     @Operation(summary = "List trips for the authenticated user's company")
@@ -73,7 +74,7 @@ public class TripController {
         TripStatusEnum statusEnum = (status != null && !status.isBlank())
                 ? TripStatusEnum.fromValue(status) : null;
         Page<TripType> result = tripService.list(companyId, statusEnum, page, limit);
-        var content = result.getContent().stream().map(TripResponse::from).toList();
+        var content = enricher.enrich(result.getContent());
         return ResponseEntity.ok(new PaginateResponseType<>(
                 content, result.getTotalElements(), result.isLast()));
     }
@@ -88,7 +89,7 @@ public class TripController {
         TripStatusEnum statusEnum = (status != null && !status.isBlank())
                 ? TripStatusEnum.fromValue(status) : null;
         Page<TripType> result = tripService.list(companyId, statusEnum, page, limit);
-        var content = result.getContent().stream().map(TripResponse::from).toList();
+        var content = enricher.enrich(result.getContent());
         return ResponseEntity.ok(new PaginateResponseType<>(
                 content, result.getTotalElements(), result.isLast()));
     }
@@ -119,7 +120,7 @@ public class TripController {
                 destinationPlaceId,
                 page,
                 limit);
-        var content = result.getContent().stream().map(TripResponse::from).toList();
+        var content = enricher.enrich(result.getContent());
         return ResponseEntity.ok(new PaginateResponseType<>(
                 content, result.getTotalElements(), result.isLast()));
     }
@@ -132,7 +133,7 @@ public class TripController {
             @AuthenticationPrincipal User principal) {
         String companyId = resolveCompanyId(principal);
         TripType trip = tripService.update(id, req, companyId);
-        return ResponseEntity.ok(TripResponse.from(trip));
+        return ResponseEntity.ok(enricher.enrich(trip));
     }
 
     @Operation(summary = "Delete a trip (SCHEDULED only)")
@@ -161,7 +162,7 @@ public class TripController {
         }
         TripType trip = tripService.transitionStatus(
                 id, TripStatusEnum.fromValue(targetStatus), companyId);
-        return ResponseEntity.ok(TripResponse.from(trip));
+        return ResponseEntity.ok(enricher.enrich(trip));
     }
 
     // ════════════════════════════════════════════════════════════════════
@@ -180,7 +181,7 @@ public class TripController {
             throw new BadRequestException("basePrice is required");
         }
         TripType trip = tripService.updateSegmentPrice(id, segmentId, price, companyId);
-        return ResponseEntity.ok(TripResponse.from(trip));
+        return ResponseEntity.ok(enricher.enrich(trip));
     }
 
     @Operation(summary = "Update segment max seats")
@@ -196,7 +197,7 @@ public class TripController {
             throw new BadRequestException("maxSeats is required");
         }
         TripType trip = tripService.updateSegmentMaxSeats(id, segmentId, maxSeats, companyId);
-        return ResponseEntity.ok(TripResponse.from(trip));
+        return ResponseEntity.ok(enricher.enrich(trip));
     }
 
     // ════════════════════════════════════════════════════════════════════
@@ -210,7 +211,7 @@ public class TripController {
             @AuthenticationPrincipal User principal) {
         String companyId = resolveCompanyId(principal);
         TripType trip = tripService.addExpressFare(id, req, companyId);
-        return ResponseEntity.status(HttpStatus.CREATED).body(TripResponse.from(trip));
+        return ResponseEntity.status(HttpStatus.CREATED).body(enricher.enrich(trip));
     }
 
     @Operation(summary = "Update an express fare")
@@ -222,7 +223,7 @@ public class TripController {
             @AuthenticationPrincipal User principal) {
         String companyId = resolveCompanyId(principal);
         TripType trip = tripService.updateExpressFare(id, expressId, req, companyId);
-        return ResponseEntity.ok(TripResponse.from(trip));
+        return ResponseEntity.ok(enricher.enrich(trip));
     }
 
     @Operation(summary = "Delete/deactivate an express fare")
@@ -233,7 +234,7 @@ public class TripController {
             @AuthenticationPrincipal User principal) {
         String companyId = resolveCompanyId(principal);
         TripType trip = tripService.deleteExpressFare(id, expressId, companyId);
-        return ResponseEntity.ok(TripResponse.from(trip));
+        return ResponseEntity.ok(enricher.enrich(trip));
     }
 
     // ════════════════════════════════════════════════════════════════════
@@ -247,7 +248,7 @@ public class TripController {
             @AuthenticationPrincipal User principal) {
         String companyId = resolveCompanyId(principal);
         TripType trip = tripService.addPickupPoint(id, req, companyId);
-        return ResponseEntity.status(HttpStatus.CREATED).body(TripResponse.from(trip));
+        return ResponseEntity.status(HttpStatus.CREATED).body(enricher.enrich(trip));
     }
 
     @Operation(summary = "Update a pickup point")
@@ -259,7 +260,7 @@ public class TripController {
             @AuthenticationPrincipal User principal) {
         String companyId = resolveCompanyId(principal);
         TripType trip = tripService.updatePickupPoint(id, pointId, req, companyId);
-        return ResponseEntity.ok(TripResponse.from(trip));
+        return ResponseEntity.ok(enricher.enrich(trip));
     }
 
     // ════════════════════════════════════════════════════════════════════
@@ -273,7 +274,7 @@ public class TripController {
             @AuthenticationPrincipal User principal) {
         String companyId = resolveCompanyId(principal);
         TripType trip = tripService.addDropoffPoint(id, req, companyId);
-        return ResponseEntity.status(HttpStatus.CREATED).body(TripResponse.from(trip));
+        return ResponseEntity.status(HttpStatus.CREATED).body(enricher.enrich(trip));
     }
 
     @Operation(summary = "Update a dropoff point")
@@ -285,7 +286,7 @@ public class TripController {
             @AuthenticationPrincipal User principal) {
         String companyId = resolveCompanyId(principal);
         TripType trip = tripService.updateDropoffPoint(id, pointId, req, companyId);
-        return ResponseEntity.ok(TripResponse.from(trip));
+        return ResponseEntity.ok(enricher.enrich(trip));
     }
 
     // ════════════════════════════════════════════════════════════════════

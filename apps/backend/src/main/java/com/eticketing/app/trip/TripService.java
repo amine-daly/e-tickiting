@@ -4,6 +4,8 @@ import com.eticketing.app.bus.BusRepository;
 import com.eticketing.app.bus.BusService;
 import com.eticketing.app.bus.BusType;
 import com.eticketing.app.common.TargetInput;
+import com.eticketing.app.currency.CurrencyRepository;
+import com.eticketing.app.currency.CurrencyType;
 import com.eticketing.app.place.PlaceRepository;
 import com.eticketing.app.place.PlaceType;
 import com.eticketing.app.ticket.TripCancellationHandler;
@@ -43,6 +45,7 @@ public class TripService {
     private final TripTypeRepository tripRepository;
     private final BusService busService;
     private final BusRepository busRepository;
+    private final CurrencyRepository currencyRepository;
     private final PlaceRepository placeRepository;
     private final MongoTemplate mongoTemplate;
     private final TripCancellationHandler tripCancellationHandler;
@@ -74,6 +77,7 @@ public class TripService {
         if (bus.getTarget() == null || !companyId.equals(bus.getTarget().getCompany())) {
             throw new ForbiddenException("Bus does not belong to company " + companyId);
         }
+        CurrencyType currency = resolveCurrency(req.getCurrency().getCurrencyId());
 
         // ── 3. Bus lock check — not already in SCHEDULED/ACTIVE trip ────
         List<TripType> busTrips = tripRepository.findByBusBusIdAndStatusIn(
@@ -180,7 +184,7 @@ public class TripService {
                 .timezone(req.getTimezone())
                 .status(TripStatusEnum.SCHEDULED)
                 .bus(TripBusRef.builder().busId(bus.getId()).build())
-                .currency(req.getCurrency())
+                .currency(TripCurrency.builder().currencyId(currency.getId()).build())
                 .seatHoldMinutes(req.getSeatHoldMinutes() != null ? req.getSeatHoldMinutes() : 10)
                 .stopSchedule(stops)
                 .pickupPoints(pickupPoints)
@@ -328,7 +332,8 @@ public class TripService {
             trip.setTimezone(req.getTimezone());
         }
         if (req.getCurrency() != null) {
-            trip.setCurrency(req.getCurrency());
+            CurrencyType currency = resolveCurrency(req.getCurrency().getCurrencyId());
+            trip.setCurrency(TripCurrency.builder().currencyId(currency.getId()).build());
         }
         if (req.getSeatHoldMinutes() != null) {
             trip.setSeatHoldMinutes(req.getSeatHoldMinutes());
@@ -641,6 +646,11 @@ public class TripService {
                 || !companyId.equals(trip.getTarget().getCompany())) {
             throw new ForbiddenException("Trip does not belong to company " + companyId);
         }
+    }
+
+    private CurrencyType resolveCurrency(String currencyId) {
+        return currencyRepository.findById(currencyId)
+                .orElseThrow(() -> new NotFoundException("Currency not found: " + currencyId));
     }
 
     private SegmentType findSegment(TripType trip, String segmentId) {

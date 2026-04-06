@@ -133,16 +133,29 @@
             {{ "TRIPS.CREATE.BASIC.CURRENCY" | translate }}
           </label>
           <ng-select
-            formControlName="currency"
+            formControlName="currencyId"
             [items]="currencies"
-            bindValue="value"
+            bindValue="id"
             bindLabel="label"
             [placeholder]="
               'TRIPS.CREATE.BASIC.CURRENCY_PLACEHOLDER' | translate
             "
             [clearable]="true"
-          ></ng-select>
-          <div *ngIf="isInvalid('currency')" class="text-danger small mt-1">
+          >
+            <ng-template ng-label-tmp let-item="item" let-clear="clear">
+              {{ item?.iconFlag }} {{ item?.name }}
+              <span
+                class="ng-value-icon right"
+                (click)="clear(item)"
+                aria-hidden="true"
+                >×</span
+              >
+            </ng-template>
+            <ng-template ng-option-tmp let-item="item">
+              {{ item?.iconFlag }} {{ item?.name }}
+            </ng-template>
+          </ng-select>
+          <div *ngIf="isInvalid('currencyId')" class="text-danger small mt-1">
             {{ "TRIPS.CREATE.ERRORS.CURRENCY_REQUIRED" | translate }}
           </div>
         </div>
@@ -989,7 +1002,7 @@
                   "TRIPS.CREATE.BASIC.CURRENCY" | translate
                 }}</span>
                 <span class="fw-semibold">{{
-                  tripForm.get("currency")?.value
+                  getCurrencyLabel(tripForm.get("currencyId")?.value)
                 }}</span>
               </div>
               <div class="col-md-4 mb-2">
@@ -1065,7 +1078,10 @@
                       {{ segmentDisplays[i].fromPlaceName }} →
                       {{ segmentDisplays[i].toPlaceName }}
                     </td>
-                    <td>{{ seg.get("basePrice")?.value }}</td>
+                    <td>
+                      {{ seg.get("basePrice")?.value }}
+                      {{ getCurrencyCode(tripForm.get("currencyId")?.value) }}
+                    </td>
                     <td>{{ seg.get("maxSeats")?.value }}</td>
                     <td>{{ seg.get("distanceKm")?.value }} km</td>
                   </tr>
@@ -1162,7 +1178,10 @@
                         </span>
                       </ng-container>
                     </td>
-                    <td class="fw-semibold">{{ fare.get("price")?.value }}</td>
+                    <td class="fw-semibold">
+                      {{ fare.get("price")?.value }}
+                      {{ getCurrencyCode(tripForm.get("currencyId")?.value) }}
+                    </td>
                     <td>
                       <span
                         class="badge"

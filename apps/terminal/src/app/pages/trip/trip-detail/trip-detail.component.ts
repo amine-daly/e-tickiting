@@ -22,10 +22,6 @@ import {
   DropoffPointType,
 } from '../../../core/models/trip.model';
 import { TripService } from '../trip.service';
-import { BusService } from '../../buses/bus.service';
-import { PlacesService } from '../../places/places.service';
-import { BusType } from '../../../core/models/bus.model';
-import { PlaceType } from '../../../core/models/place-type';
 import { AlertService } from '../../../core/services/alert.service';
 import { ToolbarComponent } from 'src/app/_metronic/layout/components/toolbar/toolbar.component';
 import { PageInfoService } from 'src/app/_metronic/layout/core/page-info.service';
@@ -50,11 +46,6 @@ export class TripDetailComponent implements OnInit, OnDestroy {
   trip: TripType | null = null;
   isTransitioning = false;
 
-  places: PlaceType[] = [];
-  buses: BusType[] = [];
-  private placeMap = new Map<string, string>();
-  private busMap = new Map<string, string>();
-
   readonly TripStatusEnum = TripStatusEnum;
 
   statusLabelMap: Record<TripStatusEnum, string> = {
@@ -75,8 +66,6 @@ export class TripDetailComponent implements OnInit, OnDestroy {
     private route: ActivatedRoute,
     private router: Router,
     private tripService: TripService,
-    private busService: BusService,
-    private placesService: PlacesService,
     private alert: AlertService,
     private translate: TranslateService,
     private pageInfo: PageInfoService,
@@ -86,47 +75,11 @@ export class TripDetailComponent implements OnInit, OnDestroy {
   ngOnInit(): void {
     this.pageInfo.setTitle(this.t('TRIPS.EDIT'));
 
-    this.loadReferenceData();
-
     // Subscribe to trip$ BehaviorSubject (populated by resolver)
     this.tripService.trip$.pipe(takeUntil(this.destroy$)).subscribe((trip) => {
       this.trip = trip;
       this.cdr.markForCheck();
     });
-  }
-
-  private loadReferenceData(): void {
-    this.placesService.placesPageLimit = 200;
-    this.placesService
-      .getPlaces()
-      .pipe(takeUntil(this.destroy$))
-      .subscribe((places) => {
-        this.places = places;
-        this.placeMap.clear();
-        places.forEach((p) => {
-          if (p.id) this.placeMap.set(p.id, p.city);
-        });
-        this.cdr.markForCheck();
-      });
-    this.busService
-      .list()
-      .pipe(takeUntil(this.destroy$))
-      .subscribe((buses) => {
-        this.buses = buses;
-        this.busMap.clear();
-        buses.forEach((b) => this.busMap.set(b.id, b.name));
-        this.cdr.markForCheck();
-      });
-  }
-
-  getPlaceName(placeId: string | undefined): string {
-    if (!placeId) return '-';
-    return this.placeMap.get(placeId) ?? placeId;
-  }
-
-  getBusName(busId: string | undefined): string {
-    if (!busId) return '-';
-    return this.busMap.get(busId) ?? busId;
   }
 
   // ─── COMPUTED ─────────────────────────────────────────

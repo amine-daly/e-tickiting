@@ -177,7 +177,7 @@ export class SellTicketComponent implements OnInit, OnDestroy {
     const stops = this.selectedTrip.stopSchedule || [];
     const fromPlaceId = stops[0]?.placeId;
     const toPlaceId = stops[stops.length - 1]?.placeId;
-    this.currency = this.selectedTrip.currency || '';
+    this.currency = this.selectedTrip.currency?.code || '';
 
     const express = (this.selectedTrip.expressFares || []).find(
       (f) =>

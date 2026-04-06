@@ -23,7 +23,8 @@ public class TripUpdateRequest {
     // ── Identity fields (SCHEDULED: free, ACTIVE: blocked) ──────────────
     private Instant departureDate;
     private String timezone;
-    private String currency;
+    @Valid
+    private CurrencyInput currency;
 
     // ── Seat hold (always allowed — affects new bookings only) ──────────
     private Integer seatHoldMinutes;
@@ -51,6 +52,13 @@ public class TripUpdateRequest {
 
         @NotBlank
         private String busId;
+    }
+
+    @Data
+    public static class CurrencyInput {
+
+        @NotBlank
+        private String currencyId;
     }
 
     @Data

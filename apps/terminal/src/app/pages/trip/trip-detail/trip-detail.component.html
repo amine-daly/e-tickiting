@@ -41,13 +41,13 @@
                 ><span class="path1"></span><span class="path2"></span
                 ><span class="path3"></span><span class="path4"></span
               ></i>
-              {{ getBusName(trip.bus?.busId) }}
+              {{ trip.bus?.name || "-" }}
             </span>
             <span>
               <i class="ki-duotone ki-dollar fs-6 me-1"
                 ><span class="path1"></span><span class="path2"></span
               ></i>
-              {{ trip.currency }}
+              {{ trip.currency?.name || "-" }}
             </span>
             <span>
               {{ "TRIPS.FIELDS.SEAT_HOLD_MINUTES" | translate }}:
@@ -62,7 +62,7 @@
             *ngIf="canPublish"
             class="btn btn-sm btn-success"
             [disabled]="isTransitioning"
-            (click)="transitionStatus(TripStatusEnum.ACTIVE)"
+            (click)="transitionStatus('ACTIVE')"
           >
             <i class="ki-duotone ki-check-circle fs-4 me-1"
               ><span class="path1"></span><span class="path2"></span
@@ -73,7 +73,7 @@
             *ngIf="canComplete"
             class="btn btn-sm btn-info"
             [disabled]="isTransitioning"
-            (click)="transitionStatus(TripStatusEnum.COMPLETED)"
+            (click)="transitionStatus('COMPLETED')"
           >
             <i class="ki-duotone ki-flag fs-4 me-1"
               ><span class="path1"></span><span class="path2"></span
@@ -84,13 +84,13 @@
             *ngIf="canCancel"
             class="btn btn-sm btn-danger"
             [disabled]="isTransitioning"
-            (click)="transitionStatus(TripStatusEnum.CANCELLED)"
+            (click)="transitionStatus('CANCELLED')"
           >
             <i class="ki-duotone ki-cross-circle fs-4 me-1"
               ><span class="path1"></span><span class="path2"></span
             ></i>
             {{
-              trip.status === TripStatusEnum.ACTIVE
+              trip.status === "ACTIVE"
                 ? ("TRIPS.ACTIONS.EMERGENCY_CANCEL" | translate)
                 : ("TRIPS.ACTIONS.CANCEL" | translate)
             }}
@@ -125,7 +125,7 @@
           <div class="flex-grow-1">
             <div class="d-flex flex-wrap align-items-center gap-3">
               <span class="fw-bold text-dark">{{
-                getPlaceName(stop.placeId)
+                stop.place?.city || stop.placeId || "-"
               }}</span>
               <span
                 class="badge badge-sm"
@@ -205,8 +205,12 @@
           <tbody>
             <tr *ngFor="let seg of sortedSegments">
               <td class="text-muted">{{ seg.sequence }}</td>
-              <td class="fw-semibold">{{ getPlaceName(seg.fromPlaceId) }}</td>
-              <td class="fw-semibold">{{ getPlaceName(seg.toPlaceId) }}</td>
+              <td class="fw-semibold">
+                {{ seg.fromPlace?.city || seg.fromPlaceId }}
+              </td>
+              <td class="fw-semibold">
+                {{ seg.toPlace?.city || seg.toPlaceId }}
+              </td>
               <td class="text-center">{{ seg.maxSeats }}</td>
               <td class="text-center">
                 <span
@@ -219,7 +223,10 @@
                   {{ seg.bookedSeats }}
                 </span>
               </td>
-              <td>{{ seg.basePrice | number: "1.2-2" }} {{ trip.currency }}</td>
+              <td>
+                {{ seg.basePrice | number: "1.2-2" }}
+                {{ trip.currency?.code || "-" }}
+              </td>
               <td>{{ seg.distanceKm | number: "1.1-1" }}</td>
               <td>{{ seg.durationMinutes }}</td>
             </tr>
@@ -264,11 +271,16 @@
           </thead>
           <tbody>
             <tr *ngFor="let fare of activeFares">
-              <td class="fw-semibold">{{ getPlaceName(fare.fromPlaceId) }}</td>
-              <td class="fw-semibold">{{ getPlaceName(fare.toPlaceId) }}</td>
+              <td class="fw-semibold">
+                {{ fare.fromPlace?.city || fare.fromPlaceId }}
+              </td>
+              <td class="fw-semibold">
+                {{ fare.toPlace?.city || fare.toPlaceId }}
+              </td>
               <td>{{ fare.segmentsCovered?.length || 0 }}</td>
               <td class="fw-bold">
-                {{ fare.price | number: "1.2-2" }} {{ trip.currency }}
+                {{ fare.price | number: "1.2-2" }}
+                {{ trip.currency?.code || "-" }}
               </td>
               <td>
                 {{
@@ -318,7 +330,7 @@
           <i class="ki-duotone ki-geolocation fs-5 me-1"
             ><span class="path1"></span><span class="path2"></span
           ></i>
-          {{ getPlaceName(placeId) }}
+          {{ pickupsByPlace[placeId][0]?.place?.city || placeId }}
         </h6>
         <div class="table-responsive">
           <table
@@ -372,7 +384,7 @@
           <i class="ki-duotone ki-geolocation fs-5 me-1"
             ><span class="path1"></span><span class="path2"></span
           ></i>
-          {{ getPlaceName(placeId) }}
+          {{ dropoffsByPlace[placeId][0]?.place?.city || placeId }}
         </h6>
         <div class="table-responsive">
           <table

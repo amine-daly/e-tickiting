@@ -4,15 +4,12 @@ import { CommonModule } from '@angular/common';
 import { Subject, takeUntil } from 'rxjs';
 
 import { TripService } from '../trip.service';
-import { PlacesService } from '../../../home/home.service';
 import {
   TripType,
   PickupPointType,
   DropoffPointType,
   SegmentType,
-  ExpressFareType,
 } from '../../../../core/models/trip.model';
-import { PlaceType } from '../../../../core/models/place-type';
 
 @Component({
   selector: 'app-bus-details',
@@ -25,7 +22,6 @@ export class BusDetailsComponent implements OnInit, OnDestroy {
   private destroy$ = new Subject<void>();
 
   trip: TripType | null = null;
-  places: PlaceType[] = [];
   originPlaceId: string | null = null;
   destPlaceId: string | null = null;
 
@@ -43,18 +39,13 @@ export class BusDetailsComponent implements OnInit, OnDestroy {
   constructor(
     private route: ActivatedRoute,
     private tripService: TripService,
-    private placesService: PlacesService,
   ) {}
 
   ngOnInit(): void {
     const tripId = this.route.snapshot.paramMap.get('id')!;
     this.originPlaceId = this.route.snapshot.queryParamMap.get('originPlaceId');
-    this.destPlaceId = this.route.snapshot.queryParamMap.get('destinationPlaceId');
-
-    this.placesService.fetchPlaces().pipe(takeUntil(this.destroy$)).subscribe((p) => {
-      this.places = p;
-      this.resolveLabels();
-    });
+    this.destPlaceId =
+      this.route.snapshot.queryParamMap.get('destinationPlaceId');
 
     this.tripService
       .getTripById(tripId)
@@ -62,9 +53,13 @@ export class BusDetailsComponent implements OnInit, OnDestroy {
       .subscribe((trip) => {
         this.trip = trip;
         this.activePickups = (trip.pickupPoints || []).filter((p) => p.active);
-        this.activeDropoffs = (trip.dropoffPoints || []).filter((p) => p.active);
-        if (this.activePickups.length) this.selectedPickup = this.activePickups[0];
-        if (this.activeDropoffs.length) this.selectedDropoff = this.activeDropoffs[0];
+        this.activeDropoffs = (trip.dropoffPoints || []).filter(
+          (p) => p.active,
+        );
+        if (this.activePickups.length)
+          this.selectedPickup = this.activePickups[0];
+        if (this.activeDropoffs.length)
+          this.selectedDropoff = this.activeDropoffs[0];
         this.computePriceAndDuration();
         this.resolveLabels();
       });
@@ -79,19 +74,20 @@ export class BusDetailsComponent implements OnInit, OnDestroy {
   }
 
   getPlaceName(placeId: string): string {
-    return this.places.find((p) => p.id === placeId)?.city || placeId;
+    const stop = this.trip?.stopSchedule?.find((s) => s.placeId === placeId);
+    return stop?.place?.city || placeId;
   }
 
   private resolveLabels(): void {
     if (!this.trip) return;
-    const originStop = this.trip.stopSchedule?.find(
-      (s) => s.placeId === this.originPlaceId
-    ) || this.trip.stopSchedule?.[0];
-    const destStop = this.trip.stopSchedule?.find(
-      (s) => s.placeId === this.destPlaceId
-    ) || this.trip.stopSchedule?.[this.trip.stopSchedule.length - 1];
-    this.originCity = this.getPlaceName(originStop?.placeId || '');
-    this.destCity = this.getPlaceName(destStop?.placeId || '');
+    const originStop =
+      this.trip.stopSchedule?.find((s) => s.placeId === this.originPlaceId) ||
+      this.trip.stopSchedule?.[0];
+    const destStop =
+      this.trip.stopSchedule?.find((s) => s.placeId === this.destPlaceId) ||
+      this.trip.stopSchedule?.[this.trip.stopSchedule.length - 1];
+    this.originCity = originStop?.place?.city || originStop?.placeId || '';
+    this.destCity = destStop?.place?.city || destStop?.placeId || '';
   }
 
   private computePriceAndDuration(): void {
@@ -103,7 +99,7 @@ export class BusDetailsComponent implements OnInit, OnDestroy {
       (f) =>
         f.fromPlaceId === this.originPlaceId &&
         f.toPlaceId === this.destPlaceId &&
-        f.active
+        f.active,
     );
     this.displayPrice = express
       ? express.price
@@ -113,9 +109,13 @@ export class BusDetailsComponent implements OnInit, OnDestroy {
 
   private getSegmentChain(): SegmentType[] {
     if (!this.trip?.segments) return [];
-    const sorted = [...this.trip.segments].sort((a, b) => a.sequence - b.sequence);
+    const sorted = [...this.trip.segments].sort(
+      (a, b) => a.sequence - b.sequence,
+    );
     if (!this.originPlaceId || !this.destPlaceId) return sorted;
-    const startIdx = sorted.findIndex((s) => s.fromPlaceId === this.originPlaceId);
+    const startIdx = sorted.findIndex(
+      (s) => s.fromPlaceId === this.originPlaceId,
+    );
     const endIdx = sorted.findIndex((s) => s.toPlaceId === this.destPlaceId);
     if (startIdx < 0 || endIdx < 0 || startIdx > endIdx) return sorted;
     return sorted.slice(startIdx, endIdx + 1);

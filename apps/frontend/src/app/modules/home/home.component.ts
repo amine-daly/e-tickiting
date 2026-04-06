@@ -5,10 +5,9 @@ import { SearchCardComponent } from '../../shared/components/search-card/search-
 import { TripService } from '../pages/bus/trip.service';
 import { RecentSearchesService } from '../../core/services/recent-searches.service';
 import { PlacesService } from './home.service';
-import { map as rxMap, combineLatest, of, switchMap } from 'rxjs';
+import { map as rxMap } from 'rxjs';
 
 import { TripType } from 'src/app/core/models/trip.model';
-import { PlaceType } from 'src/app/core/models/place-type';
 
 type PopularRouteCard = {
   key: string;
@@ -33,11 +32,8 @@ export class HomeComponent {
   allTrips$ = this.tripService.allTrips$;
   recentSearches$ = this.recentSearchesService.recentSearches$;
 
-  explicitTrips$ = combineLatest([
-    this.allTrips$,
-    this.placesService.places$,
-  ]).pipe(
-    rxMap(([trips, places]) => this.expandTripsToExplicitRoutes(trips, places))
+  explicitTrips$ = this.allTrips$.pipe(
+    rxMap((trips) => this.expandTripsToExplicitRoutes(trips)),
   );
 
   constructor(
@@ -51,11 +47,8 @@ export class HomeComponent {
 
   private expandTripsToExplicitRoutes(
     trips: TripType[] | null,
-    places: PlaceType[],
   ): PopularRouteCard[] {
     if (!trips?.length) return [];
-
-    const placeMap = new Map(places.map((p) => [p.id, p.city || p.id]));
 
     const cards: PopularRouteCard[] = [];
 
@@ -65,11 +58,14 @@ export class HomeComponent {
 
       const originStop = stops[0];
       const destStop = stops[stops.length - 1];
-      const originLabel = placeMap.get(originStop.placeId) || originStop.placeId;
-      const destLabel = placeMap.get(destStop.placeId) || destStop.placeId;
+      const originLabel = originStop.place?.city || originStop.placeId;
+      const destLabel = destStop.place?.city || destStop.placeId;
 
       // Full-route price from segments
-      const segPrice = (trip.segments || []).reduce((s, seg) => s + (seg.basePrice || 0), 0);
+      const segPrice = (trip.segments || []).reduce(
+        (s, seg) => s + (seg.basePrice || 0),
+        0,
+      );
 
       // Main card: origin → destination
       cards.push({
@@ -81,23 +77,27 @@ export class HomeComponent {
         destinationLabel: destLabel,
         departureDate: trip.departureDate,
         price: segPrice,
-        currency: trip.currency || '',
+        currency: trip.currency?.code || '',
       });
 
       // Express fare cards (sub-routes)
       for (const ef of trip.expressFares || []) {
         if (!ef.active) continue;
-        if (ef.fromPlaceId === originStop.placeId && ef.toPlaceId === destStop.placeId) continue; // skip duplicate of main route
+        if (
+          ef.fromPlaceId === originStop.placeId &&
+          ef.toPlaceId === destStop.placeId
+        )
+          continue; // skip duplicate of main route
         cards.push({
           key: `${trip.id}:ef:${ef.expressId}`,
           parentTripId: trip.id,
           originPlaceId: ef.fromPlaceId,
           destinationPlaceId: ef.toPlaceId,
-          originLabel: placeMap.get(ef.fromPlaceId) || ef.fromPlaceId,
-          destinationLabel: placeMap.get(ef.toPlaceId) || ef.toPlaceId,
+          originLabel: ef.fromPlace?.city || ef.fromPlaceId,
+          destinationLabel: ef.toPlace?.city || ef.toPlaceId,
           departureDate: trip.departureDate,
           price: ef.price,
-          currency: trip.currency || '',
+          currency: trip.currency?.code || '',
         });
       }
     }
