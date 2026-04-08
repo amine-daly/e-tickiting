@@ -23,6 +23,8 @@
 - delete() → filter BehaviorSubject list locally after success via tap()
 - posId always from localStorage.getItem('posId') inside the service
 - Never pass posId from the component
+- Never declare request/response interfaces inside services
+- Put shared payload contracts under a models folder and import them into services/components
 
 4.  Component Pattern
 

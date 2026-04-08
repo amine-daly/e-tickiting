@@ -3,25 +3,6 @@ import { StateType } from './state-type';
 
 export enum PlaceKindEnum {
   CITY = 'CITY',
-  POINT = 'POINT',
-}
-
-export interface LonLatType {
-  type?: string | null;
-  coordinates: [number, number]; // [lng, lat]
-}
-
-/** Sub-place (pickup/dropoff point) inside a city */
-export interface SubPlaceType {
-  id?: string;
-  address?: string;
-  kind?: PlaceKindEnum;
-  location?: LonLatType;
-  pickupInstructions?: string;
-  /** Parent place ID (for linking back to the city) */
-  parentId?: string;
-  /** Parent city name (for display purposes) */
-  parentCity?: string;
 }
 
 export interface PlaceType {
@@ -30,6 +11,4 @@ export interface PlaceType {
   kind?: PlaceKindEnum;
   state?: StateType;
   country?: CountryType;
-  /** Sub-places (pickup/dropoff points) - only for CITY places */
-  subPlaces?: SubPlaceType[];
 }

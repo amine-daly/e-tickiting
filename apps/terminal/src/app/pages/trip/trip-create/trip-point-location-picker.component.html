@@ -1,0 +1,129 @@
+<div class="trip-point-location" [formGroup]="group">
+  <div
+    class="d-flex flex-wrap align-items-start justify-content-between gap-3 mb-3"
+  >
+    <div>
+      <div class="d-flex flex-wrap align-items-center gap-2 mb-1">
+        <label class="form-label mb-0">
+          {{ "TRIPS.CREATE.LOCATION.TITLE" | translate }}
+        </label>
+        <span class="badge badge-light-secondary">
+          {{ "TRIPS.CREATE.LOCATION.OPTIONAL" | translate }}
+        </span>
+      </div>
+      <div class="form-text mt-0">
+        {{ "TRIPS.CREATE.LOCATION.HELP" | translate }}
+      </div>
+    </div>
+
+    <div class="d-flex flex-wrap align-items-center gap-2">
+      <span
+        class="badge"
+        [ngClass]="
+          hasCoordinates ? 'badge-light-success' : 'badge-light-secondary'
+        "
+      >
+        {{
+          (hasCoordinates
+            ? "TRIPS.CREATE.LOCATION.PIN_SET"
+            : "TRIPS.CREATE.LOCATION.PIN_EMPTY"
+          ) | translate
+        }}
+      </span>
+
+      <button
+        type="button"
+        class="btn btn-sm btn-light-primary"
+        (click)="useCurrentLocation()"
+        [disabled]="locating"
+      >
+        <i class="ki-duotone ki-geolocation fs-5 me-1">
+          <span class="path1"></span><span class="path2"></span>
+        </i>
+        {{
+          (locating
+            ? "TRIPS.CREATE.LOCATION.LOCATING"
+            : "TRIPS.CREATE.LOCATION.USE_CURRENT"
+          ) | translate
+        }}
+      </button>
+
+      <button
+        *ngIf="hasCoordinates"
+        type="button"
+        class="btn btn-sm btn-light"
+        (click)="clearCoordinates()"
+      >
+        {{ "TRIPS.CREATE.LOCATION.CLEAR" | translate }}
+      </button>
+    </div>
+  </div>
+
+  <div class="trip-point-location__map-wrap">
+    <div #mapContainer class="trip-point-location__map border"></div>
+  </div>
+
+  <div class="form-text mt-2">
+    {{ "TRIPS.CREATE.LOCATION.CLICK_HELP" | translate }}
+  </div>
+
+  <div *ngIf="geolocationErrorKey" class="text-danger small mt-2">
+    {{ geolocationErrorKey | translate }}
+  </div>
+
+  <div class="row mt-4">
+    <div class="col-md-6 mb-3">
+      <label class="form-label">
+        {{ "TRIPS.CREATE.LOCATION.LATITUDE" | translate }}
+      </label>
+      <input
+        type="number"
+        class="form-control form-control-solid form-control-sm"
+        formControlName="latitude"
+        step="0.000001"
+        min="-90"
+        max="90"
+        [placeholder]="'TRIPS.CREATE.LOCATION.LATITUDE_PLACEHOLDER' | translate"
+        (change)="onCoordinateBlur()"
+        (blur)="onCoordinateBlur()"
+      />
+      <div
+        *ngIf="
+          group.get('latitude')?.invalid &&
+          (group.get('latitude')?.dirty || group.get('latitude')?.touched)
+        "
+        class="text-danger small mt-1"
+      >
+        {{ "TRIPS.CREATE.LOCATION.LATITUDE_ERROR" | translate }}
+      </div>
+    </div>
+
+    <div class="col-md-6 mb-3">
+      <label class="form-label">
+        {{ "TRIPS.CREATE.LOCATION.LONGITUDE" | translate }}
+      </label>
+      <input
+        type="number"
+        class="form-control form-control-solid form-control-sm"
+        formControlName="longitude"
+        step="0.000001"
+        min="-180"
+        max="180"
+        [placeholder]="
+          'TRIPS.CREATE.LOCATION.LONGITUDE_PLACEHOLDER' | translate
+        "
+        (change)="onCoordinateBlur()"
+        (blur)="onCoordinateBlur()"
+      />
+      <div
+        *ngIf="
+          group.get('longitude')?.invalid &&
+          (group.get('longitude')?.dirty || group.get('longitude')?.touched)
+        "
+        class="text-danger small mt-1"
+      >
+        {{ "TRIPS.CREATE.LOCATION.LONGITUDE_ERROR" | translate }}
+      </div>
+    </div>
+  </div>
+</div>

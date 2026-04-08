@@ -23,24 +23,25 @@ import { TranslateModule, TranslateService } from '@ngx-translate/core';
 import {
   NgLabelTemplateDirective,
   NgOptionTemplateDirective,
-  NgSelectModule,
+  NgSelectComponent,
 } from '@ng-select/ng-select';
 import {
   FlatpickrDirective,
-  FlatpickrModule,
   provideFlatpickrDefaults,
 } from 'angularx-flatpickr';
 
-import { TripService, TripCreatePayload } from '../trip.service';
+import { TripService } from '../trip.service';
 import { BusService } from '../../buses/bus.service';
 import { PlacesService } from '../../places/places.service';
 import { CurrencyType } from 'src/app/core/models/account.model';
 import { BusType } from 'src/app/core/models/bus.model';
 import { PlaceType } from 'src/app/core/models/place-type';
+import { TripCreatePayload } from '../../../core/models/trip-payload.model';
 import { AlertService } from 'src/app/core/services/alert.service';
 import { CurrencyService } from 'src/app/core/services/currency.service';
 import { PageInfoService } from 'src/app/_metronic/layout/core/page-info.service';
 import { ToolbarComponent } from 'src/app/_metronic/layout/components/toolbar/toolbar.component';
+import { TripPointLocationPickerComponent } from './trip-point-location-picker.component';
 
 interface SegmentDisplay {
   index: number;
@@ -64,11 +65,12 @@ interface CurrencyOption {
     FormsModule,
     ReactiveFormsModule,
     TranslateModule,
-    NgSelectModule,
     FlatpickrDirective,
     ToolbarComponent,
+    NgSelectComponent,
     NgLabelTemplateDirective,
     NgOptionTemplateDirective,
+    TripPointLocationPickerComponent,
   ],
   providers: [
     provideFlatpickrDefaults({
@@ -144,7 +146,6 @@ export class TripCreateComponent implements OnInit, OnDestroy {
     dateFormat: 'Y-m-d',
     allowInput: true,
   };
-
   // ── Form accessors ──────────────────────────────
   get stopSchedule(): FormArray {
     return this.tripForm.get('stopSchedule') as FormArray;
@@ -181,6 +182,17 @@ export class TripCreateComponent implements OnInit, OnDestroy {
       .map((c) => c.get('placeId')?.value)
       .filter(Boolean);
     return this.places.filter((p) => placeIds.includes(p.id));
+  }
+
+  get selectedCurrency(): CurrencyType | null {
+    const currencyId = this.tripForm?.get('currencyId')?.value;
+    if (!currencyId) {
+      return null;
+    }
+
+    return (
+      this.currencies.find((currency) => currency.id === currencyId) ?? null
+    );
   }
 
   constructor(
@@ -253,10 +265,6 @@ export class TripCreateComponent implements OnInit, OnDestroy {
       .listAll()
       .pipe(takeUntil(this.destroy$))
       .subscribe((currencies) => {
-        console.log(
-          '🚀 ~ TripCreateComponent ~ loadCurrencies ~ currencies:',
-          currencies,
-        );
         this.currencies = currencies;
         this.cdr.markForCheck();
       });
@@ -734,8 +742,8 @@ export class TripCreateComponent implements OnInit, OnDestroy {
         address: ['', Validators.required],
         scheduledDepartureTime: [null, Validators.required],
         active: [true],
-        latitude: [null],
-        longitude: [null],
+        latitude: [null, [Validators.min(-90), Validators.max(90)]],
+        longitude: [null, [Validators.min(-180), Validators.max(180)]],
       }),
     );
     this.cdr.markForCheck();
@@ -753,8 +761,8 @@ export class TripCreateComponent implements OnInit, OnDestroy {
         address: ['', Validators.required],
         scheduledArrivalTime: [null, Validators.required],
         active: [true],
-        latitude: [null],
-        longitude: [null],
+        latitude: [null, [Validators.min(-90), Validators.max(90)]],
+        longitude: [null, [Validators.min(-180), Validators.max(180)]],
       }),
     );
     this.cdr.markForCheck();
@@ -806,7 +814,7 @@ export class TripCreateComponent implements OnInit, OnDestroy {
       bus: { busId: raw.busId },
       departureDate: this.toISOString(raw.departureDate),
       timezone: raw.timezone,
-      currency: { currencyId: raw.currencyId },
+      currencyId: raw.currencyId,
       seatHoldMinutes: raw.seatHoldMinutes,
       stopSchedule: raw.stopSchedule.map((s: any, i: number) => ({
         placeId: s.placeId,
@@ -840,18 +848,14 @@ export class TripCreateComponent implements OnInit, OnDestroy {
         address: p.address,
         scheduledDepartureTime: this.toISOString(p.scheduledDepartureTime),
         active: p.active ?? true,
-        ...(p.latitude && p.longitude
-          ? { location: { latitude: p.latitude, longitude: p.longitude } }
-          : {}),
+        ...this.buildLocationPayload(p),
       })),
       dropoffPoints: raw.dropoffPoints.map((d: any) => ({
         placeId: d.placeId,
         address: d.address,
         scheduledArrivalTime: this.toISOString(d.scheduledArrivalTime),
         active: d.active ?? true,
-        ...(d.latitude && d.longitude
-          ? { location: { latitude: d.latitude, longitude: d.longitude } }
-          : {}),
+        ...this.buildLocationPayload(d),
       })),
       expressFares:
         raw.expressFares.length > 0
@@ -936,6 +940,36 @@ export class TripCreateComponent implements OnInit, OnDestroy {
       return isNaN(d.getTime()) ? value : d.toISOString();
     }
     return String(value);
+  }
+
+  private buildLocationPayload(point: {
+    latitude?: number | string | null;
+    longitude?: number | string | null;
+  }): { location?: { latitude: number; longitude: number } } {
+    const latitude = this.parseCoordinate(point.latitude);
+    const longitude = this.parseCoordinate(point.longitude);
+
+    if (latitude === null || longitude === null) {
+      return {};
+    }
+
+    return {
+      location: {
+        latitude,
+        longitude,
+      },
+    };
+  }
+
+  private parseCoordinate(
+    value: number | string | null | undefined,
+  ): number | null {
+    if (value === null || value === undefined || value === '') {
+      return null;
+    }
+
+    const numericValue = Number(value);
+    return Number.isFinite(numericValue) ? numericValue : null;
   }
 
   ngOnDestroy(): void {

@@ -10,18 +10,23 @@ import { NgbActiveModal } from '@ng-bootstrap/ng-bootstrap';
 import { TranslateModule, TranslateService } from '@ngx-translate/core';
 import { Subscription } from 'rxjs';
 import { isEqual } from 'lodash';
-import { NgSelectModule } from '@ng-select/ng-select';
 
 import { CompanyService } from '../../companies/company.service';
 import { AccountsService } from 'src/app/core/services/accounts.service';
 import { AlertService } from 'src/app/core/services/alert.service';
 import { CompanyType } from 'src/app/core/models/company.model';
 import { AccountType } from 'src/app/core/models/account.model';
+import { NgSelectComponent } from '@ng-select/ng-select';
 
 @Component({
   selector: 'app-add-pos-modal',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule, TranslateModule, NgSelectModule],
+  imports: [
+    CommonModule,
+    ReactiveFormsModule,
+    TranslateModule,
+    NgSelectComponent,
+  ],
   templateUrl: './add-pos-modal.component.html',
   styleUrls: ['./add-pos-modal.component.scss'],
 })

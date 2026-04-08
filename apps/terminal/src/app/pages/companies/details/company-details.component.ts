@@ -8,6 +8,7 @@ import {
 } from '@angular/forms';
 import { ActivatedRoute, Router, RouterModule } from '@angular/router';
 import { TranslateModule, TranslateService } from '@ngx-translate/core';
+import { keys } from 'lodash';
 import { Subject, from } from 'rxjs';
 import { finalize, takeUntil } from 'rxjs/operators';
 
@@ -123,7 +124,7 @@ export class CompanyDetailsComponent implements OnInit, OnDestroy {
           this.initialValues,
           this.companyForm.getRawValue(),
         );
-        this.isButtonDisabled = Object.keys(changed).length === 0;
+        this.isButtonDisabled = keys(changed).length === 0;
       });
   }
 

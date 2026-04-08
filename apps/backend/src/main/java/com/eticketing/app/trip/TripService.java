@@ -77,7 +77,7 @@ public class TripService {
         if (bus.getTarget() == null || !companyId.equals(bus.getTarget().getCompany())) {
             throw new ForbiddenException("Bus does not belong to company " + companyId);
         }
-        CurrencyType currency = resolveCurrency(req.getCurrency().getCurrencyId());
+        CurrencyType currency = resolveCurrency(req.getCurrencyId());
 
         // ── 3. Bus lock check — not already in SCHEDULED/ACTIVE trip ────
         List<TripType> busTrips = tripRepository.findByBusBusIdAndStatusIn(
@@ -331,8 +331,8 @@ public class TripService {
         if (req.getTimezone() != null) {
             trip.setTimezone(req.getTimezone());
         }
-        if (req.getCurrency() != null) {
-            CurrencyType currency = resolveCurrency(req.getCurrency().getCurrencyId());
+        if (req.getCurrencyId() != null) {
+            CurrencyType currency = resolveCurrency(req.getCurrencyId());
             trip.setCurrency(TripCurrency.builder().currencyId(currency.getId()).build());
         }
         if (req.getSeatHoldMinutes() != null) {

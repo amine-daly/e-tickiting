@@ -7,7 +7,6 @@ import jakarta.validation.constraints.Positive;
 import jakarta.validation.constraints.PositiveOrZero;
 import lombok.Data;
 
-import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.List;
 
@@ -23,8 +22,7 @@ public class TripUpdateRequest {
     // ── Identity fields (SCHEDULED: free, ACTIVE: blocked) ──────────────
     private Instant departureDate;
     private String timezone;
-    @Valid
-    private CurrencyInput currency;
+    private String currencyId;
 
     // ── Seat hold (always allowed — affects new bookings only) ──────────
     private Integer seatHoldMinutes;
@@ -52,13 +50,6 @@ public class TripUpdateRequest {
 
         @NotBlank
         private String busId;
-    }
-
-    @Data
-    public static class CurrencyInput {
-
-        @NotBlank
-        private String currencyId;
     }
 
     @Data

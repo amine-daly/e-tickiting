@@ -10,15 +10,13 @@ import org.springframework.data.mongodb.core.mapping.Document;
 import java.time.Instant;
 
 /**
- * Place document — can represent a city (kind=CITY) or a pickup/dropoff point
- * (kind=POINT). POINT places have a parentId pointing to their parent CITY.
+ * Place document representing a managed city.
  */
 @Document("places")
 public class PlaceType {
 
     public enum PlaceKind {
-        CITY,
-        POINT
+        CITY
     }
 
     @Id
@@ -35,7 +33,7 @@ public class PlaceType {
     private Integer rank;
 
     /**
-     * Kind of place: CITY or POINT (pickup/dropoff address)
+     * Kind of place. New records are stored as CITY.
      */
     @JsonProperty("kind")
     private PlaceKind kind = PlaceKind.CITY;

@@ -378,18 +378,6 @@
                   <label class="form-check-label" [for]="'boarding_' + i">
                     {{ "TRIPS.STOPS.BOARDING_ALLOWED" | translate }}
                   </label>
-                  <span
-                    *ngIf="i === 0"
-                    class="badge badge-light-info ms-2 small"
-                  >
-                    {{ "TRIPS.CREATE.STOPS.ALWAYS_ON" | translate }}
-                  </span>
-                  <span
-                    *ngIf="i === stopSchedule.length - 1 && i > 0"
-                    class="badge badge-light-warning ms-2 small"
-                  >
-                    {{ "TRIPS.CREATE.STOPS.ALWAYS_OFF" | translate }}
-                  </span>
                 </div>
                 <div class="form-check form-check-custom form-check-sm">
                   <input
@@ -404,18 +392,6 @@
                   <label class="form-check-label" [for]="'dropping_' + i">
                     {{ "TRIPS.STOPS.DROPPING_ALLOWED" | translate }}
                   </label>
-                  <span
-                    *ngIf="i === stopSchedule.length - 1 && i > 0"
-                    class="badge badge-light-info ms-2 small"
-                  >
-                    {{ "TRIPS.CREATE.STOPS.ALWAYS_ON" | translate }}
-                  </span>
-                  <span
-                    *ngIf="i === 0"
-                    class="badge badge-light-warning ms-2 small"
-                  >
-                    {{ "TRIPS.CREATE.STOPS.ALWAYS_OFF" | translate }}
-                  </span>
                 </div>
               </div>
             </div>
@@ -650,6 +626,11 @@
                   </div>
                 </div>
 
+                <app-trip-point-location-picker
+                  class="d-block mb-3"
+                  [pointControl]="pp"
+                ></app-trip-point-location-picker>
+
                 <div class="form-check form-switch form-check-custom">
                   <input
                     type="checkbox"
@@ -762,6 +743,11 @@
                     />
                   </div>
                 </div>
+
+                <app-trip-point-location-picker
+                  class="d-block mb-3"
+                  [pointControl]="dp"
+                ></app-trip-point-location-picker>
 
                 <div class="form-check form-switch form-check-custom">
                   <input
@@ -1001,9 +987,7 @@
                 <span class="text-muted d-block small">{{
                   "TRIPS.CREATE.BASIC.CURRENCY" | translate
                 }}</span>
-                <span class="fw-semibold">{{
-                  getCurrencyLabel(tripForm.get("currencyId")?.value)
-                }}</span>
+                <span class="fw-semibold">{{ selectedCurrency?.name }}</span>
               </div>
               <div class="col-md-4 mb-2">
                 <span class="text-muted d-block small">{{
@@ -1080,7 +1064,7 @@
                     </td>
                     <td>
                       {{ seg.get("basePrice")?.value }}
-                      {{ getCurrencyCode(tripForm.get("currencyId")?.value) }}
+                      {{ selectedCurrency?.code }}
                     </td>
                     <td>{{ seg.get("maxSeats")?.value }}</td>
                     <td>{{ seg.get("distanceKm")?.value }} km</td>
@@ -1180,7 +1164,7 @@
                     </td>
                     <td class="fw-semibold">
                       {{ fare.get("price")?.value }}
-                      {{ getCurrencyCode(tripForm.get("currencyId")?.value) }}
+                      {{ selectedCurrency?.code }}
                     </td>
                     <td>
                       <span

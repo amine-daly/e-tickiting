@@ -9,7 +9,11 @@ import {
 } from '@angular/forms';
 import { isEqual } from 'lodash';
 import { Subject, from } from 'rxjs';
-import { NgSelectModule } from '@ng-select/ng-select';
+import {
+  NgLabelTemplateDirective,
+  NgOptionTemplateDirective,
+  NgSelectComponent,
+} from '@ng-select/ng-select';
 import { Router, RouterModule } from '@angular/router';
 import { map, finalize, takeUntil } from 'rxjs/operators';
 import { TranslateModule, TranslateService } from '@ngx-translate/core';
@@ -30,7 +34,9 @@ import { AmazonS3Helper } from '../../../../../../../libs/helpers/amazon-s3-help
     RouterModule,
     ReactiveFormsModule,
     TranslateModule,
-    NgSelectModule,
+    NgSelectComponent,
+    NgLabelTemplateDirective,
+    NgOptionTemplateDirective,
     ToolbarComponent,
   ],
   providers: [AmazonS3Helper],

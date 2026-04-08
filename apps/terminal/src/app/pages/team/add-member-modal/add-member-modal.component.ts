@@ -11,7 +11,11 @@ import { TranslateModule, TranslateService } from '@ngx-translate/core';
 import { Subject } from 'rxjs';
 import { takeUntil } from 'rxjs/operators';
 import { isEqual } from 'lodash';
-import { NgSelectModule } from '@ng-select/ng-select';
+import {
+  NgSelectComponent,
+  NgLabelTemplateDirective,
+  NgOptionTemplateDirective,
+} from '@ng-select/ng-select';
 
 import { TeamService } from '../team.service';
 import { PermissionsService } from '../../permissions/permissions.service';
@@ -23,7 +27,12 @@ import { FormHelper } from 'src/app/core/helpers/form-helper';
 @Component({
   selector: 'app-add-member-modal',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule, TranslateModule, NgSelectModule],
+  imports: [
+    CommonModule,
+    ReactiveFormsModule,
+    TranslateModule,
+    NgSelectComponent,
+  ],
   templateUrl: './add-member-modal.component.html',
   styleUrls: ['./add-member-modal.component.scss'],
 })

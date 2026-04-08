@@ -34,6 +34,8 @@ public interface PlaceRepository extends MongoRepository<PlaceType, String> {
      */
     Page<PlaceType> findByKind(PlaceType.PlaceKind kind, Pageable pageable);
 
+    Page<PlaceType> findByKindAndCityIgnoreCaseContaining(PlaceType.PlaceKind kind, String city, Pageable pageable);
+
     /**
      * Find places by state
      */
@@ -44,11 +46,4 @@ public interface PlaceRepository extends MongoRepository<PlaceType, String> {
      */
     List<PlaceType> findByCountryId(String countryId);
 
-    /**
-     * Find cities by ID list OR city name
-     */
-    Page<PlaceType> findByKindAndIdInOrKindAndCityIgnoreCaseContaining(
-            PlaceType.PlaceKind kind1, List<String> ids,
-            PlaceType.PlaceKind kind2, String city,
-            Pageable pageable);
 }

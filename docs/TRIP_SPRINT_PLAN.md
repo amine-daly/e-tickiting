@@ -10,23 +10,23 @@
 
 ### What Exists Today (Legacy Model)
 
-| Layer           | Current Implementation                                                                                    |
-| --------------- | --------------------------------------------------------------------------------------------------------- |
-| **Entity**      | `TripType.java` — flat model: `originId`, `destinationId`, `totalPrice`, `stops` with rank+fare           |
-| **Inventory**   | `seats: List<SeatUnit>` — flat seat map on trip, no segment-based inventory                               |
-| **Scoping**     | `target.pos` — legacy POS-only scoping                                                                    |
-| **Status**      | `SCHEDULED`, `COMPLETED`, `CANCELLED` — missing `ACTIVE`                                                  |
-| **Pricing**     | Single `totalPrice` — no per-segment pricing, no express fares                                            |
-| **Points**      | `pickupPoints` as `List<TripSubPlaceType>` — references SubPlace, no active flag, no mandatory validation |
-| **Segments**    | Does not exist                                                                                            |
-| **Express**     | Does not exist                                                                                            |
-| **Currency**    | Does not exist — no currency field                                                                        |
-| **Timezone**    | Does not exist — no timezone field                                                                        |
-| **Seat Hold**   | Does not exist — no `seatHoldMinutes`                                                                     |
-| **Ticket**      | Separate `ticket` package exists but does not follow TRIP_SPEC schema                                     |
-| **Refund**      | Does not exist                                                                                            |
-| **Booking CAS** | Does not exist — no atomic seat reservation                                                               |
-| **Frontend**    | Terminal: trip list + CRUD form (flat model). Frontend: trip search + results (simple)                    |
+| Layer           | Current Implementation                                                                                        |
+| --------------- | ------------------------------------------------------------------------------------------------------------- |
+| **Entity**      | `TripType.java` — flat model: `originId`, `destinationId`, `totalPrice`, `stops` with rank+fare               |
+| **Inventory**   | `seats: List<SeatUnit>` — flat seat map on trip, no segment-based inventory                                   |
+| **Scoping**     | `target.pos` — legacy POS-only scoping                                                                        |
+| **Status**      | `SCHEDULED`, `COMPLETED`, `CANCELLED` — missing `ACTIVE`                                                      |
+| **Pricing**     | Single `totalPrice` — no per-segment pricing, no express fares                                                |
+| **Points**      | `pickupPoints` as `List<PickupPointType>` — legacy trip-level points, no active flag, no mandatory validation |
+| **Segments**    | Does not exist                                                                                                |
+| **Express**     | Does not exist                                                                                                |
+| **Currency**    | Does not exist — no currency field                                                                            |
+| **Timezone**    | Does not exist — no timezone field                                                                            |
+| **Seat Hold**   | Does not exist — no `seatHoldMinutes`                                                                         |
+| **Ticket**      | Separate `ticket` package exists but does not follow TRIP_SPEC schema                                         |
+| **Refund**      | Does not exist                                                                                                |
+| **Booking CAS** | Does not exist — no atomic seat reservation                                                                   |
+| **Frontend**    | Terminal: trip list + CRUD form (flat model). Frontend: trip search + results (simple)                        |
 
 ### What Must Be Built (Target Model — TRIP_SPEC)
 

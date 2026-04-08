@@ -33,13 +33,24 @@ import * as L from 'leaflet';
 import { FormHelper } from 'src/app/core/helpers/form-helper';
 import { AlertService } from 'src/app/core/services/alert.service';
 import { TranslateModule, TranslateService } from '@ngx-translate/core';
-import { NgSelectModule } from '@ng-select/ng-select';
+import {
+  NgLabelTemplateDirective,
+  NgOptionTemplateDirective,
+  NgSelectComponent,
+} from '@ng-select/ng-select';
 import { PlacesService } from '../../places/places.service';
 
 @Component({
   selector: 'app-business-profile',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule, TranslateModule, NgSelectModule],
+  imports: [
+    CommonModule,
+    ReactiveFormsModule,
+    TranslateModule,
+    NgSelectComponent,
+    NgLabelTemplateDirective,
+    NgOptionTemplateDirective,
+  ],
   templateUrl: './business-profile.component.html',
   styleUrls: ['./business-profile.component.scss'],
 })

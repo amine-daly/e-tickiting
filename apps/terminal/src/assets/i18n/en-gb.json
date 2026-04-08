@@ -128,51 +128,14 @@
     "ADD_BUTTON": "Add place",
     "LOADING": "Loading places...",
     "EMPTY": "No places available.",
-    "TAB": {
-      "PLACES": "Cities",
-      "SUBPLACES": "Pickup Points"
-    },
-    "KIND": {
-      "CITY": "City",
-      "POINT": "Point"
-    },
     "MODAL": {
       "EDIT_TITLE": "Edit place",
       "ADD_TITLE": "Add place",
-      "SELECT_PARENT": "Select parent place",
       "SELECT_COUNTRY": "Select a country",
       "SELECT_STATE": "Select a state",
-      "LOCATION_LABEL": "Map location",
-      "LOCATION_HELP": "Click on the map to set the latitude and longitude.",
       "ERRORS": {
-        "CITY_REQUIRED": "City is required.",
-        "PARENT_REQUIRED": "Parent place is required.",
-        "ADDRESS_REQUIRED": "Address is required."
+        "CITY_REQUIRED": "City is required."
       }
-    },
-    "SUBPLACES": {
-      "TITLE": "Pickup Points",
-      "ADD_BUTTON": "Add pickup point",
-      "LOADING": "Loading pickup points...",
-      "EMPTY": "No pickup points available.",
-      "COUNT": "Points",
-      "PARENT_CITY": "Parent City",
-      "ERROR": {
-        "LOAD": "Unable to load pickup points."
-      },
-      "MODAL": {
-        "EDIT_TITLE": "Edit pickup point",
-        "ADD_TITLE": "Add pickup point"
-      },
-      "MESSAGES": {
-        "CREATE_SUCCESS": "Pickup point created successfully.",
-        "CREATE_ERROR": "Unable to create the pickup point.",
-        "UPDATE_SUCCESS": "Pickup point updated successfully.",
-        "UPDATE_ERROR": "Unable to update the pickup point.",
-        "DELETE_SUCCESS": "Pickup point deleted successfully.",
-        "DELETE_ERROR": "Unable to delete the pickup point."
-      },
-      "MORE": "+{{count}} more"
     },
     "MESSAGES": {
       "CREATE_SUCCESS": "Place created successfully.",
@@ -395,6 +358,25 @@
         "PLACE_PLACEHOLDER": "Select city",
         "ADDRESS_PLACEHOLDER": "Street address",
         "EMPTY": "No drop-off points added. This step is optional."
+      },
+      "LOCATION": {
+        "TITLE": "Map pin",
+        "OPTIONAL": "Optional",
+        "HELP": "Save exact coordinates so drivers and passengers can find the stop faster.",
+        "CLICK_HELP": "Click on the map, drag the marker, or enter coordinates manually.",
+        "USE_CURRENT": "Use my location",
+        "LOCATING": "Locating...",
+        "CLEAR": "Clear pin",
+        "PIN_SET": "Geolocation set",
+        "PIN_EMPTY": "No geolocation yet",
+        "LATITUDE": "Latitude",
+        "LONGITUDE": "Longitude",
+        "LATITUDE_PLACEHOLDER": "e.g. 33.8869",
+        "LONGITUDE_PLACEHOLDER": "e.g. 9.5375",
+        "LATITUDE_ERROR": "Latitude must be between -90 and 90.",
+        "LONGITUDE_ERROR": "Longitude must be between -180 and 180.",
+        "ERROR_PERMISSION": "Location access was denied by the browser.",
+        "ERROR_UNAVAILABLE": "Unable to retrieve your current location."
       },
       "EXPRESS": {
         "ADD": "Add express fare",

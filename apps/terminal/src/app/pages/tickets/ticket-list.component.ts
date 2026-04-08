@@ -21,7 +21,11 @@ import { TicketService } from './ticket.service';
 import { TranslateModule, TranslateService } from '@ngx-translate/core';
 import { PaginationComponent } from '../../shared/components/pagination/pagination.component';
 import { FormsModule } from '@angular/forms';
-import { NgSelectComponent } from '@ng-select/ng-select';
+import {
+  NgLabelTemplateDirective,
+  NgOptionTemplateDirective,
+  NgSelectComponent,
+} from '@ng-select/ng-select';
 
 @Component({
   standalone: true,
@@ -37,6 +41,8 @@ import { NgSelectComponent } from '@ng-select/ng-select';
     TranslateModule,
     PaginationComponent,
     NgSelectComponent,
+    NgLabelTemplateDirective,
+    NgOptionTemplateDirective,
   ],
 })
 export class TicketListComponent implements OnInit, OnDestroy {
@@ -96,7 +102,7 @@ export class TicketListComponent implements OnInit, OnDestroy {
         error: () =>
           this.alert.error(
             this.t('TICKETS.MESSAGES.LOAD_ERROR_TITLE'),
-            this.t('TICKETS.MESSAGES.LOAD_ERROR_TEXT')
+            this.t('TICKETS.MESSAGES.LOAD_ERROR_TEXT'),
           ),
       });
     this.subscriptions.add(sub);
@@ -117,15 +123,21 @@ export class TicketListComponent implements OnInit, OnDestroy {
       this.t('TICKETS.MESSAGES.STATUS_CONFIRM_TITLE'),
       this.t('TICKETS.MESSAGES.CONFIRM_TEXT'),
       this.t('TICKETS.MESSAGES.STATUS_CONFIRM_OK'),
-      this.t('COMMON.BUTTON.CANCEL')
+      this.t('COMMON.BUTTON.CANCEL'),
     );
     if (!result.isConfirmed) return;
     this.statusUpdating[ticket.id] = true;
     const sub = this.ticketService
       .confirmTicket(ticket.id)
-      .pipe(finalize(() => { this.statusUpdating[ticket.id] = false; this.cdr.markForCheck(); }))
+      .pipe(
+        finalize(() => {
+          this.statusUpdating[ticket.id] = false;
+          this.cdr.markForCheck();
+        }),
+      )
       .subscribe({
-        next: () => this.alert.success(this.t('TICKETS.MESSAGES.STATUS_SUCCESS')),
+        next: () =>
+          this.alert.success(this.t('TICKETS.MESSAGES.STATUS_SUCCESS')),
         error: () => this.alert.error(this.t('TICKETS.MESSAGES.STATUS_ERROR')),
       });
     this.subscriptions.add(sub);
@@ -137,15 +149,21 @@ export class TicketListComponent implements OnInit, OnDestroy {
       this.t('TICKETS.MESSAGES.STATUS_CONFIRM_TITLE'),
       this.t('TICKETS.MESSAGES.CANCEL_TEXT'),
       this.t('TICKETS.MESSAGES.STATUS_CONFIRM_OK'),
-      this.t('COMMON.BUTTON.CANCEL')
+      this.t('COMMON.BUTTON.CANCEL'),
     );
     if (!result.isConfirmed) return;
     this.statusUpdating[ticket.id] = true;
     const sub = this.ticketService
       .cancelTicket(ticket.id)
-      .pipe(finalize(() => { this.statusUpdating[ticket.id] = false; this.cdr.markForCheck(); }))
+      .pipe(
+        finalize(() => {
+          this.statusUpdating[ticket.id] = false;
+          this.cdr.markForCheck();
+        }),
+      )
       .subscribe({
-        next: () => this.alert.success(this.t('TICKETS.MESSAGES.STATUS_SUCCESS')),
+        next: () =>
+          this.alert.success(this.t('TICKETS.MESSAGES.STATUS_SUCCESS')),
         error: () => this.alert.error(this.t('TICKETS.MESSAGES.STATUS_ERROR')),
       });
     this.subscriptions.add(sub);
@@ -157,15 +175,21 @@ export class TicketListComponent implements OnInit, OnDestroy {
       this.t('TICKETS.MESSAGES.EMAIL_CONFIRM_TITLE'),
       this.t('TICKETS.MESSAGES.EMAIL_CONFIRM_TEXT'),
       this.t('TICKETS.MESSAGES.EMAIL_CONFIRM_OK'),
-      this.t('COMMON.BUTTON.CANCEL')
+      this.t('COMMON.BUTTON.CANCEL'),
     );
     if (!result.isConfirmed) return;
     this.emailSending[ticket.id] = true;
     const sub = this.ticketService
       .sendEmail(ticket.id)
-      .pipe(finalize(() => { this.emailSending[ticket.id] = false; this.cdr.markForCheck(); }))
+      .pipe(
+        finalize(() => {
+          this.emailSending[ticket.id] = false;
+          this.cdr.markForCheck();
+        }),
+      )
       .subscribe({
-        next: () => this.alert.success(this.t('TICKETS.MESSAGES.EMAIL_SUCCESS_TITLE')),
+        next: () =>
+          this.alert.success(this.t('TICKETS.MESSAGES.EMAIL_SUCCESS_TITLE')),
         error: () => this.alert.error(this.t('TICKETS.MESSAGES.EMAIL_ERROR')),
       });
     this.subscriptions.add(sub);

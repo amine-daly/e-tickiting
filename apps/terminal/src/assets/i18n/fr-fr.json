@@ -128,51 +128,14 @@
     "ADD_BUTTON": "Ajouter un lieu",
     "LOADING": "Chargement des lieux...",
     "EMPTY": "Aucun lieu disponible.",
-    "TAB": {
-      "PLACES": "Villes",
-      "SUBPLACES": "Points de ramassage"
-    },
-    "KIND": {
-      "CITY": "Ville",
-      "POINT": "Point"
-    },
     "MODAL": {
       "EDIT_TITLE": "Modifier le lieu",
       "ADD_TITLE": "Ajouter un lieu",
-      "SELECT_PARENT": "Sélectionnez le lieu parent",
       "SELECT_COUNTRY": "Sélectionnez un pays",
       "SELECT_STATE": "Sélectionnez un gouvernorat",
-      "LOCATION_LABEL": "Position sur la carte",
-      "LOCATION_HELP": "Cliquez sur la carte pour définir la latitude et la longitude.",
       "ERRORS": {
-        "CITY_REQUIRED": "La ville est obligatoire.",
-        "PARENT_REQUIRED": "Le lieu parent est obligatoire.",
-        "ADDRESS_REQUIRED": "L'adresse est obligatoire."
+        "CITY_REQUIRED": "La ville est obligatoire."
       }
-    },
-    "SUBPLACES": {
-      "TITLE": "Points de ramassage",
-      "ADD_BUTTON": "Ajouter un point de ramassage",
-      "LOADING": "Chargement des points de ramassage...",
-      "EMPTY": "Aucun point de ramassage disponible.",
-      "COUNT": "Points",
-      "PARENT_CITY": "Ville parente",
-      "ERROR": {
-        "LOAD": "Impossible de charger les points de ramassage."
-      },
-      "MODAL": {
-        "EDIT_TITLE": "Modifier le point de ramassage",
-        "ADD_TITLE": "Ajouter un point de ramassage"
-      },
-      "MESSAGES": {
-        "CREATE_SUCCESS": "Point de ramassage créé avec succès.",
-        "CREATE_ERROR": "Impossible de créer le point de ramassage.",
-        "UPDATE_SUCCESS": "Point de ramassage mis à jour avec succès.",
-        "UPDATE_ERROR": "Impossible de mettre à jour le point de ramassage.",
-        "DELETE_SUCCESS": "Point de ramassage supprimé avec succès.",
-        "DELETE_ERROR": "Impossible de supprimer le point de ramassage."
-      },
-      "MORE": "+{{count}} de plus"
     },
     "MESSAGES": {
       "CREATE_SUCCESS": "Lieu créé avec succès.",
@@ -395,6 +358,25 @@
         "PLACE_PLACEHOLDER": "Sélectionnez une ville",
         "ADDRESS_PLACEHOLDER": "Adresse",
         "EMPTY": "Aucun point de dépose ajouté. Cette étape est optionnelle."
+      },
+      "LOCATION": {
+        "TITLE": "Position sur la carte",
+        "OPTIONAL": "Optionnel",
+        "HELP": "Enregistrez des coordonnées précises pour aider les chauffeurs et les passagers à trouver l'arrêt plus vite.",
+        "CLICK_HELP": "Cliquez sur la carte, faites glisser le marqueur ou saisissez les coordonnées manuellement.",
+        "USE_CURRENT": "Utiliser ma position",
+        "LOCATING": "Localisation...",
+        "CLEAR": "Effacer le point",
+        "PIN_SET": "Géolocalisation définie",
+        "PIN_EMPTY": "Aucune géolocalisation",
+        "LATITUDE": "Latitude",
+        "LONGITUDE": "Longitude",
+        "LATITUDE_PLACEHOLDER": "ex. 33.8869",
+        "LONGITUDE_PLACEHOLDER": "ex. 9.5375",
+        "LATITUDE_ERROR": "La latitude doit être comprise entre -90 et 90.",
+        "LONGITUDE_ERROR": "La longitude doit être comprise entre -180 et 180.",
+        "ERROR_PERMISSION": "L'accès à votre position a été refusé par le navigateur.",
+        "ERROR_UNAVAILABLE": "Impossible de récupérer votre position actuelle."
       },
       "EXPRESS": {
         "ADD": "Ajouter un tarif express",

@@ -1,12 +1,5 @@
 package com.eticketing.app.web;
 
-import com.eticketing.app.trip.TripTypeRepository;
-import com.eticketing.app.place.PlaceRepository;
-import com.eticketing.app.place.LonLatType;
-import com.eticketing.app.place.PlaceType;
-import com.eticketing.app.subplace.SubPlaceRepository;
-import com.eticketing.app.subplace.SubPlaceType;
-
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
@@ -17,42 +10,12 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDate;
-import java.util.List;
 import java.util.Map;
 
 @RestController
 @RequestMapping("/api/search")
 @Tag(name = "Search", description = "Search APIs")
 public class SearchController {
-
-    private final TripTypeRepository trips;
-    private final PlaceRepository places;
-    private final SubPlaceRepository subPlaces;
-
-    public SearchController(TripTypeRepository trips, PlaceRepository places, SubPlaceRepository subPlaces) {
-        this.trips = trips;
-        this.places = places;
-        this.subPlaces = subPlaces;
-    }
-
-    private LonLatType resolveCityLocation(String cityId) {
-        if (cityId == null || cityId.isBlank()) {
-            return null;
-        }
-
-        List<SubPlaceType> list = subPlaces.findByParentId(cityId);
-        if (list == null || list.isEmpty()) {
-            return null;
-        }
-
-        // Return first sub-place with a location
-        for (SubPlaceType sp : list) {
-            if (sp.getLocation() != null) {
-                return sp.getLocation();
-            }
-        }
-        return null;
-    }
 
     // TODO: Rewrite in Batch 2 — segment-based search with stop schedule model
     @GetMapping("/trips")

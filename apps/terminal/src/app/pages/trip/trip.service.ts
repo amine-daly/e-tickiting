@@ -3,93 +3,19 @@ import { HttpClient, HttpParams } from '@angular/common/http';
 import { BehaviorSubject, Observable, of, throwError } from 'rxjs';
 import { catchError, finalize, map, tap } from 'rxjs/operators';
 
-import {
-  TripType,
-  TripStatusEnum,
-  PickupPointType,
-  DropoffPointType,
-  ExpressFareType,
-} from '../../core/models/trip.model';
+import { TripType, TripStatusEnum } from '../../core/models/trip.model';
 import { TripFilterInput } from 'src/app/core/models/trip-filter-input.model';
+import {
+  DropoffPointPayload,
+  ExpressFarePayload,
+  PickupPointPayload,
+  TripCreatePayload,
+  TripUpdatePayload,
+} from '../../core/models/trip-payload.model';
 import {
   IPagination,
   PaginateResponse,
 } from 'src/app/core/models/paginate-model';
-
-// ────────────────────────────────────────────────
-// Payload interfaces
-// ────────────────────────────────────────────────
-export interface StopInput {
-  placeId: string;
-  sequence: number;
-  arrivalTime: string | null;
-  departureTime: string | null;
-  boardingAllowed: boolean;
-  droppingAllowed: boolean;
-}
-
-export interface SegmentCreateInput {
-  basePrice: number;
-  maxSeats: number;
-  distanceKm: number;
-  durationMinutesOverride?: number;
-}
-
-export interface PickupPointPayload {
-  placeId: string;
-  address: string;
-  scheduledDepartureTime: string;
-  active?: boolean;
-  location?: { latitude: number; longitude: number };
-}
-
-export interface DropoffPointPayload {
-  placeId: string;
-  address: string;
-  scheduledArrivalTime: string;
-  active?: boolean;
-  location?: { latitude: number; longitude: number };
-}
-
-export interface ExpressFareCreateInput {
-  segmentIndices: number[];
-  price: number;
-  validFrom?: string | null;
-  validUntil?: string | null;
-  active?: boolean;
-}
-
-export interface ExpressFarePayload {
-  fromPlaceId: string;
-  toPlaceId: string;
-  segmentsCovered: string[];
-  price: number;
-  validFrom?: string | null;
-  validUntil?: string | null;
-  active?: boolean;
-}
-
-export interface TripCreatePayload {
-  bus: { busId: string };
-  departureDate: string;
-  timezone: string;
-  currency: { currencyId: string };
-  seatHoldMinutes: number;
-  stopSchedule: StopInput[];
-  segmentInputs: SegmentCreateInput[];
-  pickupPoints: PickupPointPayload[];
-  dropoffPoints: DropoffPointPayload[];
-  expressFares?: ExpressFareCreateInput[];
-}
-
-export interface TripUpdatePayload {
-  bus?: { busId: string };
-  departureDate?: string;
-  timezone?: string;
-  currency?: { currencyId: string };
-  seatHoldMinutes?: number;
-  stopSchedule?: StopInput[];
-}
 
 @Injectable({ providedIn: 'root' })
 export class TripService {

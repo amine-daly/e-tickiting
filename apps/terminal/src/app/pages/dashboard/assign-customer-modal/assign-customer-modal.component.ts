@@ -17,7 +17,10 @@ import {
   takeUntil,
 } from 'rxjs/operators';
 import { isEqual } from 'lodash';
-import { NgSelectModule } from '@ng-select/ng-select';
+import {
+  NgOptionTemplateDirective,
+  NgSelectComponent,
+} from '@ng-select/ng-select';
 
 import { PermissionsService } from '../../permissions/permissions.service';
 import { CompanyService } from '../../companies/company.service';
@@ -38,7 +41,8 @@ import { CompanyType } from 'src/app/core/models/company.model';
     CommonModule,
     ReactiveFormsModule,
     TranslateModule,
-    NgSelectModule,
+    NgSelectComponent,
+    NgOptionTemplateDirective,
     NgbNavModule,
   ],
   templateUrl: './assign-customer-modal.component.html',

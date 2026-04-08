@@ -68,7 +68,7 @@ public final class TripEditRules {
         if (req.getDepartureDate() != null) {
             throw new BadRequestException("BLOCKED: departureDate cannot be changed on ACTIVE trip");
         }
-        if (req.getCurrency() != null) {
+        if (req.getCurrencyId() != null) {
             throw new BadRequestException("BLOCKED: currency cannot be changed on ACTIVE trip");
         }
 
@@ -145,7 +145,7 @@ public final class TripEditRules {
     private static boolean hasNonStatusChanges(TripUpdateRequest req) {
         return req.getDepartureDate() != null
                 || req.getTimezone() != null
-                || req.getCurrency() != null
+                || req.getCurrencyId() != null
                 || req.getSeatHoldMinutes() != null
                 || req.getBus() != null
                 || req.getStopSchedule() != null

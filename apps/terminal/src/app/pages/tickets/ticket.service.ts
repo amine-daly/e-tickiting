@@ -41,6 +41,7 @@ export class TicketService {
 
   fetchTickets(status?: TicketStatus): Observable<Ticket[]> {
     const posId = localStorage.getItem('posId');
+    console.log('🚀 ~ TicketService ~ fetchTickets ~ posId:', posId);
     if (!posId) {
       this.tickets.next([]);
       return throwError(() => new Error('POS_ID_MISSING'));
@@ -53,9 +54,12 @@ export class TicketService {
       params = params.set('status', status);
     }
     return this.http
-      .get<PaginateResponse<Ticket>>(`${this.ticketsUrl}/by-pos/${posId}`, { params })
+      .get<
+        PaginateResponse<Ticket>
+      >(`${this.ticketsUrl}/by-pos/${posId}`, { params })
       .pipe(
         map((res) => {
+          console.log('🚀 ~ TicketService ~ fetchTickets ~ res:', res);
           const objects = Array.isArray(res?.objects) ? res.objects : [];
           this.tickets.next(objects);
           this.pagination.next({
@@ -68,7 +72,7 @@ export class TicketService {
           this.tickets.next([]);
           return throwError(() => error);
         }),
-        finalize(() => this.loading.next(false))
+        finalize(() => this.loading.next(false)),
       );
   }
 
@@ -87,7 +91,7 @@ export class TicketService {
   sendEmail(id: string): Observable<TicketEmailResponse> {
     return this.http.post<TicketEmailResponse>(
       `${this.ticketsUrl}/${id}/send-email`,
-      {}
+      {},
     );
   }
 
@@ -97,9 +101,9 @@ export class TicketService {
     this.tickets.next(
       exists
         ? current.map((ticket) =>
-            ticket.id === updated.id ? { ...ticket, ...updated } : ticket
+            ticket.id === updated.id ? { ...ticket, ...updated } : ticket,
           )
-        : [...current, updated]
+        : [...current, updated],
     );
   }
 }
