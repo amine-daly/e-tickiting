@@ -26,6 +26,7 @@ import {
   NgOptionTemplateDirective,
   NgSelectComponent,
 } from '@ng-select/ng-select';
+import { RouterModule } from '@angular/router';
 
 @Component({
   standalone: true,
@@ -36,6 +37,7 @@ import {
   imports: [
     CommonModule,
     FormsModule,
+    RouterModule,
     NgbDropdownModule,
     NgbTooltipModule,
     TranslateModule,

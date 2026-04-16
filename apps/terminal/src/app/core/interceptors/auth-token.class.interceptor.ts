@@ -20,12 +20,16 @@ export class AuthTokenClassInterceptor implements HttpInterceptor {
   ): Observable<HttpEvent<any>> {
     const token = localStorage.getItem('accessToken');
     const companyId = localStorage.getItem('companyId');
+    const posId = localStorage.getItem('posId');
     const headers: Record<string, string> = {};
     if (token) {
       headers['Authorization'] = `Bearer ${token}`;
     }
     if (companyId) {
       headers['X-Company-Id'] = companyId;
+    }
+    if (posId) {
+      headers['X-Pos-Id'] = posId;
     }
     const authReq = Object.keys(headers).length
       ? req.clone({ setHeaders: headers })

@@ -159,11 +159,29 @@ export class AddMemberModalComponent implements OnInit, OnDestroy {
           this.activeModal.close(true);
         },
         error: (err) => {
-          const backendMsg: string = err?.error?.message || '';
+          const backendMsg: string = `${err?.error?.message || ''}`.trim();
+          const normalizedMsg = backendMsg.toLowerCase();
           let message: string;
-          if (backendMsg.toLowerCase().includes('already exist')) {
+
+          if (
+            normalizedMsg.includes('already has an account with this company')
+          ) {
+            message = this.translate.instant('TEAM.MESSAGES.ALREADY_ASSIGNED');
+          } else if (
+            normalizedMsg.includes('email and phone belong to different users')
+          ) {
+            message = this.translate.instant('TEAM.MESSAGES.CONTACT_CONFLICT');
+          } else if (
+            normalizedMsg.includes('email already exists') ||
+            normalizedMsg.includes('user with this email already exists') ||
+            normalizedMsg.includes('already exist')
+          ) {
             message = this.translate.instant(
               'TEAM.MESSAGES.EMAIL_ALREADY_EXISTS',
+            );
+          } else if (normalizedMsg.includes('phone number already exists')) {
+            message = this.translate.instant(
+              'TEAM.MESSAGES.PHONE_ALREADY_EXISTS',
             );
           } else {
             message = this.translate.instant('TEAM.MESSAGES.CREATE_ERROR');

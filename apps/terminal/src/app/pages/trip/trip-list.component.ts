@@ -22,7 +22,11 @@ import {
 } from '@ng-select/ng-select';
 
 import { TripType, TripStatusEnum } from '../../core/models/trip.model';
-import { TripFilterInput } from '../../core/models/trip-filter-input.model';
+import {
+  TripFilterInput,
+  TripSortBy,
+  TripSortOrder,
+} from '../../core/models/trip-filter-input.model';
 import { TripService } from './trip.service';
 import { AlertService } from '../../core/services/alert.service';
 import { PaginationComponent } from 'src/app/shared/components/pagination/pagination.component';
@@ -63,6 +67,8 @@ export class TripListComponent implements OnInit, OnDestroy {
   // Filters
   filterStatus: TripStatusEnum | null = null;
   filterSearch = '';
+  sortBy: TripSortBy = 'createdAt';
+  sortOrder: TripSortOrder = 'desc';
 
   statusUpdating: Record<string, boolean> = {};
 
@@ -84,6 +90,19 @@ export class TripListComponent implements OnInit, OnDestroy {
       value: TripStatusEnum.CANCELLED,
       label: this.t('TRIPS.STATUS.CANCELLED'),
     },
+  ];
+
+  sortByOptions: Array<{ value: TripSortBy; label: string }> = [
+    { value: 'createdAt', label: this.t('TRIPS.SORT.CREATED_AT') },
+    {
+      value: 'departureDate',
+      label: this.t('TRIPS.FIELDS.DEPARTURE_DATE'),
+    },
+  ];
+
+  sortOrderOptions: Array<{ value: TripSortOrder; label: string }> = [
+    { value: 'desc', label: this.t('TRIPS.SORT.DESC') },
+    { value: 'asc', label: this.t('TRIPS.SORT.ASC') },
   ];
 
   statusLabelMap: Record<TripStatusEnum, string> = {
@@ -124,6 +143,8 @@ export class TripListComponent implements OnInit, OnDestroy {
     if (this.filterSearch.trim()) {
       filter.searchTerm = this.filterSearch.trim();
     }
+    filter.sortBy = this.sortBy;
+    filter.order = this.sortOrder;
     const sub = this.tripService.list(filter).subscribe({
       next: () => this.cdr.markForCheck(),
       error: () => this.alert.error(this.t('TRIPS.MESSAGES.LOAD_ERROR')),
@@ -142,6 +163,8 @@ export class TripListComponent implements OnInit, OnDestroy {
   clearFilters(): void {
     this.filterStatus = null;
     this.filterSearch = '';
+    this.sortBy = 'createdAt';
+    this.sortOrder = 'desc';
     this.loadTrips(1);
   }
 

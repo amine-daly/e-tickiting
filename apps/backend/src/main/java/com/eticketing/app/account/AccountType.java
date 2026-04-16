@@ -117,21 +117,50 @@ public class AccountType {
      */
     public static class TargetType {
 
+        public static class CompanyRef {
+
+            @JsonProperty("id")
+            private String id;
+
+            public CompanyRef() {
+            }
+
+            public CompanyRef(String id) {
+                this.id = id;
+            }
+
+            public static CompanyRef from(CompanyType company) {
+                return company == null ? null : new CompanyRef(company.getId());
+            }
+
+            public String getId() {
+                return id;
+            }
+
+            public void setId(String id) {
+                this.id = id;
+            }
+        }
+
         @JsonProperty("company")
-        private CompanyType company;
+        private CompanyRef company;
 
         public TargetType() {
         }
 
         public TargetType(CompanyType company) {
+            this.company = CompanyRef.from(company);
+        }
+
+        public TargetType(CompanyRef company) {
             this.company = company;
         }
 
-        public CompanyType getCompany() {
+        public CompanyRef getCompany() {
             return company;
         }
 
-        public void setCompany(CompanyType company) {
+        public void setCompany(CompanyRef company) {
             this.company = company;
         }
 

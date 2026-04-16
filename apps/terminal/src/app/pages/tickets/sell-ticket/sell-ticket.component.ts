@@ -17,10 +17,12 @@ import { TranslateModule, TranslateService } from '@ngx-translate/core';
 import {
   Subject,
   Subscription,
+  Observable,
   debounceTime,
   distinctUntilChanged,
+  finalize,
+  map,
   switchMap,
-  of,
 } from 'rxjs';
 
 import { AlertService } from '../../../core/services/alert.service';
@@ -28,16 +30,15 @@ import {
   BookingService,
   BookingRequest,
   BookingResponse,
-  UserSearchResult,
 } from '../../../core/services/booking.service';
-import { TripService } from '../../trip/trip.service';
-import { PlacesService } from '../../places/places.service';
+import { UserType } from '../../../core/models/user-type';
 import {
   TripType,
   PickupPointType,
   DropoffPointType,
-  SegmentType,
 } from '../../../core/models/trip.model';
+import { CustomersService } from '../../customers/customers.service';
+import { TripService } from '../../trip/trip.service';
 
 @Component({
   standalone: true,
@@ -63,9 +64,12 @@ export class SellTicketComponent implements OnInit, OnDestroy {
 
   // Step 1 — Customer
   customerQuery = '';
-  customers: UserSearchResult[] = [];
+  customers: UserType[] = [];
   customerLoading = false;
-  selectedCustomer: UserSearchResult | null = null;
+  selectedCustomer: UserType | null = null;
+  private customerPage = 0;
+  private customerIsLast = false;
+  private readonly customerPageSize = 20;
 
   // Step 2 — Trip
   trips: TripType[] = [];
@@ -85,8 +89,8 @@ export class SellTicketComponent implements OnInit, OnDestroy {
 
   constructor(
     private bookingService: BookingService,
+    private customersService: CustomersService,
     private tripService: TripService,
-    private placesService: PlacesService,
     private alert: AlertService,
     private translate: TranslateService,
     private router: Router,
@@ -94,34 +98,26 @@ export class SellTicketComponent implements OnInit, OnDestroy {
   ) {}
 
   ngOnInit(): void {
-    // Debounced customer search
     const sub = this.customerSearch$
       .pipe(
         debounceTime(300),
         distinctUntilChanged(),
         switchMap((q) => {
-          if (!q || q.length < 2) {
-            this.customers = [];
-            this.cdr.markForCheck();
-            return of(null);
-          }
-          this.customerLoading = true;
-          this.cdr.markForCheck();
-          return this.bookingService.searchUsers(q);
+          this.customerQuery = (q || '').trim();
+          return this.fetchCustomers(true);
         }),
       )
       .subscribe({
-        next: (res) => {
-          this.customerLoading = false;
-          if (res) this.customers = res.objects || [];
-          this.cdr.markForCheck();
-        },
-        error: () => {
-          this.customerLoading = false;
-          this.cdr.markForCheck();
-        },
+        next: () => this.cdr.markForCheck(),
+        error: () => this.cdr.markForCheck(),
       });
     this.subscriptions.add(sub);
+
+    const initialLoadSub = this.fetchCustomers(true).subscribe({
+      next: () => this.cdr.markForCheck(),
+      error: () => this.cdr.markForCheck(),
+    });
+    this.subscriptions.add(initialLoadSub);
   }
 
   // ─── Step 1: Customer ───
@@ -129,8 +125,20 @@ export class SellTicketComponent implements OnInit, OnDestroy {
     this.customerSearch$.next(term);
   }
 
-  selectCustomer(customer: UserSearchResult): void {
+  selectCustomer(customer: UserType): void {
     this.selectedCustomer = customer;
+  }
+
+  loadMoreCustomers(): void {
+    if (this.customerLoading || this.customerIsLast) {
+      return;
+    }
+
+    const sub = this.fetchCustomers(false).subscribe({
+      next: () => this.cdr.markForCheck(),
+      error: () => this.cdr.markForCheck(),
+    });
+    this.subscriptions.add(sub);
   }
 
   goToStep2(): void {
@@ -172,34 +180,74 @@ export class SellTicketComponent implements OnInit, OnDestroy {
   }
 
   // ─── Step 3: Review & Book ───
+  onPickupChange(): void {
+    this.computePrice();
+  }
+
+  onDropoffChange(): void {
+    this.computePrice();
+  }
+
+  private getSelectedPickupPlaceId(): string | null {
+    if (!this.selectedPickupId || !this.selectedTrip) return null;
+    const pp = (this.selectedTrip.pickupPoints || []).find(
+      (p) => p.pointId === this.selectedPickupId,
+    );
+    return pp?.placeId || null;
+  }
+
+  private getSelectedDropoffPlaceId(): string | null {
+    if (!this.selectedDropoffId || !this.selectedTrip) return null;
+    const dp = (this.selectedTrip.dropoffPoints || []).find(
+      (p) => p.pointId === this.selectedDropoffId,
+    );
+    return dp?.placeId || null;
+  }
+
   private computePrice(): void {
     if (!this.selectedTrip) return;
-    const stops = this.selectedTrip.stopSchedule || [];
-    const fromPlaceId = stops[0]?.placeId;
-    const toPlaceId = stops[stops.length - 1]?.placeId;
     this.currency = this.selectedTrip.currency?.code || '';
 
+    const fromPlaceId = this.getSelectedPickupPlaceId();
+    const toPlaceId = this.getSelectedDropoffPlaceId();
+    if (!fromPlaceId || !toPlaceId) return;
+
+    const now = new Date();
     const express = (this.selectedTrip.expressFares || []).find(
       (f) =>
-        f.fromPlaceId === fromPlaceId && f.toPlaceId === toPlaceId && f.active,
+        f.fromPlaceId === fromPlaceId &&
+        f.toPlaceId === toPlaceId &&
+        f.active &&
+        (!f.validFrom || now >= new Date(f.validFrom)) &&
+        (!f.validUntil || now <= new Date(f.validUntil)),
     );
     if (express) {
       this.displayPrice = express.price;
     } else {
-      this.displayPrice = (this.selectedTrip.segments || []).reduce(
-        (s, seg) => s + (seg.basePrice || 0),
-        0,
-      );
+      const chain = this.resolveDisplaySegments(fromPlaceId, toPlaceId);
+      this.displayPrice = chain.reduce((s, seg) => s + (seg.basePrice || 0), 0);
     }
     this.cdr.markForCheck();
+  }
+
+  private resolveDisplaySegments(fromPlaceId: string, toPlaceId: string) {
+    const segments = this.selectedTrip?.segments || [];
+    const sorted = [...segments].sort((a, b) => a.sequence - b.sequence);
+    const startIdx = sorted.findIndex((s) => s.fromPlaceId === fromPlaceId);
+    if (startIdx === -1) return sorted;
+    const chain: typeof sorted = [];
+    for (let i = startIdx; i < sorted.length; i++) {
+      chain.push(sorted[i]);
+      if (sorted[i].toPlaceId === toPlaceId) return chain;
+    }
+    return sorted;
   }
 
   confirmBooking(): void {
     if (!this.selectedCustomer || !this.selectedTrip || this.booking) return;
 
-    const stops = this.selectedTrip.stopSchedule || [];
-    const fromPlaceId = stops[0]?.placeId || '';
-    const toPlaceId = stops[stops.length - 1]?.placeId || '';
+    const fromPlaceId = this.getSelectedPickupPlaceId() || '';
+    const toPlaceId = this.getSelectedDropoffPlaceId() || '';
 
     this.booking = true;
     this.cdr.markForCheck();
@@ -243,7 +291,82 @@ export class SellTicketComponent implements OnInit, OnDestroy {
   }
 
   getStopCity(placeId: string): string {
-    return placeId; // Places resolution could be added here
+    if (!placeId || !this.selectedTrip) return placeId;
+    const stops = this.selectedTrip.stopSchedule || [];
+    const stop = stops.find((s) => s.placeId === placeId);
+    return stop?.place?.city || placeId;
+  }
+
+  private fetchCustomers(reset: boolean): Observable<UserType[]> {
+    if (reset) {
+      this.customerPage = 0;
+      this.customerIsLast = false;
+    }
+
+    this.customerLoading = true;
+    this.cdr.markForCheck();
+
+    const companyId = localStorage.getItem('companyId') || undefined;
+    const page = this.customerPage;
+    const request$ =
+      this.customerQuery.length >= 2
+        ? this.customersService.searchCustomers(
+            this.customerQuery,
+            companyId,
+            page,
+            this.customerPageSize,
+          )
+        : this.customersService.getCustomersByCompany(
+            companyId,
+            page,
+            this.customerPageSize,
+          );
+
+    return request$.pipe(
+      map((response) => {
+        const incoming = response?.objects || [];
+        this.customerPage = page + 1;
+        this.customerIsLast = response?.isLast ?? true;
+        this.customers = reset
+          ? incoming
+          : this.mergeCustomers(this.customers, incoming);
+        return this.customers;
+      }),
+      finalize(() => {
+        this.customerLoading = false;
+        this.cdr.markForCheck();
+      }),
+    );
+  }
+
+  private mergeCustomers(
+    existing: UserType[],
+    incoming: UserType[],
+  ): UserType[] {
+    const merged = new Map<string, UserType>();
+
+    [...existing, ...incoming].forEach((customer) => {
+      if (customer?.id) {
+        merged.set(customer.id, customer);
+      }
+    });
+
+    return Array.from(merged.values());
+  }
+
+  // ─── ROUTE PREVIEW ─────────────────────────────────────
+  routePreview(trip: TripType): string {
+    if (!trip?.stopSchedule?.length) return '-';
+    const stops = [...trip.stopSchedule].sort(
+      (a, b) => a.sequence - b.sequence,
+    );
+    const first = stops[0]?.place?.city || stops[0]?.placeId || '-';
+    const last =
+      stops[stops.length - 1]?.place?.city ||
+      stops[stops.length - 1]?.placeId ||
+      '-';
+    if (first === last) return first;
+    return `${first} → ${last}`;
   }
 
   ngOnDestroy(): void {

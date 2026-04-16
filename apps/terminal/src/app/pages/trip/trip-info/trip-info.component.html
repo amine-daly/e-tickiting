@@ -58,6 +58,15 @@
 
         <!-- Status action buttons -->
         <div class="d-flex gap-2">
+          <a
+            class="btn btn-sm btn-light-primary"
+            [routerLink]="['/trips', trip.id, 'edit']"
+          >
+            <i class="ki-duotone ki-pencil fs-4 me-1"
+              ><span class="path1"></span><span class="path2"></span
+            ></i>
+            {{ "TRIPS.ACTIONS.EDIT" | translate }}
+          </a>
           <button
             *ngIf="canPublish"
             class="btn btn-sm btn-success"
@@ -284,12 +293,16 @@
               </td>
               <td>
                 {{
-                  fare.validFrom ? (fare.validFrom | date: "yyyy-MM-dd") : "-"
+                  fare.validFrom
+                    ? (fare.validFrom | date: "yyyy-MM-dd HH:mm a")
+                    : "-"
                 }}
               </td>
               <td>
                 {{
-                  fare.validUntil ? (fare.validUntil | date: "yyyy-MM-dd") : "-"
+                  fare.validUntil
+                    ? (fare.validUntil | date: "yyyy-MM-dd HH:mm a")
+                    : "-"
                 }}
               </td>
               <td class="text-center">

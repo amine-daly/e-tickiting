@@ -29,6 +29,7 @@ import org.springframework.web.server.ResponseStatusException;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 
 import org.springframework.dao.IncorrectResultSizeDataAccessException;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -180,10 +181,10 @@ public class AccountsController {
         // Build target response (full Company object)
         TargetRes targetRes = null;
         if (acc.getTarget() != null && acc.getTarget().getCompany() != null) {
-            var embeddedCompany = acc.getTarget().getCompany();
-            CompanyType company = embeddedCompany.getId() != null
-                    ? companyRepo.findById(embeddedCompany.getId()).orElse(embeddedCompany)
-                    : embeddedCompany;
+            var companyRef = acc.getTarget().getCompany();
+            CompanyType company = companyRef.getId() != null
+                    ? companyRepo.findById(companyRef.getId()).orElse(null)
+                    : null;
 
             if (company != null) {
                 targetRes = new TargetRes(new CompanyRes(
@@ -323,13 +324,21 @@ public class AccountsController {
         CompanyType company = companyRepo.findById(req.target().companyId())
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Company not found"));
 
+        boolean alreadyAssigned = accountRepo.findByUserId(user.getId()).stream()
+                .anyMatch(acc -> acc.getTarget() != null
+                && acc.getTarget().getCompany() != null
+                && req.target().companyId().equals(acc.getTarget().getCompany().getId()));
+        if (alreadyAssigned) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "User already has an account with this company");
+        }
+
         // Verify permission exists (optional)
         if (req.permissionId() != null && !req.permissionId().isBlank()) {
             permissionRepo.findById(req.permissionId())
                     .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Permission not found"));
         }
 
-        // Embed full company object into account target
+        // Store only the company reference in account target
         AccountType account = new AccountType();
         account.setUserId(req.userId());
         account.setPermissionId(req.permissionId());
@@ -461,6 +470,11 @@ public class AccountsController {
         if (req.companyId() == null || req.companyId().isBlank()) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "companyId is required");
         }
+        if (req.phone() == null
+                || req.phone().countryCode() == null || req.phone().countryCode().isBlank()
+                || req.phone().number() == null || req.phone().number().isBlank()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "phone is required");
+        }
 
         // Verify company exists
         CompanyType company = companyRepo.findById(req.companyId())
@@ -474,28 +488,66 @@ public class AccountsController {
             permissionId = req.permissionId();
         }
 
-        // Check if user with this email already exists
+        RoleEnum targetRole;
         try {
-            if (userRepo.findByEmail(req.email()).isPresent()) {
-                throw new ResponseStatusException(HttpStatus.CONFLICT, "User with this email already exists");
-            }
+            targetRole = req.role() != null ? RoleEnum.valueOf(req.role()) : RoleEnum.MANAGER;
+        } catch (IllegalArgumentException ex) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "role is invalid");
+        }
+
+        Optional<UserType> existingByEmail;
+        try {
+            existingByEmail = userRepo.findByEmailAndApp(req.email().trim(), AppEnum.TERMINAL);
         } catch (IncorrectResultSizeDataAccessException e) {
-            // Multiple users found with same email - also means email exists
-            throw new ResponseStatusException(HttpStatus.CONFLICT, "User with this email already exists");
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "Email already exists");
+        }
+
+        Optional<UserType> existingByPhone = userRepo.findByPhone_CountryCodeAndPhone_Number(
+                req.phone().countryCode(),
+                req.phone().number()
+        );
+
+        if (existingByEmail.isPresent() && existingByPhone.isPresent()
+                && !existingByEmail.get().getId().equals(existingByPhone.get().getId())) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "Email and phone belong to different users");
+        }
+
+        UserType existingUser = existingByEmail.orElseGet(() -> existingByPhone.orElse(null));
+
+        if (existingUser != null) {
+            if (existingUser.getRole() != targetRole) {
+                throw new ResponseStatusException(HttpStatus.CONFLICT, "A user with this contact already exists with a different role");
+            }
+
+            boolean alreadyAssigned = accountRepo.findByUserId(existingUser.getId()).stream()
+                    .anyMatch(acc -> acc.getTarget() != null
+                    && acc.getTarget().getCompany() != null
+                    && req.companyId().equals(acc.getTarget().getCompany().getId()));
+            if (alreadyAssigned) {
+                throw new ResponseStatusException(HttpStatus.CONFLICT, "User already has an account with this company");
+            }
+
+            Instant now = Instant.now();
+            AccountType account = new AccountType();
+            account.setUserId(existingUser.getId());
+            account.setPermissionId(permissionId);
+            account.setTarget(new AccountType.TargetType(company));
+            account.setCreatedAt(now);
+            account.setUpdatedAt(now);
+
+            return ResponseEntity.status(HttpStatus.CREATED).body(toRes(accountRepo.save(account)));
         }
 
         // Step 1: Create the user
         UserType user = new UserType();
         user.setFirstName(req.firstName());
         user.setLastName(req.lastName());
-        user.setEmail(req.email());
+        user.setEmail(req.email().trim());
         user.setPasswordHash(passwordEncoder.encode(req.password()));
-        user.setRole(req.role() != null ? RoleEnum.valueOf(req.role()) : RoleEnum.MANAGER);
+        user.setRole(targetRole);
         user.setApp(AppEnum.TERMINAL);
         user.setTarget(new UserType.TargetType(req.companyId(), null));
-        if (req.phone() != null) {
-            user.setPhone(new PhoneType(req.phone().countryCode(), req.phone().number()));
-        }
+        user.setPhone(new PhoneType(req.phone().countryCode(), req.phone().number()));
         Instant now = Instant.now();
         user.setCreatedAt(now);
         user.setUpdatedAt(now);

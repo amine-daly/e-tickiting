@@ -1,46 +1,82 @@
 <div class="container py-5">
   <div class="card">
     <div class="card-body">
-
       <!-- Header with steps -->
-      <div class="d-flex justify-content-between align-items-center mb-5">
-        <h2 class="mb-0">{{ 'TICKETS.SELL.TITLE' | translate }}</h2>
+      <div
+        class="d-flex justify-content-between align-items-center mb-5 flex-wrap gap-2"
+      >
+        <h2 class="mb-0">{{ "TICKETS.SELL.TITLE" | translate }}</h2>
         <div class="d-flex gap-2">
-          <span class="badge" [class.badge-primary]="step === 1" [class.badge-light]="step !== 1">1. {{ 'TICKETS.SELL.STEP_CUSTOMER' | translate }}</span>
-          <span class="badge" [class.badge-primary]="step === 2" [class.badge-light]="step !== 2">2. {{ 'TICKETS.SELL.STEP_TRIP' | translate }}</span>
-          <span class="badge" [class.badge-primary]="step === 3" [class.badge-light]="step !== 3">3. {{ 'TICKETS.SELL.STEP_REVIEW' | translate }}</span>
+          <span
+            class="badge"
+            [class.badge-primary]="step === 1"
+            [class.badge-light]="step !== 1"
+            >1. {{ "TICKETS.SELL.STEP_CUSTOMER" | translate }}</span
+          >
+          <span
+            class="badge"
+            [class.badge-primary]="step === 2"
+            [class.badge-light]="step !== 2"
+            >2. {{ "TICKETS.SELL.STEP_TRIP" | translate }}</span
+          >
+          <span
+            class="badge"
+            [class.badge-primary]="step === 3"
+            [class.badge-light]="step !== 3"
+            >3. {{ "TICKETS.SELL.STEP_REVIEW" | translate }}</span
+          >
         </div>
       </div>
 
       <!-- ─── Step 1: Customer Search ─── -->
       <div *ngIf="step === 1">
-        <h5 class="fw-bold mb-3">{{ 'TICKETS.SELL.SEARCH_CUSTOMER' | translate }}</h5>
+        <h5 class="fw-bold mb-3">
+          {{ "TICKETS.SELL.SEARCH_CUSTOMER" | translate }}
+        </h5>
         <ng-select
           [items]="customers"
           [loading]="customerLoading"
           [typeahead]="customerSearch$"
+          [virtualScroll]="true"
           [minTermLength]="2"
           bindLabel="firstName"
           [placeholder]="'TICKETS.SELL.CUSTOMER_PLACEHOLDER' | translate"
-          (change)="selectCustomer($event)">
+          (change)="selectCustomer($event)"
+          (scrollToEnd)="loadMoreCustomers()"
+        >
           <ng-template ng-label-tmp let-item="item">
-            {{ item.firstName }} {{ item.lastName }} — {{ item.email || item.phone?.number }}
+            {{ item.firstName }} {{ item.lastName }} —
+            {{ item.email || item.phone?.number }}
           </ng-template>
           <ng-template ng-option-tmp let-item="item">
-            <div class="fw-semibold">{{ item.firstName }} {{ item.lastName }}</div>
-            <div class="text-muted small">{{ item.email }} {{ item.phone?.number ? '— ' + item.phone.number : '' }}</div>
+            <div class="fw-semibold">
+              {{ item.firstName }} {{ item.lastName }}
+            </div>
+            <div class="text-muted small">
+              {{ item.email }}
+              {{ item.phone?.number ? "— " + item.phone.number : "" }}
+            </div>
           </ng-template>
         </ng-select>
 
         <div *ngIf="selectedCustomer" class="mt-4 p-3 bg-light rounded">
-          <div class="fw-bold">{{ selectedCustomer.firstName }} {{ selectedCustomer.lastName }}</div>
+          <div class="fw-bold">
+            {{ selectedCustomer.firstName }} {{ selectedCustomer.lastName }}
+          </div>
           <div class="text-muted">{{ selectedCustomer.email }}</div>
-          <div class="text-muted" *ngIf="selectedCustomer.phone">{{ selectedCustomer.phone.countryCode }} {{ selectedCustomer.phone.number }}</div>
+          <div class="text-muted" *ngIf="selectedCustomer.phone">
+            {{ selectedCustomer.phone.countryCode }}
+            {{ selectedCustomer.phone.number }}
+          </div>
         </div>
 
         <div class="mt-4 text-end">
-          <button class="btn btn-primary" [disabled]="!selectedCustomer" (click)="goToStep2()">
-            {{ 'COMMON.BUTTON.NEXT' | translate }}
+          <button
+            class="btn btn-primary"
+            [disabled]="!selectedCustomer"
+            (click)="goToStep2()"
+          >
+            {{ "COMMON.BUTTON.NEXT" | translate }}
           </button>
         </div>
       </div>
@@ -48,9 +84,12 @@
       <!-- ─── Step 2: Trip Selection ─── -->
       <div *ngIf="step === 2">
         <div class="d-flex justify-content-between align-items-center mb-3">
-          <h5 class="fw-bold mb-0">{{ 'TICKETS.SELL.SELECT_TRIP' | translate }}</h5>
+          <h5 class="fw-bold mb-0">
+            {{ "TICKETS.SELL.SELECT_TRIP" | translate }}
+          </h5>
           <button class="btn btn-sm btn-light" (click)="goBack()">
-            <i class="ki-duotone ki-arrow-left fs-4"></i> {{ 'COMMON.BUTTON.BACK' | translate }}
+            <i class="ki-duotone ki-arrow-left fs-4"></i>
+            {{ "COMMON.BUTTON.BACK" | translate }}
           </button>
         </div>
 
@@ -59,34 +98,51 @@
         </div>
 
         <div *ngIf="!tripsLoading && !trips.length" class="alert alert-info">
-          {{ 'TICKETS.SELL.NO_TRIPS' | translate }}
+          {{ "TICKETS.SELL.NO_TRIPS" | translate }}
         </div>
 
         <div *ngIf="!tripsLoading && trips.length" class="list-group">
-          <button *ngFor="let trip of trips"
-                  type="button"
-                  class="list-group-item list-group-item-action"
-                  [class.active]="selectedTrip?.id === trip.id"
-                  (click)="selectTrip(trip)">
+          <button
+            *ngFor="let trip of trips"
+            type="button"
+            class="list-group-item list-group-item-action"
+            [class.active]="selectedTrip?.id === trip.id"
+            (click)="selectTrip(trip)"
+          >
             <div class="d-flex justify-content-between">
               <div>
-                <div class="fw-bold">{{ trip.departureDate }}</div>
+                <span class="text-dark fw-bold text-hover-primary fs-6">{{
+                  routePreview(trip)
+                }}</span>
+                <div class="fw-semibold">
+                  {{ trip.departureDate | date: "dd-MM-yyyy hh:mm a" }}
+                </div>
                 <div class="text-muted small">
-                  {{ trip.stopSchedule?.length || 0 }} {{ 'TICKETS.SELL.STOPS' | translate }}
-                  · {{ (trip.segments || []).length }} {{ 'TICKETS.SELL.SEGMENTS' | translate }}
+                  {{ trip.stopSchedule?.length || 0 }}
+                  {{ "TICKETS.SELL.STOPS" | translate }} ·
+                  {{ (trip.segments || []).length }}
+                  {{ "TICKETS.SELL.SEGMENTS" | translate }}
                 </div>
               </div>
               <div class="text-end">
-                <span class="badge" [class.badge-light-success]="trip.status === 'ACTIVE'"
-                      [class.badge-light-primary]="trip.status !== 'ACTIVE'">{{ trip.status }}</span>
+                <span
+                  class="badge"
+                  [class.badge-light-success]="trip.status === 'ACTIVE'"
+                  [class.badge-light-primary]="trip.status !== 'ACTIVE'"
+                  >{{ "TRIPS.STATUS." + trip.status | translate }}</span
+                >
               </div>
             </div>
           </button>
         </div>
 
         <div class="mt-4 text-end">
-          <button class="btn btn-primary" [disabled]="!selectedTrip" (click)="goToStep3()">
-            {{ 'COMMON.BUTTON.NEXT' | translate }}
+          <button
+            class="btn btn-primary"
+            [disabled]="!selectedTrip"
+            (click)="goToStep3()"
+          >
+            {{ "COMMON.BUTTON.NEXT" | translate }}
           </button>
         </div>
       </div>
@@ -94,9 +150,10 @@
       <!-- ─── Step 3: Review & Confirm ─── -->
       <div *ngIf="step === 3 && !booked">
         <div class="d-flex justify-content-between align-items-center mb-3">
-          <h5 class="fw-bold mb-0">{{ 'TICKETS.SELL.REVIEW' | translate }}</h5>
+          <h5 class="fw-bold mb-0">{{ "TICKETS.SELL.REVIEW" | translate }}</h5>
           <button class="btn btn-sm btn-light" (click)="goBack()">
-            <i class="ki-duotone ki-arrow-left fs-4"></i> {{ 'COMMON.BUTTON.BACK' | translate }}
+            <i class="ki-duotone ki-arrow-left fs-4"></i>
+            {{ "COMMON.BUTTON.BACK" | translate }}
           </button>
         </div>
 
@@ -104,8 +161,13 @@
           <div class="col-md-6">
             <div class="card bg-light">
               <div class="card-body">
-                <h6 class="text-muted text-uppercase mb-2">{{ 'TICKETS.SELL.CUSTOMER_LABEL' | translate }}</h6>
-                <div class="fw-bold">{{ selectedCustomer?.firstName }} {{ selectedCustomer?.lastName }}</div>
+                <h6 class="text-muted text-uppercase mb-2">
+                  {{ "TICKETS.SELL.CUSTOMER_LABEL" | translate }}
+                </h6>
+                <div class="fw-bold">
+                  {{ selectedCustomer?.firstName }}
+                  {{ selectedCustomer?.lastName }}
+                </div>
                 <div class="text-muted">{{ selectedCustomer?.email }}</div>
               </div>
             </div>
@@ -113,48 +175,80 @@
           <div class="col-md-6">
             <div class="card bg-light">
               <div class="card-body">
-                <h6 class="text-muted text-uppercase mb-2">{{ 'TICKETS.SELL.TRIP_LABEL' | translate }}</h6>
-                <div class="fw-bold">{{ selectedTrip?.departureDate }}</div>
-                <div class="text-muted">{{ selectedTrip?.status }}</div>
+                <h6 class="text-muted text-uppercase mb-2">
+                  {{ "TICKETS.SELL.TRIP_LABEL" | translate }}
+                </h6>
+                <div class="fw-bold">
+                  {{ selectedTrip?.departureDate | date: "dd-MM-yyyy hh:mm a" }}
+                </div>
+                <div class="text-muted">
+                  {{ "TRIPS.STATUS." + selectedTrip?.status | translate }}
+                </div>
               </div>
             </div>
           </div>
         </div>
 
         <!-- Pickup / Dropoff -->
-        <div class="row g-4 mb-4" *ngIf="activePickups.length || activeDropoffs.length">
+        <div
+          class="row g-4 mb-4"
+          *ngIf="activePickups.length || activeDropoffs.length"
+        >
           <div class="col-md-6" *ngIf="activePickups.length">
-            <label class="form-label fw-semibold">{{ 'TICKETS.SELL.PICKUP' | translate }}</label>
-            <ng-select [(ngModel)]="selectedPickupId"
-                       [items]="activePickups"
-                       bindValue="pointId"
-                       bindLabel="address"
-                       [clearable]="false">
+            <label class="form-label fw-semibold">{{
+              "TICKETS.SELL.PICKUP" | translate
+            }}</label>
+            <ng-select
+              [(ngModel)]="selectedPickupId"
+              (ngModelChange)="onPickupChange()"
+              [items]="activePickups"
+              bindValue="pointId"
+              bindLabel="address"
+              [clearable]="false"
+            >
             </ng-select>
           </div>
           <div class="col-md-6" *ngIf="activeDropoffs.length">
-            <label class="form-label fw-semibold">{{ 'TICKETS.SELL.DROPOFF' | translate }}</label>
-            <ng-select [(ngModel)]="selectedDropoffId"
-                       [items]="activeDropoffs"
-                       bindValue="pointId"
-                       bindLabel="address"
-                       [clearable]="false">
+            <label class="form-label fw-semibold">{{
+              "TICKETS.SELL.DROPOFF" | translate
+            }}</label>
+            <ng-select
+              [(ngModel)]="selectedDropoffId"
+              (ngModelChange)="onDropoffChange()"
+              [items]="activeDropoffs"
+              bindValue="pointId"
+              bindLabel="address"
+              [clearable]="false"
+            >
             </ng-select>
           </div>
         </div>
 
         <!-- Price -->
         <div class="p-4 bg-primary bg-opacity-10 rounded mb-4 text-center">
-          <div class="text-muted small mb-1">{{ 'TICKETS.SELL.PRICE_LABEL' | translate }}</div>
-          <div class="fs-2 fw-bold text-primary">{{ displayPrice | number:'1.2-2' }} {{ currency }}</div>
+          <div class="text-muted small mb-1">
+            {{ "TICKETS.SELL.PRICE_LABEL" | translate }}
+          </div>
+          <div class="fs-2 fw-bold text-primary">
+            {{ displayPrice | number: "1.2-2" }} {{ currency }}
+          </div>
         </div>
 
         <div class="text-end">
-          <button class="btn btn-success btn-lg"
-                  [disabled]="booking"
-                  (click)="confirmBooking()">
-            <span *ngIf="booking" class="spinner-border spinner-border-sm me-1"></span>
-            {{ booking ? ('TICKETS.SELL.BOOKING' | translate) : ('TICKETS.SELL.CONFIRM' | translate) }}
+          <button
+            class="btn btn-success btn-lg"
+            [disabled]="booking"
+            (click)="confirmBooking()"
+          >
+            <span
+              *ngIf="booking"
+              class="spinner-border spinner-border-sm me-1"
+            ></span>
+            {{
+              booking
+                ? ("TICKETS.SELL.BOOKING" | translate)
+                : ("TICKETS.SELL.CONFIRM" | translate)
+            }}
           </button>
         </div>
       </div>
@@ -165,20 +259,27 @@
           <i class="ki-duotone ki-check-circle fs-3x text-success mb-4">
             <span class="path1"></span><span class="path2"></span>
           </i>
-          <h4 class="fw-bold mb-2">{{ 'TICKETS.SELL.SUCCESS_TITLE' | translate }}</h4>
+          <h4 class="fw-bold mb-2">
+            {{ "TICKETS.SELL.SUCCESS_TITLE" | translate }}
+          </h4>
           <p class="text-muted mb-4">
-            {{ 'TICKETS.SELL.TICKET_ID' | translate }}: <span class="fw-bold">{{ bookingResult.id }}</span>
+            {{ "TICKETS.SELL.TICKET_ID" | translate }}:
+            <span class="fw-bold">{{ bookingResult.id }}</span>
           </p>
           <div class="mb-3">
-            <span class="badge badge-light-primary me-2">{{ bookingResult.status }}</span>
-            <span class="fw-semibold">{{ bookingResult.appliedPrice | number:'1.2-2' }} {{ bookingResult.currency }}</span>
+            <span class="badge badge-light-primary me-2">{{
+              bookingResult.status
+            }}</span>
+            <span class="fw-semibold"
+              >{{ bookingResult.appliedPrice | number: "1.2-2" }}
+              {{ bookingResult.currency }}</span
+            >
           </div>
           <button class="btn btn-primary" (click)="goToTickets()">
-            {{ 'TICKETS.SELL.GO_TO_TICKETS' | translate }}
+            {{ "TICKETS.SELL.GO_TO_TICKETS" | translate }}
           </button>
         </div>
       </div>
-
     </div>
   </div>
 </div>

@@ -40,11 +40,10 @@ export class TicketService {
   constructor(private http: HttpClient) {}
 
   fetchTickets(status?: TicketStatus): Observable<Ticket[]> {
-    const posId = localStorage.getItem('posId');
-    console.log('🚀 ~ TicketService ~ fetchTickets ~ posId:', posId);
-    if (!posId) {
+    const companyId = localStorage.getItem('companyId');
+    if (!companyId) {
       this.tickets.next([]);
-      return throwError(() => new Error('POS_ID_MISSING'));
+      return throwError(() => new Error('COMPANY_ID_MISSING'));
     }
     this.loading.next(true);
     let params = new HttpParams()
@@ -56,10 +55,9 @@ export class TicketService {
     return this.http
       .get<
         PaginateResponse<Ticket>
-      >(`${this.ticketsUrl}/by-pos/${posId}`, { params })
+      >(`${this.ticketsUrl}/by-company/${companyId}`, { params })
       .pipe(
         map((res) => {
-          console.log('🚀 ~ TicketService ~ fetchTickets ~ res:', res);
           const objects = Array.isArray(res?.objects) ? res.objects : [];
           this.tickets.next(objects);
           this.pagination.next({

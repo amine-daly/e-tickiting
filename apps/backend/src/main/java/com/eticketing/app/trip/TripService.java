@@ -31,6 +31,7 @@ import java.time.LocalDate;
 import java.time.ZoneOffset;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
@@ -206,11 +207,18 @@ public class TripService {
         return trip;
     }
 
-    public Page<TripType> list(String companyId, TripStatusEnum status, int page, int limit) {
+    public Page<TripType> list(
+            String companyId,
+            TripStatusEnum status,
+            String sortBy,
+            String order,
+            int page,
+            int limit) {
+        Sort sort = buildSort(sortBy, order);
         Pageable pageable = PageRequest.of(
                 Math.max(page, 0),
                 Math.clamp(limit, 1, 100),
-                Sort.by(Sort.Direction.ASC, "departureDate"));
+                sort);
 
         if (status != null) {
             return tripRepository.findByTargetCompanyAndStatus(companyId, status, pageable);
@@ -219,12 +227,14 @@ public class TripService {
     }
 
     public Page<TripType> search(String companyId, TripStatusEnum status, String searchTerm,
+            String sortBy, String order,
             LocalDate date, String originPlaceId, String destinationPlaceId,
             int page, int limit) {
+        Sort sort = buildSort(sortBy, order);
         Pageable pageable = PageRequest.of(
                 Math.max(page, 0),
                 Math.clamp(limit, 1, 100),
-                Sort.by(Sort.Direction.ASC, "departureDate"));
+                sort);
 
         Query q = new Query();
         if (companyId != null && !companyId.isBlank()) {
@@ -300,6 +310,33 @@ public class TripService {
         }
 
         return new PageImpl<>(results, pageable, total);
+    }
+
+    private Sort buildSort(String sortBy, String order) {
+        String property = switch (sortBy == null || sortBy.isBlank() ? "createdAt" : sortBy.trim()) {
+            case "createdAt" ->
+                "createdAt";
+            case "departureDate" ->
+                "departureDate";
+            default ->
+                throw new BadRequestException(
+                        "INVALID_SORT_FIELD: sortBy must be one of [createdAt, departureDate]");
+        };
+
+        String normalizedOrder = order == null || order.isBlank()
+                ? "desc"
+                : order.trim().toLowerCase(Locale.ROOT);
+        Sort.Direction direction = switch (normalizedOrder) {
+            case "asc" ->
+                Sort.Direction.ASC;
+            case "desc" ->
+                Sort.Direction.DESC;
+            default ->
+                throw new BadRequestException(
+                        "INVALID_SORT_ORDER: order must be one of [asc, desc]");
+        };
+
+        return Sort.by(direction, property);
     }
 
     // ════════════════════════════════════════════════════════════════════
@@ -494,6 +531,7 @@ public class TripService {
     // ════════════════════════════════════════════════════════════════════
     public TripType addExpressFare(String tripId, ExpressFareRequest req, String companyId) {
         TripType trip = getById(tripId, companyId);
+        assertExpressFareMutationAllowed(trip, true);
 
         ExpressFareType fare = ExpressFareType.builder()
                 .expressId(UUID.randomUUID().toString())
@@ -514,6 +552,7 @@ public class TripService {
     public TripType updateExpressFare(String tripId, String expressId,
             ExpressFareUpdateRequest req, String companyId) {
         TripType trip = getById(tripId, companyId);
+        assertExpressFareMutationAllowed(trip, false);
         ExpressFareType fare = findExpressFare(trip, expressId);
 
         if (req.getPrice() != null) {
@@ -534,6 +573,7 @@ public class TripService {
 
     public TripType deleteExpressFare(String tripId, String expressId, String companyId) {
         TripType trip = getById(tripId, companyId);
+        assertExpressFareMutationAllowed(trip, false);
 
         if (trip.getStatus() == TripStatusEnum.ACTIVE) {
             // Deactivate instead of delete when ACTIVE
@@ -665,6 +705,18 @@ public class TripService {
                 .filter(f -> f.getExpressId().equals(expressId))
                 .findFirst()
                 .orElseThrow(() -> new NotFoundException("Express fare not found: " + expressId));
+    }
+
+    private void assertExpressFareMutationAllowed(TripType trip, boolean adding) {
+        if (trip.getStatus() == TripStatusEnum.COMPLETED
+                || trip.getStatus() == TripStatusEnum.CANCELLED) {
+            throw new BadRequestException(
+                    "BLOCKED: express fares cannot be modified on " + trip.getStatus() + " trip");
+        }
+
+        if (adding && trip.getStatus() == TripStatusEnum.ACTIVE) {
+            throw new BadRequestException("BLOCKED: cannot add express fares to ACTIVE trip");
+        }
     }
 
     /**

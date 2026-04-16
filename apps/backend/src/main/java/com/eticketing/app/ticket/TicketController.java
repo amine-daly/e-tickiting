@@ -149,6 +149,47 @@ public class TicketController {
         ));
     }
 
+    @GetMapping("/by-company/{companyId}")
+    public ResponseEntity<?> getTicketsByCompany(
+            @PathVariable String companyId,
+            @RequestParam(required = false) TicketStatusEnum status,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int limit,
+            @AuthenticationPrincipal User principal) {
+        if (!isAdminOrManager(principal)) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(Map.of("error", "Access denied"));
+        }
+        if (companyId == null || companyId.isBlank()) {
+            return ResponseEntity.badRequest().body(Map.of("error", "companyId is required"));
+        }
+        if (page < 0) {
+            page = 0;
+        }
+        if (limit < 1 || limit > 100) {
+            limit = 20;
+        }
+
+        org.springframework.data.domain.Pageable pageable = org.springframework.data.domain.PageRequest.of(page, limit,
+                org.springframework.data.domain.Sort.by(org.springframework.data.domain.Sort.Direction.DESC, "createdAt"));
+
+        org.springframework.data.domain.Page<TicketType> result;
+        if (status != null) {
+            result = ticketRepository.findByTargetCompanyAndStatus(companyId, status, pageable);
+        } else {
+            result = ticketRepository.findByTargetCompany(companyId, pageable);
+        }
+
+        List<Map<String, Object>> tickets = result.getContent().stream()
+                .map(this::buildTicketResponse)
+                .toList();
+
+        return ResponseEntity.ok(Map.of(
+                "objects", tickets,
+                "count", result.getTotalElements(),
+                "isLast", result.isLast()
+        ));
+    }
+
     @GetMapping("/{id}")
     public ResponseEntity<?> getTicket(@PathVariable String id, @AuthenticationPrincipal User principal) {
         Optional<TicketType> ticketOpt = ticketRepository.findById(id);
@@ -170,7 +211,8 @@ public class TicketController {
         payload.put("id", ticket.getId());
         payload.put("version", ticket.getVersion());
         payload.put("tripId", ticket.getTripId());
-        payload.put("target", ticket.getTarget());
+        payload.put("companyId", ticket.getTarget() != null ? ticket.getTarget().getCompany() : null);
+        payload.put("posId", ticket.getTarget() != null ? ticket.getTarget().getPos() : null);
         payload.put("segmentIds", ticket.getSegmentIds());
         payload.put("expressId", ticket.getExpressId());
         payload.put("pickupPointId", ticket.getPickupPointId());
@@ -184,6 +226,14 @@ public class TicketController {
         payload.put("createdAt", formatInstant(ticket.getCreatedAt()));
         payload.put("confirmedAt", formatInstant(ticket.getConfirmedAt()));
         payload.put("cancelledAt", formatInstant(ticket.getCancelledAt()));
+        // Enrich with passenger name
+        if (ticket.getPassengerId() != null) {
+            userRepository.findById(ticket.getPassengerId()).ifPresent(user -> {
+                String name = ((user.getFirstName() != null ? user.getFirstName() : "") + " "
+                        + (user.getLastName() != null ? user.getLastName() : "")).trim();
+                payload.put("passengerName", name.isEmpty() ? null : name);
+            });
+        }
         if (trip != null) {
             payload.put("tripDepartureDate", formatInstant(trip.getDepartureDate()));
             payload.put("tripStatus", trip.getStatus());

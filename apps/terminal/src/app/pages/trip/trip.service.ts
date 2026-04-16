@@ -4,10 +4,15 @@ import { BehaviorSubject, Observable, of, throwError } from 'rxjs';
 import { catchError, finalize, map, tap } from 'rxjs/operators';
 
 import { TripType, TripStatusEnum } from '../../core/models/trip.model';
-import { TripFilterInput } from 'src/app/core/models/trip-filter-input.model';
+import {
+  TripFilterInput,
+  TripSortBy,
+  TripSortOrder,
+} from 'src/app/core/models/trip-filter-input.model';
 import {
   DropoffPointPayload,
   ExpressFarePayload,
+  ExpressFareUpdatePayload,
   PickupPointPayload,
   TripCreatePayload,
   TripUpdatePayload,
@@ -43,15 +48,21 @@ export class TripService {
 
   pageLimit = 10;
   pageIndex = 0;
+  private readonly defaultSortBy: TripSortBy = 'createdAt';
+  private readonly defaultSortOrder: TripSortOrder = 'desc';
 
   constructor(private http: HttpClient) {}
 
   // ─── LIST ────────────────────────────────────────────────
   list(filter: TripFilterInput = {}): Observable<TripType[]> {
     this.loading.next(true);
+    const sortBy = filter.sortBy ?? this.defaultSortBy;
+    const order = filter.order ?? this.defaultSortOrder;
     let params = new HttpParams()
       .set('page', this.pageIndex)
-      .set('limit', this.pageLimit);
+      .set('limit', this.pageLimit)
+      .set('sortBy', sortBy)
+      .set('order', order);
     let endpoint = this.baseUrl;
 
     if (filter.status) {
@@ -189,7 +200,7 @@ export class TripService {
   updateExpressFare(
     tripId: string,
     expressId: string,
-    changes: Partial<ExpressFarePayload>,
+    changes: ExpressFareUpdatePayload,
   ): Observable<TripType> {
     return this.http
       .put<TripType>(

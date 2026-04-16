@@ -55,14 +55,14 @@ export class BookingService {
   confirmBooking(ticketId: string): Observable<BookingResponse> {
     return this.http.post<BookingResponse>(
       `${this.bookingUrl}/${ticketId}/confirm`,
-      {}
+      {},
     );
   }
 
   cancelBooking(ticketId: string): Observable<BookingResponse> {
     return this.http.post<BookingResponse>(
       `${this.bookingUrl}/${ticketId}/cancel`,
-      {}
+      {},
     );
   }
 
@@ -70,8 +70,12 @@ export class BookingService {
     q: string,
     companyId?: string,
     page = 0,
-    limit = 20
-  ): Observable<{ objects: UserSearchResult[]; count: number; isLast: boolean }> {
+    limit = 20,
+  ): Observable<{
+    objects: UserSearchResult[];
+    count: number;
+    isLast: boolean;
+  }> {
     let params = new HttpParams()
       .set('q', q)
       .set('page', page.toString())

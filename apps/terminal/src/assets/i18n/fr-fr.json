@@ -152,6 +152,7 @@
     "LOADING": "Chargement des voyages...",
     "EMPTY": "Aucun voyage disponible.",
     "EDIT": "Détails du voyage",
+    "EDIT_TITLE": "Modifier le voyage",
     "LABEL": {
       "ROUTE": "Trajet"
     },
@@ -162,6 +163,7 @@
       "CANCELLED": "Annulé"
     },
     "FIELDS": {
+      "CREATED_AT": "Date de création",
       "DEPARTURE_DATE": "Date de départ",
       "SEGMENTS": "Segments",
       "BUS": "Bus",
@@ -171,7 +173,14 @@
     "FILTERS": {
       "STATUS": "Filtrer par statut",
       "ALL": "Tous",
-      "SEARCH": "Rechercher des voyages..."
+      "SEARCH": "Rechercher des voyages...",
+      "SORT_BY": "Trier par",
+      "ORDER": "Ordre"
+    },
+    "SORT": {
+      "CREATED_AT": "Date de création",
+      "ASC": "Plus anciens d'abord",
+      "DESC": "Plus récents d'abord"
     },
     "STOPS": {
       "TITLE": "Plan des arrêts",
@@ -222,7 +231,8 @@
       "PUBLISH": "Publier",
       "COMPLETE": "Terminer",
       "CANCEL": "Annuler le voyage",
-      "EMERGENCY_CANCEL": "Annulation d'urgence"
+      "EMERGENCY_CANCEL": "Annulation d'urgence",
+      "EDIT": "Modifier"
     },
     "MESSAGES": {
       "STATUS_CONFIRM_TITLE": "Modifier le statut du voyage",
@@ -248,7 +258,9 @@
       "DELETE_SUCCESS": "Voyage supprimé avec succès.",
       "DELETE_ERROR": "Impossible de supprimer le voyage.",
       "DELETE_CONFIRM_TITLE": "Supprimer le voyage ?",
-      "DELETE_CONFIRM_TEXT": "Cette action est irréversible."
+      "DELETE_CONFIRM_TEXT": "Cette action est irréversible.",
+      "UPDATE_SUCCESS": "Voyage mis à jour avec succès.",
+      "UPDATE_ERROR": "Impossible de mettre à jour le voyage."
     },
     "TOOLTIP": {
       "OCCUPANCY": "Réservés : {{booked}} / {{total}}"
@@ -403,10 +415,21 @@
         "DEPARTURE_DATE_MISMATCH": "L'heure de départ de l'origine doit correspondre ou être après la date de départ globale.",
         "MIN_COMMERCIAL_STOPS": "Au moins 2 arrêts commerciaux (embarquement ou débarquement) sont nécessaires.",
         "MAX_SEATS_EXCEEDS_BUS": "La capacité max dépasse celle du bus ({{max}}).",
+        "BUS_CAPACITY_BELOW_BOOKED": "La capacité du bus sélectionné ({{total}}) est inférieure aux places déjà réservées ({{booked}}).",
         "COVERAGE_TITLE": "Points de ramassage/dépose manquants",
         "MISSING_PICKUP_FOR_STOP": "La ville {{place}} (arrêt d'embarquement) nécessite au moins un point de ramassage.",
         "MISSING_DROPOFF_FOR_STOP": "La ville {{place}} (arrêt de débarquement) nécessite au moins un point de dépose."
       }
+    },
+    "EDIT_MODE": {
+      "SUBMIT": "Enregistrer les modifications",
+      "SEGMENTS_FROZEN": "Les segments sont figés après la création et ne peuvent pas être modifiés.",
+      "EXPRESS_FARES_FROZEN": "Les tarifs express ne peuvent pas être modifiés depuis ce formulaire. Utilisez la gestion dédiée des tarifs express.",
+      "EXPRESS_FARES_SCHEDULED": "Les tarifs express peuvent être ajoutés, supprimés ou modifiés tant que le voyage est planifié.",
+      "EXPRESS_FARES_ACTIVE": "Pour un voyage actif, seuls le prix, la période de validité et l'état actif du tarif express peuvent être modifiés. La couverture des segments reste figée.",
+      "EXPRESS_FARES_READONLY": "Ce voyage est terminé ou annulé. Les tarifs express sont en lecture seule.",
+      "ACTIVE_WARNING": "Ce voyage est actif. La date de départ et la devise ne peuvent pas être modifiées.",
+      "READONLY_WARNING": "Ce voyage est terminé ou annulé. Tous les champs sont en lecture seule."
     }
   },
   "TICKETS": {
@@ -434,7 +457,7 @@
       "CANCEL": "Annuler"
     },
     "MODAL": {
-      "TITLE": "Billet {{reference}}"
+      "TITLE": "Billet"
     },
     "STATUS": {
       "PENDING": "En attente",
@@ -625,6 +648,9 @@
       "CREATE_SUCCESS": "Membre de l'équipe ajouté avec succès.",
       "CREATE_ERROR": "Impossible d'ajouter le membre de l'équipe.",
       "EMAIL_ALREADY_EXISTS": "Un utilisateur avec cet e-mail existe déjà.",
+      "PHONE_ALREADY_EXISTS": "Un utilisateur avec ce numéro de téléphone existe déjà.",
+      "CONTACT_CONFLICT": "L'e-mail et le numéro de téléphone appartiennent à deux utilisateurs existants différents.",
+      "ALREADY_ASSIGNED": "Cet utilisateur est déjà affecté à la société sélectionnée.",
       "DELETE_SUCCESS": "Membre de l'équipe supprimé avec succès.",
       "DELETE_ERROR": "Impossible de supprimer le membre de l'équipe."
     }

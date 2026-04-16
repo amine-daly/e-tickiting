@@ -23,4 +23,14 @@ export interface Ticket {
   createdAt?: string | null;
   confirmedAt?: string | null;
   cancelledAt?: string | null;
+  // Enriched fields from backend
+  originCity?: string | null;
+  destinationCity?: string | null;
+  pickupCity?: string | null;
+  dropoffCity?: string | null;
+  pickupAddress?: string | null;
+  dropoffAddress?: string | null;
+  tripDepartureDate?: string | null;
+  tripStatus?: string | null;
+  passengerName?: string | null;
 }

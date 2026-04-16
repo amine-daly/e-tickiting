@@ -14,15 +14,29 @@
        Stepper Header (nav-pills)
        ──────────────────────────────────────────── -->
   <div class="card-header border-0 pt-6 pb-0">
-    <h3 class="card-title fw-bold mb-4">
-      {{ "TRIPS.CREATE.TITLE" | translate }}
-    </h3>
+    <div class="d-flex align-items-center gap-3 mb-4">
+      <h3 class="card-title fw-bold mb-0">
+        {{
+          (isEditMode ? "TRIPS.EDIT_TITLE" : "TRIPS.CREATE.TITLE") | translate
+        }}
+      </h3>
+      <span
+        *ngIf="isEditMode && trip"
+        class="badge"
+        [class.badge-light-info]="trip.status === 'SCHEDULED'"
+        [class.badge-light-success]="trip.status === 'ACTIVE'"
+        [class.badge-light-primary]="trip.status === 'COMPLETED'"
+        [class.badge-light-danger]="trip.status === 'CANCELLED'"
+      >
+        {{ "TRIPS.STATUS." + trip.status | translate }}
+      </span>
+    </div>
     <ul class="nav nav-pills nav-pills-custom w-100 mb-3">
       <li class="nav-item" *ngFor="let step of STEPS; let i = index">
         <a
           class="nav-link btn btn-outline btn-flex btn-active-primary d-flex rounded-3 px-4 py-2 me-2"
           [class.active]="currentStep === i"
-          [class.text-muted]="i > currentStep"
+          [class.text-muted]="!isEditMode && i > currentStep"
           (click)="goToStep(i)"
           role="button"
         >
@@ -50,6 +64,33 @@
            STEP 0 — Basic Info
            ══════════════════════════════════════════ -->
       <div *ngIf="currentStep === 0">
+        <!-- Edit mode: blocked fields warning for ACTIVE trips -->
+        <div
+          *ngIf="isEditMode && trip?.status === 'ACTIVE'"
+          class="alert alert-warning d-flex align-items-center py-3 mb-6"
+        >
+          <i class="ki-duotone ki-information-2 fs-2 me-3 text-warning">
+            <span class="path1"></span><span class="path2"></span
+            ><span class="path3"></span>
+          </i>
+          {{ "TRIPS.EDIT_MODE.ACTIVE_WARNING" | translate }}
+        </div>
+
+        <!-- Edit mode: COMPLETED/CANCELLED trips are fully readonly -->
+        <div
+          *ngIf="
+            isEditMode &&
+            (trip?.status === 'COMPLETED' || trip?.status === 'CANCELLED')
+          "
+          class="alert alert-info d-flex align-items-center py-3 mb-6"
+        >
+          <i class="ki-duotone ki-information-2 fs-2 me-3 text-info">
+            <span class="path1"></span><span class="path2"></span
+            ><span class="path3"></span>
+          </i>
+          {{ "TRIPS.EDIT_MODE.READONLY_WARNING" | translate }}
+        </div>
+
         <!--begin::Bus-->
         <div class="mb-8">
           <label class="form-label required">
@@ -75,6 +116,16 @@
           </ng-select>
           <div *ngIf="isInvalid('busId')" class="text-danger small mt-1">
             {{ "TRIPS.CREATE.ERRORS.BUS_REQUIRED" | translate }}
+          </div>
+          <div
+            *ngIf="hasInsufficientBusCapacity"
+            class="text-danger small mt-1"
+          >
+            {{
+              "TRIPS.CREATE.ERRORS.BUS_CAPACITY_BELOW_BOOKED"
+                | translate
+                  : { booked: maxBookedSeats, total: selectedBusTotalSeats }
+            }}
           </div>
         </div>
         <!--end::Bus-->
@@ -242,7 +293,9 @@
                     type="button"
                     class="btn btn-icon btn-sm btn-light"
                     (click)="moveStop(i, -1)"
-                    [disabled]="i === 0"
+                    [disabled]="
+                      i === 0 || (isEditMode && trip?.status === 'ACTIVE')
+                    "
                     [title]="'TRIPS.CREATE.STOPS.MOVE_UP' | translate"
                   >
                     <i class="ki-duotone ki-arrow-up fs-5">
@@ -253,7 +306,10 @@
                     type="button"
                     class="btn btn-icon btn-sm btn-light"
                     (click)="moveStop(i, 1)"
-                    [disabled]="i === stopSchedule.length - 1"
+                    [disabled]="
+                      i === stopSchedule.length - 1 ||
+                      (isEditMode && trip?.status === 'ACTIVE')
+                    "
                     [title]="'TRIPS.CREATE.STOPS.MOVE_DOWN' | translate"
                   >
                     <i class="ki-duotone ki-arrow-down fs-5">
@@ -264,6 +320,7 @@
                     type="button"
                     class="btn btn-icon btn-sm btn-light-danger"
                     (click)="removeStop(i)"
+                    [disabled]="isEditMode && trip?.status === 'ACTIVE'"
                     [title]="'TRIPS.CREATE.STOPS.REMOVE' | translate"
                   >
                     <i class="ki-duotone ki-trash fs-5">
@@ -283,16 +340,16 @@
                   </label>
                   <ng-select
                     [items]="availablePlacesForStop(i)"
-                    bindValue="id"
                     bindLabel="city"
                     [placeholder]="
                       'TRIPS.CREATE.STOPS.PLACE_PLACEHOLDER' | translate
                     "
                     [clearable]="true"
-                    [ngModel]="stop.get('placeId')?.value"
+                    [compareWith]="comparePlaces"
+                    [ngModel]="stop.get('place')?.value"
                     [ngModelOptions]="{ standalone: true }"
                     (ngModelChange)="
-                      stop.get('placeId')?.setValue($event || '')
+                      stop.get('place')?.setValue($event || null)
                     "
                     (clear)="clearStopPlace(i)"
                   ></ng-select>
@@ -423,7 +480,12 @@
       <div *ngIf="currentStep === 2">
         <h5 class="fw-bold mb-4">{{ "TRIPS.SEGMENTS.TITLE" | translate }}</h5>
         <p class="text-muted small mb-5">
-          {{ "TRIPS.CREATE.SEGMENTS.AUTO_GENERATED" | translate }}
+          {{
+            (isEditMode
+              ? "TRIPS.EDIT_MODE.SEGMENTS_FROZEN"
+              : "TRIPS.CREATE.SEGMENTS.AUTO_GENERATED"
+            ) | translate
+          }}
         </p>
 
         <div
@@ -437,7 +499,60 @@
           {{ "TRIPS.CREATE.SEGMENTS.NO_SEGMENTS" | translate }}
         </div>
 
-        <div formArrayName="segments">
+        <!-- ── EDIT MODE: read-only segment table ── -->
+        <div *ngIf="isEditMode && segments.length > 0" class="table-responsive">
+          <table
+            class="table table-row-bordered table-row-gray-200 align-middle gs-0 gy-3"
+          >
+            <thead>
+              <tr class="fw-bolder text-muted fs-7">
+                <th>#</th>
+                <th>
+                  {{ "TRIPS.SEGMENTS.FROM" | translate }} →
+                  {{ "TRIPS.SEGMENTS.TO" | translate }}
+                </th>
+                <th>{{ "TRIPS.SEGMENTS.BASE_PRICE" | translate }}</th>
+                <th>{{ "TRIPS.SEGMENTS.MAX_SEATS" | translate }}</th>
+                <th>{{ "TRIPS.SEGMENTS.BOOKED_SEATS" | translate }}</th>
+                <th>{{ "TRIPS.SEGMENTS.DISTANCE_KM" | translate }}</th>
+                <th>{{ "TRIPS.SEGMENTS.DURATION_MIN" | translate }}</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let seg of segments.controls; let i = index">
+                <td class="text-muted">{{ i + 1 }}</td>
+                <td class="fw-semibold" *ngIf="segmentDisplays[i]">
+                  {{ segmentDisplays[i].fromPlaceName }} →
+                  {{ segmentDisplays[i].toPlaceName }}
+                </td>
+                <td>
+                  {{ seg.get("basePrice")?.value | number: "1.2-2" }}
+                  {{ selectedCurrency?.code }}
+                </td>
+                <td>{{ seg.get("maxSeats")?.value }}</td>
+                <td>
+                  <span
+                    [class.text-danger]="
+                      seg.get('bookedSeats')?.value >=
+                      seg.get('maxSeats')?.value
+                    "
+                    [class.fw-bold]="
+                      seg.get('bookedSeats')?.value >=
+                      seg.get('maxSeats')?.value
+                    "
+                  >
+                    {{ seg.get("bookedSeats")?.value || 0 }}
+                  </span>
+                </td>
+                <td>{{ seg.get("distanceKm")?.value | number: "1.1-1" }} km</td>
+                <td>{{ seg.get("durationMinutesOverride")?.value || "-" }}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <!-- ── CREATE MODE: editable segment cards ── -->
+        <div *ngIf="!isEditMode" formArrayName="segments">
           <div
             *ngFor="let seg of segments.controls; let i = index"
             [formGroupName]="i"
@@ -584,10 +699,10 @@
                       {{ "TRIPS.CREATE.PICKUP.PLACE" | translate }}
                     </label>
                     <ng-select
-                      formControlName="placeId"
+                      formControlName="place"
                       [items]="boardingPlaces"
-                      bindValue="id"
                       bindLabel="city"
+                      [compareWith]="comparePlaces"
                       [placeholder]="
                         'TRIPS.CREATE.PICKUP.PLACE_PLACEHOLDER' | translate
                       "
@@ -702,10 +817,10 @@
                       {{ "TRIPS.CREATE.DROPOFF.PLACE" | translate }}
                     </label>
                     <ng-select
-                      formControlName="placeId"
+                      formControlName="place"
                       [items]="droppingPlaces"
-                      bindValue="id"
                       bindLabel="city"
+                      [compareWith]="comparePlaces"
                       [placeholder]="
                         'TRIPS.CREATE.DROPOFF.PLACE_PLACEHOLDER' | translate
                       "
@@ -793,6 +908,7 @@
             {{ "TRIPS.EXPRESS_FARES.TITLE" | translate }}
           </h5>
           <button
+            *ngIf="canAddExpressFare"
             type="button"
             class="btn btn-sm btn-light-primary"
             (click)="addExpressFare()"
@@ -805,14 +921,91 @@
         </div>
 
         <p class="text-muted small mb-5">
-          {{ "TRIPS.CREATE.EXPRESS.HINT" | translate }}
+          {{ expressFareHintKey | translate }}
         </p>
 
         <div *ngIf="expressFares.length === 0" class="text-muted small mb-4">
           {{ "TRIPS.CREATE.EXPRESS.EMPTY" | translate }}
         </div>
 
-        <div formArrayName="expressFares">
+        <!-- ── READ ONLY: completed/cancelled trips ── -->
+        <div
+          *ngIf="showReadonlyExpressFareTable && expressFares.length > 0"
+          class="table-responsive"
+        >
+          <table
+            class="table table-row-bordered table-row-gray-200 align-middle gs-0 gy-3"
+          >
+            <thead>
+              <tr class="fw-bolder text-muted fs-7">
+                <th>#</th>
+                <th>
+                  {{ "TRIPS.EXPRESS_FARES.SEGMENTS_COVERED" | translate }}
+                </th>
+                <th>{{ "TRIPS.EXPRESS_FARES.PRICE" | translate }}</th>
+                <th>{{ "TRIPS.EXPRESS_FARES.VALID_FROM" | translate }}</th>
+                <th>{{ "TRIPS.EXPRESS_FARES.VALID_UNTIL" | translate }}</th>
+                <th>{{ "TRIPS.EXPRESS_FARES.ACTIVE" | translate }}</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let fare of expressFares.controls; let i = index">
+                <td class="text-muted">{{ i + 1 }}</td>
+                <td>
+                  <ng-container
+                    *ngFor="
+                      let idx of fare.get('segmentIndices')?.value;
+                      let last = last
+                    "
+                  >
+                    <span
+                      *ngIf="segmentDisplays[idx]"
+                      class="badge badge-light-info me-1"
+                    >
+                      {{ segmentDisplays[idx].fromPlaceName }} →
+                      {{ segmentDisplays[idx].toPlaceName }}
+                    </span>
+                  </ng-container>
+                </td>
+                <td class="fw-semibold">
+                  {{ fare.get("price")?.value | number: "1.2-2" }}
+                  {{ selectedCurrency?.code }}
+                </td>
+                <td>
+                  {{
+                    fare.get("validFrom")?.value
+                      ? (fare.get("validFrom")?.value | date: "medium")
+                      : "-"
+                  }}
+                </td>
+                <td>
+                  {{
+                    fare.get("validUntil")?.value
+                      ? (fare.get("validUntil")?.value | date: "medium")
+                      : "-"
+                  }}
+                </td>
+                <td>
+                  <span
+                    class="badge"
+                    [class.badge-light-success]="fare.get('active')?.value"
+                    [class.badge-light-danger]="!fare.get('active')?.value"
+                  >
+                    {{
+                      (fare.get("active")?.value
+                        ? "COMMON.LABEL.YES"
+                        : "COMMON.LABEL.NO"
+                      ) | translate
+                    }}
+                  </span>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <!-- ── CREATE / EDIT MODE: editable express fare cards ── -->
+        <div *ngIf="!showReadonlyExpressFareTable" formArrayName="expressFares">
           <div
             *ngFor="let fare of expressFares.controls; let i = index"
             [formGroupName]="i"
@@ -826,6 +1019,7 @@
                   {{ "TRIPS.EXPRESS_FARES.TITLE" | translate }} {{ i + 1 }}
                 </span>
                 <button
+                  *ngIf="canAddExpressFare"
                   type="button"
                   class="btn btn-icon btn-sm btn-light-danger"
                   (click)="removeExpressFare(i)"
@@ -970,7 +1164,7 @@
                   "TRIPS.FIELDS.DEPARTURE_DATE" | translate
                 }}</span>
                 <span class="fw-semibold">{{
-                  tripForm.get("departureDate")?.value
+                  tripForm.get("departureDate")?.value | date: "medium"
                 }}</span>
               </div>
               <div class="col-md-4 mb-2">
@@ -1019,7 +1213,7 @@
                 "
               >
                 <span class="badge badge-light fw-bold py-2 px-3">
-                  {{ getPlaceName(stop.get("placeId")?.value) }}
+                  {{ stop.get("place")?.value?.city || "-" }}
                 </span>
                 <i
                   *ngIf="!last"
@@ -1091,7 +1285,7 @@
                 </h6>
                 <div *ngFor="let pp of pickupPoints.controls" class="mb-2">
                   <span class="fw-semibold">{{
-                    getPlaceName(pp.get("placeId")?.value)
+                    pp.get("place")?.value?.city || "-"
                   }}</span>
                   <span class="text-muted ms-2">{{
                     pp.get("address")?.value
@@ -1111,7 +1305,7 @@
                 </h6>
                 <div *ngFor="let dp of dropoffPoints.controls" class="mb-2">
                   <span class="fw-semibold">{{
-                    getPlaceName(dp.get("placeId")?.value)
+                    dp.get("place")?.value?.city || "-"
                   }}</span>
                   <span class="text-muted ms-2">{{
                     dp.get("address")?.value
@@ -1174,8 +1368,8 @@
                       >
                         {{
                           (fare.get("active")?.value
-                            ? "COMMON.YES"
-                            : "COMMON.NO"
+                            ? "COMMON.LABEL.YES"
+                            : "COMMON.LABEL.NO"
                           ) | translate
                         }}
                       </span>
@@ -1233,13 +1427,16 @@
           *ngIf="currentStep === STEPS.length - 1"
           type="submit"
           class="btn btn-success"
-          [disabled]="isSubmitting"
+          [disabled]="isSubmitting || (isEditMode && isButtonDisabled)"
         >
           <span
             *ngIf="isSubmitting"
             class="spinner-border spinner-border-sm me-2"
           ></span>
-          {{ "TRIPS.CREATE.SUBMIT" | translate }}
+          {{
+            (isEditMode ? "TRIPS.EDIT_MODE.SUBMIT" : "TRIPS.CREATE.SUBMIT")
+              | translate
+          }}
         </button>
       </div>
     </div>

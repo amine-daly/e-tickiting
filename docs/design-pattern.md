@@ -21,8 +21,8 @@
 - getById() → fetches and pushes to bus$ via tap()
 - create() / update() / delete() → plain HTTP, with BehaviorSubject side effects via tap()
 - delete() → filter BehaviorSubject list locally after success via tap()
-- posId always from localStorage.getItem('posId') inside the service
-- Never pass posId from the component
+- companyId always from localStorage.getItem('companyId') inside the service
+- Never pass companyId from the component
 - Never declare request/response interfaces inside services
 - Put shared payload contracts under a models folder and import them into services/components
 
@@ -51,9 +51,14 @@
 
 6. Submit Pattern (Defensive)
 
-CREATE → FormHelper.getChangedValues(getRawValue(), initialValues) + target: { pos: posId }
+CREATE → FormHelper.getChangedValues(getRawValue(), initialValues) + target: { company: companyId }
 EDIT → FormHelper.getChangedValues(getRawValue(), initialValues)
 → Always check if changes is empty → return early, do nothing
+
+- Build payloads declaratively with object spread + conditional properties
+  (`...(condition && { key: value })`) instead of mutating an empty object with many `if` statements
+- Keep all transformations inline at the payload edge only
+  (date formatting, array mapping, DTO shaping)
 
 isSubmitting = true on start
 isSubmitting = false only on error (on success navigate away)
@@ -85,7 +90,7 @@ Route setup:
 - Remove → removeAt(index) on FormArray + deleteFileFromAws(path)
 - Never save pictures separately from submit umless it's edit mode
 - Never call persistMediaChanges() outside submit
-- S3 upload always uses posId from localStorage inside the component
+- S3 upload always uses companyId from localStorage inside the component
 
 8. i18n Pattern
 
@@ -96,11 +101,11 @@ Route setup:
 
 9. Target / POS Pattern
 
-- target: { pos } always injected from localStorage.getItem('posId')
+- target: { company } always injected from localStorage.getItem('companyId')
 - Never shown in any form
 - Never passed from component to service
 - Service injects it directly into HTTP params
-- Always scoped — never query without posId
+- Always scoped — never query without companyId
 
 10. What Copilot Should Never Do
 
@@ -109,9 +114,8 @@ Fetch data inside ngOnInit directly — always use Resolver
 Track pictures or any array outside the form — use FormArray
 Call persistMediaChanges() in create mode
 Hardcode any user-visible string — always use i18n
-Pass posId from component to service methods
 
-CREATE → FormHelper.getChangedValues(getRawValue(), initialValues) + target: { pos: posId }
+CREATE → FormHelper.getChangedValues(getRawValue(), initialValues) + target: { company: companyId }
 EDIT → FormHelper.getChangedValues(getRawValue(), initialValues)
 No need to check if changes is empty — isButtonDisabled already
 
@@ -249,5 +253,30 @@ dtos.add(dto);
 // ✅ GOOD - Using libraries (Backend)
 if (StringUtils.isBlank(str)) { }
 List<BusDTO> dtos = busMapper.toDtoList(buses); // MapStruct
+
+12. Simplicity & No Hardcoding
+
+- Prefer simple, readable code over clever abstractions. If a helper adds more than 3 lines and is used only once, inline it.
+- Do not preemptively optimize or generalize: extract helpers when multiple call-sites appear or when tests show duplication.
+- Avoid hardcoding domain values, strings, or IDs in code or templates. Use i18n keys, environment/config, or enums.
+- Keep form values as plain objects when the form already provides them; map to API DTOs only at submit time.
+- Use library utilities (lodash, date-fns) for common operations — but don't wrap them in extra layers unless necessary.
+- Prefer direct property access (obj?.id, obj?.city) over multi-step resolution functions unless resolution is non-trivial.
+
+Examples (preferred):
+
+- Inline simple mapping:
+  - `placeId: stop.place?.id || ''`
+
+- Use i18n instead of hardcoded labels:
+  - `translate.instant('TRIPS.CREATE.ERRORS.MISSING_PICKUP_FOR_STOP', { stop: i })`
+
+When to extract a helper:
+
+- The logic is duplicated in 2+ places.
+- The logic is complex enough to require unit tests.
+- Extracting improves clarity and reduces the surface area for bugs.
+
+GOLDEN RULE: Prefer the simplest correct solution. Only refactor to abstractions when usage patterns justify it.
 
 ═══════════════════════════════════════════════════════════════

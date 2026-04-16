@@ -152,6 +152,7 @@
     "LOADING": "Loading trips...",
     "EMPTY": "No trips available.",
     "EDIT": "Trip details",
+    "EDIT_TITLE": "Edit trip",
     "LABEL": {
       "ROUTE": "Route"
     },
@@ -162,6 +163,7 @@
       "CANCELLED": "Cancelled"
     },
     "FIELDS": {
+      "CREATED_AT": "Created at",
       "DEPARTURE_DATE": "Departure date",
       "SEGMENTS": "Segments",
       "BUS": "Bus",
@@ -171,7 +173,14 @@
     "FILTERS": {
       "STATUS": "Filter by status",
       "ALL": "All",
-      "SEARCH": "Search trips..."
+      "SEARCH": "Search trips...",
+      "SORT_BY": "Sort by",
+      "ORDER": "Order"
+    },
+    "SORT": {
+      "CREATED_AT": "Created date",
+      "ASC": "Oldest first",
+      "DESC": "Newest first"
     },
     "STOPS": {
       "TITLE": "Stop schedule",
@@ -222,7 +231,8 @@
       "PUBLISH": "Publish",
       "COMPLETE": "Complete",
       "CANCEL": "Cancel trip",
-      "EMERGENCY_CANCEL": "Emergency cancel"
+      "EMERGENCY_CANCEL": "Emergency cancel",
+      "EDIT": "Edit"
     },
     "MESSAGES": {
       "STATUS_CONFIRM_TITLE": "Change trip status",
@@ -248,7 +258,9 @@
       "DELETE_SUCCESS": "Trip deleted successfully.",
       "DELETE_ERROR": "Unable to delete the trip.",
       "DELETE_CONFIRM_TITLE": "Delete trip?",
-      "DELETE_CONFIRM_TEXT": "This action cannot be undone."
+      "DELETE_CONFIRM_TEXT": "This action cannot be undone.",
+      "UPDATE_SUCCESS": "Trip updated successfully.",
+      "UPDATE_ERROR": "Unable to update the trip."
     },
     "TOOLTIP": {
       "OCCUPANCY": "Booked: {{booked}} / {{total}}"
@@ -403,10 +415,21 @@
         "DEPARTURE_DATE_MISMATCH": "Origin departure time must match or be after the global departure date.",
         "MIN_COMMERCIAL_STOPS": "At least 2 commercial stops (boarding or dropping) are required.",
         "MAX_SEATS_EXCEEDS_BUS": "Max seats exceeds bus capacity ({{max}}).",
+        "BUS_CAPACITY_BELOW_BOOKED": "Selected bus capacity ({{total}}) is lower than already booked seats ({{booked}}).",
         "COVERAGE_TITLE": "Missing Pickup/Dropoff Points",
         "MISSING_PICKUP_FOR_STOP": "City {{place}} (boarding stop) requires at least one pickup point.",
         "MISSING_DROPOFF_FOR_STOP": "City {{place}} (dropping stop) requires at least one drop-off point."
       }
+    },
+    "EDIT_MODE": {
+      "SUBMIT": "Save changes",
+      "SEGMENTS_FROZEN": "Segments are frozen after creation and cannot be modified.",
+      "EXPRESS_FARES_FROZEN": "Express fares cannot be modified from this form. Use the dedicated express fares management instead.",
+      "EXPRESS_FARES_SCHEDULED": "Express fares can be added, removed, or edited while the trip is scheduled.",
+      "EXPRESS_FARES_ACTIVE": "Active trips allow express fare price, validity, and active state changes only. Segment coverage cannot be changed.",
+      "EXPRESS_FARES_READONLY": "This trip is completed or cancelled. Express fares are read-only.",
+      "ACTIVE_WARNING": "This trip is active. Departure date and currency cannot be changed.",
+      "READONLY_WARNING": "This trip is completed or cancelled. All fields are read-only."
     }
   },
   "TICKETS": {
@@ -434,7 +457,7 @@
       "CANCEL": "Cancel"
     },
     "MODAL": {
-      "TITLE": "Ticket {{reference}}"
+      "TITLE": "Ticket"
     },
     "STATUS": {
       "PENDING": "Pending",
@@ -625,6 +648,9 @@
       "CREATE_SUCCESS": "Team member added successfully.",
       "CREATE_ERROR": "Unable to add team member.",
       "EMAIL_ALREADY_EXISTS": "A user with this email already exists.",
+      "PHONE_ALREADY_EXISTS": "A user with this phone number already exists.",
+      "CONTACT_CONFLICT": "The email and phone number belong to different existing users.",
+      "ALREADY_ASSIGNED": "This user is already assigned to the selected company.",
       "DELETE_SUCCESS": "Team member deleted successfully.",
       "DELETE_ERROR": "Unable to delete team member."
     }

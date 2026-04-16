@@ -16,9 +16,10 @@ import {
   Validators,
   ReactiveFormsModule,
 } from '@angular/forms';
-import { Router, RouterModule } from '@angular/router';
-import { Subject } from 'rxjs';
-import { takeUntil } from 'rxjs/operators';
+import { ActivatedRoute, Router, RouterModule } from '@angular/router';
+import { Observable, Subject, of } from 'rxjs';
+import { concatMap, take, takeUntil } from 'rxjs/operators';
+import { keys } from 'lodash';
 import { TranslateModule, TranslateService } from '@ngx-translate/core';
 import {
   NgLabelTemplateDirective,
@@ -36,12 +37,19 @@ import { PlacesService } from '../../places/places.service';
 import { CurrencyType } from 'src/app/core/models/account.model';
 import { BusType } from 'src/app/core/models/bus.model';
 import { PlaceType } from 'src/app/core/models/place-type';
-import { TripCreatePayload } from '../../../core/models/trip-payload.model';
+import {
+  ExpressFarePayload,
+  ExpressFareUpdatePayload,
+  TripCreatePayload,
+  TripUpdatePayload,
+} from '../../../core/models/trip-payload.model';
+import { TripType, TripStatusEnum } from '../../../core/models/trip.model';
+import { FormHelper } from '../../../core/helpers/form-helper';
 import { AlertService } from 'src/app/core/services/alert.service';
 import { CurrencyService } from 'src/app/core/services/currency.service';
 import { PageInfoService } from 'src/app/_metronic/layout/core/page-info.service';
 import { ToolbarComponent } from 'src/app/_metronic/layout/components/toolbar/toolbar.component';
-import { TripPointLocationPickerComponent } from './trip-point-location-picker.component';
+import { TripPointLocationPickerComponent } from './location/trip-point-location-picker.component';
 
 interface SegmentDisplay {
   index: number;
@@ -49,12 +57,6 @@ interface SegmentDisplay {
   fromPlaceName: string;
   toPlaceId: string;
   toPlaceName: string;
-}
-
-interface CurrencyOption {
-  id: string;
-  code: string;
-  label: string;
 }
 
 @Component({
@@ -78,18 +80,23 @@ interface CurrencyOption {
       dateFormat: 'Y-m-d',
     }),
   ],
-  selector: 'app-trip-create',
-  templateUrl: './trip-create.component.html',
-  styleUrls: ['./trip-create.component.scss'],
+  selector: 'app-trip-details',
+  templateUrl: './details.component.html',
+  styleUrls: ['./details.component.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class TripCreateComponent implements OnInit, OnDestroy {
+export class TripDetailsComponent implements OnInit, OnDestroy {
   private destroy$ = new Subject<void>();
   private currencyService = inject(CurrencyService);
+  private initialValues: any;
+  private tripPlacesMap = new Map<string, string>();
 
   tripForm: FormGroup;
   currentStep = 0;
   isSubmitting = false;
+  isButtonDisabled = true;
+  isEditMode = false;
+  trip: TripType;
 
   buses: BusType[] = [];
   places: PlaceType[] = [];
@@ -106,6 +113,9 @@ export class TripCreateComponent implements OnInit, OnDestroy {
 
   /** Total seats of the currently selected bus (for maxSeats validation) */
   selectedBusTotalSeats: number | null = null;
+
+  /** Highest booked seat count across existing segments (edit mode guard) */
+  maxBookedSeats = 0;
 
   readonly STEPS = [
     'TRIPS.CREATE.STEPS.BASIC_INFO',
@@ -169,19 +179,34 @@ export class TripCreateComponent implements OnInit, OnDestroy {
 
   /** Places used in stops (for pickup/dropoff city filtering) */
   get boardingPlaces(): PlaceType[] {
-    const placeIds = this.stopSchedule.controls
+    return this.stopSchedule.controls
       .filter((c) => c.get('boardingAllowed')?.value)
-      .map((c) => c.get('placeId')?.value)
-      .filter(Boolean);
-    return this.places.filter((p) => placeIds.includes(p.id));
+      .map((c) => c.get('place')?.value)
+      .filter((p): p is PlaceType => !!p?.id);
   }
 
   get droppingPlaces(): PlaceType[] {
-    const placeIds = this.stopSchedule.controls
+    return this.stopSchedule.controls
       .filter((c) => c.get('droppingAllowed')?.value)
-      .map((c) => c.get('placeId')?.value)
-      .filter(Boolean);
-    return this.places.filter((p) => placeIds.includes(p.id));
+      .map((c) => c.get('place')?.value)
+      .filter((p): p is PlaceType => !!p?.id);
+  }
+
+  comparePlaces = (left: PlaceType | null, right: PlaceType | null): boolean =>
+    left?.id === right?.id;
+
+  private resolvePlaceById(placeId?: string | null): PlaceType | null {
+    if (!placeId) {
+      return null;
+    }
+
+    return (
+      this.places.find((place) => place.id === placeId) ??
+      ({
+        id: placeId,
+        city: this.tripPlacesMap.get(placeId) || placeId,
+      } as PlaceType)
+    );
   }
 
   get selectedCurrency(): CurrencyType | null {
@@ -195,8 +220,45 @@ export class TripCreateComponent implements OnInit, OnDestroy {
     );
   }
 
+  get canAddExpressFare(): boolean {
+    return !this.isEditMode || this.trip?.status === TripStatusEnum.SCHEDULED;
+  }
+
+  get canEditExpressFareValues(): boolean {
+    return (
+      !this.isEditMode ||
+      this.trip?.status === TripStatusEnum.SCHEDULED ||
+      this.trip?.status === TripStatusEnum.ACTIVE
+    );
+  }
+
+  get canEditExpressFareSegments(): boolean {
+    return !this.isEditMode || this.trip?.status === TripStatusEnum.SCHEDULED;
+  }
+
+  get showReadonlyExpressFareTable(): boolean {
+    return this.isEditMode && !this.canEditExpressFareValues;
+  }
+
+  get expressFareHintKey(): string {
+    if (!this.isEditMode) {
+      return 'TRIPS.CREATE.EXPRESS.HINT';
+    }
+
+    if (this.trip?.status === TripStatusEnum.SCHEDULED) {
+      return 'TRIPS.EDIT_MODE.EXPRESS_FARES_SCHEDULED';
+    }
+
+    if (this.trip?.status === TripStatusEnum.ACTIVE) {
+      return 'TRIPS.EDIT_MODE.EXPRESS_FARES_ACTIVE';
+    }
+
+    return 'TRIPS.EDIT_MODE.EXPRESS_FARES_READONLY';
+  }
+
   constructor(
     private fb: FormBuilder,
+    private route: ActivatedRoute,
     private router: Router,
     private cdr: ChangeDetectorRef,
     private tripService: TripService,
@@ -208,12 +270,33 @@ export class TripCreateComponent implements OnInit, OnDestroy {
   ) {}
 
   ngOnInit(): void {
-    this.pageInfo.setTitle(this.translate.instant('TRIPS.CREATE.TITLE'));
-
-    this.buildForm();
     this.loadBuses();
     this.loadPlaces();
     this.loadCurrencies();
+
+    const id = this.route.snapshot.paramMap.get('id');
+    if (id) {
+      // ── EDIT MODE ──
+      this.isEditMode = true;
+      this.tripService.trip$
+        .pipe(take(1), takeUntil(this.destroy$))
+        .subscribe((trip) => {
+          this.trip = trip;
+          this.buildForm();
+          this.populateFormFromTrip(trip);
+          this.applyEditModeRestrictions();
+          this.initialValues = this.tripForm.getRawValue();
+          this.onFormChanges();
+          this.pageInfo.setTitle(this.translate.instant('TRIPS.EDIT_TITLE'));
+          this.cdr.markForCheck();
+        });
+    } else {
+      // ── CREATE MODE ──
+      this.buildForm();
+      this.initialValues = this.tripForm.getRawValue();
+      this.onFormChanges();
+      this.pageInfo.setTitle(this.translate.instant('TRIPS.CREATE.TITLE'));
+    }
   }
 
   // ══════════════════════════════════════════════════
@@ -245,6 +328,9 @@ export class TripCreateComponent implements OnInit, OnDestroy {
       .pipe(takeUntil(this.destroy$))
       .subscribe((buses) => {
         this.buses = buses;
+        if (this.tripForm) {
+          this.syncSelectedBusCapacity();
+        }
         this.cdr.markForCheck();
       });
   }
@@ -270,6 +356,225 @@ export class TripCreateComponent implements OnInit, OnDestroy {
       });
   }
 
+  private onFormChanges(): void {
+    this.syncSelectedBusCapacity();
+
+    this.tripForm
+      .get('busId')
+      ?.valueChanges.pipe(takeUntil(this.destroy$))
+      .subscribe(() => {
+        this.syncSelectedBusCapacity();
+        this.cdr.markForCheck();
+      });
+
+    this.tripForm.valueChanges.pipe(takeUntil(this.destroy$)).subscribe(() => {
+      const changed = FormHelper.getChangedValues(
+        this.tripForm.getRawValue(),
+        this.initialValues,
+      );
+      this.isButtonDisabled = keys(changed).length === 0;
+    });
+  }
+
+  // ══════════════════════════════════════════════════
+  //  Edit mode — populate form from existing trip
+  // ══════════════════════════════════════════════════
+  private populateFormFromTrip(trip: TripType): void {
+    if (!trip) return;
+
+    // Build place lookup from embedded trip data
+    this.buildTripPlacesMap(trip);
+
+    // Step 0 — Basic info
+    this.tripForm.patchValue({
+      busId: trip.bus?.busId || '',
+      departureDate: trip.departureDate || null,
+      timezone: trip.timezone || '',
+      currencyId: trip.currency?.id || '',
+      seatHoldMinutes: trip.seatHoldMinutes ?? 15,
+    });
+
+    // Track bus seats
+    const bus = this.buses.find((b) => b.id === trip.bus?.busId);
+    this.selectedBusTotalSeats =
+      bus?.totalSeats ?? trip.bus?.totalSeats ?? null;
+    this.maxBookedSeats = Math.max(
+      0,
+      ...(trip.segments || []).map((segment) => segment.bookedSeats ?? 0),
+    );
+
+    // Step 1 — Stop schedule
+    this.stopSchedule.clear();
+    (trip.stopSchedule || [])
+      .sort((a, b) => a.sequence - b.sequence)
+      .forEach((stop) => {
+        this.stopSchedule.push(
+          this.fb.group({
+            place: [stop.place ?? null, Validators.required],
+            arrivalTime: [stop.arrivalTime],
+            departureTime: [stop.departureTime],
+            boardingAllowed: [stop.boardingAllowed],
+            droppingAllowed: [stop.droppingAllowed],
+          }),
+        );
+      });
+
+    // Step 2 — Segments (read-only in edit mode)
+    this.segments.clear();
+    this.segmentDisplays = [];
+    (trip.segments || [])
+      .sort((a, b) => a.sequence - b.sequence)
+      .forEach((seg, i) => {
+        this.segmentDisplays.push({
+          index: i,
+          fromPlaceId: seg.fromPlaceId,
+          fromPlaceName:
+            seg.fromPlace?.city ||
+            this.resolvePlaceById(seg.fromPlaceId)?.city ||
+            seg.fromPlaceId,
+          toPlaceId: seg.toPlaceId,
+          toPlaceName:
+            seg.toPlace?.city ||
+            this.resolvePlaceById(seg.toPlaceId)?.city ||
+            seg.toPlaceId,
+        });
+        this.segments.push(
+          this.fb.group({
+            segmentId: [seg.segmentId],
+            basePrice: [
+              seg.basePrice,
+              [Validators.required, Validators.min(0)],
+            ],
+            maxSeats: [seg.maxSeats, [Validators.required, Validators.min(1)]],
+            distanceKm: [
+              seg.distanceKm,
+              [Validators.required, Validators.min(0.1)],
+            ],
+            durationMinutesOverride: [seg.durationMinutes ?? null],
+            bookedSeats: [seg.bookedSeats],
+          }),
+        );
+      });
+
+    // Step 3 — Pickup points
+    this.pickupPoints.clear();
+    (trip.pickupPoints || []).forEach((pp) => {
+      this.pickupPoints.push(
+        this.fb.group({
+          pointId: [pp.pointId],
+          place: [pp.place ?? null, Validators.required],
+          address: [pp.address, Validators.required],
+          scheduledDepartureTime: [
+            pp.scheduledDepartureTime,
+            Validators.required,
+          ],
+          active: [pp.active],
+          latitude: [
+            pp.location?.latitude ?? null,
+            [Validators.min(-90), Validators.max(90)],
+          ],
+          longitude: [
+            pp.location?.longitude ?? null,
+            [Validators.min(-180), Validators.max(180)],
+          ],
+        }),
+      );
+    });
+
+    // Step 3 — Dropoff points
+    this.dropoffPoints.clear();
+    (trip.dropoffPoints || []).forEach((dp) => {
+      this.dropoffPoints.push(
+        this.fb.group({
+          pointId: [dp.pointId],
+          place: [dp.place ?? null, Validators.required],
+          address: [dp.address, Validators.required],
+          scheduledArrivalTime: [dp.scheduledArrivalTime, Validators.required],
+          active: [dp.active],
+          latitude: [
+            dp.location?.latitude ?? null,
+            [Validators.min(-90), Validators.max(90)],
+          ],
+          longitude: [
+            dp.location?.longitude ?? null,
+            [Validators.min(-180), Validators.max(180)],
+          ],
+        }),
+      );
+    });
+
+    // Step 4 — Express fares
+    this.expressFares.clear();
+    (trip.expressFares || []).forEach((fare) => {
+      // Map segmentsCovered (segmentIds) back to indices
+      const segmentIds = trip.segments
+        .sort((a, b) => a.sequence - b.sequence)
+        .map((s) => s.segmentId);
+      const indices = (fare.segmentsCovered || [])
+        .map((id) => segmentIds.indexOf(id))
+        .filter((idx) => idx >= 0);
+
+      this.expressFares.push(
+        this.fb.group({
+          expressId: [fare.expressId],
+          segmentIndices: [
+            indices,
+            (c: AbstractControl) =>
+              c.value?.length > 0 ? null : { required: true },
+          ],
+          price: [fare.price, [Validators.required, Validators.min(0)]],
+          validFrom: [fare.validFrom],
+          validUntil: [fare.validUntil],
+          active: [fare.active],
+        }),
+      );
+    });
+  }
+
+  // ══════════════════════════════════════════════════
+  //  Edit mode — disable fields based on trip status
+  // ══════════════════════════════════════════════════
+  private applyEditModeRestrictions(): void {
+    if (!this.trip) return;
+
+    // Segments are ALWAYS frozen — disable all segment controls
+    this.segments.controls.forEach((seg) => seg.disable());
+
+    if (!this.canEditExpressFareValues) {
+      this.expressFares.controls.forEach((fare) => fare.disable());
+    } else if (!this.canEditExpressFareSegments) {
+      this.expressFares.controls.forEach((fare) => {
+        fare.get('segmentIndices')?.disable({ emitEvent: false });
+      });
+    }
+
+    if (this.trip.status === TripStatusEnum.ACTIVE) {
+      this.tripForm.get('departureDate')?.disable();
+      this.tripForm.get('currencyId')?.disable();
+
+      // Disable stop times when adjacent segments have bookings
+      this.stopSchedule.controls.forEach((stop, i) => {
+        const hasBookedBefore =
+          i > 0 &&
+          (this.segments.at(i - 1)?.get('bookedSeats')?.value ?? 0) > 0;
+        const hasBookedAfter =
+          i < this.segments.length &&
+          (this.segments.at(i)?.get('bookedSeats')?.value ?? 0) > 0;
+        if (hasBookedBefore || hasBookedAfter) {
+          stop.get('arrivalTime')?.disable();
+          stop.get('departureTime')?.disable();
+        }
+      });
+    }
+
+    if (
+      this.trip.status === TripStatusEnum.COMPLETED ||
+      this.trip.status === TripStatusEnum.CANCELLED
+    ) {
+      this.tripForm.disable();
+    }
+  }
+
   // ══════════════════════════════════════════════════
   //  Stepper navigation
   // ══════════════════════════════════════════════════
@@ -283,15 +588,24 @@ export class TripCreateComponent implements OnInit, OnDestroy {
   /** Get available places for a stop, excluding places already selected by other stops */
   availablePlacesForStop(stopIndex: number): PlaceType[] {
     const selectedIds = this.stopSchedule.controls
-      .map((c, i) => (i !== stopIndex ? c.get('placeId')?.value : null))
-      .filter(Boolean);
+      .map((c, i) => (i !== stopIndex ? c.get('place')?.value?.id : null))
+      .filter((id): id is string => Boolean(id));
     return this.places.filter((p) => !selectedIds.includes(p.id));
   }
 
   /** Clear handler for stop city ng-select */
   clearStopPlace(stopIndex: number): void {
-    this.stopSchedule.at(stopIndex).get('placeId')?.setValue('');
+    this.stopSchedule.at(stopIndex).get('place')?.setValue(null);
     this.cdr.markForCheck();
+  }
+
+  get hasInsufficientBusCapacity(): boolean {
+    return (
+      this.isEditMode &&
+      this.maxBookedSeats > 0 &&
+      this.selectedBusTotalSeats != null &&
+      this.selectedBusTotalSeats < this.maxBookedSeats
+    );
   }
 
   isStepValid(step: number): boolean {
@@ -303,7 +617,8 @@ export class TripCreateComponent implements OnInit, OnDestroy {
           f.get('departureDate')!.valid &&
           f.get('timezone')!.valid &&
           f.get('currencyId')!.valid &&
-          f.get('seatHoldMinutes')!.valid
+          f.get('seatHoldMinutes')!.valid &&
+          !this.hasInsufficientBusCapacity
         );
       }
       case 1:
@@ -313,6 +628,8 @@ export class TripCreateComponent implements OnInit, OnDestroy {
           this.timelineErrors.length === 0
         );
       case 2: {
+        // In edit mode, segments are frozen — always valid
+        if (this.isEditMode) return true;
         if (this.segments.length === 0 || !this.segments.valid) return false;
         if (this.selectedBusTotalSeats != null) {
           const segs = this.segments.getRawValue();
@@ -330,7 +647,7 @@ export class TripCreateComponent implements OnInit, OnDestroy {
           this.pickupDropoffErrors.length === 0
         );
       case 4:
-        return this.expressFares.valid;
+        return this.showReadonlyExpressFareTable || this.expressFares.valid;
       default:
         return true;
     }
@@ -339,9 +656,7 @@ export class TripCreateComponent implements OnInit, OnDestroy {
   nextStep(): void {
     // When leaving step 0 (basic info), sync departureDate to first stop & track bus
     if (this.currentStep === 0) {
-      const busId = this.tripForm.get('busId')?.value;
-      const bus = this.buses.find((b) => b.id === busId);
-      this.selectedBusTotalSeats = bus?.totalSeats ?? null;
+      this.syncSelectedBusCapacity();
       if (this.stopSchedule.length > 0) {
         this.enforceStopConstraints();
       }
@@ -369,14 +684,17 @@ export class TripCreateComponent implements OnInit, OnDestroy {
 
     if (!this.isStepValid(this.currentStep)) {
       this.markCurrentStepTouched();
+      if (this.currentStep === 0 && this.hasInsufficientBusCapacity) {
+        this.showBusCapacityError();
+      }
       if (this.currentStep === 1 && this.timelineErrors.length > 0) {
         this.alert.error(this.timelineErrors.join('<br>'));
       }
       return;
     }
 
-    // When leaving step 1 (stops), regenerate segments
-    if (this.currentStep === 1) {
+    // When leaving step 1 (stops), regenerate segments (create mode only)
+    if (this.currentStep === 1 && !this.isEditMode) {
       this.regenerateSegments();
     }
 
@@ -390,8 +708,8 @@ export class TripCreateComponent implements OnInit, OnDestroy {
   }
 
   goToStep(step: number): void {
-    // Only allow navigating to already-visited or current+1 steps
-    if (step <= this.currentStep) {
+    // In edit mode, all steps are unlocked — allow free navigation
+    if (this.isEditMode || step <= this.currentStep) {
       this.currentStep = step;
       this.cdr.markForCheck();
     }
@@ -430,7 +748,7 @@ export class TripCreateComponent implements OnInit, OnDestroy {
   addStop(): void {
     this.stopSchedule.push(
       this.fb.group({
-        placeId: ['', Validators.required],
+        place: [null, Validators.required],
         arrivalTime: [null],
         departureTime: [null],
         boardingAllowed: [false],
@@ -496,8 +814,23 @@ export class TripCreateComponent implements OnInit, OnDestroy {
     }
   }
 
-  getPlaceName(placeId: string): string {
-    return this.places.find((p) => p.id === placeId)?.city ?? placeId;
+  private buildTripPlacesMap(trip: TripType): void {
+    trip.stopSchedule?.forEach((stop) => {
+      if (stop.place?.city)
+        this.tripPlacesMap.set(stop.placeId, stop.place.city);
+    });
+    trip.segments?.forEach((seg) => {
+      if (seg.fromPlace?.city)
+        this.tripPlacesMap.set(seg.fromPlaceId, seg.fromPlace.city);
+      if (seg.toPlace?.city)
+        this.tripPlacesMap.set(seg.toPlaceId, seg.toPlace.city);
+    });
+    trip.pickupPoints?.forEach((pp) => {
+      if (pp.place?.city) this.tripPlacesMap.set(pp.placeId, pp.place.city);
+    });
+    trip.dropoffPoints?.forEach((dp) => {
+      if (dp.place?.city) this.tripPlacesMap.set(dp.placeId, dp.place.city);
+    });
   }
 
   // ══════════════════════════════════════════════════
@@ -516,7 +849,7 @@ export class TripCreateComponent implements OnInit, OnDestroy {
       const departure = stop.departureTime
         ? new Date(stop.departureTime).getTime()
         : null;
-      const placeName = this.getPlaceName(stop.placeId);
+      const placeName = stop.place?.city || '-';
 
       // Rule 0a: first stop must NOT have an arrival time
       if (i === 0 && arrival) {
@@ -581,7 +914,7 @@ export class TripCreateComponent implements OnInit, OnDestroy {
                 stop: i + 1,
                 place: placeName,
                 prevStop: i,
-                prevPlace: this.getPlaceName(prev.placeId),
+                prevPlace: prev.place?.city || '-',
               },
             ),
           );
@@ -640,26 +973,28 @@ export class TripCreateComponent implements OnInit, OnDestroy {
     const dropoffs = this.dropoffPoints.getRawValue();
 
     stops.forEach((stop: any, i: number) => {
+      const stopPlaceId = stop.place?.id;
+
       if (stop.boardingAllowed) {
-        const hasPickup = pickups.some((p: any) => p.placeId === stop.placeId);
+        const hasPickup = pickups.some((p: any) => p.place?.id === stopPlaceId);
         if (!hasPickup) {
           this.pickupDropoffErrors.push(
             this.translate.instant(
               'TRIPS.CREATE.ERRORS.MISSING_PICKUP_FOR_STOP',
-              { stop: i + 1, place: this.getPlaceName(stop.placeId) },
+              { stop: i + 1, place: stop.place?.city || '-' },
             ),
           );
         }
       }
       if (stop.droppingAllowed) {
         const hasDropoff = dropoffs.some(
-          (d: any) => d.placeId === stop.placeId,
+          (d: any) => d.place?.id === stopPlaceId,
         );
         if (!hasDropoff) {
           this.pickupDropoffErrors.push(
             this.translate.instant(
               'TRIPS.CREATE.ERRORS.MISSING_DROPOFF_FOR_STOP',
-              { stop: i + 1, place: this.getPlaceName(stop.placeId) },
+              { stop: i + 1, place: stop.place?.city || '-' },
             ),
           );
         }
@@ -688,19 +1023,21 @@ export class TripCreateComponent implements OnInit, OnDestroy {
     for (let i = 0; i < commercial.length - 1; i++) {
       const from = commercial[i];
       const to = commercial[i + 1];
+      const fromPlaceId = from.place?.id || '';
+      const toPlaceId = to.place?.id || '';
 
       // Try to preserve user-entered data by matching from→to
       const existingIdx = oldDisplays.findIndex(
-        (d) => d.fromPlaceId === from.placeId && d.toPlaceId === to.placeId,
+        (d) => d.fromPlaceId === fromPlaceId && d.toPlaceId === toPlaceId,
       );
       const existing = existingIdx >= 0 ? oldSegments[existingIdx] : null;
 
       this.segmentDisplays.push({
         index: i,
-        fromPlaceId: from.placeId,
-        fromPlaceName: this.getPlaceName(from.placeId),
-        toPlaceId: to.placeId,
-        toPlaceName: this.getPlaceName(to.placeId),
+        fromPlaceId,
+        fromPlaceName: from.place?.city || fromPlaceId,
+        toPlaceId,
+        toPlaceName: to.place?.city || toPlaceId,
       });
 
       this.segments.push(
@@ -738,7 +1075,7 @@ export class TripCreateComponent implements OnInit, OnDestroy {
   addPickupPoint(): void {
     this.pickupPoints.push(
       this.fb.group({
-        placeId: ['', Validators.required],
+        place: [null, Validators.required],
         address: ['', Validators.required],
         scheduledDepartureTime: [null, Validators.required],
         active: [true],
@@ -757,7 +1094,7 @@ export class TripCreateComponent implements OnInit, OnDestroy {
   addDropoffPoint(): void {
     this.dropoffPoints.push(
       this.fb.group({
-        placeId: ['', Validators.required],
+        place: [null, Validators.required],
         address: ['', Validators.required],
         scheduledArrivalTime: [null, Validators.required],
         active: [true],
@@ -779,6 +1116,7 @@ export class TripCreateComponent implements OnInit, OnDestroy {
   addExpressFare(): void {
     this.expressFares.push(
       this.fb.group({
+        expressId: [null],
         segmentIndices: [
           [],
           (c: AbstractControl) =>
@@ -804,10 +1142,42 @@ export class TripCreateComponent implements OnInit, OnDestroy {
   submit(): void {
     if (this.tripForm.invalid) {
       this.tripForm.markAllAsTouched();
+      this.alert.error(this.translate.instant('COMMON.FORM_INVALID'));
+      return;
+    }
+
+    if (this.hasInsufficientBusCapacity) {
+      this.tripForm.get('busId')?.markAsTouched();
+      this.showBusCapacityError();
       return;
     }
 
     this.isSubmitting = true;
+
+    const submitAction = this.isEditMode
+      ? this.submitUpdate()
+      : this.submitCreate();
+
+    submitAction.pipe(takeUntil(this.destroy$)).subscribe({
+      next: () => {
+        this.alert.success(
+          this.translate.instant(
+            this.isEditMode
+              ? 'TRIPS.MESSAGES.UPDATE_SUCCESS'
+              : 'TRIPS.MESSAGES.SAVE_SUCCESS',
+          ),
+        );
+        this.router.navigate(['/trips']);
+      },
+      error: (err) => {
+        this.handleSubmitError(err);
+        this.isSubmitting = false;
+        this.cdr.markForCheck();
+      },
+    });
+  }
+
+  private submitCreate(): Observable<TripType> {
     const raw = this.tripForm.getRawValue();
 
     const payload: TripCreatePayload = {
@@ -817,7 +1187,7 @@ export class TripCreateComponent implements OnInit, OnDestroy {
       currencyId: raw.currencyId,
       seatHoldMinutes: raw.seatHoldMinutes,
       stopSchedule: raw.stopSchedule.map((s: any, i: number) => ({
-        placeId: s.placeId,
+        placeId: s.place?.id || '',
         sequence: i,
         arrivalTime:
           i === 0
@@ -844,14 +1214,14 @@ export class TripCreateComponent implements OnInit, OnDestroy {
           : {}),
       })),
       pickupPoints: raw.pickupPoints.map((p: any) => ({
-        placeId: p.placeId,
+        placeId: p.place?.id || '',
         address: p.address,
         scheduledDepartureTime: this.toISOString(p.scheduledDepartureTime),
         active: p.active ?? true,
         ...this.buildLocationPayload(p),
       })),
       dropoffPoints: raw.dropoffPoints.map((d: any) => ({
-        placeId: d.placeId,
+        placeId: d.place?.id || '',
         address: d.address,
         scheduledArrivalTime: this.toISOString(d.scheduledArrivalTime),
         active: d.active ?? true,
@@ -869,52 +1239,304 @@ export class TripCreateComponent implements OnInit, OnDestroy {
           : undefined,
     };
 
-    this.tripService
-      .create(payload)
-      .pipe(takeUntil(this.destroy$))
-      .subscribe({
-        next: () => {
-          this.alert.success(
-            this.translate.instant('TRIPS.MESSAGES.SAVE_SUCCESS'),
+    return this.tripService.create(payload);
+  }
+
+  private submitUpdate(): Observable<TripType> {
+    const raw = this.tripForm.getRawValue();
+    const changed = FormHelper.getChangedValues(raw, this.initialValues);
+
+    const { beforeTripUpdate, afterTripUpdate } =
+      this.buildExpressFareSyncOperations(raw.expressFares || []);
+
+    const payload: Partial<TripUpdatePayload> = {
+      ...(changed.busId !== undefined && {
+        bus: { busId: changed.busId },
+      }),
+      ...(changed.departureDate !== undefined && {
+        departureDate: this.toISOString(changed.departureDate),
+      }),
+      ...(changed.timezone !== undefined && {
+        timezone: changed.timezone,
+      }),
+      ...(changed.currencyId !== undefined && {
+        currencyId: changed.currencyId,
+      }),
+      ...(changed.seatHoldMinutes !== undefined && {
+        seatHoldMinutes: changed.seatHoldMinutes,
+      }),
+      ...(changed.stopSchedule !== undefined && {
+        stopSchedule: changed.stopSchedule.map((s: any, i: number) => ({
+          placeId: s.place?.id || '',
+          sequence: i,
+          arrivalTime: s.arrivalTime ? this.toISOString(s.arrivalTime) : null,
+          departureTime: s.departureTime
+            ? this.toISOString(s.departureTime)
+            : null,
+          boardingAllowed: s.boardingAllowed,
+          droppingAllowed: s.droppingAllowed,
+        })),
+      }),
+      ...(changed.pickupPoints !== undefined && {
+        pickupPoints: changed.pickupPoints.map((p: any) => ({
+          placeId: p.place?.id || '',
+          address: p.address,
+          scheduledDepartureTime: this.toISOString(p.scheduledDepartureTime),
+          active: p.active ?? true,
+          ...this.buildLocationPayload(p),
+        })),
+      }),
+      ...(changed.dropoffPoints !== undefined && {
+        dropoffPoints: changed.dropoffPoints.map((d: any) => ({
+          placeId: d.place?.id || '',
+          address: d.address,
+          scheduledArrivalTime: this.toISOString(d.scheduledArrivalTime),
+          active: d.active ?? true,
+          ...this.buildLocationPayload(d),
+        })),
+      }),
+    };
+
+    let request$ = of(this.trip);
+
+    beforeTripUpdate.forEach((operation) => {
+      request$ = request$.pipe(concatMap(() => operation));
+    });
+
+    if (Object.keys(payload).length > 0) {
+      request$ = request$.pipe(
+        concatMap(() => this.tripService.update(this.trip.id, payload)),
+      );
+    }
+
+    afterTripUpdate.forEach((operation) => {
+      request$ = request$.pipe(concatMap(() => operation));
+    });
+
+    return request$;
+  }
+
+  private buildExpressFareSyncOperations(currentFares: any[]): {
+    beforeTripUpdate: Observable<TripType>[];
+    afterTripUpdate: Observable<TripType>[];
+  } {
+    if (!this.isEditMode || !this.canEditExpressFareValues) {
+      return { beforeTripUpdate: [], afterTripUpdate: [] };
+    }
+
+    const initialFares = this.initialValues?.expressFares ?? [];
+    const beforeTripUpdate: Observable<TripType>[] = [];
+    const afterTripUpdate: Observable<TripType>[] = [];
+    const currentById = new Map<string, any>();
+
+    currentFares
+      .filter((fare) => !!fare?.expressId)
+      .forEach((fare) => currentById.set(fare.expressId, fare));
+
+    initialFares.forEach((initialFare: any) => {
+      const expressId = initialFare?.expressId;
+      if (!expressId) {
+        return;
+      }
+
+      const currentFare = currentById.get(expressId);
+      if (!currentFare) {
+        if (this.canAddExpressFare) {
+          beforeTripUpdate.push(
+            this.tripService.deleteExpressFare(this.trip.id, expressId),
           );
-          this.router.navigate(['/trips']);
-        },
-        error: (err) => {
-          const backendMsg: string = err?.error?.message || '';
-          let message: string;
-          if (backendMsg.includes('UNRECOGNIZED_FIELD')) {
-            const field = backendMsg.split(':')[1]?.trim() || '';
-            message = this.translate.instant(
-              'TRIPS.MESSAGES.UNRECOGNIZED_FIELD',
-              { field },
-            );
-          } else if (backendMsg.includes('MISSING_PICKUP_POINT')) {
-            message = this.translate.instant('TRIPS.MESSAGES.MISSING_PICKUP');
-          } else if (backendMsg.includes('MISSING_DROPOFF_POINT')) {
-            message = this.translate.instant('TRIPS.MESSAGES.MISSING_DROPOFF');
-          } else if (backendMsg.includes('BUS_ALREADY_ASSIGNED')) {
-            message = this.translate.instant(
-              'TRIPS.MESSAGES.BUS_ALREADY_ASSIGNED',
-            );
-          } else if (backendMsg.includes('MAX_SEATS_EXCEEDS')) {
-            message = this.translate.instant('TRIPS.MESSAGES.MAX_SEATS_ERROR');
-          } else if (
-            backendMsg.includes('INVALID_TIMELINE') ||
-            backendMsg.includes('INVALID_STOP_SEQUENCE')
-          ) {
-            message = this.translate.instant('TRIPS.MESSAGES.INVALID_TIMELINE');
-          } else if (backendMsg.includes('INVALID_EXPRESS_FARE_CHAIN')) {
-            message = this.translate.instant(
-              'TRIPS.MESSAGES.INVALID_EXPRESS_CHAIN',
-            );
-          } else {
-            message = this.translate.instant('TRIPS.MESSAGES.SAVE_ERROR');
-          }
-          this.alert.error(message);
-          this.isSubmitting = false;
-          this.cdr.markForCheck();
-        },
+        }
+        return;
+      }
+
+      if (
+        this.canEditExpressFareSegments &&
+        this.hasSegmentSelectionChanged(
+          currentFare.segmentIndices,
+          initialFare.segmentIndices,
+        )
+      ) {
+        beforeTripUpdate.push(
+          this.tripService.deleteExpressFare(this.trip.id, expressId),
+        );
+        afterTripUpdate.push(
+          this.tripService.addExpressFare(
+            this.trip.id,
+            this.buildExpressFareCreatePayload(currentFare),
+          ),
+        );
+        return;
+      }
+
+      const updatePayload = this.buildExpressFareUpdatePayload(
+        currentFare,
+        initialFare,
+      );
+      if (updatePayload) {
+        afterTripUpdate.push(
+          this.tripService.updateExpressFare(
+            this.trip.id,
+            expressId,
+            updatePayload,
+          ),
+        );
+      }
+    });
+
+    if (this.canAddExpressFare) {
+      currentFares
+        .filter((fare) => !fare?.expressId)
+        .forEach((fare) => {
+          afterTripUpdate.push(
+            this.tripService.addExpressFare(
+              this.trip.id,
+              this.buildExpressFareCreatePayload(fare),
+            ),
+          );
+        });
+    }
+
+    return { beforeTripUpdate, afterTripUpdate };
+  }
+
+  private buildExpressFareCreatePayload(fare: any): ExpressFarePayload {
+    const segmentIndices = this.normalizeSegmentIndices(fare.segmentIndices);
+    const firstSegment = this.segmentDisplays[segmentIndices[0]];
+    const lastSegment =
+      this.segmentDisplays[segmentIndices[segmentIndices.length - 1]];
+
+    return {
+      fromPlaceId: firstSegment?.fromPlaceId || '',
+      toPlaceId: lastSegment?.toPlaceId || '',
+      segmentIds: segmentIndices
+        .map((index) => this.segments.at(index)?.get('segmentId')?.value)
+        .filter((segmentId): segmentId is string => !!segmentId),
+      price: fare.price,
+      validFrom: fare.validFrom ? this.toISOString(fare.validFrom) : null,
+      validUntil: fare.validUntil ? this.toISOString(fare.validUntil) : null,
+      active: fare.active ?? true,
+    };
+  }
+
+  private buildExpressFareUpdatePayload(
+    currentFare: any,
+    initialFare: any,
+  ): ExpressFareUpdatePayload | null {
+    const payload: ExpressFareUpdatePayload = {};
+
+    if (currentFare.price !== initialFare.price) {
+      payload.price = currentFare.price;
+    }
+    if (
+      !this.areDateValuesEqual(currentFare.validFrom, initialFare.validFrom)
+    ) {
+      payload.validFrom = currentFare.validFrom
+        ? this.toISOString(currentFare.validFrom)
+        : null;
+    }
+    if (
+      !this.areDateValuesEqual(currentFare.validUntil, initialFare.validUntil)
+    ) {
+      payload.validUntil = currentFare.validUntil
+        ? this.toISOString(currentFare.validUntil)
+        : null;
+    }
+    if ((currentFare.active ?? true) !== (initialFare.active ?? true)) {
+      payload.active = currentFare.active ?? true;
+    }
+
+    return Object.keys(payload).length > 0 ? payload : null;
+  }
+
+  private normalizeSegmentIndices(
+    indices: Array<number | string> | null | undefined,
+  ): number[] {
+    return [
+      ...new Set(
+        (indices ?? [])
+          .map((value) => Number(value))
+          .filter((value) => Number.isInteger(value) && value >= 0),
+      ),
+    ].sort((left, right) => left - right);
+  }
+
+  private hasSegmentSelectionChanged(
+    current: Array<number | string> | null | undefined,
+    initial: Array<number | string> | null | undefined,
+  ): boolean {
+    const normalizedCurrent = this.normalizeSegmentIndices(current);
+    const normalizedInitial = this.normalizeSegmentIndices(initial);
+
+    return (
+      normalizedCurrent.length !== normalizedInitial.length ||
+      normalizedCurrent.some(
+        (value, index) => value !== normalizedInitial[index],
+      )
+    );
+  }
+
+  private areDateValuesEqual(left: any, right: any): boolean {
+    return this.toISOString(left) === this.toISOString(right);
+  }
+
+  private handleSubmitError(err: any): void {
+    const backendMsg: string = err?.error?.message || '';
+    let message: string;
+    if (backendMsg.includes('UNRECOGNIZED_FIELD')) {
+      const field = backendMsg.split(':')[1]?.trim() || '';
+      message = this.translate.instant('TRIPS.MESSAGES.UNRECOGNIZED_FIELD', {
+        field,
       });
+    } else if (backendMsg.includes('MISSING_PICKUP_POINT')) {
+      message = this.translate.instant('TRIPS.MESSAGES.MISSING_PICKUP');
+    } else if (backendMsg.includes('MISSING_DROPOFF_POINT')) {
+      message = this.translate.instant('TRIPS.MESSAGES.MISSING_DROPOFF');
+    } else if (backendMsg.includes('BUS_ALREADY_ASSIGNED')) {
+      message = this.translate.instant('TRIPS.MESSAGES.BUS_ALREADY_ASSIGNED');
+    } else if (backendMsg.includes('MAX_SEATS_EXCEEDS')) {
+      message = this.translate.instant('TRIPS.MESSAGES.MAX_SEATS_ERROR');
+    } else if (backendMsg.includes('BLOCKED')) {
+      message = backendMsg;
+    } else if (
+      backendMsg.includes('INVALID_TIMELINE') ||
+      backendMsg.includes('INVALID_STOP_SEQUENCE')
+    ) {
+      message = this.translate.instant('TRIPS.MESSAGES.INVALID_TIMELINE');
+    } else if (backendMsg.includes('INVALID_EXPRESS_FARE_CHAIN')) {
+      message = this.translate.instant('TRIPS.MESSAGES.INVALID_EXPRESS_CHAIN');
+    } else {
+      message = this.translate.instant(
+        this.isEditMode
+          ? 'TRIPS.MESSAGES.UPDATE_ERROR'
+          : 'TRIPS.MESSAGES.SAVE_ERROR',
+      );
+    }
+    this.alert.error(message);
+  }
+
+  private syncSelectedBusCapacity(): void {
+    const busId = this.tripForm?.get('busId')?.value;
+
+    if (!busId) {
+      this.selectedBusTotalSeats = null;
+      return;
+    }
+
+    const bus = this.buses.find((item) => item.id === busId);
+    this.selectedBusTotalSeats =
+      bus?.totalSeats ??
+      (this.isEditMode && busId === this.trip?.bus?.busId
+        ? (this.trip.bus?.totalSeats ?? null)
+        : null);
+  }
+
+  private showBusCapacityError(): void {
+    this.alert.error(
+      this.translate.instant('TRIPS.CREATE.ERRORS.BUS_CAPACITY_BELOW_BOOKED', {
+        booked: this.maxBookedSeats,
+        total: this.selectedBusTotalSeats ?? 0,
+      }),
+    );
   }
 
   // ── Helpers ──────────────────────────────────────

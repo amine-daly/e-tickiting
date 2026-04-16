@@ -80,10 +80,18 @@ export class TeamComponent implements OnInit, OnDestroy {
   }
 
   openAddMemberModal(): void {
-    this.modalService.open(AddMemberModalComponent, {
+    const modalRef = this.modalService.open(AddMemberModalComponent, {
       centered: true,
       size: 'lg',
     });
+
+    this.subscriptions.add(
+      modalRef.closed.subscribe((created) => {
+        if (created) {
+          this.loadPage(this.page);
+        }
+      }),
+    );
   }
 
   onPageChange(page: number): void {

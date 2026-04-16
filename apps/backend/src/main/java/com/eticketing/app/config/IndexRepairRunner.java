@@ -89,6 +89,19 @@ public class IndexRepairRunner implements ApplicationRunner {
                     accountOps.dropIndex(name);
                 } catch (Exception ignored) {
                 }
+                continue;
+            }
+
+            boolean leakedEmbeddedCompanyUnique = info.isUnique()
+                    && keys.stream().anyMatch(key -> key.startsWith("target.company."))
+                    && !(keys.size() == 2
+                    && keys.contains("userId")
+                    && keys.contains("target.company.id"));
+            if (leakedEmbeddedCompanyUnique) {
+                try {
+                    accountOps.dropIndex(name);
+                } catch (Exception ignored) {
+                }
             }
         }
 

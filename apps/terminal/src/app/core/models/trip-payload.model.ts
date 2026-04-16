@@ -43,8 +43,15 @@ export interface ExpressFareCreateInput {
 export interface ExpressFarePayload {
   fromPlaceId: string;
   toPlaceId: string;
-  segmentsCovered: string[];
+  segmentIds: string[];
   price: number;
+  validFrom?: string | null;
+  validUntil?: string | null;
+  active?: boolean;
+}
+
+export interface ExpressFareUpdatePayload {
+  price?: number;
   validFrom?: string | null;
   validUntil?: string | null;
   active?: boolean;
@@ -70,4 +77,6 @@ export interface TripUpdatePayload {
   currencyId?: string;
   seatHoldMinutes?: number;
   stopSchedule?: StopInput[];
+  pickupPoints?: PickupPointPayload[];
+  dropoffPoints?: DropoffPointPayload[];
 }

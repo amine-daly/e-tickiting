@@ -67,13 +67,15 @@ public class TripController {
     @GetMapping
     public ResponseEntity<PaginateResponseType<TripResponse>> listTrips(
             @RequestParam(required = false) String status,
+            @RequestParam(defaultValue = "createdAt") String sortBy,
+            @RequestParam(defaultValue = "desc") String order,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int limit,
             @AuthenticationPrincipal User principal) {
         String companyId = resolveCompanyId(principal);
         TripStatusEnum statusEnum = (status != null && !status.isBlank())
                 ? TripStatusEnum.fromValue(status) : null;
-        Page<TripType> result = tripService.list(companyId, statusEnum, page, limit);
+        Page<TripType> result = tripService.list(companyId, statusEnum, sortBy, order, page, limit);
         var content = enricher.enrich(result.getContent());
         return ResponseEntity.ok(new PaginateResponseType<>(
                 content, result.getTotalElements(), result.isLast()));
@@ -84,11 +86,13 @@ public class TripController {
     public ResponseEntity<PaginateResponseType<TripResponse>> listByCompany(
             @PathVariable String companyId,
             @RequestParam(required = false) String status,
+            @RequestParam(defaultValue = "createdAt") String sortBy,
+            @RequestParam(defaultValue = "desc") String order,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int limit) {
         TripStatusEnum statusEnum = (status != null && !status.isBlank())
                 ? TripStatusEnum.fromValue(status) : null;
-        Page<TripType> result = tripService.list(companyId, statusEnum, page, limit);
+        Page<TripType> result = tripService.list(companyId, statusEnum, sortBy, order, page, limit);
         var content = enricher.enrich(result.getContent());
         return ResponseEntity.ok(new PaginateResponseType<>(
                 content, result.getTotalElements(), result.isLast()));
@@ -100,6 +104,8 @@ public class TripController {
             @RequestParam(required = false) String companyId,
             @RequestParam(required = false) String status,
             @RequestParam(required = false) String searchTerm,
+            @RequestParam(defaultValue = "createdAt") String sortBy,
+            @RequestParam(defaultValue = "desc") String order,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date,
             @RequestParam(required = false) String originPlaceId,
             @RequestParam(required = false) String destinationPlaceId,
@@ -115,6 +121,8 @@ public class TripController {
                 scopedCompanyId,
                 statusEnum,
                 searchTerm,
+                sortBy,
+                order,
                 date,
                 originPlaceId,
                 destinationPlaceId,

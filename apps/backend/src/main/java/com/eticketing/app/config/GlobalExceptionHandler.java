@@ -1,11 +1,11 @@
 package com.eticketing.app.config;
 
-import com.eticketing.app.web.error.ApiError;
-import com.eticketing.app.web.error.ApiExceptions.*;
-import jakarta.servlet.http.HttpServletRequest;
+import java.util.HashMap;
+import java.util.Map;
+
+import org.springframework.dao.DuplicateKeyException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.dao.DuplicateKeyException;
 import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -13,8 +13,15 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.multipart.MaxUploadSizeExceededException;
 import org.springframework.web.server.ResponseStatusException;
 
-import java.util.HashMap;
-import java.util.Map;
+import com.eticketing.app.web.error.ApiError;
+import com.eticketing.app.web.error.ApiExceptions.*;
+import com.eticketing.app.web.error.ApiExceptions.BadRequestException;
+import com.eticketing.app.web.error.ApiExceptions.ConflictException;
+import com.eticketing.app.web.error.ApiExceptions.ForbiddenException;
+import com.eticketing.app.web.error.ApiExceptions.NotFoundException;
+import com.eticketing.app.web.error.ApiExceptions.UnauthorizedException;
+
+import jakarta.servlet.http.HttpServletRequest;
 
 @RestControllerAdvice
 public class GlobalExceptionHandler {
@@ -68,6 +75,10 @@ public class GlobalExceptionHandler {
             friendly = "Email already exists";
         } else if (raw.contains("phone.countryCode") || raw.contains("phone.number") || raw.contains(" index: unique_phone")) {
             friendly = "Phone number already exists";
+        } else if (raw.contains(" index: user_company_idx")
+                || raw.contains("target.company.id")
+                || raw.contains("target.company.taxId")) {
+            friendly = "User already has an account with this company";
         }
         return ResponseEntity.status(HttpStatus.CONFLICT)
                 .body(new ApiError(409, "Conflict", friendly, req.getRequestURI(), null));

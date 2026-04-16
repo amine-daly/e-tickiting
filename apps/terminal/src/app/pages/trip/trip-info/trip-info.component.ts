@@ -35,12 +35,12 @@ import { PageInfoService } from 'src/app/_metronic/layout/core/page-info.service
     NgbTooltipModule,
     ToolbarComponent,
   ],
-  selector: 'app-trip-detail',
-  templateUrl: './trip-detail.component.html',
-  styleUrls: ['./trip-detail.component.scss'],
+  selector: 'app-trip-info',
+  templateUrl: './trip-info.component.html',
+  styleUrls: ['./trip-info.component.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class TripDetailComponent implements OnInit, OnDestroy {
+export class TripInfoComponent implements OnInit, OnDestroy {
   private destroy$ = new Subject<void>();
 
   trip: TripType | null = null;

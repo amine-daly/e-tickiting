@@ -73,6 +73,14 @@ public class BookingService {
             throw new BadRequestException("TRIP_NOT_ACTIVE: booking is only allowed on ACTIVE trips");
         }
 
+        // ── 1b. Derive companyId from trip (authoritative source) ────────
+        String resolvedCompanyId = (trip.getTarget() != null && trip.getTarget().getCompany() != null)
+                ? trip.getTarget().getCompany()
+                : companyId;
+        if (resolvedCompanyId == null || resolvedCompanyId.isBlank()) {
+            throw new BadRequestException("COMPANY_MISSING: cannot determine company for this booking");
+        }
+
         // ── 2. Resolve segment chain ────────────────────────────────────
         List<String> segmentIds = resolveSegmentChain(trip.getSegments(), fromPlaceId, toPlaceId);
         if (segmentIds.isEmpty()) {
@@ -111,7 +119,7 @@ public class BookingService {
 
             TicketType ticket = TicketType.builder()
                     .tripId(tripId)
-                    .target(new TargetInput(companyId, posId))
+                    .target(new TargetInput(resolvedCompanyId, posId))
                     .segmentIds(new ArrayList<>(segmentIds))
                     .expressId(expressId)
                     .pickupPointId(pickupPointId)
@@ -168,15 +176,28 @@ public class BookingService {
     // CANCEL BOOKING (US-8.6)
     // ════════════════════════════════════════════════════════════════════
     /**
-     * Cancels a CONFIRMED ticket. Creates a Refund record with status
-     * REQUESTED. Seats are NOT released here — that happens on Refund APPROVED
-     * (Sprint 9).
+     * Cancels a ticket.
+     * <p>
+     * PENDING tickets use the expiry path: they transition to EXPIRED and
+     * release their held seats immediately. CONFIRMED tickets transition to
+     * CANCELLED and create a Refund record with status REQUESTED. Seats are NOT
+     * released here — that happens on Refund APPROVED (Sprint 9).
      *
-     * @return the cancelled ticket
+     * @return the updated ticket
      */
     public TicketType cancelBooking(String ticketId, RefundRepository refundRepository) {
         TicketType ticket = ticketRepository.findById(ticketId)
                 .orElseThrow(() -> new NotFoundException("Ticket not found: " + ticketId));
+
+        if (ticket.getStatus() == TicketStatusEnum.PENDING) {
+            ticket.setStatus(TicketStatusEnum.EXPIRED);
+            ticket.setExpiresAt(Instant.now());
+            TicketType saved = ticketRepository.save(ticket);
+            seatReservationService.releaseSeats(ticket.getTripId(), ticket.getSegmentIds());
+            LOG.info("Pending ticket {} cancelled via expiry path - released {} segments on trip {}",
+                    ticketId, ticket.getSegmentIds().size(), ticket.getTripId());
+            return saved;
+        }
 
         if (ticket.getStatus() != TicketStatusEnum.CONFIRMED) {
             throw new ConflictException("INVALID_TICKET_TRANSITION: only CONFIRMED tickets can be cancelled, current=" + ticket.getStatus());

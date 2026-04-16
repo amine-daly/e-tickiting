@@ -2,7 +2,7 @@ import { Injectable } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { BehaviorSubject, finalize, map, Observable, of } from 'rxjs';
 import { IPagination } from 'src/app/core/models/paginate-model';
-import { PhoneType, UserType } from 'src/app/core/models/user-type';
+import { PhoneType, RoleEnum, UserType } from 'src/app/core/models/user-type';
 
 const API_USERS_URL = '/api/users';
 
@@ -14,6 +14,12 @@ export interface CustomerCreatePayload {
   phone: PhoneType;
 }
 
+type CustomerCreateRequest = CustomerCreatePayload & {
+  target?: {
+    company: string;
+  };
+};
+
 export interface CustomerUpdatePayload {
   firstName?: string;
   lastName?: string;
@@ -21,6 +27,12 @@ export interface CustomerUpdatePayload {
   role?: string;
   phone?: PhoneType;
   picture?: { baseUrl: string; path: string };
+}
+
+export interface CustomerListResponse {
+  objects: UserType[];
+  count: number;
+  isLast: boolean;
 }
 
 @Injectable({ providedIn: 'root' })
@@ -62,6 +74,97 @@ export class CustomersService {
 
   constructor(private http: HttpClient) {}
 
+  private getCurrentCompanyId(): string | undefined {
+    return localStorage.getItem('companyId') || undefined;
+  }
+
+  private syncCustomerPage(
+    response: CustomerListResponse,
+    page: number,
+    size: number,
+  ): UserType[] {
+    const objects = response?.objects ?? [];
+    const count = response?.count ?? objects.length;
+
+    this.users.next(objects);
+    this.pagination.next({
+      length: count,
+      size,
+      page,
+      lastPage: Math.max(0, Math.ceil(count / size) - 1),
+    });
+
+    return objects;
+  }
+
+  private updatePaginationCount(delta: number): void {
+    const current = this.pagination.value;
+    if (!current) {
+      return;
+    }
+
+    const size = current.size || this.pageLimit;
+    const length = Math.max(0, (current.length || 0) + delta);
+
+    this.pagination.next({
+      ...current,
+      length,
+      lastPage: Math.max(0, Math.ceil(length / size) - 1),
+    });
+  }
+
+  getCustomersPage(
+    page = this.pageIndex,
+    limit = this.pageLimit,
+  ): Observable<CustomerListResponse> {
+    const params = new HttpParams()
+      .set('page', page.toString())
+      .set('limit', limit.toString());
+
+    return this.http
+      .get<any>(API_USERS_URL, { params })
+      .pipe(map((data: any) => this.toCustomerListResponse(data)));
+  }
+
+  getCustomersByCompany(
+    companyId?: string,
+    page = 0,
+    limit = this.pageLimit,
+  ): Observable<CustomerListResponse> {
+    if (!companyId) {
+      return this.getCustomersPage(page, limit);
+    }
+
+    const params = new HttpParams()
+      .set('companyId', companyId)
+      .set('page', page.toString())
+      .set('limit', limit.toString());
+
+    return this.http
+      .get<any>(`${API_USERS_URL}/by-company`, { params })
+      .pipe(map((data: any) => this.toCustomerListResponse(data)));
+  }
+
+  searchCustomers(
+    q: string,
+    companyId?: string,
+    page = 0,
+    limit = this.pageLimit,
+  ): Observable<CustomerListResponse> {
+    let params = new HttpParams()
+      .set('q', q)
+      .set('page', page.toString())
+      .set('limit', limit.toString());
+
+    if (companyId) {
+      params = params.set('companyId', companyId);
+    }
+
+    return this.http
+      .get<any>(`${API_USERS_URL}/search`, { params })
+      .pipe(map((data: any) => this.toCustomerListResponse(data)));
+  }
+
   getUserById(id: string): Observable<UserType> {
     if (!id) {
       return of(null as any);
@@ -82,30 +185,48 @@ export class CustomersService {
 
   getCustomers(): Observable<UserType[]> {
     this.loading.next(true);
-    const params = new HttpParams()
-      .set('page', this.pageIndex)
-      .set('limit', this.pageLimit);
-    return this.http.get<any>(API_USERS_URL, { params }).pipe(
-      map((data: any) => {
-        const objects = data?.objects ?? [];
-        const count = data?.count ?? objects.length;
-        this.users.next(objects);
-        this.pagination.next({
-          length: count,
-          size: this.pageLimit,
-          page: this.pageIndex,
-          lastPage: Math.max(0, Math.ceil(count / this.pageLimit) - 1),
-        });
-        return objects;
-      }),
+    const companyId = this.getCurrentCompanyId();
+    const request$ = companyId
+      ? this.getCustomersByCompany(companyId, this.pageIndex, this.pageLimit)
+      : this.getCustomersPage(this.pageIndex, this.pageLimit);
+
+    return request$.pipe(
+      map((response) =>
+        this.syncCustomerPage(response, this.pageIndex, this.pageLimit),
+      ),
       finalize(() => this.loading.next(false)),
     );
   }
 
+  private toCustomerListResponse(data: any): CustomerListResponse {
+    const objects = Array.isArray(data?.objects)
+      ? data.objects.filter(
+          (user: UserType) => user?.role === RoleEnum.CUSTOMER,
+        )
+      : [];
+
+    return {
+      objects,
+      count: data?.count ?? objects.length,
+      isLast: data?.isLast ?? true,
+    };
+  }
+
   createCustomer(data: CustomerCreatePayload): Observable<UserType> {
-    return this.http.post<UserType>(API_USERS_URL, data).pipe(
+    const companyId = this.getCurrentCompanyId();
+    const payload: CustomerCreateRequest = {
+      ...data,
+      ...(companyId && {
+        target: {
+          company: companyId,
+        },
+      }),
+    };
+
+    return this.http.post<UserType>(API_USERS_URL, payload).pipe(
       map((created: UserType) => {
         this.users.next([...(this.users.value || []), created]);
+        this.updatePaginationCount(1);
         return created;
       }),
     );
@@ -132,6 +253,7 @@ export class CustomersService {
       map(() => {
         const updatedList = this.users.value.filter((u) => u.id !== id);
         this.users.next(updatedList);
+        this.updatePaginationCount(-1);
       }),
     );
   }

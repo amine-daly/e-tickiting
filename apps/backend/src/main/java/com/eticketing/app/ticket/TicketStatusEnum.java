@@ -7,7 +7,7 @@ import com.fasterxml.jackson.annotation.JsonValue;
  * Ticket state machine per TRIP_SPEC section 8.
  * <pre>
  * PENDING   → CONFIRMED  (payment success)
- * PENDING   → EXPIRED    (timeout or payment failure)
+ * PENDING   → EXPIRED    (timeout, payment failure, or operator cancellation)
  * CONFIRMED → CANCELLED  (triggers Refund)
  * EXPIRED   → terminal
  * CANCELLED → terminal

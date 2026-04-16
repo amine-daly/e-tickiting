@@ -420,7 +420,31 @@
       <ng-container formGroupName="phone">
         <div class="row">
           <div class="col-md-4 mb-6">
-            <label
+            <div class="js-form-message js-focus-state">
+              <label
+                >{{ "CUSTOMERS.MODAL.PHONE_CODE" | translate }}
+                <span class="text-danger">*</span></label
+              >
+              <div class="input-group">
+                <div class="input-group-prepend">
+                  <span class="input-group-text" id="signupPasswordLabel">
+                    +
+                  </span>
+                </div>
+                <input
+                  class="form-control form-control-solid"
+                  formControlName="countryCode"
+                />
+              </div>
+              <div
+                *ngIf="isInvalid('phone.countryCode')"
+                class="text-danger small"
+              >
+                {{ "CUSTOMERS.MODAL.ERRORS.PHONE_CODE" | translate }}
+              </div>
+            </div>
+
+            <!--  <label
               >{{ "CUSTOMERS.MODAL.PHONE_CODE" | translate }}
               <span class="text-danger">*</span></label
             >
@@ -433,7 +457,7 @@
               class="text-danger small"
             >
               {{ "CUSTOMERS.MODAL.ERRORS.PHONE_CODE" | translate }}
-            </div>
+            </div> -->
           </div>
           <div class="col-md-8 mb-6">
             <label

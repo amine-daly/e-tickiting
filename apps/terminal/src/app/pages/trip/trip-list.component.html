@@ -35,7 +35,7 @@
       </div>
 
       <!-- Search -->
-      <div class="col-md-4">
+      <div class="col-md-3">
         <label class="form-label fw-semibold">{{
           "TRIPS.FILTERS.SEARCH" | translate
         }}</label>
@@ -55,8 +55,52 @@
         </div>
       </div>
 
+      <!-- Sort by -->
+      <div class="col-md-2">
+        <label class="form-label fw-semibold">{{
+          "TRIPS.FILTERS.SORT_BY" | translate
+        }}</label>
+        <ng-select
+          [items]="sortByOptions"
+          bindLabel="label"
+          bindValue="value"
+          [(ngModel)]="sortBy"
+          [clearable]="false"
+          (change)="applyFilters()"
+        >
+          <ng-template ng-label-tmp let-item="item">{{
+            item.label
+          }}</ng-template>
+          <ng-template ng-option-tmp let-item="item">{{
+            item.label
+          }}</ng-template>
+        </ng-select>
+      </div>
+
+      <!-- Sort order -->
+      <div class="col-md-2">
+        <label class="form-label fw-semibold">{{
+          "TRIPS.FILTERS.ORDER" | translate
+        }}</label>
+        <ng-select
+          [items]="sortOrderOptions"
+          bindLabel="label"
+          bindValue="value"
+          [(ngModel)]="sortOrder"
+          [clearable]="false"
+          (change)="applyFilters()"
+        >
+          <ng-template ng-label-tmp let-item="item">{{
+            item.label
+          }}</ng-template>
+          <ng-template ng-option-tmp let-item="item">{{
+            item.label
+          }}</ng-template>
+        </ng-select>
+      </div>
+
       <!-- Actions -->
-      <div class="col-md-3 d-flex gap-2">
+      <div class="col-md-2 d-flex gap-2">
         <button class="btn btn-sm btn-primary" (click)="applyFilters()">
           <i class="ki-duotone ki-magnifier fs-4"
             ><span class="path1"></span><span class="path2"></span
@@ -231,7 +275,7 @@
                     *ngIf="canDelete(trip)"
                     class="btn btn-icon btn-active-light-danger btn-sm"
                     (click)="deleteTrip(trip)"
-                    [ngbTooltip]="'TRIPS.DELETE' | translate"
+                    [ngbTooltip]="'COMMON.BUTTON.DELETE' | translate"
                   >
                     <i class="ki-duotone ki-trash fs-4"
                       ><span class="path1"></span><span class="path2"></span

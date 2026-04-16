@@ -10,16 +10,20 @@ export const tripRoutes: Routes = [
   {
     path: 'create',
     loadComponent: () =>
-      import('./trip-create/trip-create.component').then(
-        (m) => m.TripCreateComponent,
-      ),
+      import('./trip/details.component').then((m) => m.TripDetailsComponent),
   },
   {
     path: ':id',
     resolve: { trip: TripResolver },
     loadComponent: () =>
-      import('./trip-detail/trip-detail.component').then(
-        (m) => m.TripDetailComponent,
+      import('./trip-info/trip-info.component').then(
+        (m) => m.TripInfoComponent,
       ),
+  },
+  {
+    path: ':id/edit',
+    resolve: { trip: TripResolver },
+    loadComponent: () =>
+      import('./trip/details.component').then((m) => m.TripDetailsComponent),
   },
 ];

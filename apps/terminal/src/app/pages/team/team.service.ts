@@ -38,12 +38,25 @@ export class TeamService {
 
   constructor(private http: HttpClient) {}
 
+  private prependAccount(account: AccountType): void {
+    if (!account) {
+      return;
+    }
+
+    const currentAccounts = this.accounts.value || [];
+    if (account.id && currentAccounts.some((item) => item.id === account.id)) {
+      return;
+    }
+
+    this.accounts.next([account, ...currentAccounts]);
+  }
+
   getAccountsByTarget(): Observable<AccountType[]> {
     this.loading.next(true);
     const params = new HttpParams()
-      .set('companyId', localStorage.getItem('companyId'))
-      .set('page', this.pageIndex)
-      .set('limit', this.pageLimit);
+      .set('companyId', localStorage.getItem('companyId') || '')
+      .set('page', this.pageIndex.toString())
+      .set('limit', this.pageLimit.toString());
     return this.http
       .get<PaginatedAccounts>(`${this.baseUrl}/by-target`, { params })
       .pipe(
@@ -81,16 +94,8 @@ export class TeamService {
     target: { companyId: string };
   }): Observable<AccountType> {
     return this.http.post<AccountType>(`${this.baseUrl}`, payload).pipe(
-      tap(({ data }: any) => {
-        console.log('🚀 ~ TeamService ~ createAccount ~ data:', data);
-        if (data) {
-          const accounts = [data, ...this.accounts.value];
-          this.accounts.next(accounts);
-          console.log(
-            '🚀 ~ TeamService ~ createAccount ~ this.accounts:',
-            this.accounts.value,
-          );
-        }
+      tap((createdAccount) => {
+        this.prependAccount(createdAccount);
       }),
     );
   }
@@ -105,10 +110,7 @@ export class TeamService {
       .post<AccountType>(`${this.baseUrl}/register-for-target`, payload)
       .pipe(
         tap((createdAccount) => {
-          if (createdAccount) {
-            const accounts = [createdAccount, ...this.accounts.value];
-            this.accounts.next(accounts);
-          }
+          this.prependAccount(createdAccount);
         }),
       );
   }

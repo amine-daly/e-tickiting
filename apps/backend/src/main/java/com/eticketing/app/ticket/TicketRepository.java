@@ -24,6 +24,9 @@ public interface TicketRepository extends MongoRepository<TicketType, String> {
     @Query("{ 'target.company': ?0 }")
     Page<TicketType> findByTargetCompany(String companyId, Pageable pageable);
 
+    @Query("{ 'target.company': ?0, 'status': ?1 }")
+    Page<TicketType> findByTargetCompanyAndStatus(String companyId, TicketStatusEnum status, Pageable pageable);
+
     List<TicketType> findByTripIdAndStatus(String tripId, TicketStatusEnum status);
 
     @Query("{ 'status': 'PENDING', 'expiresAt': { $lt: ?0 } }")
