@@ -26,6 +26,9 @@ export class BusService {
   get bus$(): Observable<BusType> {
     return this.bus.asObservable();
   }
+  set bus$(value: BusType) {
+    this.bus.next(value);
+  }
 
   get loading$(): Observable<boolean> {
     return this.loading.asObservable();
@@ -83,7 +86,10 @@ export class BusService {
     );
   }
 
-  update(id: string, payload: Partial<BusType>): Observable<BusType> {
+  update(
+    id: string,
+    payload: Partial<BusType> & { clearLayout?: boolean },
+  ): Observable<BusType> {
     return this.http.put<BusType>(`${this.baseUrl}/${id}`, payload).pipe(
       tap((updatedBus) => {
         const current = this.buses.value ?? [];

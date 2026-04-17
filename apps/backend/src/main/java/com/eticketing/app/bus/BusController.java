@@ -90,7 +90,8 @@ public class BusController {
             @Min(1) Integer totalSeats,
             List<AmenityEnum> amenities,
             MediaReq media,
-            @Valid LayoutTemplateReq layoutTemplate
+            @Valid LayoutTemplateReq layoutTemplate,
+            Boolean clearLayout
             ) {
 
     }

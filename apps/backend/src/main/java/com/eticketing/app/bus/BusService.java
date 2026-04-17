@@ -49,6 +49,10 @@ public class BusService {
     public BusType update(String id, BusController.BusUpdateReq updates) {
         var existing = getById(id);
 
+        if (Boolean.TRUE.equals(updates.clearLayout()) && updates.layoutTemplate() != null) {
+            throw new BadRequestException("clearLayout and layoutTemplate cannot be used together");
+        }
+
         if (updates.name() != null) {
             if (updates.name().isBlank()) {
                 throw new BadRequestException("name must not be blank");
@@ -56,9 +60,23 @@ public class BusService {
             existing.setName(updates.name());
         }
 
+        if (Boolean.TRUE.equals(updates.clearLayout())) {
+            assertLayoutNotLocked(id);
+            if (updates.totalSeats() == null) {
+                throw new BadRequestException("totalSeats is required when clearLayout is true");
+            }
+            existing.setLayoutTemplate(null);
+            existing.setTotalSeats(updates.totalSeats());
+        }
+
         // totalSeats change requires lock check (only when no layout is being sent —
         // when layout is present, totalSeats is derived automatically)
-        if (updates.totalSeats() != null && updates.layoutTemplate() == null) {
+        if (!Boolean.TRUE.equals(updates.clearLayout())
+                && updates.totalSeats() != null
+                && updates.layoutTemplate() == null) {
+            if (existing.getLayoutTemplate() != null) {
+                throw new BadRequestException("Cannot update totalSeats directly while layoutTemplate exists");
+            }
             if (updates.totalSeats() != existing.getTotalSeats()) {
                 assertTotalSeatsNotLocked(id);
             }

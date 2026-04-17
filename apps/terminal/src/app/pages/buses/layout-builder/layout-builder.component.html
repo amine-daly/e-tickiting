@@ -1,0 +1,269 @@
+<app-toolbar [appToolbarLayout]="'classic'">
+  <div toolbar-actions>
+    <button
+      class="btn btn-sm fw-bold btn-light me-3"
+      [routerLink]="['/buses', bus?.id, 'edit']"
+    >
+      {{ "COMMON.BUTTON.CANCEL" | translate }}
+    </button>
+  </div>
+</app-toolbar>
+
+<!-- Lock banner -->
+<div
+  *ngIf="isLocked"
+  class="alert alert-warning d-flex align-items-center mb-4"
+>
+  <i class="ki-duotone ki-lock fs-2 me-3">
+    <span class="path1"></span>
+    <span class="path2"></span>
+    <span class="path3"></span>
+  </i>
+  <span>{{ "BUSES.LAYOUT.LOCKED" | translate }}</span>
+</div>
+
+<div class="card">
+  <div class="card-header border-0 pt-6">
+    <h3 class="card-title fw-bold">{{ "BUSES.LAYOUT.TITLE" | translate }}</h3>
+    <div class="card-toolbar">
+      <span class="badge badge-light-primary fs-6">
+        {{ "BUSES.LAYOUT.SEAT_COUNT" | translate }}: {{ seatCount }}
+      </span>
+    </div>
+  </div>
+
+  <div class="card-body pt-0">
+    <p class="text-muted mb-6">{{ "BUSES.LAYOUT.SUBTITLE" | translate }}</p>
+
+    <!-- Deck tabs -->
+    <ul *ngIf="hasDecks" class="nav nav-tabs nav-line-tabs mb-5">
+      <li class="nav-item">
+        <a
+          class="nav-link"
+          [class.active]="activeDeck === 'lower'"
+          (click)="switchDeck('lower')"
+          role="button"
+        >
+          {{ "BUSES.LAYOUT.DECK_LOWER" | translate }}
+        </a>
+      </li>
+      <li class="nav-item">
+        <a
+          class="nav-link"
+          [class.active]="activeDeck === 'upper'"
+          [class.disabled]="!hasDecks"
+          (click)="switchDeck('upper')"
+          role="button"
+        >
+          {{ "BUSES.LAYOUT.DECK_UPPER" | translate }}
+        </a>
+      </li>
+    </ul>
+
+    <!-- Three-column layout -->
+    <div class="layout-builder-container">
+      <!-- LEFT: Tool palette + Parameters -->
+      <div class="palette-panel">
+        <h6 class="fw-bold mb-3">
+          {{ "BUSES.LAYOUT.ACTIVE_TOOL" | translate }}
+        </h6>
+        <div class="d-flex flex-column gap-2 mb-6">
+          <button
+            *ngFor="let t of tools"
+            type="button"
+            class="btn btn-sm d-flex align-items-center gap-2"
+            [class.btn-primary]="isToolSelected(t.type)"
+            [class.btn-light]="!isToolSelected(t.type)"
+            [disabled]="isLocked"
+            (click)="selectTool(t.type)"
+          >
+            <i [class]="t.icon + ' fs-4'">
+              <span class="path1"></span>
+              <span class="path2"></span>
+            </i>
+            <span>{{ toolLabel(t.type) | translate }}</span>
+            <span class="badge badge-light-dark ms-auto">{{ t.key }}</span>
+          </button>
+        </div>
+
+        <!-- Parameters -->
+        <h6 class="fw-bold mb-3">
+          {{ "BUSES.LAYOUT.PARAMETERS" | translate }}
+        </h6>
+        <div class="mb-3">
+          <label class="form-label form-label-sm">{{
+            "BUSES.LAYOUT.GRID_COLUMNS" | translate
+          }}</label>
+          <input
+            type="number"
+            class="form-control form-control-sm form-control-solid"
+            [ngModel]="gridColumns"
+            (ngModelChange)="onGridColumnsChange($event)"
+            [min]="3"
+            [max]="7"
+            [disabled]="isLocked"
+          />
+        </div>
+        <div class="mb-3">
+          <label class="form-label form-label-sm">{{
+            "BUSES.LAYOUT.GRID_ROWS" | translate
+          }}</label>
+          <input
+            type="number"
+            class="form-control form-control-sm form-control-solid"
+            [ngModel]="gridRows"
+            (ngModelChange)="onGridRowsChange($event)"
+            [min]="5"
+            [max]="20"
+            [disabled]="isLocked"
+          />
+        </div>
+        <div class="form-check form-switch mb-3">
+          <input
+            class="form-check-input"
+            type="checkbox"
+            id="hasDecksToggle"
+            [checked]="hasDecks"
+            (change)="toggleHasDecks()"
+            [disabled]="isLocked"
+          />
+          <label class="form-check-label" for="hasDecksToggle">
+            {{ "BUSES.LAYOUT.HAS_DECKS" | translate }}
+          </label>
+        </div>
+        <div class="separator my-4"></div>
+        <div class="text-muted small">
+          {{ "BUSES.LAYOUT.AUTO_NUMBER" | translate }}:
+          <strong>{{ nextSeatNo }}</strong>
+        </div>
+      </div>
+
+      <!-- CENTER: CSS Grid canvas -->
+      <div class="grid-canvas-wrapper">
+        <!-- Column headers -->
+        <div
+          class="grid-header"
+          [style.grid-template-columns]="
+            '40px repeat(' + gridColumns + ', minmax(48px, 72px))'
+          "
+        >
+          <div class="grid-corner"></div>
+          <div
+            *ngFor="let col of colArray"
+            class="grid-col-header text-center text-muted small fw-bold"
+          >
+            {{ columnHeaders[col] || "" | translate }}
+          </div>
+        </div>
+
+        <!-- Grid rows -->
+        <div
+          class="grid-body"
+          [style.grid-template-columns]="
+            '40px repeat(' + gridColumns + ', minmax(48px, 72px))'
+          "
+          [style.grid-template-rows]="
+            'repeat(' + gridRows + ', minmax(48px, 72px))'
+          "
+        >
+          <ng-container *ngFor="let row of rowArray">
+            <!-- Row number -->
+            <div
+              class="grid-row-label d-flex align-items-center justify-content-center text-muted small fw-bold"
+              [style.grid-row]="row"
+              [style.grid-column]="1"
+            >
+              {{ row }}
+            </div>
+
+            <!-- Cells -->
+            <div
+              *ngFor="let col of colArray"
+              class="grid-cell"
+              [class]="cellClass(col, row)"
+              [class.ghost-preview]="
+                isGhost(col, row) &&
+                !getElement(col, row) &&
+                selectedTool !== 'ERASER'
+              "
+              [class.ghost-eraser]="
+                isGhost(col, row) &&
+                !!getElement(col, row) &&
+                selectedTool === 'ERASER'
+              "
+              [ngClass]="ghostClass(col, row)"
+              [style.grid-row]="row"
+              [style.grid-column]="col + 1"
+              (mouseenter)="onCellEnter(col, row)"
+              (mouseleave)="onCellLeave()"
+              (click)="onCellClick(col, row)"
+              (contextmenu)="onCellContext($event, col, row)"
+              [attr.data-col]="col"
+              [attr.data-row]="row"
+            >
+              <!-- Seat edit input -->
+              <input
+                *ngIf="isEditing(col, row)"
+                type="text"
+                class="seat-edit-input"
+                [(ngModel)]="editingSeatValue"
+                (blur)="confirmSeatEdit()"
+                (keydown)="onSeatEditKeydown($event)"
+                autofocus
+              />
+
+              <!-- Normal content -->
+              <ng-container *ngIf="!isEditing(col, row)">
+                <ng-container [ngSwitch]="getElement(col, row)?.type">
+                  <span *ngSwitchCase="'SEAT'" class="seat-label">{{
+                    cellLabel(col, row)
+                  }}</span>
+                  <i *ngSwitchCase="'DRIVER'" class="ki-duotone ki-car fs-3">
+                    <span class="path1"></span><span class="path2"></span>
+                  </i>
+                  <i
+                    *ngSwitchCase="'DOOR'"
+                    class="ki-duotone ki-entrance-left fs-3"
+                  >
+                    <span class="path1"></span><span class="path2"></span>
+                  </i>
+                  <i
+                    *ngSwitchCase="'STAIRS'"
+                    class="ki-duotone ki-arrow-up fs-3"
+                  >
+                    <span class="path1"></span><span class="path2"></span>
+                  </i>
+                  <i *ngSwitchCase="'TOILET'" class="ki-duotone ki-drop fs-3">
+                    <span class="path1"></span><span class="path2"></span>
+                  </i>
+                </ng-container>
+              </ng-container>
+            </div>
+          </ng-container>
+        </div>
+      </div>
+    </div>
+
+    <div *ngIf="!isLocked" class="d-flex justify-content-end gap-3 mt-4">
+      <button
+        type="button"
+        class="btn btn-primary"
+        [disabled]="isSaving || !bus?.id"
+        (click)="save()"
+      >
+        <span
+          *ngIf="isSaving"
+          class="spinner-border spinner-border-sm me-2"
+        ></span>
+        {{ "COMMON.BUTTON.SAVE" | translate }}
+      </button>
+      <button
+        type="button"
+        class="btn btn-light-warning"
+        (click)="resetToDefault()"
+      >
+        {{ "BUSES.LAYOUT.RESET" | translate }}
+      </button>
+    </div>
+  </div>
+</div>

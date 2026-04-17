@@ -1,0 +1,890 @@
+{
+  "COMMON": {
+    "STATUS": {
+      "ACTIVE": "نشط",
+      "INACTIVE": "غير نشط",
+      "SUSPENDED": "معلّق"
+    },
+    "LABEL": {
+      "NAME": "الاسم",
+      "SEARCH_BY_CITY": "البحث حسب المدينة",
+      "ADDRESS": "العنوان",
+      "EMAIL": "البريد الإلكتروني",
+      "PHONE": "الهاتف",
+      "ACTIONS": "الإجراءات",
+      "KIND": "النوع",
+      "CITY": "المدينة",
+      "STATE": "الولاية",
+      "COUNTRY": "البلد",
+      "PARENT_PLACE": "المكان الأصلي",
+      "LATITUDE": "خط العرض",
+      "LONGITUDE": "خط الطول",
+      "ORIGIN": "المنطلق",
+      "DESTINATION": "الوجهة",
+      "DATE": "التاريخ",
+      "STATUS": "الحالة",
+      "AGENCY": "الوكالة",
+      "PRICE": "السعر",
+      "OCCUPANCY": "الإشغال",
+      "TOTAL_PRICE": "السعر الإجمالي",
+      "TOTAL_PLACES": "إجمالي المقاعد",
+      "AVAILABLE_SEATS": "المقاعد المتاحة",
+      "REFERENCE": "المرجع",
+      "FIRST_NAME": "الاسم الأول",
+      "LAST_NAME": "اسم العائلة",
+      "ROLE": "الدور",
+      "PICKUP_INSTRUCTIONS": "تعليمات الصعود",
+      "IS_DEFAULT": "افتراضي",
+      "DEFAULT": "افتراضي",
+      "YES": "نعم",
+      "NO": "لا",
+      "SEARCH": "بحث...",
+      "NOT_AVAILABLE": "غير متوفر"
+    },
+    "BUTTON": {
+      "SAVE": "حفظ",
+      "VIEW_PROFILE": "عرض الملف الشخصي",
+      "BACK": "رجوع",
+      "CANCEL": "إلغاء",
+      "UPDATE": "تحديث",
+      "RESET": "إعادة تعيين",
+      "APPLY": "تطبيق",
+      "EXPORT": "تصدير",
+      "EDIT": "تعديل",
+      "DELETE": "حذف",
+      "CREATE": "إنشاء",
+      "WAIT": "يرجى الانتظار...",
+      "UPLOAD": "رفع",
+      "CLOSE": "إغلاق",
+      "CONTINUE": "متابعة",
+      "NEXT": "التالي"
+    },
+    "CURRENCY": {
+      "TND": "د.ت"
+    },
+    "CONFIRM": {
+      "DELETE_TITLE": "حذف العنصر؟",
+      "DELETE_TEXT": "هذا الإجراء لا رجعة فيه. هل تريد المتابعة؟",
+      "DELETE_CONFIRM": "نعم، احذف"
+    },
+    "MESSAGES": {
+      "GENERIC_ERROR": "حدث خطأ. يرجى المحاولة مرة أخرى."
+    },
+    "VALIDATION": {
+      "REQUIRED": "هذا الحقل مطلوب."
+    },
+    "FORM_INVALID": "يرجى إكمال الحقول المطلوبة.",
+    "LANGUAGE": "اللغة"
+  },
+  "AGENCIES": {
+    "TITLE": "الوكالات",
+    "ADD_BUTTON": "إضافة وكالة",
+    "LOADING": "جارٍ تحميل الوكالات...",
+    "EMPTY": "لم يتم العثور على أي وكالة.",
+    "MODAL": {
+      "EDIT_TITLE": "تعديل الوكالة",
+      "ADD_TITLE": "إضافة وكالة",
+      "PHONE_CODE_PLACEHOLDER": "رمز الدولة",
+      "PHONE_NUMBER_PLACEHOLDER": "رقم الهاتف",
+      "ERRORS": {
+        "NAME_REQUIRED": "اسم الوكالة مطلوب.",
+        "ADDRESS_REQUIRED": "عنوان الوكالة مطلوب.",
+        "EMAIL_INVALID": "يرجى إدخال بريد إلكتروني صالح.",
+        "PHONE_REQUIRED": "رمز الدولة ورقم الهاتف مطلوبان."
+      }
+    },
+    "TEMPLATE": {
+      "TITLE": "قالب لـ {{name}}",
+      "LABEL": "قالب البريد الإلكتروني للتذكرة (HTML)",
+      "PREVIEW_TOGGLE": "معاينة القالب",
+      "PLACEHOLDER": "الصق هنا قالب HTML. يمكنك استخدام متغيرات مثل {{customerName}} أو {{tripReference}}.",
+      "USE_DEFAULT": "استخدام القالب الافتراضي"
+    }
+  },
+  "PERMISSIONS": {
+    "TITLE": "الصلاحيات",
+    "ADD_BUTTON": "إضافة صلاحية",
+    "LOADING": "جارٍ تحميل الصلاحيات...",
+    "EMPTY": "لم يتم العثور على أي صلاحية.",
+    "TOTAL_GRANTS": "إجمالي التراخيص: {{count}}",
+    "GRANTS_EMPTY": "لم يتم تحديد أي ترخيص.",
+    "SECTION_TITLE": "الأدوار",
+    "CHECK_ALL": "تحديد الكل",
+    "READ": "قراءة",
+    "WRITE": "كتابة",
+    "CREATE": "إنشاء",
+    "MODAL": {
+      "ADD_TITLE": "إضافة صلاحية",
+      "EDIT_TITLE": "تعديل الصلاحية",
+      "ROLE_NAME": "اسم الدور",
+      "ROLE_NAME_PLACEHOLDER": "أدخل اسم الدور",
+      "ERRORS": {
+        "NAME_REQUIRED": "اسم الدور مطلوب."
+      }
+    }
+  },
+  "PLACES": {
+    "TITLE": "الأماكن",
+    "ADD_BUTTON": "إضافة مكان",
+    "LOADING": "جارٍ تحميل الأماكن...",
+    "EMPTY": "لا تتوفر أماكن.",
+    "MODAL": {
+      "EDIT_TITLE": "تعديل المكان",
+      "ADD_TITLE": "إضافة مكان",
+      "SELECT_COUNTRY": "اختر بلداً",
+      "SELECT_STATE": "اختر ولاية",
+      "ERRORS": {
+        "CITY_REQUIRED": "المدينة مطلوبة."
+      }
+    },
+    "MESSAGES": {
+      "CREATE_SUCCESS": "تم إنشاء المكان بنجاح.",
+      "CREATE_ERROR": "تعذّر إنشاء المكان.",
+      "UPDATE_SUCCESS": "تم تحديث المكان بنجاح.",
+      "UPDATE_ERROR": "تعذّر تحديث المكان.",
+      "DELETE_SUCCESS": "تم حذف المكان بنجاح.",
+      "DELETE_ERROR": "تعذّر حذف المكان."
+    }
+  },
+  "TRIPS": {
+    "TITLE": "الرحلات",
+    "ADD_BUTTON": "إضافة رحلة",
+    "LOADING": "جارٍ تحميل الرحلات...",
+    "EMPTY": "لا تتوفر رحلات.",
+    "EDIT": "تفاصيل الرحلة",
+    "EDIT_TITLE": "تعديل الرحلة",
+    "LABEL": {
+      "ROUTE": "المسار"
+    },
+    "STATUS": {
+      "SCHEDULED": "مجدولة",
+      "ACTIVE": "نشطة",
+      "COMPLETED": "مكتملة",
+      "CANCELLED": "ملغاة"
+    },
+    "FIELDS": {
+      "CREATED_AT": "تاريخ الإنشاء",
+      "DEPARTURE_DATE": "تاريخ المغادرة",
+      "SEGMENTS": "الأقسام",
+      "BUS": "الحافلة",
+      "CURRENCY": "العملة",
+      "SEAT_HOLD_MINUTES": "حجز المقعد (دقائق)"
+    },
+    "FILTERS": {
+      "STATUS": "تصفية حسب الحالة",
+      "ALL": "الكل",
+      "SEARCH": "البحث في الرحلات...",
+      "SORT_BY": "ترتيب حسب",
+      "ORDER": "الترتيب"
+    },
+    "SORT": {
+      "CREATED_AT": "تاريخ الإنشاء",
+      "ASC": "الأقدم أولاً",
+      "DESC": "الأحدث أولاً"
+    },
+    "STOPS": {
+      "TITLE": "خطة المحطات",
+      "BOARDING_ALLOWED": "الصعود",
+      "DROPPING_ALLOWED": "النزول",
+      "ARRIVAL_TIME": "الوصول",
+      "DEPARTURE_TIME": "المغادرة",
+      "TYPES": {
+        "ORIGIN": "المنطلق",
+        "DESTINATION": "الوجهة",
+        "INTERMEDIATE": "محطة وسيطة",
+        "TECHNICAL": "توقف تقني"
+      }
+    },
+    "SEGMENTS": {
+      "TITLE": "الأقسام",
+      "FROM": "من",
+      "TO": "إلى",
+      "MAX_SEATS": "السعة",
+      "BOOKED_SEATS": "المحجوزة",
+      "BASE_PRICE": "السعر الأساسي",
+      "DISTANCE_KM": "المسافة (كم)",
+      "DURATION_MIN": "المدة (دقائق)"
+    },
+    "EXPRESS_FARES": {
+      "TITLE": "تعريفات سريعة",
+      "SEGMENTS_COVERED": "الأقسام",
+      "PRICE": "السعر",
+      "VALID_FROM": "صالح من",
+      "VALID_UNTIL": "صالح حتى",
+      "ACTIVE": "نشط",
+      "TOTAL_DISTANCE": "كم إجمالي",
+      "TOTAL_DURATION": "دقائق إجمالي"
+    },
+    "PICKUP_POINTS": {
+      "TITLE": "نقاط الصعود",
+      "ADDRESS": "العنوان",
+      "SCHEDULED_TIME": "الوقت المحدد",
+      "ACTIVE": "نشط"
+    },
+    "DROPOFF_POINTS": {
+      "TITLE": "نقاط النزول",
+      "ADDRESS": "العنوان",
+      "SCHEDULED_TIME": "الوقت المحدد",
+      "ACTIVE": "نشط"
+    },
+    "ACTIONS": {
+      "PUBLISH": "نشر",
+      "COMPLETE": "إنهاء",
+      "CANCEL": "إلغاء الرحلة",
+      "EMERGENCY_CANCEL": "إلغاء طارئ",
+      "EDIT": "تعديل"
+    },
+    "MESSAGES": {
+      "STATUS_CONFIRM_TITLE": "تغيير حالة الرحلة",
+      "STATUS_CONFIRM_TEXT": "هل تريد تعيين حالة هذه الرحلة إلى {{status}}؟",
+      "STATUS_CONFIRM_OK": "نعم، غيّر",
+      "STATUS_UPDATED": "تم تحديث حالة الرحلة.",
+      "STATUS_UPDATE_SUCCESS": "تم تحديث حالة الرحلة.",
+      "STATUS_UPDATE_ERROR": "تعذّر تحديث حالة الرحلة.",
+      "PUBLISH_CONFIRM": "ستكون الرحلة مرئية للمسافرين. هل تريد المتابعة؟",
+      "CANCEL_CONFIRM": "سيتم إلغاء الرحلة. هل تريد المتابعة؟",
+      "EMERGENCY_CANCEL_CONFIRM": "رحلة نشطة! الإلغاء الطارئ قد يؤثر على المسافرين المحجوزين. هل تريد المتابعة؟",
+      "LOAD_ERROR": "تعذّر تحميل الرحلات. حاول مرة أخرى لاحقاً.",
+      "SAVE_SUCCESS": "تم حفظ الرحلة بنجاح.",
+      "SAVE_ERROR": "تعذّر حفظ الرحلة.",
+      "UNRECOGNIZED_FIELD": "حقل استعلام غير صالح: {{field}}.",
+      "BUS_ALREADY_ASSIGNED": "هذه الحافلة مخصصة بالفعل لرحلة مجدولة أو نشطة.",
+      "MISSING_PICKUP": "محطة صعود بدون نقطة صعود.",
+      "MISSING_DROPOFF": "محطة نزول بدون نقطة نزول.",
+      "MAX_SEATS_ERROR": "السعة القصوى لقسم تتجاوز سعة الحافلة.",
+      "INVALID_TIMELINE": "الجدول الزمني للمحطات غير صالح. تحقق من الأوقات.",
+      "INVALID_STOP_SEQUENCE": "تسلسل المحطات غير صالح.",
+      "INVALID_EXPRESS_CHAIN": "سلسلة أقسام التعريفة السريعة غير صالحة.",
+      "DELETE_SUCCESS": "تم حذف الرحلة بنجاح.",
+      "DELETE_ERROR": "تعذّر حذف الرحلة.",
+      "DELETE_CONFIRM_TITLE": "حذف الرحلة؟",
+      "DELETE_CONFIRM_TEXT": "هذا الإجراء لا رجعة فيه.",
+      "UPDATE_SUCCESS": "تم تحديث الرحلة بنجاح.",
+      "UPDATE_ERROR": "تعذّر تحديث الرحلة."
+    },
+    "TOOLTIP": {
+      "OCCUPANCY": "محجوز: {{booked}} / {{total}}"
+    },
+    "MODAL": {
+      "EDIT_TITLE": "تعديل الرحلة",
+      "ADD_TITLE": "إضافة رحلة",
+      "AGENCY_PLACEHOLDER": "اختر وكالة",
+      "ORIGIN": "المنطلق",
+      "ORIGIN_PLACEHOLDER": "اختر المنطلق",
+      "DESTINATION": "الوجهة",
+      "DESTINATION_PLACEHOLDER": "اختر الوجهة",
+      "TOTAL_PRICE": "السعر الإجمالي",
+      "TOTAL_PLACES": "إجمالي المقاعد",
+      "STOPS": "محطات وسيطة (اختياري)",
+      "STOP_PLACEHOLDER": "اختر محطة",
+      "FARE_PLACEHOLDER": "التعريفة",
+      "ADD_STOP": "إضافة محطة",
+      "STOPS_HINT": "أضف محطات وسيطة إذا كان المسار يتضمن عدة مراحل. اسحب لإعادة الترتيب.",
+      "PICKUP_POINTS": "نقاط الصعود",
+      "PICKUP_TIME_PLACEHOLDER": "اختر الوقت المحدد",
+      "DEPARTURE_DATE_LABEL": "تاريخ المغادرة",
+      "DEPARTURE_DATE_PLACEHOLDER": "اختر تاريخ المغادرة",
+      "CLEAR_DATE": "مسح التاريخ",
+      "ERRORS": {
+        "ORIGIN_REQUIRED": "المنطلق مطلوب.",
+        "DESTINATION_REQUIRED": "الوجهة مطلوبة.",
+        "PRICE_REQUIRED": "السعر الإجمالي مطلوب.",
+        "DEPARTURE_REQUIRED": "تاريخ المغادرة مطلوب.",
+        "PRICE_INVALID": "أدخل سعراً صالحاً.",
+        "SEATS_REQUIRED": "عدد المقاعد المتاحة مطلوب.",
+        "TOTAL_PLACES_REQUIRED": "إجمالي المقاعد مطلوب."
+      }
+    },
+    "FARES": {
+      "TITLE": "التعريفات",
+      "LOADING": "جارٍ تحميل التعريفات...",
+      "EMPTY": "لم يتم العثور على تعريفات لهذه الرحلة.",
+      "FROM": "من",
+      "TO": "إلى",
+      "TYPE": "النوع",
+      "AUTO": "تلقائي",
+      "MANUAL": "يدوي",
+      "REGENERATE": "إعادة إنشاء التعريفات",
+      "REGENERATE_CONFIRM_TITLE": "إعادة إنشاء التعريفات",
+      "REGENERATE_CONFIRM_TEXT": "سيتم إعادة حساب تعريفات هذه الرحلة. ستُحفظ التعديلات اليدوية.",
+      "REGENERATE_CONFIRM_OK": "نعم، أعد الإنشاء",
+      "REGENERATE_SUCCESS": "تم إعادة إنشاء التعريفات بنجاح.",
+      "REGENERATE_ERROR": "تعذّر إعادة إنشاء التعريفات.",
+      "LOAD_ERROR": "تعذّر تحميل التعريفات.",
+      "SAVE_SUCCESS": "تم تحديث التعريفة بنجاح.",
+      "SAVE_ERROR": "تعذّر تحديث التعريفة.",
+      "PRICE_INVALID": "أدخل تعريفة صالحة."
+    },
+    "CREATE": {
+      "TITLE": "إنشاء رحلة",
+      "NEXT": "التالي",
+      "PREVIOUS": "السابق",
+      "SUBMIT": "إنشاء الرحلة",
+      "STEPS": {
+        "BASIC_INFO": "المعلومات الأساسية",
+        "STOP_SCHEDULE": "المحطات",
+        "SEGMENTS": "الأقسام",
+        "PICKUP_DROPOFF": "الصعود / النزول",
+        "EXPRESS_FARES": "تعريفات سريعة",
+        "REVIEW": "المراجعة"
+      },
+      "BASIC": {
+        "BUS_PLACEHOLDER": "اختر حافلة",
+        "SEATS": "مقعد",
+        "DATE_PLACEHOLDER": "اختر تاريخ ووقت المغادرة",
+        "TIMEZONE": "المنطقة الزمنية",
+        "TIMEZONE_PLACEHOLDER": "اختر المنطقة الزمنية",
+        "CURRENCY": "العملة",
+        "CURRENCY_PLACEHOLDER": "اختر العملة",
+        "SEAT_HOLD_PLACEHOLDER": "دقائق"
+      },
+      "STOPS": {
+        "ADD": "إضافة محطة",
+        "STOP_LABEL": "محطة",
+        "PLACE": "المدينة",
+        "PLACE_PLACEHOLDER": "اختر مدينة",
+        "MOVE_UP": "تحريك لأعلى",
+        "MOVE_DOWN": "تحريك لأسفل",
+        "REMOVE": "إزالة",
+        "MIN_STOPS": "مطلوب محطتان على الأقل (منطلق ووجهة).",
+        "ORIGIN_NO_ARRIVAL": "المنطلق — لا يوجد وقت وصول",
+        "DEST_NO_DEPARTURE": "الوجهة — لا يوجد وقت مغادرة",
+        "ALWAYS_ON": "مفعّل دائماً",
+        "ALWAYS_OFF": "معطّل دائماً"
+      },
+      "SEGMENTS": {
+        "AUTO_GENERATED": "يتم إنشاء الأقسام تلقائياً من المحطات التجارية المتتالية.",
+        "NO_SEGMENTS": "أضف محطتين تجاريتين على الأقل لإنشاء الأقسام.",
+        "DURATION_PLACEHOLDER": "اختياري"
+      },
+      "PICKUP": {
+        "ADD": "إضافة نقطة صعود",
+        "PLACE": "المدينة",
+        "PLACE_PLACEHOLDER": "اختر مدينة",
+        "ADDRESS_PLACEHOLDER": "العنوان",
+        "EMPTY": "لم تتم إضافة نقاط صعود. هذه الخطوة اختيارية."
+      },
+      "DROPOFF": {
+        "ADD": "إضافة نقطة نزول",
+        "PLACE": "المدينة",
+        "PLACE_PLACEHOLDER": "اختر مدينة",
+        "ADDRESS_PLACEHOLDER": "العنوان",
+        "EMPTY": "لم تتم إضافة نقاط نزول. هذه الخطوة اختيارية."
+      },
+      "LOCATION": {
+        "TITLE": "الموقع على الخريطة",
+        "OPTIONAL": "اختياري",
+        "HELP": "سجّل إحداثيات دقيقة لمساعدة السائقين والمسافرين في العثور على المحطة بسرعة.",
+        "CLICK_HELP": "انقر على الخريطة، أو اسحب العلامة، أو أدخل الإحداثيات يدوياً.",
+        "USE_CURRENT": "استخدام موقعي",
+        "LOCATING": "جارٍ تحديد الموقع...",
+        "CLEAR": "مسح النقطة",
+        "PIN_SET": "تم تحديد الموقع الجغرافي",
+        "PIN_EMPTY": "لا يوجد موقع جغرافي",
+        "LATITUDE": "خط العرض",
+        "LONGITUDE": "خط الطول",
+        "LATITUDE_PLACEHOLDER": "مثال: 33.8869",
+        "LONGITUDE_PLACEHOLDER": "مثال: 9.5375",
+        "LATITUDE_ERROR": "خط العرض يجب أن يكون بين -90 و 90.",
+        "LONGITUDE_ERROR": "خط الطول يجب أن يكون بين -180 و 180.",
+        "ERROR_PERMISSION": "تم رفض الوصول إلى موقعك من قبل المتصفح.",
+        "ERROR_UNAVAILABLE": "تعذّر الحصول على موقعك الحالي."
+      },
+      "EXPRESS": {
+        "ADD": "إضافة تعريفة سريعة",
+        "SEGMENTS_PLACEHOLDER": "اختر الأقسام",
+        "PRICE_PLACEHOLDER": "السعر",
+        "HINT": "التعريفات السريعة اختيارية. تتيح للمسافرين حجز رحلات متعددة الأقسام بسعر خاص.",
+        "EMPTY": "لم تتم إضافة تعريفات سريعة. هذه الخطوة اختيارية."
+      },
+      "REVIEW": {
+        "TITLE": "راجع رحلتك قبل الإرسال"
+      },
+      "ERRORS": {
+        "BUS_REQUIRED": "الحافلة مطلوبة.",
+        "DATE_REQUIRED": "تاريخ المغادرة مطلوب.",
+        "TIMEZONE_REQUIRED": "المنطقة الزمنية مطلوبة.",
+        "CURRENCY_REQUIRED": "العملة مطلوبة.",
+        "SEAT_HOLD_REQUIRED": "وقت حجز المقعد مطلوب.",
+        "TIMELINE_TITLE": "جدول زمني غير صالح",
+        "DEPARTURE_BEFORE_ARRIVAL": "محطة {{stop}} ({{place}}): المغادرة يجب أن تكون بعد الوصول.",
+        "ARRIVAL_BEFORE_PREVIOUS": "محطة {{stop}} ({{place}}): الوصول يجب أن يكون بعد مغادرة المحطة {{prevStop}} ({{prevPlace}}).",
+        "ORIGIN_NO_ARRIVAL": "المنطلق ({{place}}) يجب ألا يحتوي على وقت وصول.",
+        "DEST_NO_DEPARTURE": "الوجهة ({{place}}) يجب ألا تحتوي على وقت مغادرة.",
+        "DROPOFF_BEFORE_PICKUP": "نقطة النزول {{dropoff}}: وقت الوصول يجب أن يكون بعد أول وقت مغادرة للصعود.",
+        "DEPARTURE_DATE_MISMATCH": "وقت مغادرة المنطلق يجب أن يتطابق أو يكون بعد تاريخ المغادرة الإجمالي.",
+        "MIN_COMMERCIAL_STOPS": "مطلوب محطتان تجاريتان على الأقل (صعود أو نزول).",
+        "MAX_SEATS_EXCEEDS_BUS": "السعة القصوى تتجاوز سعة الحافلة ({{max}}).",
+        "BUS_CAPACITY_BELOW_BOOKED": "سعة الحافلة المحددة ({{total}}) أقل من المقاعد المحجوزة بالفعل ({{booked}}).",
+        "COVERAGE_TITLE": "نقاط صعود/نزول مفقودة",
+        "MISSING_PICKUP_FOR_STOP": "المدينة {{place}} (محطة صعود) تحتاج نقطة صعود واحدة على الأقل.",
+        "MISSING_DROPOFF_FOR_STOP": "المدينة {{place}} (محطة نزول) تحتاج نقطة نزول واحدة على الأقل."
+      }
+    },
+    "EDIT_MODE": {
+      "SUBMIT": "حفظ التعديلات",
+      "SEGMENTS_FROZEN": "الأقسام مجمّدة بعد الإنشاء ولا يمكن تعديلها.",
+      "EXPRESS_FARES_FROZEN": "لا يمكن تعديل التعريفات السريعة من هذا النموذج. استخدم إدارة التعريفات السريعة المخصصة.",
+      "EXPRESS_FARES_SCHEDULED": "يمكن إضافة أو حذف أو تعديل التعريفات السريعة طالما الرحلة مجدولة.",
+      "EXPRESS_FARES_ACTIVE": "للرحلة النشطة، يمكن تعديل السعر وفترة الصلاحية وحالة النشاط فقط. تغطية الأقسام مجمّدة.",
+      "EXPRESS_FARES_READONLY": "هذه الرحلة مكتملة أو ملغاة. التعريفات السريعة للقراءة فقط.",
+      "ACTIVE_WARNING": "هذه الرحلة نشطة. لا يمكن تعديل تاريخ المغادرة والعملة.",
+      "READONLY_WARNING": "هذه الرحلة مكتملة أو ملغاة. جميع الحقول للقراءة فقط."
+    }
+  },
+  "TICKETS": {
+    "TITLE": "التذاكر",
+    "LOADING": "جارٍ تحميل التذاكر...",
+    "EMPTY": "لم يتم العثور على تذاكر.",
+    "DEFAULT_PASSENGER": "مسافر",
+    "LABEL": {
+      "PASSENGER": "المسافر",
+      "AGENCY": "الوكالة",
+      "SEATS": "المقاعد",
+      "AMOUNT": "المبلغ",
+      "CREATED_AT": "تاريخ الإنشاء",
+      "CONFIRMED_AT": "تاريخ التأكيد",
+      "TICKET_ID": "رقم التذكرة",
+      "TRIP": "الرحلة",
+      "EXPIRES": "تنتهي في"
+    },
+    "FILTERS": {
+      "ALL": "جميع الحالات"
+    },
+    "ACTIONS": {
+      "SEND_EMAIL": "إرسال التذكرة بالبريد الإلكتروني",
+      "VIEW_DETAILS": "عرض التفاصيل",
+      "CONFIRM": "تأكيد",
+      "CANCEL": "إلغاء"
+    },
+    "MODAL": {
+      "TITLE": "تذكرة"
+    },
+    "STATUS": {
+      "PENDING": "قيد الانتظار",
+      "CONFIRMED": "مؤكدة",
+      "CANCELLED": "ملغاة",
+      "EXPIRED": "منتهية الصلاحية"
+    },
+    "MESSAGES": {
+      "LOAD_ERROR_TITLE": "تعذّر تحميل التذاكر",
+      "LOAD_ERROR_TEXT": "قم بتحديث الصفحة أو حاول مرة أخرى لاحقاً.",
+      "STATUS_CONFIRM_TITLE": "تغيير حالة التذكرة",
+      "STATUS_CONFIRM_TEXT": "هل تريد تعيين حالة هذه التذكرة إلى {{status}}؟",
+      "STATUS_CONFIRM_OK": "نعم، غيّر",
+      "STATUS_SUCCESS": "تم تحديث حالة التذكرة.",
+      "STATUS_ERROR": "تعذّر تحديث حالة التذكرة.",
+      "CONFIRM_TEXT": "هل أنت متأكد من تأكيد هذه التذكرة؟",
+      "CANCEL_TEXT": "هل أنت متأكد من إلغاء هذه التذكرة؟",
+      "EMAIL_CONFIRM_TITLE": "إرسال التذكرة بالبريد الإلكتروني",
+      "EMAIL_CONFIRM_TEXT": "إرسال التذكرة إلى {{email}}؟",
+      "EMAIL_CONFIRM_OK": "نعم، أرسل",
+      "EMAIL_SUCCESS_TITLE": "تم إرسال البريد الإلكتروني",
+      "EMAIL_SUCCESS_TEXT": "تم إرسال التذكرة إلى {{email}}.",
+      "EMAIL_ERROR": "تعذّر إرسال التذكرة."
+    },
+    "SELL": {
+      "TITLE": "بيع تذكرة",
+      "STEP_CUSTOMER": "العميل",
+      "STEP_TRIP": "الرحلة",
+      "STEP_REVIEW": "مراجعة وحجز",
+      "SEARCH_CUSTOMER": "البحث عن عميل",
+      "CUSTOMER_PLACEHOLDER": "اكتب اسماً أو بريداً إلكترونياً أو رقم هاتف...",
+      "SELECT_TRIP": "اختيار رحلة",
+      "NO_TRIPS": "لم يتم العثور على رحلات نشطة.",
+      "STOPS": "محطات",
+      "SEGMENTS": "أقسام",
+      "REVIEW": "مراجعة وتأكيد",
+      "CUSTOMER_LABEL": "العميل",
+      "TRIP_LABEL": "الرحلة",
+      "PICKUP": "نقطة الصعود",
+      "DROPOFF": "نقطة النزول",
+      "PRICE_LABEL": "السعر",
+      "BOOKING": "جارٍ الحجز...",
+      "CONFIRM": "تأكيد الحجز",
+      "SUCCESS": "تم إنشاء الحجز بنجاح!",
+      "ERROR": "تعذّر إنشاء الحجز. يرجى المحاولة مرة أخرى.",
+      "SUCCESS_TITLE": "تم تأكيد الحجز",
+      "TICKET_ID": "رقم التذكرة",
+      "GO_TO_TICKETS": "عرض التذاكر"
+    }
+  },
+  "CUSTOMERS": {
+    "SEARCH_PLACEHOLDER": "البحث عن عملاء",
+    "FILTER": {
+      "BUTTON": "تصفية",
+      "TITLE": "خيارات التصفية",
+      "TWO_FACTOR": "المصادقة الثنائية",
+      "TWO_FACTOR_ENABLED": "مفعّلة"
+    },
+    "ROLES": {
+      "ADMINISTRATOR": "مدير",
+      "ANALYST": "محلل",
+      "DEVELOPER": "مطوّر",
+      "SUPPORT": "دعم",
+      "TRIAL": "تجريبي",
+      "CUSTOMER": "عميل",
+      "ADMIN": "مدير",
+      "MANAGER": "مسؤول",
+      "DRIVER": "سائق"
+    },
+    "ADD_BUTTON": "إضافة عميل",
+    "LOADING": "جارٍ تحميل العملاء...",
+    "EMPTY": "لم يتم العثور على عملاء.",
+    "SELECTION": {
+      "SELECTED": "محدد",
+      "DELETE_SELECTED": "حذف المحدد"
+    },
+    "TABLE": {
+      "CUSTOMER": "العميل",
+      "CREATED_AT": "تاريخ الإنشاء"
+    },
+    "MODAL": {
+      "EDIT_TITLE": "تعديل العميل",
+      "ADD_TITLE": "إضافة عميل",
+      "PHONE_CODE": "رمز الدولة",
+      "PHONE_NUMBER": "رقم الهاتف",
+      "ERRORS": {
+        "FIRST_NAME": "الاسم الأول مطلوب.",
+        "LAST_NAME": "اسم العائلة مطلوب.",
+        "EMAIL": "يرجى إدخال بريد إلكتروني صالح.",
+        "PHONE_CODE": "رمز الدولة مطلوب.",
+        "PHONE_NUMBER": "رقم الهاتف مطلوب."
+      }
+    }
+  },
+  "ROUTES": {
+    "TITLE": "تسعير المسارات",
+    "TAB_ROUTES": "المسارات",
+    "TAB_COEFFICIENTS": "التسعير الموسمي",
+    "ADD_ROUTE_BUTTON": "إضافة مسار",
+    "ADD_COEFF_BUTTON": "إضافة معامل",
+    "LOADING": "جارٍ تحميل المسارات...",
+    "EMPTY": "لم يتم العثور على مسارات. أضف مساراً لتفعيل الحساب التلقائي للتعريفات.",
+    "COEFF_EMPTY": "لم يتم تكوين معاملات موسمية. أضف معاملات لتطبيق التسعير الموسمي.",
+    "COEFF_INFO_TITLE": "حول التسعير الموسمي",
+    "COEFF_INFO_TEXT": "تعدّل المعاملات حساب التعريفات لفترات محددة. المعاملات ذات الأولوية الأعلى تتجاوز ذات الأولوية الأقل. معامل 1.5 يزيد التعريفات بنسبة 50%.",
+    "LABEL": {
+      "KILOMETERS": "المسافة",
+      "RATE": "التعريفة",
+      "COEFFICIENT": "المعامل",
+      "DEFAULT_FARE": "التعريفة الافتراضية",
+      "MILLIMES_KM": "مليم/كم",
+      "COEFF_NAME": "الاسم",
+      "START_DATE": "تاريخ البداية",
+      "END_DATE": "تاريخ النهاية",
+      "PRIORITY": "الأولوية",
+      "RANK": "ترتيب العرض",
+      "ACTIVE": "نشط",
+      "GLOBAL": "عام"
+    },
+    "MODAL": {
+      "ADD_ROUTE_TITLE": "إضافة مسار",
+      "EDIT_ROUTE_TITLE": "تعديل المسار",
+      "ADD_COEFF_TITLE": "إضافة معامل موسمي",
+      "EDIT_COEFF_TITLE": "تعديل المعامل الموسمي",
+      "ORIGIN_PLACEHOLDER": "اختر مدينة المنطلق",
+      "DESTINATION_PLACEHOLDER": "اختر مدينة الوجهة",
+      "COEFF_NAME_PLACEHOLDER": "مثال: ذروة الصيف، رمضان، إلخ.",
+      "COEFF_NAME_HELP": "اختياري. يساعد في التعرف على هذا المعامل.",
+      "COEFF_HELP": "مثال: 1.0 = عادي، 1.5 = +50%، 0.8 = -20%",
+      "PRIORITY_HELP": "الأولوية الأعلى تتغلب. الافتراضي 0.",
+      "FARE_PREVIEW": "التعريفة المقدّرة",
+      "ERRORS": {
+        "ORIGIN_REQUIRED": "المنطلق مطلوب.",
+        "DESTINATION_REQUIRED": "الوجهة مطلوبة.",
+        "KILOMETERS_REQUIRED": "المسافة بالكيلومترات مطلوبة.",
+        "RATE_REQUIRED": "التعريفة لكل كيلومتر مطلوبة.",
+        "COEFF_REQUIRED": "المعامل مطلوب.",
+        "START_DATE_REQUIRED": "تاريخ البداية مطلوب.",
+        "END_DATE_REQUIRED": "تاريخ النهاية مطلوب."
+      }
+    },
+    "MESSAGES": {
+      "LOAD_ERROR": "تعذّر تحميل المسارات. حاول مرة أخرى لاحقاً.",
+      "SAVE_SUCCESS": "تم حفظ المسار بنجاح.",
+      "CREATE_SUCCESS": "تم إنشاء المسار بنجاح.",
+      "UPDATE_SUCCESS": "تم تحديث المسار بنجاح.",
+      "CREATE_ERROR": "تعذّر إنشاء المسار.",
+      "UPDATE_ERROR": "تعذّر تحديث المسار.",
+      "DELETE_SUCCESS": "تم حذف المسار بنجاح.",
+      "DELETE_ERROR": "تعذّر حذف المسار.",
+      "COEFF_SAVE_SUCCESS": "تم حفظ المعامل بنجاح.",
+      "COEFF_CREATE_SUCCESS": "تم إنشاء المعامل بنجاح.",
+      "COEFF_UPDATE_SUCCESS": "تم تحديث المعامل بنجاح.",
+      "COEFF_CREATE_ERROR": "تعذّر إنشاء المعامل.",
+      "COEFF_UPDATE_ERROR": "تعذّر تحديث المعامل.",
+      "COEFF_DELETE_SUCCESS": "تم حذف المعامل بنجاح.",
+      "COEFF_DELETE_ERROR": "تعذّر حذف المعامل."
+    }
+  },
+  "TEAM": {
+    "TITLE": "الفريق",
+    "ADD_BUTTON": "إضافة عضو",
+    "EMPTY": "لم يتم العثور على أعضاء",
+    "PROMPT": {
+      "USER_ID": "أدخل معرّف المستخدم لإضافته"
+    },
+    "MODAL": {
+      "TITLE": "إضافة عضو",
+      "DEFAULT_PICTURE": "افتراضي",
+      "PERMISSION": "الصلاحية",
+      "PERMISSION_PLACEHOLDER": "اختر صلاحية",
+      "PASSWORD": "كلمة المرور",
+      "PASSWORD_PLACEHOLDER": "أدخل كلمة المرور",
+      "CONFIRM_PASSWORD": "تأكيد كلمة المرور",
+      "CONFIRM_PASSWORD_PLACEHOLDER": "أعد إدخال كلمة المرور",
+      "ERRORS": {
+        "FIRST_NAME": "الاسم الأول مطلوب.",
+        "LAST_NAME": "اسم العائلة مطلوب.",
+        "EMAIL": "بريد إلكتروني صالح مطلوب.",
+        "PHONE_CODE": "رمز الدولة مطلوب.",
+        "PHONE_NUMBER": "رقم الهاتف مطلوب.",
+        "PASSWORD": "كلمة المرور يجب أن تتكون من 6 أحرف على الأقل.",
+        "CONFIRM_PASSWORD": "يرجى تأكيد كلمة المرور.",
+        "PASSWORD_MISMATCH": "كلمتا المرور غير متطابقتين."
+      }
+    },
+    "MESSAGES": {
+      "CREATE_SUCCESS": "تمت إضافة عضو الفريق بنجاح.",
+      "CREATE_ERROR": "تعذّر إضافة عضو الفريق.",
+      "EMAIL_ALREADY_EXISTS": "مستخدم بهذا البريد الإلكتروني موجود بالفعل.",
+      "PHONE_ALREADY_EXISTS": "مستخدم بهذا الرقم موجود بالفعل.",
+      "CONTACT_CONFLICT": "البريد الإلكتروني ورقم الهاتف ينتميان لمستخدمين مختلفين.",
+      "ALREADY_ASSIGNED": "هذا المستخدم مخصص بالفعل للشركة المحددة.",
+      "DELETE_SUCCESS": "تم حذف عضو الفريق بنجاح.",
+      "DELETE_ERROR": "تعذّر حذف عضو الفريق."
+    }
+  },
+  "BUSINESS_PROFILE": {
+    "MESSAGES": {
+      "SAVE_SUCCESS": "تم حفظ الملف التجاري بنجاح.",
+      "SAVE_ERROR": "تعذّر حفظ الملف التجاري.",
+      "LOCATION_SAVE_SUCCESS": "تم حفظ الموقع بنجاح.",
+      "LOCATION_SAVE_ERROR": "تعذّر حفظ الموقع."
+    }
+  },
+  "DASHBOARD": {
+    "ACTIONS": {
+      "TITLE": "الإجراءات",
+      "ADD_CUSTOMER": "إضافة عميل",
+      "DELETE_CUSTOMER": "حذف عميل",
+      "ASSIGN_CUSTOMER": "تعيين عميل"
+    },
+    "POS": {
+      "ADD_TITLE": "إضافة عميل جديد",
+      "DELETE_TITLE": "حذف العميل",
+      "DELETE_CONFIRM_TITLE": "هل أنت متأكد؟",
+      "DELETE_CONFIRM_TEXT": "سيتم حذف هذا العميل وجميع البيانات المرتبطة نهائياً.",
+      "FORM": {
+        "TITLE": "العنوان",
+        "TITLE_PLACEHOLDER": "أدخل اسم الشركة",
+        "SUBTITLE": "العنوان الفرعي",
+        "SUBTITLE_PLACEHOLDER": "شعار أو وصف (اختياري)",
+        "EMAIL_PLACEHOLDER": "email@example.com"
+      },
+      "ERRORS": {
+        "TITLE_REQUIRED": "العنوان مطلوب.",
+        "EMAIL_INVALID": "يرجى إدخال بريد إلكتروني صالح."
+      },
+      "MESSAGES": {
+        "CREATE_SUCCESS": "تم إنشاء العميل بنجاح.",
+        "CREATE_ERROR": "تعذّر إنشاء العميل.",
+        "DELETE_SUCCESS": "تم حذف العميل بنجاح.",
+        "DELETE_ERROR": "تعذّر حذف العميل.",
+        "NO_POS": "لم يتم تحديد عميل."
+      }
+    },
+    "ASSIGN": {
+      "TITLE": "تعيين عميل",
+      "TAB_CUSTOMER": "العميل",
+      "TAB_PERMISSION": "الدور",
+      "CHOOSE_POS": "اختر عميلاً*",
+      "POS_PLACEHOLDER": "اختر عميلاً",
+      "CHOOSE_ROLE_BUTTON": "اختر دوراً",
+      "CHOOSE_PERMISSION": "الصلاحية (اختياري)",
+      "PERMISSION_PLACEHOLDER": "اختر دور الصلاحية",
+      "PERMISSION_HELP": "اتركه فارغاً لاستخدام الصلاحيات الافتراضية.",
+      "NO_PERMISSIONS": "لم يتم العثور على أدوار لهذا العميل. انقر على إضافة صلاحية لإنشاء واحدة.",
+      "ERRORS": {
+        "POS_REQUIRED": "يرجى اختيار عميل.",
+        "PERMISSION_REQUIRED": "يرجى اختيار دور."
+      },
+      "MESSAGES": {
+        "SUCCESS": "تم تعيين العميل بنجاح.",
+        "ERROR": "تعذّر تعيين العميل.",
+        "NO_ACCOUNT": "لم يتم العثور على حساب."
+      }
+    }
+  },
+  "COMPANIES": {
+    "TITLE": "الشركات",
+    "ADD_BUTTON": "إضافة شركة",
+    "EMPTY": "لم يتم العثور على شركات.",
+    "LABEL": {
+      "NAME": "اسم الشركة",
+      "LEGAL_NAME": "الاسم القانوني",
+      "TAX_ID": "المعرّف الضريبي",
+      "STATUS": "الحالة",
+      "FEE": "عمولة المنصة (%)",
+      "CONTACT": "الاتصال",
+      "PICTURE": "الصورة",
+      "LOGO": "الشعار",
+      "BANK_ACCOUNT": "الحساب البنكي",
+      "BANK_NAME": "البنك",
+      "ACCOUNT_HOLDER": "صاحب الحساب",
+      "IBAN": "IBAN",
+      "EMAIL": "البريد الإلكتروني",
+      "PHONE": "الهاتف",
+      "CURRENCY": "العملة",
+      "EMAIL_TEMPLATE": "قالب البريد الإلكتروني"
+    },
+    "FORM": {
+      "CREATE_TITLE": "إنشاء شركة",
+      "EDIT_TITLE": "تعديل الشركة",
+      "SELECT_CURRENCY": "اختر عملة"
+    },
+    "MESSAGES": {
+      "CREATE_SUCCESS": "تم إنشاء الشركة بنجاح.",
+      "UPDATE_SUCCESS": "تم تحديث الشركة بنجاح.",
+      "DELETE_SUCCESS": "تم حذف الشركة بنجاح.",
+      "DELETE_ERROR": "تعذّر حذف الشركة.",
+      "STATUS_UPDATED": "تم تحديث حالة الشركة.",
+      "STATUS_ERROR": "تعذّر تحديث حالة الشركة.",
+      "HAS_ACTIVE_POS": "لا يمكن حذف هذه الشركة لأنها لا تزال تملك نقاط بيع.",
+      "SAVE_ERROR": "تعذّر حفظ الشركة."
+    }
+  },
+  "POS": {
+    "TITLE": "نقاط البيع",
+    "LABEL": {
+      "TITLE": "العنوان",
+      "SUBTITLE": "العنوان الفرعي",
+      "EMAIL": "البريد الإلكتروني",
+      "EMAIL_TEMPLATE": "قالب البريد الإلكتروني",
+      "PICTURE": "الصورة",
+      "PHONE": "الهاتف",
+      "LOCATION": "العنوان",
+      "CURRENCY": "العملة",
+      "ACTIVE": "نشط",
+      "COUNTRY_CODE": "رمز الدولة",
+      "NUMBER": "الرقم",
+      "ZIP_CODE": "الرمز البريدي"
+    },
+    "LIST": {
+      "TITLE": "نقاط البيع",
+      "ADD": "إضافة نقطة بيع",
+      "EMPTY": "لم يتم العثور على نقاط بيع."
+    },
+    "FORM": {
+      "CREATE_TITLE": "إنشاء نقطة بيع",
+      "EDIT_TITLE": "تعديل نقطة البيع",
+      "CREATED": "تم إنشاء نقطة البيع بنجاح.",
+      "UPDATED": "تم تحديث نقطة البيع بنجاح."
+    },
+    "MESSAGES": {
+      "CONFIRM_DELETE": "هل تريد حذف نقطة البيع هذه؟",
+      "DELETE_SUCCESS": "تم حذف نقطة البيع بنجاح.",
+      "DELETE_ERROR": "تعذّر حذف نقطة البيع."
+    }
+  },
+  "MENU": {
+    "DASHBOARD": "لوحة التحكم",
+    "BUSES": "الحافلات",
+    "COMPANIES": "الشركات"
+  },
+  "BUSES": {
+    "TITLE": "الحافلات",
+    "ADD_BUTTON": "إضافة حافلة",
+    "LOADING": "جارٍ تحميل الحافلات...",
+    "EMPTY": "لم يتم العثور على حافلات.",
+    "LABEL": {
+      "SEATS": "مقعد"
+    },
+    "AMENITY": {
+      "WIFI": "واي فاي",
+      "POWER_OUTLET": "مقبس كهربائي",
+      "TV": "تلفاز",
+      "SNACKS": "وجبات خفيفة",
+      "AC": "تكييف",
+      "TOILET": "مرحاض",
+      "LUGGAGE": "أمتعة",
+      "USB": "USB"
+    },
+    "LAYOUT": {
+      "TITLE": "مخطط التوزيع",
+      "SUBTITLE": "رسم مخطط مقاعد الحافلة",
+      "DESIGN_BUTTON": "تصميم المخطط",
+      "DERIVED_SEATS_HINT": "يتم اشتقاق إجمالي المقاعد من مخطط المقاعد المحفوظ.",
+      "OPEN_BUILDER_HINT": "افتح تصميم المخطط لإنشاء مخطط المقاعد لهذه الحافلة أو تحديثه.",
+      "CREATE_FIRST_HINT": "احفظ الحافلة أولاً قبل استخدام المصمم المرئي.",
+      "SWITCH_TO_MANUAL_TITLE": "حذف مخطط المقاعد المحفوظ؟",
+      "SWITCH_TO_MANUAL_TEXT": "هل أنت متأكد؟ سيؤدي التبديل إلى الوضع اليدوي إلى حذف مخطط المقاعد المحفوظ لهذه الحافلة.",
+      "SWITCH_TO_MANUAL_CONFIRM": "نعم، التحويل إلى الوضع اليدوي",
+      "TOOL": {
+        "SEAT": "مقعد",
+        "DRIVER": "سائق",
+        "DOOR": "باب",
+        "STAIRS": "درج",
+        "TOILET": "مرحاض",
+        "ERASER": "ممحاة"
+      },
+      "DECK_LOWER": "الطابق السفلي",
+      "DECK_UPPER": "الطابق العلوي",
+      "HAS_DECKS": "حافلة ذات طابقين",
+      "PARAMETERS": "المعاملات",
+      "GRID_SIZE": "الشبكة",
+      "GRID_COLUMNS": "الأعمدة",
+      "GRID_ROWS": "الصفوف",
+      "SEAT_COUNT": "المقاعد",
+      "ACTIVE_TOOL": "الأداة النشطة",
+      "AUTO_NUMBER": "ترقيم تلقائي",
+      "SAVE_SUCCESS": "تم حفظ المخطط بنجاح.",
+      "SAVE_ERROR": "تعذّر حفظ المخطط.",
+      "LOCKED": "هذا المخطط للقراءة فقط لأن الحافلة في رحلة نشطة.",
+      "CONFIRM_RESIZE": "سيؤدي تغيير الحجم إلى حذف {{count}} عنصر(عناصر) خارج الحدود. هل تريد المتابعة؟",
+      "RESET": "إعادة تعيين",
+      "RESET_CONFIRM": "إعادة التعيين إلى المخطط التونسي الافتراضي؟ ستُفقد جميع التعديلات.",
+      "DUPLICATE_SEAT": "رقم المقعد \"{{seatNo}}\" مستخدم بالفعل.",
+      "COLUMN_HEADERS": {
+        "1": "نافذة يسار",
+        "2": "ممر يسار",
+        "3": "الممر",
+        "4": "ممر يمين",
+        "5": "نافذة يمين"
+      }
+    },
+    "FORM": {
+      "ADD_TITLE": "إضافة حافلة",
+      "EDIT_TITLE": "تعديل الحافلة",
+      "NAME": "اسم الحافلة",
+      "NAME_PLACEHOLDER": "أدخل اسم الحافلة",
+      "SEAT_MODE_LABEL": "وضع إدخال المقاعد",
+      "SEAT_MODE": {
+        "MANUAL": "إدخال يدوي",
+        "VISUAL": "المصمم المرئي"
+      },
+      "TOTAL_SEATS": "إجمالي المقاعد",
+      "TOTAL_SEATS_PLACEHOLDER": "أدخل السعة الإجمالية",
+      "AMENITIES": "التجهيزات",
+      "AMENITIES_PLACEHOLDER": "اختر التجهيزات",
+      "PICTURES": "الصور",
+      "ERRORS": {
+        "NAME_REQUIRED": "اسم الحافلة مطلوب.",
+        "TOTAL_SEATS_REQUIRED": "عدد المقاعد يجب أن يكون 1 على الأقل."
+      }
+    },
+    "MESSAGES": {
+      "CREATE_SUCCESS": "تم إنشاء الحافلة بنجاح.",
+      "CREATE_ERROR": "تعذّر إنشاء الحافلة.",
+      "UPDATE_SUCCESS": "تم تحديث الحافلة بنجاح.",
+      "UPDATE_ERROR": "تعذّر تحديث الحافلة.",
+      "DELETE_SUCCESS": "تم حذف الحافلة بنجاح.",
+      "DELETE_ERROR": "تعذّر حذف الحافلة.",
+      "LOAD_ERROR": "تعذّر تحميل بيانات الحافلة.",
+      "UPLOAD_ERROR": "تعذّر رفع الصورة.",
+      "SEATS_LOCKED": "لا يمكن تعديل عدد المقاعد طالما الحافلة في رحلة مجدولة أو نشطة.",
+      "BUS_IN_ACTIVE_TRIP": "لا يمكن حذف هذه الحافلة لأنها في رحلة مجدولة أو نشطة."
+    }
+  }
+}

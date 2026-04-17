@@ -22,10 +22,17 @@ import { BusService } from '../bus.service';
 import { Picture } from 'src/app/core/models/shared.model';
 import { FormHelper } from 'src/app/core/helpers/form-helper';
 import { AlertService } from 'src/app/core/services/alert.service';
-import { AmenityEnum, BusType } from 'src/app/core/models/bus.model';
+import {
+  AmenityEnum,
+  BusType,
+  LayoutElementType,
+  LayoutTemplate,
+} from 'src/app/core/models/bus.model';
 import { PageInfoService } from 'src/app/_metronic/layout/core/page-info.service';
 import { ToolbarComponent } from 'src/app/_metronic/layout/components/toolbar/toolbar.component';
 import { AmazonS3Helper } from '../../../../../../../libs/helpers/amazon-s3-helper';
+
+type SeatEntryMode = 'MANUAL' | 'VISUAL';
 
 @Component({
   standalone: true,
@@ -46,6 +53,8 @@ import { AmazonS3Helper } from '../../../../../../../libs/helpers/amazon-s3-help
 export class BusDetailsComponent implements OnInit, OnDestroy {
   private initialValues: any;
   private destroy$ = new Subject<void>();
+  private manualTotalSeatsDraft: number | null = null;
+  private pendingLayoutDeletion = false;
 
   busForm: FormGroup;
   isSubmitting = false;
@@ -53,6 +62,7 @@ export class BusDetailsComponent implements OnInit, OnDestroy {
   isUploading = false;
   uploadPreviewUrl: string | null = null;
   seatsLocked = false;
+  seatEntryMode: SeatEntryMode = 'MANUAL';
 
   /** All amenity options for ng-select */
   amenityOptions = Object.values(AmenityEnum).map((value) => ({
@@ -97,6 +107,10 @@ export class BusDetailsComponent implements OnInit, OnDestroy {
     // Read resolved bus (only present on edit route)
     this.busService.bus$.pipe(takeUntil(this.destroy$)).subscribe((bus) => {
       this.bus = bus;
+      this.seatEntryMode = this.bus?.layoutTemplate ? 'VISUAL' : 'MANUAL';
+      this.manualTotalSeatsDraft = this.normalizeTotalSeats(this.bus?.totalSeats);
+      this.pendingLayoutDeletion = false;
+
       this.busForm = this.fb.group({
         name: [this.bus?.name || '', [Validators.required]],
         totalSeats: [
@@ -116,13 +130,23 @@ export class BusDetailsComponent implements OnInit, OnDestroy {
         }),
       });
 
+      this.applySeatEntryModeState();
       this.initialValues = this.busForm.getRawValue();
+      this.syncButtonState();
 
       this.busForm.valueChanges
         .pipe(takeUntil(this.destroy$))
-        .subscribe((values) => {
-          const current = this.busForm.getRawValue();
-          this.isButtonDisabled = isEqual(current, this.initialValues);
+        .subscribe(() => {
+          this.syncButtonState();
+        });
+
+      this.busForm
+        .get('totalSeats')
+        ?.valueChanges.pipe(takeUntil(this.destroy$))
+        .subscribe((value) => {
+          if (this.seatEntryMode === 'MANUAL') {
+            this.manualTotalSeatsDraft = this.normalizeTotalSeats(value);
+          }
         });
 
       if (this.bus) {
@@ -133,9 +157,7 @@ export class BusDetailsComponent implements OnInit, OnDestroy {
           .pipe(takeUntil(this.destroy$))
           .subscribe((locked) => {
             this.seatsLocked = locked;
-            if (locked) {
-              this.busForm.get('totalSeats')?.disable();
-            }
+            this.applySeatEntryModeState();
           });
       } else {
         this.pageInfo.setTitle(this.translate.instant('BUSES.FORM.ADD_TITLE'));
@@ -146,6 +168,126 @@ export class BusDetailsComponent implements OnInit, OnDestroy {
   isInvalid(controlName: string): boolean {
     const control = this.busForm.get(controlName);
     return !!control && control.invalid && (control.dirty || control.touched);
+  }
+
+  get isVisualMode(): boolean {
+    return this.seatEntryMode === 'VISUAL';
+  }
+
+  get canToggleSeatEntryMode(): boolean {
+    return !!this.bus && !this.seatsLocked;
+  }
+
+  get hasPersistedLayout(): boolean {
+    return !!this.bus?.layoutTemplate;
+  }
+
+  async onSeatEntryModeToggle(checked: boolean): Promise<void> {
+    const nextMode: SeatEntryMode = checked ? 'VISUAL' : 'MANUAL';
+
+    if (nextMode === this.seatEntryMode) {
+      return;
+    }
+
+    if (nextMode === 'VISUAL' && !this.canToggleSeatEntryMode) {
+      this.cdr.markForCheck();
+      return;
+    }
+
+    if (nextMode === 'MANUAL' && this.hasPersistedLayout) {
+      const result = await this.alert.fire({
+        icon: 'warning',
+        title: this.translate.instant('BUSES.LAYOUT.SWITCH_TO_MANUAL_TITLE'),
+        text: this.translate.instant('BUSES.LAYOUT.SWITCH_TO_MANUAL_TEXT'),
+        showCancelButton: true,
+        confirmButtonText: this.translate.instant(
+          'BUSES.LAYOUT.SWITCH_TO_MANUAL_CONFIRM',
+        ),
+        cancelButtonText: this.translate.instant('COMMON.BUTTON.CANCEL'),
+        confirmButtonColor: 'rgb(3, 142, 220)',
+        cancelButtonColor: 'rgb(243, 78, 78)',
+      });
+
+      if (!result.isConfirmed) {
+        this.cdr.markForCheck();
+        return;
+      }
+
+      this.pendingLayoutDeletion = true;
+    } else if (nextMode === 'VISUAL') {
+      this.pendingLayoutDeletion = false;
+    }
+
+    this.manualTotalSeatsDraft = this.normalizeTotalSeats(
+      this.busForm.get('totalSeats')?.getRawValue(),
+    );
+    this.seatEntryMode = nextMode;
+    this.applySeatEntryModeState();
+    this.cdr.markForCheck();
+  }
+
+  goToLayoutBuilder(): void {
+    if (!this.bus || !this.isVisualMode) {
+      return;
+    }
+
+    this.router.navigate(['/buses', this.bus.id, 'layout']);
+  }
+
+  private applySeatEntryModeState(): void {
+    const totalSeatsControl = this.busForm?.get('totalSeats');
+    if (!totalSeatsControl) {
+      return;
+    }
+
+    if (this.isVisualMode) {
+      const visualSeats = this.hasPersistedLayout
+        ? this.countLayoutSeats(this.bus?.layoutTemplate)
+        : this.manualTotalSeatsDraft;
+      totalSeatsControl.setValue(visualSeats, { emitEvent: false });
+      totalSeatsControl.disable({ emitEvent: false });
+    } else {
+      totalSeatsControl.setValue(this.manualTotalSeatsDraft, {
+        emitEvent: false,
+      });
+
+      if (this.seatsLocked) {
+        totalSeatsControl.disable({ emitEvent: false });
+      } else {
+        totalSeatsControl.enable({ emitEvent: false });
+      }
+    }
+
+    this.syncButtonState();
+  }
+
+  private syncButtonState(): void {
+    if (!this.busForm) {
+      return;
+    }
+
+    const current = this.busForm.getRawValue();
+    this.isButtonDisabled =
+      isEqual(current, this.initialValues) && !this.pendingLayoutDeletion;
+  }
+
+  private countLayoutSeats(layoutTemplate?: LayoutTemplate | null): number {
+    if (!layoutTemplate) {
+      return 0;
+    }
+
+    return [layoutTemplate.lowerDeck, layoutTemplate.upperDeck]
+      .flat()
+      .filter((element) => element?.type === LayoutElementType.SEAT).length;
+  }
+
+  private normalizeTotalSeats(value: unknown): number | null {
+    if (value === null || value === undefined || value === '') {
+      return null;
+    }
+
+    const normalized = Number(value);
+    return Number.isFinite(normalized) ? normalized : null;
   }
 
   /* ═══════ Picture management ═══════ */
@@ -276,6 +418,15 @@ export class BusDetailsComponent implements OnInit, OnDestroy {
     const raw = this.busForm.getRawValue();
     const changes = FormHelper.getChangedValues(raw, this.initialValues);
 
+    if (this.isVisualMode) {
+      delete changes.totalSeats;
+    }
+
+    if (this.pendingLayoutDeletion) {
+      changes.clearLayout = true;
+      changes.totalSeats = raw.totalSeats;
+    }
+
     if (Object.keys(changes).length === 0) {
       return;
     }
@@ -288,14 +439,29 @@ export class BusDetailsComponent implements OnInit, OnDestroy {
       : this.busService.create({ ...changes, target: { company: companyId } });
 
     request$.pipe(takeUntil(this.destroy$)).subscribe({
-      next: () => {
+      next: (savedBus) => {
         const msg = this.bus
           ? this.translate.instant('BUSES.MESSAGES.UPDATE_SUCCESS')
           : this.translate.instant('BUSES.MESSAGES.CREATE_SUCCESS');
+
+        if (this.bus) {
+          this.bus = savedBus;
+          this.pendingLayoutDeletion = false;
+          this.seatEntryMode = savedBus.layoutTemplate ? 'VISUAL' : 'MANUAL';
+          this.manualTotalSeatsDraft = this.normalizeTotalSeats(
+            savedBus.totalSeats,
+          );
+          this.applySeatEntryModeState();
+          this.initialValues = this.busForm.getRawValue();
+          this.syncButtonState();
+        }
+
+        this.isSubmitting = false;
         this.alert.success(msg);
         if (!this.bus) {
           this.router.navigate(['/buses']);
         }
+        this.cdr.markForCheck();
       },
       error: (err) => {
         const backendMsg: string = err?.error?.message || '';
@@ -317,5 +483,6 @@ export class BusDetailsComponent implements OnInit, OnDestroy {
   ngOnDestroy(): void {
     this.destroy$.next();
     this.destroy$.complete();
+    this.busService.bus$ = null;
   }
 }

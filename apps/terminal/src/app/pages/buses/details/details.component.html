@@ -32,6 +32,45 @@
       </div>
       <!--end::Name-->
 
+      <!--begin::Seat Entry Mode-->
+      <div class="mb-8">
+        <label class="form-label d-block">
+          {{ "BUSES.FORM.SEAT_MODE_LABEL" | translate }}
+        </label>
+
+        <div class="d-flex align-items-center gap-4 flex-wrap">
+          <span
+            class="fw-semibold"
+            [ngClass]="isVisualMode ? 'text-muted' : 'text-gray-900'"
+          >
+            {{ "BUSES.FORM.SEAT_MODE.MANUAL" | translate }}
+          </span>
+
+          <div class="form-check form-switch form-check-custom form-check-solid mb-0">
+            <input
+              id="bus-seat-entry-mode"
+              type="checkbox"
+              class="form-check-input w-45px h-30px"
+              [checked]="isVisualMode"
+              [disabled]="!canToggleSeatEntryMode"
+              (change)="onSeatEntryModeToggle($any($event.target).checked)"
+            />
+          </div>
+
+          <span
+            class="fw-semibold"
+            [ngClass]="isVisualMode ? 'text-primary' : 'text-muted'"
+          >
+            {{ "BUSES.FORM.SEAT_MODE.VISUAL" | translate }}
+          </span>
+        </div>
+
+        <div *ngIf="!bus" class="text-muted small mt-2">
+          {{ "BUSES.LAYOUT.CREATE_FIRST_HINT" | translate }}
+        </div>
+      </div>
+      <!--end::Seat Entry Mode-->
+
       <!--begin::Total Seats-->
       <div class="mb-8">
         <label class="form-label required">
@@ -44,8 +83,14 @@
           [placeholder]="'BUSES.FORM.TOTAL_SEATS_PLACEHOLDER' | translate"
           min="1"
         />
-        <div *ngIf="isInvalid('totalSeats')" class="text-danger mt-1  ">
+        <div *ngIf="isInvalid('totalSeats')" class="text-danger mt-1">
           {{ "BUSES.FORM.ERRORS.TOTAL_SEATS_REQUIRED" | translate }}
+        </div>
+        <div *ngIf="isVisualMode && bus?.layoutTemplate" class="text-muted small mt-1">
+          {{ "BUSES.LAYOUT.DERIVED_SEATS_HINT" | translate }}
+        </div>
+        <div *ngIf="isVisualMode && bus && !bus.layoutTemplate" class="text-muted small mt-1">
+          {{ "BUSES.LAYOUT.OPEN_BUILDER_HINT" | translate }}
         </div>
         <div *ngIf="seatsLocked" class="text-warning small mt-1">
           <i class="ki-duotone ki-lock fs-6 me-1">
@@ -162,6 +207,29 @@
         </div>
       </div>
       <!--end::Pictures-->
+
+      <!--begin::Layout Builder Link-->
+      <div *ngIf="isVisualMode && bus" class="mb-8">
+        <label class="form-label">{{ "BUSES.LAYOUT.TITLE" | translate }}</label>
+        <div class="d-flex flex-column align-items-start gap-2">
+          <button
+            type="button"
+            class="btn btn-light-primary"
+            (click)="goToLayoutBuilder()"
+          >
+            <i class="ki-duotone ki-grid fs-4 me-2">
+              <span class="path1"></span>
+              <span class="path2"></span>
+            </i>
+            {{ "BUSES.LAYOUT.DESIGN_BUTTON" | translate }}
+          </button>
+
+          <div *ngIf="!bus.layoutTemplate" class="text-muted small">
+            {{ "BUSES.LAYOUT.OPEN_BUILDER_HINT" | translate }}
+          </div>
+        </div>
+      </div>
+      <!--end::Layout Builder Link-->
     </div>
 
     <div class="card-footer d-flex justify-content-end gap-3">

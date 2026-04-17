@@ -18,4 +18,12 @@ export const busRoutes: Routes = [
     loadComponent: () =>
       import('./details/details.component').then((m) => m.BusDetailsComponent),
   },
+  {
+    path: ':busId/layout',
+    resolve: { bus: BusResolver },
+    loadComponent: () =>
+      import('./layout-builder/layout-builder.component').then(
+        (m) => m.LayoutBuilderComponent,
+      ),
+  },
 ];
