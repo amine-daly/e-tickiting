@@ -443,6 +443,7 @@
       "SEATS": "Places",
       "AMOUNT": "Montant",
       "CREATED_AT": "Créé le",
+      "CONFIRMED_AT": "Confirmé le",
       "TICKET_ID": "ID du billet",
       "TRIP": "Voyage",
       "EXPIRES": "Expire le"

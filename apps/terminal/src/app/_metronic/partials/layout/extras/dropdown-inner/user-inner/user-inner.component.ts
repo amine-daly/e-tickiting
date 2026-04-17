@@ -16,7 +16,8 @@ import { AuthService } from '../../../../../../modules/auth';
 })
 export class UserInnerComponent implements OnInit, OnDestroy {
   @HostBinding('class')
-  class = `menu menu-sub menu-sub-dropdown menu-column menu-rounded menu-gray-600 menu-state-bg menu-state-primary fw-bold py-4 fs-6 w-275px`;
+  class =
+    `menu menu-sub menu-sub-dropdown menu-column menu-rounded menu-gray-600 menu-state-bg menu-state-primary fw-bold py-4 fs-6 w-275px`;
   @HostBinding('attr.data-kt-menu') dataKtMenu = 'true';
 
   language: LanguageFlag;
@@ -26,14 +27,13 @@ export class UserInnerComponent implements OnInit, OnDestroy {
 
   constructor(
     private auth: AuthService,
-    private cookieService: CookieService,
-    private translationService: TranslationService
+    private translationService: TranslationService,
   ) {}
 
   ngOnInit(): void {
     this.user$ = this.auth.currentUser.asObservable();
-    const lang = this.cookieService.get('lang') || 'fr-fr';
-    this.setLanguage(lang);
+    const lang = localStorage.getItem('lang') || 'fr-fr';
+    this.selectLanguage(lang);
   }
 
   logout() {
@@ -41,12 +41,6 @@ export class UserInnerComponent implements OnInit, OnDestroy {
   }
 
   selectLanguage(lang: string) {
-    this.translationService.setLanguage(lang);
-    this.setLanguage(lang);
-    // document.location.reload();
-  }
-
-  setLanguage(lang: string) {
     this.langs.forEach((language: LanguageFlag) => {
       if (language.lang === lang) {
         language.active = true;
@@ -80,5 +74,10 @@ const languages = [
     lang: 'fr-fr',
     name: 'French',
     flag: './assets/media/flags/france.svg',
+  },
+  {
+    lang: 'ar-sa',
+    name: 'Arabic',
+    flag: './assets/media/flags/saudi-arabia.svg',
   },
 ];

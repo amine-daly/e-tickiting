@@ -50,6 +50,9 @@
                 <th class="min-w-120px">
                   {{ "TICKETS.LABEL.TRIP" | translate }}
                 </th>
+                <th class="min-w-200px">
+                  {{ "TICKETS.LABEL.PASSENGER" | translate }}
+                </th>
                 <th class="min-w-100px">
                   {{ "COMMON.LABEL.STATUS" | translate }}
                 </th>
@@ -88,6 +91,51 @@
                       {{
                         ticket.tripDepartureDate | date: "dd-MM-yyyy HH:mm a"
                       }}
+                    </div>
+                  </div>
+                </td>
+                <td>
+                  <div class="d-flex align-items-center">
+                    <ng-container
+                      *ngIf="
+                        getTicketUserPictureUrl(ticket) as pictureUrl;
+                        else ticketUserInitial
+                      "
+                    >
+                      <div
+                        class="symbol symbol-circle symbol-50px overflow-hidden me-3"
+                      >
+                        <div class="symbol-label">
+                          <img
+                            [src]="pictureUrl"
+                            [alt]="getTicketUserName(ticket)"
+                            class="w-100"
+                          />
+                        </div>
+                      </div>
+                    </ng-container>
+                    <ng-template #ticketUserInitial>
+                      <div
+                        class="symbol symbol-circle symbol-50px overflow-hidden me-3"
+                      >
+                        <div
+                          class="symbol-label fs-3 bg-light-danger text-danger"
+                        >
+                          {{ getTicketUserInitial(ticket) }}
+                        </div>
+                      </div>
+                    </ng-template>
+
+                    <div class="d-flex flex-column">
+                      <span class="text-gray-800 mb-1">
+                        {{ getTicketUserName(ticket) }}
+                      </span>
+                      <span
+                        *ngIf="getTicketUserEmail(ticket) as email"
+                        class="text-muted"
+                      >
+                        {{ email }}
+                      </span>
                     </div>
                   </div>
                 </td>
@@ -159,6 +207,7 @@
 
                     <!-- Email -->
                     <button
+                      *ngIf="ticket?.status === 'CONFIRMED'"
                       (click)="sendEmail(ticket)"
                       [disabled]="emailSending[ticket.id]"
                       [ngbTooltip]="'TICKETS.ACTIONS.SEND_EMAIL' | translate"
@@ -262,7 +311,53 @@
           <h6 class="text-muted text-uppercase">
             {{ "TICKETS.LABEL.PASSENGER" | translate }}
           </h6>
-          <p class="mb-0">{{ ticket.passengerName || ticket.passengerId }}</p>
+          <div class="d-flex align-items-center">
+            <ng-container
+              *ngIf="
+                getTicketUserPictureUrl(ticket) as pictureUrl;
+                else ticketModalUserInitial
+              "
+            >
+              <div
+                class="symbol symbol-circle symbol-50px overflow-hidden me-3"
+              >
+                <div class="symbol-label">
+                  <img
+                    [src]="pictureUrl"
+                    [alt]="getTicketUserName(ticket)"
+                    class="w-100"
+                  />
+                </div>
+              </div>
+            </ng-container>
+            <ng-template #ticketModalUserInitial>
+              <div
+                class="symbol symbol-circle symbol-50px overflow-hidden me-3"
+              >
+                <div class="symbol-label fs-3 bg-light-danger text-danger">
+                  {{ getTicketUserInitial(ticket) }}
+                </div>
+              </div>
+            </ng-template>
+
+            <div class="d-flex flex-column">
+              <span class="mb-1 fw-semibold">{{
+                getTicketUserName(ticket)
+              }}</span>
+              <span
+                *ngIf="getTicketUserEmail(ticket) as email"
+                class="text-muted"
+              >
+                {{ email }}
+              </span>
+              <span
+                *ngIf="getTicketUserPhone(ticket) as phone"
+                class="text-muted small"
+              >
+                {{ phone }}
+              </span>
+            </div>
+          </div>
         </div>
         <div class="col-md-6">
           <h6 class="text-muted text-uppercase">

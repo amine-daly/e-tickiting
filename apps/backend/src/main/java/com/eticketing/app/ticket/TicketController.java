@@ -220,20 +220,32 @@ public class TicketController {
         payload.put("passengerId", ticket.getPassengerId());
         payload.put("appliedPrice", ticket.getAppliedPrice());
         payload.put("currency", ticket.getCurrency());
+        payload.put("lang", TicketLanguage.fromCode(ticket.getLang()).getCode());
         payload.put("status", ticket.getStatus());
         payload.put("idempotencyKey", ticket.getIdempotencyKey());
         payload.put("expiresAt", formatInstant(ticket.getExpiresAt()));
         payload.put("createdAt", formatInstant(ticket.getCreatedAt()));
         payload.put("confirmedAt", formatInstant(ticket.getConfirmedAt()));
         payload.put("cancelledAt", formatInstant(ticket.getCancelledAt()));
-        // Enrich with passenger name
+        Map<String, Object> userPayload = new LinkedHashMap<>();
+        userPayload.put("id", ticket.getPassengerId());
+        userPayload.put("name", null);
+        userPayload.put("email", null);
+        userPayload.put("picture", null);
+        userPayload.put("phone", null);
+
         if (ticket.getPassengerId() != null) {
             userRepository.findById(ticket.getPassengerId()).ifPresent(user -> {
                 String name = ((user.getFirstName() != null ? user.getFirstName() : "") + " "
                         + (user.getLastName() != null ? user.getLastName() : "")).trim();
-                payload.put("passengerName", name.isEmpty() ? null : name);
+                userPayload.put("name", name.isEmpty() ? null : name);
+                userPayload.put("email", user.getEmail());
+                userPayload.put("picture", user.getPicture());
+                userPayload.put("phone", user.getPhone());
             });
         }
+
+        payload.put("user", userPayload);
         if (trip != null) {
             payload.put("tripDepartureDate", formatInstant(trip.getDepartureDate()));
             payload.put("tripStatus", trip.getStatus());

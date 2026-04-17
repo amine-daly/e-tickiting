@@ -443,6 +443,7 @@
       "SEATS": "Seats",
       "AMOUNT": "Amount",
       "CREATED_AT": "Created at",
+      "CONFIRMED_AT": "Confirmed at",
       "TICKET_ID": "Ticket ID",
       "TRIP": "Trip",
       "EXPIRES": "Expires"

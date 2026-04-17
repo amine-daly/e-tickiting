@@ -62,6 +62,13 @@ public class BusType {
     @Builder.Default
     private MediaType media = new MediaType();
 
+    /**
+     * Visual seat-map layout. Null when no layout has been designed yet. When
+     * present, {@code totalSeats} is derived from the count of SEAT elements
+     * across both decks.
+     */
+    private LayoutTemplate layoutTemplate;
+
     @CreatedDate
     private Instant createdAt;
 

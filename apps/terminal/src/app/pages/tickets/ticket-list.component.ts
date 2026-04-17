@@ -175,7 +175,10 @@ export class TicketListComponent implements OnInit, OnDestroy {
     if (!ticket) return;
     const result = await this.alert.confirm(
       this.t('TICKETS.MESSAGES.EMAIL_CONFIRM_TITLE'),
-      this.t('TICKETS.MESSAGES.EMAIL_CONFIRM_TEXT'),
+      this.t('TICKETS.MESSAGES.EMAIL_CONFIRM_TEXT', {
+        email:
+          this.getTicketUserEmail(ticket) || this.getTicketUserName(ticket),
+      }),
       this.t('TICKETS.MESSAGES.EMAIL_CONFIRM_OK'),
       this.t('COMMON.BUTTON.CANCEL'),
     );
@@ -199,6 +202,44 @@ export class TicketListComponent implements OnInit, OnDestroy {
 
   trackTicket(_: number, ticket: Ticket): string {
     return ticket?.id;
+  }
+
+  getTicketUserName(ticket: Ticket): string {
+    return ticket.user?.name || ticket.user?.id || ticket.id;
+  }
+
+  getTicketUserEmail(ticket: Ticket): string | null {
+    return ticket.user?.email || null;
+  }
+
+  getTicketUserPhone(ticket: Ticket): string | null {
+    const countryCode = ticket.user?.phone?.countryCode;
+    const number = ticket.user?.phone?.number;
+
+    if (!countryCode && !number) {
+      return null;
+    }
+
+    if (!countryCode) {
+      return number || null;
+    }
+
+    return `+${countryCode} ${number || ''}`.trim();
+  }
+
+  getTicketUserPictureUrl(ticket: Ticket): string | null {
+    const baseUrl = ticket.user?.picture?.baseUrl;
+    const path = ticket.user?.picture?.path;
+
+    if (!baseUrl || !path) {
+      return null;
+    }
+
+    return `${baseUrl}/${path}`;
+  }
+
+  getTicketUserInitial(ticket: Ticket): string {
+    return this.getTicketUserName(ticket).charAt(0).toUpperCase();
   }
 
   ngOnDestroy(): void {

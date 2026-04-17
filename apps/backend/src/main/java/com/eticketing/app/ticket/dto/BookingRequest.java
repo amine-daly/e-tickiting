@@ -26,4 +26,6 @@ public class BookingRequest {
 
     @NotBlank
     private String idempotencyKey;
+
+    private String lang;
 }

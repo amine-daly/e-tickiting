@@ -23,6 +23,7 @@ public class BookingResponse {
     private String passengerId;
     private BigDecimal appliedPrice;
     private String currency;
+    private String lang;
     private TicketStatusEnum status;
     private String idempotencyKey;
     private Instant expiresAt;

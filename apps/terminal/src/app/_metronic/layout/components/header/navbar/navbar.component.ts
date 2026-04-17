@@ -28,11 +28,9 @@ import { UserType } from 'src/app/core/models/user-type';
     CommonModule,
     NgbDropdownModule,
     KeeniconComponent,
-    SearchResultInnerComponent,
-    NotificationsInnerComponent,
-    QuickLinksInnerComponent,
-    ThemeModeSwitcherComponent,
     UserInnerComponent,
+    NotificationsInnerComponent,
+    ThemeModeSwitcherComponent,
   ],
 })
 export class NavbarComponent implements OnInit, OnDestroy {

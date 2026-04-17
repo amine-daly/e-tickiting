@@ -5,6 +5,24 @@ export enum TicketStatus {
   CANCELLED = 'CANCELLED',
 }
 
+export interface TicketUserPhone {
+  countryCode?: string | null;
+  number?: string | null;
+}
+
+export interface TicketUserPicture {
+  baseUrl?: string | null;
+  path?: string | null;
+}
+
+export interface TicketUser {
+  id?: string | null;
+  name?: string | null;
+  email?: string | null;
+  picture?: TicketUserPicture | null;
+  phone?: TicketUserPhone | null;
+}
+
 export interface Ticket {
   id: string;
   tripId: string;
@@ -17,6 +35,7 @@ export interface Ticket {
   passengerId: string;
   appliedPrice: number;
   currency: string;
+  lang?: string | null;
   status: TicketStatus;
   idempotencyKey?: string | null;
   expiresAt?: string | null;
@@ -32,5 +51,5 @@ export interface Ticket {
   dropoffAddress?: string | null;
   tripDepartureDate?: string | null;
   tripStatus?: string | null;
-  passengerName?: string | null;
+  user?: TicketUser | null;
 }

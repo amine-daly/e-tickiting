@@ -140,6 +140,7 @@
             class="form-control form-control-solid"
             formControlName="departureDate"
             mwlFlatpickr
+            [minDate]="today"
             [altInput]="flatpickrDatetime.altInput"
             [altFormat]="flatpickrDatetime.altFormat"
             [enableTime]="flatpickrDatetime.enableTime"
@@ -367,6 +368,7 @@
                     class="form-control form-control-solid form-control-sm"
                     formControlName="arrivalTime"
                     mwlFlatpickr
+                    [minDate]="today"
                     [altInput]="flatpickrDatetime.altInput"
                     [altFormat]="flatpickrDatetime.altFormat"
                     [enableTime]="flatpickrDatetime.enableTime"
@@ -385,6 +387,7 @@
                     class="form-control form-control-solid form-control-sm"
                     formControlName="departureTime"
                     mwlFlatpickr
+                    [minDate]="today"
                     [altInput]="flatpickrDatetime.altInput"
                     [altFormat]="flatpickrDatetime.altFormat"
                     [enableTime]="flatpickrDatetime.enableTime"
@@ -731,6 +734,7 @@
                       class="form-control form-control-solid form-control-sm"
                       formControlName="scheduledDepartureTime"
                       mwlFlatpickr
+                      [minDate]="today"
                       [altInput]="flatpickrDatetime.altInput"
                       [altFormat]="flatpickrDatetime.altFormat"
                       [enableTime]="flatpickrDatetime.enableTime"
@@ -848,6 +852,7 @@
                       type="text"
                       class="form-control form-control-solid form-control-sm"
                       formControlName="scheduledArrivalTime"
+                      [minDate]="today"
                       mwlFlatpickr
                       [altInput]="flatpickrDatetime.altInput"
                       [altFormat]="flatpickrDatetime.altFormat"
@@ -1089,6 +1094,7 @@
                     class="form-control form-control-solid form-control-sm"
                     formControlName="validFrom"
                     mwlFlatpickr
+                    [minDate]="today"
                     [altInput]="flatpickrDatetime.altInput"
                     [altFormat]="flatpickrDatetime.altFormat"
                     [enableTime]="flatpickrDatetime.enableTime"
@@ -1106,6 +1112,7 @@
                     class="form-control form-control-solid form-control-sm"
                     formControlName="validUntil"
                     mwlFlatpickr
+                    [minDate]="today"
                     [altInput]="flatpickrDatetime.altInput"
                     [altFormat]="flatpickrDatetime.altFormat"
                     [enableTime]="flatpickrDatetime.enableTime"

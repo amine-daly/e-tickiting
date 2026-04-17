@@ -49,13 +49,14 @@ public class BookingService {
      * @param dropoffPointId where passenger alights
      * @param passengerId passenger identifier
      * @param idempotencyKey exactly-once key
+         * @param lang passenger UI language snapshot
      * @param companyId company from auth context
      * @param posId POS from auth context (nullable)
      * @return the created ticket
      */
     public TicketType createBooking(String tripId, String fromPlaceId, String toPlaceId,
             String pickupPointId, String dropoffPointId,
-            String passengerId, String idempotencyKey,
+             String passengerId, String idempotencyKey, String lang,
             String companyId, String posId) {
 
         // ── 0. Idempotency check ───────────────────────────────────────
@@ -116,6 +117,7 @@ public class BookingService {
             Instant now = Instant.now();
             Instant expiresAt = now.plusSeconds((long) trip.getSeatHoldMinutes() * 60);
             String ticketCurrency = resolveTicketCurrency(trip);
+            String ticketLanguage = TicketLanguage.fromCode(lang).getCode();
 
             TicketType ticket = TicketType.builder()
                     .tripId(tripId)
@@ -127,6 +129,7 @@ public class BookingService {
                     .passengerId(passengerId)
                     .appliedPrice(appliedPrice)
                     .currency(ticketCurrency)
+                    .lang(ticketLanguage)
                     .status(TicketStatusEnum.PENDING)
                     .idempotencyKey(idempotencyKey)
                     .expiresAt(expiresAt)

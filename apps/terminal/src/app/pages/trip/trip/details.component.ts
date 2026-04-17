@@ -25,6 +25,7 @@ import {
   NgLabelTemplateDirective,
   NgOptionTemplateDirective,
   NgSelectComponent,
+  NgSelectModule,
 } from '@ng-select/ng-select';
 import {
   FlatpickrDirective,
@@ -70,6 +71,7 @@ interface SegmentDisplay {
     FlatpickrDirective,
     ToolbarComponent,
     NgSelectComponent,
+    NgSelectModule,
     NgLabelTemplateDirective,
     NgOptionTemplateDirective,
     TripPointLocationPickerComponent,
@@ -86,11 +88,12 @@ interface SegmentDisplay {
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class TripDetailsComponent implements OnInit, OnDestroy {
+  private initialValues: any;
   private destroy$ = new Subject<void>();
   private currencyService = inject(CurrencyService);
-  private initialValues: any;
   private tripPlacesMap = new Map<string, string>();
 
+  today = new Date();
   tripForm: FormGroup;
   currentStep = 0;
   isSubmitting = false;
@@ -104,6 +107,9 @@ export class TripDetailsComponent implements OnInit, OnDestroy {
 
   /** Derived segment display info (for labels in step 3 & 5) */
   segmentDisplays: SegmentDisplay[] = [];
+
+  /** Cached options for segment-index multi-select (stable reference for ng-select) */
+  segmentIndexOptions: { value: number; label: string }[] = [];
 
   /** Timeline validation errors (populated when leaving step 1) */
   timelineErrors: string[] = [];
@@ -455,6 +461,7 @@ export class TripDetailsComponent implements OnInit, OnDestroy {
           }),
         );
       });
+    this.rebuildSegmentIndexOptions();
 
     // Step 3 — Pickup points
     this.pickupPoints.clear();
@@ -1058,12 +1065,12 @@ export class TripDetailsComponent implements OnInit, OnDestroy {
         }),
       );
     }
+    this.rebuildSegmentIndexOptions();
     this.cdr.markForCheck();
   }
 
-  /** Options for segment-index multi-select in express fares step */
-  get segmentIndexOptions(): { value: number; label: string }[] {
-    return this.segmentDisplays.map((d) => ({
+  private rebuildSegmentIndexOptions(): void {
+    this.segmentIndexOptions = this.segmentDisplays.map((d) => ({
       value: d.index,
       label: `${d.fromPlaceName} → ${d.toPlaceName}`,
     }));
@@ -1134,6 +1141,36 @@ export class TripDetailsComponent implements OnInit, OnDestroy {
   removeExpressFare(index: number): void {
     this.expressFares.removeAt(index);
     this.cdr.markForCheck();
+  }
+
+  getSegmentOptionLabel(
+    item: { value?: number; label?: string } | number | null | undefined,
+  ): string {
+    if (typeof item === 'object' && item?.label) {
+      return item.label;
+    }
+
+    const segmentIndex = this.resolveSegmentOptionValue(item);
+    if (segmentIndex == null) {
+      return '';
+    }
+
+    const segment = this.segmentDisplays[segmentIndex];
+    return segment ? `${segment.fromPlaceName} → ${segment.toPlaceName}` : '';
+  }
+
+  private resolveSegmentOptionValue(
+    item: { value?: number } | number | null | undefined,
+  ): number | null {
+    if (typeof item === 'number') {
+      return item;
+    }
+
+    if (typeof item?.value === 'number') {
+      return item.value;
+    }
+
+    return null;
   }
 
   // ══════════════════════════════════════════════════

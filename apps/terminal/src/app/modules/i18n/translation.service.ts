@@ -22,29 +22,18 @@ export class TranslationService {
 
   constructor(
     public translate: TranslateService,
-    private cookieService: CookieService,
-    @Inject(PLATFORM_ID) private platformId: Object
+    @Inject(PLATFORM_ID) private platformId: Object,
   ) {
     if (isPlatformBrowser(this.platformId)) {
-      let browserLang: any;
-
-      const allowedLanguages = ['fr-fr', 'ar-tn', 'en-gb', 'de'];
+      const allowedLanguages = ['fr-fr', 'ar-sa', 'en-gb', 'de'];
       this.translate.addLangs(allowedLanguages);
-
-      if (this.cookieService.check('lang')) {
-        browserLang = this.cookieService.get('lang');
-      } else {
-        browserLang = translate.getBrowserLang();
-      }
-
-      this.setLanguage(
-        allowedLanguages.includes(browserLang) ? browserLang : 'fr-fr'
-      );
+      const lang = localStorage.getItem('lang');
+      this.setLanguage(allowedLanguages.includes(lang) ? lang : 'fr-fr');
     }
   }
 
   setLanguage(lang: string) {
     this.translate.use(lang);
-    this.cookieService.set('lang', lang);
+    localStorage.setItem('lang', lang);
   }
 }

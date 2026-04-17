@@ -11,7 +11,10 @@ export interface BookingRequest {
   dropoffPointId: string;
   passengerId: string;
   idempotencyKey: string;
+  lang?: BookingLang;
 }
+
+export type BookingLang = 'fr-fr' | 'en-gb' | 'ar-sa';
 
 export interface BookingResponse {
   id: string;
@@ -25,6 +28,7 @@ export interface BookingResponse {
   passengerId: string;
   appliedPrice: number;
   currency: string;
+  lang: BookingLang;
   status: string;
   idempotencyKey: string;
   expiresAt: string;
@@ -49,7 +53,22 @@ export class BookingService {
   constructor(private http: HttpClient) {}
 
   createBooking(request: BookingRequest): Observable<BookingResponse> {
-    return this.http.post<BookingResponse>(this.bookingUrl, request);
+    return this.http.post<BookingResponse>(this.bookingUrl, {
+      ...request,
+      lang: this.resolveBookingLang(request.lang),
+    });
+  }
+
+  private resolveBookingLang(lang?: string | null): BookingLang {
+    const browserLang = lang ?? (typeof localStorage !== 'undefined' ? localStorage.getItem('lang') : null);
+    switch (browserLang) {
+      case 'en-gb':
+      case 'ar-sa':
+      case 'fr-fr':
+        return browserLang;
+      default:
+        return 'fr-fr';
+    }
   }
 
   confirmBooking(ticketId: string): Observable<BookingResponse> {

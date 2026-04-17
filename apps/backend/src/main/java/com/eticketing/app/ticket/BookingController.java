@@ -47,6 +47,7 @@ public class BookingController {
                 req.getDropoffPointId(),
                 req.getPassengerId(),
                 req.getIdempotencyKey(),
+            req.getLang(),
                 companyId,
                 posId);
 
@@ -130,6 +131,7 @@ public class BookingController {
                 .passengerId(ticket.getPassengerId())
                 .appliedPrice(ticket.getAppliedPrice())
                 .currency(ticket.getCurrency())
+                .lang(ticket.getLang())
                 .status(ticket.getStatus())
                 .idempotencyKey(ticket.getIdempotencyKey())
                 .expiresAt(ticket.getExpiresAt())

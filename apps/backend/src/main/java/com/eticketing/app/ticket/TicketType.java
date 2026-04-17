@@ -66,6 +66,12 @@ public class TicketType {
      */
     private String currency;
 
+    /**
+     * Snapshot of the passenger UI language at booking time.
+     */
+    @Builder.Default
+    private String lang = TicketLanguage.FR_FR.getCode();
+
     @Builder.Default
     private TicketStatusEnum status = TicketStatusEnum.PENDING;
 

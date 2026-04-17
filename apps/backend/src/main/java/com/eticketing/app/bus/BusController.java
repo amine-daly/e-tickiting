@@ -8,6 +8,7 @@ import com.eticketing.app.web.PaginateResponseType;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
@@ -63,11 +64,33 @@ public class BusController {
 
     }
 
+    public record LayoutElementReq(
+            @NotNull LayoutElementType type,
+            String seatNo,
+            @Min(1) int gridX,
+            @Min(1) int gridY
+            ) {
+
+    }
+
+    public record LayoutTemplateReq(
+            @Min(3)
+            @Max(7) int gridColumns,
+            @Min(5)
+            @Max(20) int gridRows,
+            boolean hasDecks,
+            @NotNull List<@Valid LayoutElementReq> lowerDeck,
+            List<@Valid LayoutElementReq> upperDeck
+            ) {
+
+    }
+
     public record BusUpdateReq(
             String name,
             @Min(1) Integer totalSeats,
             List<AmenityEnum> amenities,
-            MediaReq media
+            MediaReq media,
+            @Valid LayoutTemplateReq layoutTemplate
             ) {
 
     }
@@ -94,6 +117,42 @@ public class BusController {
         }
     }
 
+    public record LayoutElementRes(String type, String seatNo, int gridX, int gridY) {
+
+        static LayoutElementRes from(LayoutElement e) {
+            return new LayoutElementRes(
+                    e.getType().name(),
+                    e.getSeatNo(),
+                    e.getGridX(),
+                    e.getGridY()
+            );
+        }
+    }
+
+    public record LayoutTemplateRes(
+            int gridColumns,
+            int gridRows,
+            boolean hasDecks,
+            List<LayoutElementRes> lowerDeck,
+            List<LayoutElementRes> upperDeck
+            ) {
+
+        static LayoutTemplateRes from(LayoutTemplate lt) {
+            if (lt == null) {
+                return null;
+            }
+            return new LayoutTemplateRes(
+                    lt.getGridColumns(),
+                    lt.getGridRows(),
+                    lt.isHasDecks(),
+                    lt.getLowerDeck() == null ? List.of()
+                    : lt.getLowerDeck().stream().map(LayoutElementRes::from).toList(),
+                    lt.getUpperDeck() == null ? List.of()
+                    : lt.getUpperDeck().stream().map(LayoutElementRes::from).toList()
+            );
+        }
+    }
+
     public record BusRes(
             String id,
             String name,
@@ -101,6 +160,7 @@ public class BusController {
             int totalSeats,
             List<AmenityEnum> amenities,
             MediaRes media,
+            LayoutTemplateRes layoutTemplate,
             Instant createdAt,
             Instant updatedAt
             ) {
@@ -113,6 +173,7 @@ public class BusController {
                     bus.getTotalSeats(),
                     bus.getAmenities(),
                     MediaRes.from(bus.getMedia()),
+                    LayoutTemplateRes.from(bus.getLayoutTemplate()),
                     bus.getCreatedAt(),
                     bus.getUpdatedAt()
             );
