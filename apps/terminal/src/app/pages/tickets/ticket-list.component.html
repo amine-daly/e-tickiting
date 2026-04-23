@@ -40,223 +40,430 @@
         <div>{{ "TICKETS.LOADING" | translate }}</div>
       </div>
 
-      <ng-container *ngIf="!(loading$ | async) && (tickets$ | async)?.length">
-        <div class="table-responsive">
-          <table
-            class="table table-row-dashed table-row-gray-300 align-middle gs-0 gy-4"
-          >
-            <thead>
-              <tr class="fw-bolder text-muted">
-                <th class="min-w-120px">
-                  {{ "TICKETS.LABEL.TRIP" | translate }}
-                </th>
-                <th class="min-w-200px">
-                  {{ "TICKETS.LABEL.PASSENGER" | translate }}
-                </th>
-                <th class="min-w-100px">
-                  {{ "COMMON.LABEL.STATUS" | translate }}
-                </th>
-                <th class="min-w-120px">
-                  {{ "TICKETS.LABEL.AMOUNT" | translate }}
-                </th>
-                <th class="min-w-120px">
-                  {{ "TICKETS.LABEL.EXPIRES" | translate }}
-                </th>
-                <th class="min-w-150px">
-                  {{ "TICKETS.LABEL.CREATED_AT" | translate }}
-                </th>
-                <th class="min-w-150px text-end">
-                  {{ "COMMON.LABEL.ACTIONS" | translate }}
-                </th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr *ngFor="let ticket of tickets$ | async; trackBy: trackTicket">
-                <td>
-                  <div class="fw-semibold text-dark" style="max-width: 180px">
-                    <span *ngIf="ticket?.originCity && ticket?.destinationCity">
-                      {{ ticket.originCity }} → {{ ticket.destinationCity }}
-                    </span>
-                    <span
-                      *ngIf="!ticket?.originCity || !ticket?.destinationCity"
-                      class="text-truncate d-inline-block"
-                      style="max-width: 140px"
-                    >
-                      {{ ticket?.tripId }}
-                    </span>
-                    <div
-                      *ngIf="ticket?.tripDepartureDate"
-                      class="text-muted small"
-                    >
-                      {{
-                        ticket.tripDepartureDate | date: "dd-MM-yyyy HH:mm a"
-                      }}
-                    </div>
-                  </div>
-                </td>
-                <td>
-                  <div class="d-flex align-items-center">
-                    <ng-container
-                      *ngIf="
-                        getTicketUserPictureUrl(ticket) as pictureUrl;
-                        else ticketUserInitial
-                      "
-                    >
+      <ng-container *ngIf="displayRows$ | async as rows">
+        <ng-container *ngIf="!(loading$ | async) && rows.length">
+          <div class="table-responsive">
+            <table
+              class="table table-row-dashed table-row-gray-300 align-middle gs-0 gy-4"
+            >
+              <thead>
+                <tr class="fw-bolder text-muted">
+                  <th class="min-w-120px">
+                    {{ "TICKETS.LABEL.TRIP" | translate }}
+                  </th>
+                  <th class="min-w-200px">
+                    {{ "TICKETS.LABEL.PASSENGER" | translate }}
+                  </th>
+                  <th class="min-w-100px">
+                    {{ "COMMON.LABEL.STATUS" | translate }}
+                  </th>
+                  <th class="min-w-120px">
+                    {{ "TICKETS.LABEL.AMOUNT" | translate }}
+                  </th>
+                  <th class="min-w-120px">
+                    {{ "TICKETS.LABEL.EXPIRES" | translate }}
+                  </th>
+                  <th class="min-w-150px">
+                    {{ "TICKETS.LABEL.CREATED_AT" | translate }}
+                  </th>
+                  <th class="min-w-150px text-end">
+                    {{ "COMMON.LABEL.ACTIONS" | translate }}
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                <ng-container
+                  *ngFor="let row of rows; trackBy: trackDisplayRow"
+                >
+                  <!-- ── Standalone Ticket Row ── -->
+                  <tr *ngIf="row.type === 'ticket'">
+                    <td>
                       <div
-                        class="symbol symbol-circle symbol-50px overflow-hidden me-3"
+                        class="fw-semibold text-dark"
+                        style="max-width: 180px"
                       >
-                        <div class="symbol-label">
-                          <img
-                            [src]="pictureUrl"
-                            [alt]="getTicketUserName(ticket)"
-                            class="w-100"
-                          />
-                        </div>
-                      </div>
-                    </ng-container>
-                    <ng-template #ticketUserInitial>
-                      <div
-                        class="symbol symbol-circle symbol-50px overflow-hidden me-3"
-                      >
-                        <div
-                          class="symbol-label fs-3 bg-light-danger text-danger"
+                        <span
+                          *ngIf="
+                            row.ticket?.originCity &&
+                            row.ticket?.destinationCity
+                          "
                         >
-                          {{ getTicketUserInitial(ticket) }}
+                          {{ row.ticket!.originCity }} →
+                          {{ row.ticket!.destinationCity }}
+                        </span>
+                        <span
+                          *ngIf="
+                            !row.ticket?.originCity ||
+                            !row.ticket?.destinationCity
+                          "
+                          class="text-truncate d-inline-block"
+                          style="max-width: 140px"
+                        >
+                          {{ row.ticket?.tripId }}
+                        </span>
+                        <div
+                          *ngIf="row.ticket?.tripDepartureDate"
+                          class="text-muted small"
+                        >
+                          {{
+                            row.ticket!.tripDepartureDate
+                              | date: "dd-MM-yyyy HH:mm a"
+                          }}
                         </div>
                       </div>
-                    </ng-template>
-
-                    <div class="d-flex flex-column">
-                      <span class="text-gray-800 mb-1">
-                        {{ getTicketUserName(ticket) }}
-                      </span>
+                    </td>
+                    <td>
+                      <div class="d-flex align-items-center">
+                        <ng-container
+                          *ngIf="
+                            getTicketUserPictureUrl(row.ticket!) as pictureUrl;
+                            else singleTicketInitial
+                          "
+                        >
+                          <div
+                            class="symbol symbol-circle symbol-50px overflow-hidden me-3"
+                          >
+                            <div class="symbol-label">
+                              <img
+                                [src]="pictureUrl"
+                                [alt]="getTicketUserName(row.ticket!)"
+                                class="w-100"
+                              />
+                            </div>
+                          </div>
+                        </ng-container>
+                        <ng-template #singleTicketInitial>
+                          <div
+                            class="symbol symbol-circle symbol-50px overflow-hidden me-3"
+                          >
+                            <div
+                              class="symbol-label fs-3 bg-light-danger text-danger"
+                            >
+                              {{ getTicketUserInitial(row.ticket!) }}
+                            </div>
+                          </div>
+                        </ng-template>
+                        <div class="d-flex flex-column">
+                          <span class="text-gray-800 mb-1">{{
+                            getTicketUserName(row.ticket!)
+                          }}</span>
+                          <span
+                            *ngIf="getTicketUserEmail(row.ticket!) as email"
+                            class="text-muted"
+                            >{{ email }}</span
+                          >
+                        </div>
+                      </div>
+                    </td>
+                    <td>
                       <span
-                        *ngIf="getTicketUserEmail(ticket) as email"
+                        class="badge"
+                        [ngClass]="
+                          badgeClass[row.ticket!.status] ||
+                          'badge-light-secondary'
+                        "
+                      >
+                        {{
+                          statusLabelMap[row.ticket!.status] ||
+                            row.ticket!.status | translate
+                        }}
+                      </span>
+                    </td>
+                    <td>
+                      <div class="fw-semibold">
+                        {{ row.ticket!.appliedPrice || 0 | number: "1.2-2" }}
+                        {{ row.ticket!.currency || "" }}
+                      </div>
+                    </td>
+                    <td>
+                      <span *ngIf="row.ticket?.expiresAt">{{
+                        row.ticket!.expiresAt | date: "dd-MM-yyyy HH:mm a"
+                      }}</span>
+                      <span *ngIf="!row.ticket?.expiresAt" class="text-muted"
+                        >—</span
+                      >
+                    </td>
+                    <td>
+                      {{ row.ticket?.createdAt | date: "dd-MM-yyyy HH:mm a" }}
+                    </td>
+                    <td class="text-end">
+                      <div class="d-inline-flex align-items-center">
+                        <button
+                          *ngIf="row.ticket!.status === 'PENDING'"
+                          (click)="confirmTicket(row.ticket!)"
+                          [disabled]="statusUpdating[row.ticket!.id]"
+                          [ngbTooltip]="'TICKETS.ACTIONS.CONFIRM' | translate"
+                          class="btn btn-icon btn-active-light-success w-30px h-30px me-2"
+                        >
+                          <span
+                            *ngIf="statusUpdating[row.ticket!.id]"
+                            class="spinner-border spinner-border-sm"
+                          ></span>
+                          <i
+                            *ngIf="!statusUpdating[row.ticket!.id]"
+                            class="ki-duotone ki-check fs-2"
+                            ><span class="path1"></span
+                            ><span class="path2"></span
+                          ></i>
+                        </button>
+                        <button
+                          *ngIf="
+                            row.ticket!.status === 'PENDING' ||
+                            row.ticket!.status === 'CONFIRMED'
+                          "
+                          (click)="cancelTicket(row.ticket!)"
+                          [disabled]="statusUpdating[row.ticket!.id]"
+                          [ngbTooltip]="'TICKETS.ACTIONS.CANCEL' | translate"
+                          class="btn btn-icon btn-active-light-danger w-30px h-30px me-2"
+                        >
+                          <i class="ki-duotone ki-cross fs-2"
+                            ><span class="path1"></span
+                            ><span class="path2"></span
+                          ></i>
+                        </button>
+                        <button
+                          *ngIf="row.ticket!.status === 'CONFIRMED'"
+                          (click)="sendEmail(row.ticket!)"
+                          [disabled]="emailSending[row.ticket!.id]"
+                          [ngbTooltip]="
+                            'TICKETS.ACTIONS.SEND_EMAIL' | translate
+                          "
+                          class="btn btn-icon btn-active-light-warning w-30px h-30px me-2"
+                        >
+                          <span
+                            *ngIf="emailSending[row.ticket!.id]"
+                            class="spinner-border spinner-border-sm"
+                          ></span>
+                          <i
+                            *ngIf="!emailSending[row.ticket!.id]"
+                            class="ki-duotone ki-sms fs-2"
+                            ><span class="path1"></span
+                            ><span class="path2"></span
+                          ></i>
+                        </button>
+                        <button
+                          class="btn btn-icon btn-active-light-primary w-30px h-30px"
+                          (click)="openTicketModal(ticketDetails, row.ticket!)"
+                          [ngbTooltip]="
+                            'TICKETS.ACTIONS.VIEW_DETAILS' | translate
+                          "
+                        >
+                          <i class="ki-duotone ki-information fs-2"
+                            ><span class="path1"></span
+                            ><span class="path2"></span
+                          ></i>
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+
+                  <!-- ── Order Row (group booking) ── -->
+                  <tr *ngIf="row.type === 'order'" class="table-light">
+                    <td>
+                      <div
+                        class="fw-semibold text-dark"
+                        style="max-width: 180px"
+                      >
+                        <span
+                          *ngIf="
+                            row.contactTicket?.originCity &&
+                            row.contactTicket?.destinationCity
+                          "
+                        >
+                          {{ row.contactTicket!.originCity }} →
+                          {{ row.contactTicket!.destinationCity }}
+                        </span>
+                        <span
+                          *ngIf="
+                            !row.contactTicket?.originCity ||
+                            !row.contactTicket?.destinationCity
+                          "
+                          class="text-truncate d-inline-block"
+                          style="max-width: 140px"
+                        >
+                          {{ row.contactTicket?.tripId }}
+                        </span>
+                        <div
+                          *ngIf="row.contactTicket?.tripDepartureDate"
+                          class="text-muted small"
+                        >
+                          {{
+                            row.contactTicket!.tripDepartureDate
+                              | date: "dd-MM-yyyy HH:mm a"
+                          }}
+                        </div>
+                      </div>
+                    </td>
+                    <td>
+                      <div class="d-flex align-items-center">
+                        <div
+                          class="symbol symbol-circle symbol-50px overflow-hidden me-3"
+                        >
+                          <div
+                            class="symbol-label fs-3 bg-light-primary text-primary"
+                          >
+                            <i class="ki-duotone ki-people fs-2"
+                              ><span class="path1"></span
+                              ><span class="path2"></span
+                              ><span class="path3"></span
+                              ><span class="path4"></span
+                              ><span class="path5"></span
+                            ></i>
+                          </div>
+                        </div>
+                        <div class="d-flex flex-column">
+                          <span class="text-gray-800 mb-1 fw-semibold">
+                            {{ getTicketUserName(row.contactTicket!) }}
+                          </span>
+                          <span class="text-muted small">
+                            {{ row.passengerCount }}
+                            {{ "TICKETS.LABEL.PASSENGERS" | translate }}
+                            <span
+                              class="badge badge-light-info badge-sm ms-1"
+                              >{{ "TICKETS.LABEL.GROUP" | translate }}</span
+                            >
+                          </span>
+                        </div>
+                      </div>
+                    </td>
+                    <td>
+                      <span
+                        class="badge"
+                        [ngClass]="
+                          badgeClass[row.status!] || 'badge-light-secondary'
+                        "
+                      >
+                        {{
+                          statusLabelMap[row.status!] || row.status | translate
+                        }}
+                      </span>
+                    </td>
+                    <td>
+                      <div class="fw-semibold">
+                        {{ row.totalPrice || 0 | number: "1.2-2" }}
+                        {{ row.currency || "" }}
+                      </div>
+                    </td>
+                    <td>
+                      <span *ngIf="row.contactTicket?.expiresAt">{{
+                        row.contactTicket!.expiresAt
+                          | date: "dd-MM-yyyy HH:mm a"
+                      }}</span>
+                      <span
+                        *ngIf="!row.contactTicket?.expiresAt"
                         class="text-muted"
+                        >—</span
                       >
-                        {{ email }}
-                      </span>
-                    </div>
-                  </div>
-                </td>
-                <td>
-                  <span
-                    class="badge"
-                    [ngClass]="
-                      badgeClass[ticket?.status] || 'badge-light-secondary'
-                    "
-                  >
-                    {{
-                      statusLabelMap[ticket?.status] || ticket?.status
-                        | translate
-                    }}
-                  </span>
-                </td>
-                <td>
-                  <div class="fw-semibold">
-                    {{ ticket?.appliedPrice || 0 | number: "1.2-2" }}
-                    {{ ticket?.currency || "" }}
-                  </div>
-                </td>
-                <td>
-                  <span *ngIf="ticket?.expiresAt">{{
-                    ticket.expiresAt | date: "dd-MM-yyyy HH:mm a"
-                  }}</span>
-                  <span *ngIf="!ticket?.expiresAt" class="text-muted">—</span>
-                </td>
-                <td>
-                  {{ ticket?.createdAt | date: "dd-MM-yyyy HH:mm a" }}
-                </td>
-                <td class="text-end">
-                  <div class="d-inline-flex align-items-center">
-                    <!-- Confirm -->
-                    <button
-                      *ngIf="ticket.status === 'PENDING'"
-                      (click)="confirmTicket(ticket)"
-                      [disabled]="statusUpdating[ticket.id]"
-                      [ngbTooltip]="'TICKETS.ACTIONS.CONFIRM' | translate"
-                      class="btn btn-icon btn-active-light-success w-30px h-30px me-2"
-                    >
-                      <span
-                        *ngIf="statusUpdating[ticket.id]"
-                        class="spinner-border spinner-border-sm"
-                      ></span>
-                      <i
-                        *ngIf="!statusUpdating[ticket.id]"
-                        class="ki-duotone ki-check fs-2"
-                      >
-                        <span class="path1"></span><span class="path2"></span>
-                      </i>
-                    </button>
+                    </td>
+                    <td>
+                      {{
+                        row.contactTicket?.createdAt
+                          | date: "dd-MM-yyyy HH:mm a"
+                      }}
+                    </td>
+                    <td class="text-end">
+                      <div class="d-inline-flex align-items-center">
+                        <button
+                          *ngIf="row.status === 'PENDING'"
+                          (click)="confirmOrder(row)"
+                          [disabled]="statusUpdating[row.orderId!]"
+                          [ngbTooltip]="
+                            'TICKETS.ACTIONS.CONFIRM_ORDER' | translate
+                          "
+                          class="btn btn-icon btn-active-light-success w-30px h-30px me-2"
+                        >
+                          <span
+                            *ngIf="statusUpdating[row.orderId!]"
+                            class="spinner-border spinner-border-sm"
+                          ></span>
+                          <i
+                            *ngIf="!statusUpdating[row.orderId!]"
+                            class="ki-duotone ki-check fs-2"
+                            ><span class="path1"></span
+                            ><span class="path2"></span
+                          ></i>
+                        </button>
+                        <button
+                          *ngIf="
+                            row.status === 'PENDING' ||
+                            row.status === 'CONFIRMED'
+                          "
+                          (click)="cancelOrder(row)"
+                          [disabled]="statusUpdating[row.orderId!]"
+                          [ngbTooltip]="
+                            'TICKETS.ACTIONS.CANCEL_ORDER' | translate
+                          "
+                          class="btn btn-icon btn-active-light-danger w-30px h-30px me-2"
+                        >
+                          <i class="ki-duotone ki-cross fs-2"
+                            ><span class="path1"></span
+                            ><span class="path2"></span
+                          ></i>
+                        </button>
+                        <button
+                          *ngIf="row.status === 'CONFIRMED'"
+                          (click)="sendOrderEmail(row)"
+                          [disabled]="emailSending[row.orderId!]"
+                          [ngbTooltip]="
+                            'TICKETS.ACTIONS.SEND_ORDER_EMAIL' | translate
+                          "
+                          class="btn btn-icon btn-active-light-warning w-30px h-30px me-2"
+                        >
+                          <span
+                            *ngIf="emailSending[row.orderId!]"
+                            class="spinner-border spinner-border-sm"
+                          ></span>
+                          <i
+                            *ngIf="!emailSending[row.orderId!]"
+                            class="ki-duotone ki-sms fs-2"
+                            ><span class="path1"></span
+                            ><span class="path2"></span
+                          ></i>
+                        </button>
+                        <button
+                          class="btn btn-icon btn-active-light-primary w-30px h-30px"
+                          (click)="
+                            openTicketModal(
+                              ticketDetails,
+                              row.contactTicket!,
+                              row.tickets
+                            )
+                          "
+                          [ngbTooltip]="
+                            'TICKETS.ACTIONS.VIEW_DETAILS' | translate
+                          "
+                        >
+                          <i class="ki-duotone ki-information fs-2"
+                            ><span class="path1"></span
+                            ><span class="path2"></span
+                          ></i>
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                </ng-container>
+              </tbody>
+            </table>
+          </div>
 
-                    <!-- Cancel -->
-                    <button
-                      *ngIf="
-                        ticket.status === 'PENDING' ||
-                        ticket.status === 'CONFIRMED'
-                      "
-                      (click)="cancelTicket(ticket)"
-                      [disabled]="statusUpdating[ticket.id]"
-                      [ngbTooltip]="'TICKETS.ACTIONS.CANCEL' | translate"
-                      class="btn btn-icon btn-active-light-danger w-30px h-30px me-2"
-                    >
-                      <i class="ki-duotone ki-cross fs-2">
-                        <span class="path1"></span><span class="path2"></span>
-                      </i>
-                    </button>
+          <!-- Pagination -->
+          <app-pagination
+            *ngIf="pagination$ | async as pag"
+            [total]="pag.count"
+            [pageSize]="pageSize"
+            [page]="page"
+            (pageChange)="loadTickets($event)"
+          >
+          </app-pagination>
+        </ng-container>
 
-                    <!-- Email -->
-                    <button
-                      *ngIf="ticket?.status === 'CONFIRMED'"
-                      (click)="sendEmail(ticket)"
-                      [disabled]="emailSending[ticket.id]"
-                      [ngbTooltip]="'TICKETS.ACTIONS.SEND_EMAIL' | translate"
-                      class="btn btn-icon btn-active-light-warning w-30px h-30px me-2"
-                    >
-                      <span
-                        *ngIf="emailSending[ticket.id]"
-                        class="spinner-border spinner-border-sm"
-                      ></span>
-                      <i
-                        *ngIf="!emailSending[ticket.id]"
-                        class="ki-duotone ki-sms fs-2"
-                        ><span class="path1"></span><span class="path2"></span
-                      ></i>
-                    </button>
-
-                    <!-- Details -->
-                    <button
-                      class="btn btn-icon btn-active-light-primary w-30px h-30px"
-                      (click)="openTicketModal(ticketDetails, ticket)"
-                      [ngbTooltip]="'TICKETS.ACTIONS.VIEW_DETAILS' | translate"
-                    >
-                      <i class="ki-duotone ki-information fs-2"
-                        ><span class="path1"></span><span class="path2"></span
-                      ></i>
-                    </button>
-                  </div>
-                </td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-
-        <!-- Pagination -->
-        <app-pagination
-          *ngIf="pagination$ | async as pag"
-          [total]="pag.count"
-          [pageSize]="pageSize"
-          [page]="page"
-          (pageChange)="loadTickets($event)"
+        <div
+          *ngIf="!(loading$ | async) && !rows.length"
+          class="alert alert-info mb-0"
         >
-        </app-pagination>
+          {{ "TICKETS.EMPTY" | translate }}
+        </div>
       </ng-container>
-      <div
-        *ngIf="!(loading$ | async) && !(tickets$ | async)?.length"
-        class="alert alert-info mb-0"
-      >
-        {{ "TICKETS.EMPTY" | translate }}
-      </div>
     </div>
   </div>
 
@@ -342,7 +549,7 @@
 
             <div class="d-flex flex-column">
               <span class="mb-1 fw-semibold">{{
-                getTicketUserName(ticket)
+                getTicketPassengerName(ticket)
               }}</span>
               <span
                 *ngIf="getTicketUserEmail(ticket) as email"
@@ -358,6 +565,14 @@
               </span>
             </div>
           </div>
+        </div>
+        <div class="col-md-6" *ngIf="selectedTickets.length === 1">
+          <h6 class="text-muted text-uppercase">
+            {{ "TICKETS.SELL.SEAT_LABEL" | translate }}
+          </h6>
+          <p class="mb-0 fw-semibold">
+            {{ ticket.seatNo || ("TICKETS.SELL.FREE_SEATING" | translate) }}
+          </p>
         </div>
         <div class="col-md-6">
           <h6 class="text-muted text-uppercase">
@@ -401,6 +616,73 @@
               — {{ ticket.dropoffAddress }}</span
             >
           </p>
+        </div>
+
+        <div class="col-12" *ngIf="selectedTickets.length > 1">
+          <h6 class="text-muted text-uppercase mb-3">
+            {{ "TICKETS.LABEL.PASSENGERS" | translate }}
+          </h6>
+          <div class="table-responsive">
+            <table class="table table-sm align-middle mb-0">
+              <thead class="table-light">
+                <tr>
+                  <th>#</th>
+                  <th>{{ "TICKETS.LABEL.PASSENGER" | translate }}</th>
+                  <th>{{ "TICKETS.SELL.SEAT_LABEL" | translate }}</th>
+                  <th class="text-end">
+                    {{ "COMMON.LABEL.ACTIONS" | translate }}
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr *ngFor="let passenger of selectedTickets; let i = index">
+                  <td>{{ i + 1 }}</td>
+                  <td>
+                    <div class="fw-semibold">
+                      {{ getTicketPassengerName(passenger) }}
+                    </div>
+                    <div class="text-muted small" *ngIf="passenger.user?.email">
+                      {{ passenger.user?.email }}
+                    </div>
+                  </td>
+                  <td>
+                    <span
+                      *ngIf="passenger.seatNo"
+                      class="badge badge-light-primary"
+                    >
+                      {{ passenger.seatNo }}
+                    </span>
+                    <span *ngIf="!passenger.seatNo" class="text-muted">
+                      {{ "TICKETS.SELL.FREE_SEATING" | translate }}
+                    </span>
+                  </td>
+                  <td class="text-end">
+                    <button
+                      *ngIf="canCancelPassenger(passenger)"
+                      type="button"
+                      class="btn btn-icon btn-active-light-danger w-30px h-30px"
+                      [disabled]="statusUpdating[passenger.id]"
+                      [ngbTooltip]="'TICKETS.ACTIONS.CANCEL_PASSENGER' | translate"
+                      (click)="cancelOrderPassenger(ticket.orderId!, passenger)"
+                    >
+                      <span
+                        *ngIf="statusUpdating[passenger.id]"
+                        class="spinner-border spinner-border-sm"
+                      ></span>
+                      <i
+                        *ngIf="!statusUpdating[passenger.id]"
+                        class="ki-duotone ki-cross fs-2"
+                        ><span class="path1"></span><span class="path2"></span
+                      ></i>
+                    </button>
+                    <span *ngIf="!canCancelPassenger(passenger)" class="text-muted"
+                      >—</span
+                    >
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
         </div>
       </div>
     </div>

@@ -212,29 +212,6 @@
           </div>
         </div>
         <!--end::Currency-->
-
-        <!--begin::Seat hold-->
-        <div class="mb-8">
-          <label class="form-label required">
-            {{ "TRIPS.FIELDS.SEAT_HOLD_MINUTES" | translate }}
-          </label>
-          <input
-            type="number"
-            class="form-control form-control-solid"
-            formControlName="seatHoldMinutes"
-            min="1"
-            [placeholder]="
-              'TRIPS.CREATE.BASIC.SEAT_HOLD_PLACEHOLDER' | translate
-            "
-          />
-          <div
-            *ngIf="isInvalid('seatHoldMinutes')"
-            class="text-danger small mt-1"
-          >
-            {{ "TRIPS.CREATE.ERRORS.SEAT_HOLD_REQUIRED" | translate }}
-          </div>
-        </div>
-        <!--end::Seat hold-->
       </div>
 
       <!-- ══════════════════════════════════════════
@@ -1189,14 +1166,6 @@
                   "TRIPS.CREATE.BASIC.CURRENCY" | translate
                 }}</span>
                 <span class="fw-semibold">{{ selectedCurrency?.name }}</span>
-              </div>
-              <div class="col-md-4 mb-2">
-                <span class="text-muted d-block small">{{
-                  "TRIPS.FIELDS.SEAT_HOLD_MINUTES" | translate
-                }}</span>
-                <span class="fw-semibold"
-                  >{{ tripForm.get("seatHoldMinutes")?.value }} min</span
-                >
               </div>
             </div>
           </div>

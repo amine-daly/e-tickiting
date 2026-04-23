@@ -93,7 +93,6 @@ export interface TripType {
   status: TripStatusEnum;
   bus: BusSummary;
   currency?: CurrencyType;
-  seatHoldMinutes: number;
   stopSchedule: StopType[];
   pickupPoints: PickupPointType[];
   dropoffPoints: DropoffPointType[];

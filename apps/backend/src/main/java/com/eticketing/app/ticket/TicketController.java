@@ -34,6 +34,8 @@ import com.eticketing.app.user.RoleEnum;
 import com.eticketing.app.user.UserType;
 import com.eticketing.app.user.UserTypeRepository;
 
+import org.springframework.data.domain.Page;
+
 /**
  * Legacy ticket query & management controller. Booking creation is handled by
  * {@link BookingController}.
@@ -58,6 +60,8 @@ public class TicketController {
     private TicketEmailService ticketEmailService;
     @Autowired
     private SeatReservationService seatReservationService;
+    @Autowired
+    private OrderRepository orderRepository;
 
     public static class SendTicketEmailRequest {
 
@@ -90,6 +94,50 @@ public class TicketController {
         String recipient = resolveRecipientEmail(requestedEmail, fallback);
         if (recipient == null || recipient.isBlank()) {
             return ResponseEntity.badRequest().body(Map.of("error", "No email available for ticket"));
+        }
+        boolean sent = ticketEmailService.sendTicket(document, recipient);
+        if (!sent) {
+            return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE)
+                    .body(Map.of("status", "email_not_sent"));
+        }
+        return ResponseEntity.ok(Map.of("status", "sent", "email", recipient));
+    }
+
+    // ── Order-level document & email ────────────────────────────────────
+    @GetMapping("/orders/{orderId}/document")
+    public ResponseEntity<?> getOrderDocument(@PathVariable String orderId, @AuthenticationPrincipal User principal) {
+        OrderType order = orderRepository.findById(orderId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Order not found"));
+        List<TicketType> tickets = ticketRepository.findByOrderId(orderId);
+        if (tickets.isEmpty()) {
+            return ResponseEntity.notFound().build();
+        }
+        if (!canViewTicket(tickets.get(0), principal)) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(Map.of("error", "Access denied"));
+        }
+        TicketDocumentView document = ticketDocumentService.buildOrderDocument(order, tickets);
+        return ResponseEntity.ok(document);
+    }
+
+    @PostMapping("/orders/{orderId}/send-email")
+    public ResponseEntity<?> sendOrderEmail(@PathVariable String orderId,
+            @AuthenticationPrincipal User principal,
+            @RequestBody(required = false) SendTicketEmailRequest payload) {
+        OrderType order = orderRepository.findById(orderId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Order not found"));
+        List<TicketType> tickets = ticketRepository.findByOrderId(orderId);
+        if (tickets.isEmpty()) {
+            return ResponseEntity.notFound().build();
+        }
+        if (!canViewTicket(tickets.get(0), principal)) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(Map.of("error", "Access denied"));
+        }
+        TicketDocumentView document = ticketDocumentService.buildOrderDocument(order, tickets);
+        String requestedEmail = payload != null ? payload.email : null;
+        String fallback = document.getPassengerEmail();
+        String recipient = resolveRecipientEmail(requestedEmail, fallback);
+        if (recipient == null || recipient.isBlank()) {
+            return ResponseEntity.badRequest().body(Map.of("error", "No email available for order contact"));
         }
         boolean sent = ticketEmailService.sendTicket(document, recipient);
         if (!sent) {
@@ -218,6 +266,10 @@ public class TicketController {
         payload.put("pickupPointId", ticket.getPickupPointId());
         payload.put("dropoffPointId", ticket.getDropoffPointId());
         payload.put("passengerId", ticket.getPassengerId());
+        payload.put("seatNo", ticket.getSeatNo());
+        payload.put("orderId", ticket.getOrderId());
+        payload.put("guestFirstName", ticket.getGuestFirstName());
+        payload.put("guestLastName", ticket.getGuestLastName());
         payload.put("appliedPrice", ticket.getAppliedPrice());
         payload.put("currency", ticket.getCurrency());
         payload.put("lang", TicketLanguage.fromCode(ticket.getLang()).getCode());
@@ -243,6 +295,11 @@ public class TicketController {
                 userPayload.put("picture", user.getPicture());
                 userPayload.put("phone", user.getPhone());
             });
+        } else if (ticket.getGuestFirstName() != null || ticket.getGuestLastName() != null) {
+            // Guest passenger — show name from ticket fields
+            String guestName = ((ticket.getGuestFirstName() != null ? ticket.getGuestFirstName() : "") + " "
+                    + (ticket.getGuestLastName() != null ? ticket.getGuestLastName() : "")).trim();
+            userPayload.put("name", guestName.isEmpty() ? null : guestName);
         }
 
         payload.put("user", userPayload);

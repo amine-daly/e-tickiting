@@ -16,8 +16,8 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Refund document — TRIP_SPEC section 9. Seats are released ONLY on APPROVED
- * transition.
+ * Refund document — TRIP_SPEC section 9. Seats can be released either during
+ * approval or earlier when a single order member is cancelled.
  */
 @Document("refunds")
 @Data
@@ -42,6 +42,11 @@ public class RefundType {
     @Indexed
     @Builder.Default
     private RefundStatusEnum status = RefundStatusEnum.REQUESTED;
+
+    @Builder.Default
+    private boolean seatReleased = false;
+
+    private Instant seatReleasedAt;
 
     @CreatedDate
     private Instant createdAt;

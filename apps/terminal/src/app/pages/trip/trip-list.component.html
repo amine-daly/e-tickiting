@@ -143,150 +143,196 @@
   <!-- Trip table -->
   <div *ngIf="(trips$ | async)?.length" class="card">
     <div class="card-body py-4">
-      <div class="table-responsive">
-        <table
-          class="table table-row-dashed table-row-gray-300 align-middle gs-0 gy-4"
-        >
-          <thead>
-            <tr class="fw-bolder text-muted">
-              <th class="min-w-150px">
-                {{ "TRIPS.FIELDS.DEPARTURE_DATE" | translate }}
-              </th>
-              <th class="min-w-200px">{{ "TRIPS.LABEL.ROUTE" | translate }}</th>
-              <th class="min-w-100px">
-                {{ "COMMON.LABEL.STATUS" | translate }}
-              </th>
-              <th class="min-w-100px">
-                {{ "TRIPS.SEGMENTS.TITLE" | translate }}
-              </th>
-              <th class="min-w-100px">{{ "TRIPS.FIELDS.BUS" | translate }}</th>
-              <th class="min-w-100px">
-                {{ "TRIPS.FIELDS.CURRENCY" | translate }}
-              </th>
-              <th class="min-w-120px text-end">
-                {{ "COMMON.LABEL.ACTIONS" | translate }}
-              </th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr *ngFor="let trip of trips$ | async">
-              <!-- Departure date -->
-              <td>
-                <div class="d-flex flex-column">
-                  <span class="fw-bold text-dark">{{
-                    trip.departureDate | date: "yyyy-MM-dd"
-                  }}</span>
-                  <span class="text-muted fs-7"
-                    >{{ trip.departureDate | date: "HH:mm" }} ({{
-                      trip.timezone
-                    }})</span
+      <ng-container *ngIf="tripRows$ | async as tripRows">
+        <div class="table-responsive">
+          <table
+            class="table table-row-dashed table-row-gray-300 align-middle gs-0 gy-4"
+          >
+            <thead>
+              <tr class="fw-bolder text-muted">
+                <th class="min-w-150px">
+                  {{ "TRIPS.FIELDS.DEPARTURE_DATE" | translate }}
+                </th>
+                <th class="min-w-200px">
+                  {{ "TRIPS.LABEL.ROUTE" | translate }}
+                </th>
+                <th class="min-w-100px">
+                  {{ "COMMON.LABEL.STATUS" | translate }}
+                </th>
+                <th class="min-w-100px">
+                  {{ "TRIPS.SEGMENTS.TITLE" | translate }}
+                </th>
+                <th class="min-w-160px text-center">
+                  {{ "COMMON.LABEL.OCCUPANCY" | translate }}
+                </th>
+                <th class="min-w-100px text-center">
+                  {{ "TRIPS.FIELDS.BUS" | translate }}
+                </th>
+                <th class="min-w-100px">
+                  {{ "TRIPS.FIELDS.CURRENCY" | translate }}
+                </th>
+                <th class="min-w-120px text-end">
+                  {{ "COMMON.LABEL.ACTIONS" | translate }}
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let row of tripRows; trackBy: trackByTripId">
+                <!-- Departure date -->
+                <td>
+                  <div class="d-flex flex-column">
+                    <span class="fw-bold text-dark">
+                      {{ row.trip.departureDate | date: "yyyy-MM-dd" }}
+                    </span>
+                    <span class="text-muted fs-7"
+                      >{{ row.trip.departureDate | date: "HH:mm" }} ({{
+                        row.trip.timezone
+                      }})</span
+                    >
+                  </div>
+                </td>
+
+                <!-- Route -->
+                <td>
+                  <span class="text-dark fw-bold text-hover-primary fs-6">
+                    {{ row.routePreview }}
+                  </span>
+                  <span class="text-muted fs-7 d-block"
+                    >{{ row.stopCount }}
+                    {{ "TRIPS.STOPS.TITLE" | translate | lowercase }}</span
                   >
-                </div>
-              </td>
+                </td>
 
-              <!-- Route -->
-              <td>
-                <span class="text-dark fw-bold text-hover-primary fs-6">{{
-                  routePreview(trip)
-                }}</span>
-                <span class="text-muted fs-7 d-block"
-                  >{{ trip.stopSchedule?.length || 0 }}
-                  {{ "TRIPS.STOPS.TITLE" | translate | lowercase }}</span
-                >
-              </td>
-
-              <!-- Status -->
-              <td>
-                <span class="badge" [ngClass]="statusBadgeClass[trip.status]">
-                  {{ statusLabelMap[trip.status] | translate }}
-                </span>
-              </td>
-
-              <!-- Segments count -->
-              <td>
-                <span class="fw-semibold">{{
-                  trip.segments?.length || 0
-                }}</span>
-              </td>
-
-              <!-- Bus -->
-              <td>
-                <span class="text-muted fs-7">{{ trip.bus?.name || "-" }}</span>
-              </td>
-
-              <!-- Currency -->
-              <td>
-                <span class="text-muted fs-7">{{
-                  trip.currency?.name || "-"
-                }}</span>
-              </td>
-
-              <!-- Actions -->
-              <td>
-                <div class="d-flex justify-content-end flex-shrink-0">
-                  <!-- Status transitions dropdown -->
-                  <ng-container
-                    *ngIf="getAvailableTransitions(trip) as transitions"
+                <!-- Status -->
+                <td>
+                  <span
+                    class="badge"
+                    [ngClass]="statusBadgeClass[row.trip.status]"
                   >
-                    <div ngbDropdown *ngIf="transitions.length" class="me-1">
-                      <button
-                        ngbDropdownToggle
-                        class="btn btn-icon btn-active-light-success btn-sm"
-                        [class.dropdown-toggle]="false"
-                        [disabled]="statusUpdating[trip.id]"
-                      >
-                        <span
-                          *ngIf="statusUpdating[trip.id]"
-                          class="spinner-border spinner-border-sm"
-                        ></span>
-                        <i
-                          *ngIf="!statusUpdating[trip.id]"
-                          class="ki-duotone ki-abstract-14 fs-4"
-                        >
-                          <span class="path1"></span><span class="path2"></span>
-                        </i>
-                      </button>
-                      <div ngbDropdownMenu>
-                        <button
-                          *ngFor="let t of transitions"
-                          type="button"
-                          ngbDropdownItem
-                          (click)="changeStatus(trip, t.status)"
-                        >
-                          {{ t.labelKey | translate }}
-                        </button>
-                      </div>
+                    {{ statusLabelMap[row.trip.status] | translate }}
+                  </span>
+                </td>
+
+                <!-- Segments count -->
+                <td>
+                  <span class="fw-semibold">
+                    {{ row.trip.segments?.length || 0 }}
+                  </span>
+                </td>
+
+                <!-- Occupancy -->
+                <td>
+                  <div class="trip-seat-occupancy">
+                    <div
+                      class="d-flex align-items-center justify-content-end mb-2"
+                    >
+                      <span class="fw-bold text-dark fs-7">
+                        {{ row.seatLoad.label }}
+                      </span>
                     </div>
-                  </ng-container>
 
-                  <!-- View / Edit -->
-                  <a
-                    [routerLink]="['/trips', trip.id]"
-                    class="btn btn-icon btn-active-light-primary btn-sm me-1"
-                    [ngbTooltip]="'TRIPS.EDIT' | translate"
-                  >
-                    <i class="ki-duotone ki-pencil fs-4"
-                      ><span class="path1"></span><span class="path2"></span
-                    ></i>
-                  </a>
+                    <div class="progress trip-seat-occupancy__bar bg-light">
+                      <div
+                        class="progress-bar rounded-pill"
+                        role="progressbar"
+                        [ngClass]="row.seatLoad.barClass"
+                        [style.width.%]="row.seatLoad.percentage"
+                        [attr.aria-valuenow]="row.seatLoad.bookedSeats"
+                        [attr.aria-valuemin]="0"
+                        [attr.aria-valuemax]="row.seatLoad.totalSeats || 0"
+                      ></div>
+                    </div>
 
-                  <!-- Delete -->
-                  <button
-                    *ngIf="canDelete(trip)"
-                    class="btn btn-icon btn-active-light-danger btn-sm"
-                    (click)="deleteTrip(trip)"
-                    [ngbTooltip]="'COMMON.BUTTON.DELETE' | translate"
-                  >
-                    <i class="ki-duotone ki-trash fs-4"
-                      ><span class="path1"></span><span class="path2"></span
-                    ></i>
-                  </button>
-                </div>
-              </td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
+                    <div class="d-flex justify-content-end mt-2">
+                      <span class="text-muted fs-8">
+                        {{ row.seatLoad.percentage }}%
+                      </span>
+                    </div>
+                  </div>
+                </td>
+
+                <!-- Bus -->
+                <td class="text-center">
+                  <span class="text-muted fs-7">
+                    {{ row.trip.bus?.name || "-" }}
+                  </span>
+                </td>
+
+                <!-- Currency -->
+                <td>
+                  <span class="text-muted fs-7">
+                    {{ row.trip.currency?.name || "-" }}
+                  </span>
+                </td>
+
+                <!-- Actions -->
+                <td>
+                  <div class="d-flex justify-content-end flex-shrink-0">
+                    <!-- Status transitions dropdown -->
+                    <ng-container
+                      *ngIf="getAvailableTransitions(row.trip) as transitions"
+                    >
+                      <div ngbDropdown *ngIf="transitions.length" class="me-1">
+                        <button
+                          ngbDropdownToggle
+                          class="btn btn-icon btn-active-light-success btn-sm"
+                          [class.dropdown-toggle]="false"
+                          [disabled]="statusUpdating[row.trip.id]"
+                        >
+                          <span
+                            *ngIf="statusUpdating[row.trip.id]"
+                            class="spinner-border spinner-border-sm"
+                          ></span>
+                          <i
+                            *ngIf="!statusUpdating[row.trip.id]"
+                            class="ki-duotone ki-abstract-14 fs-4"
+                          >
+                            <span class="path1"></span
+                            ><span class="path2"></span>
+                          </i>
+                        </button>
+                        <div ngbDropdownMenu>
+                          <button
+                            *ngFor="let t of transitions"
+                            type="button"
+                            ngbDropdownItem
+                            (click)="changeStatus(row.trip, t.status)"
+                          >
+                            {{ t.labelKey | translate }}
+                          </button>
+                        </div>
+                      </div>
+                    </ng-container>
+
+                    <!-- View / Edit -->
+                    <a
+                      [routerLink]="['/trips', row.trip.id]"
+                      class="btn btn-icon btn-active-light-primary btn-sm me-1"
+                      [ngbTooltip]="'TRIPS.EDIT' | translate"
+                    >
+                      <i class="ki-duotone ki-pencil fs-4"
+                        ><span class="path1"></span><span class="path2"></span
+                      ></i>
+                    </a>
+
+                    <!-- Delete -->
+                    <button
+                      *ngIf="canDelete(row.trip)"
+                      class="btn btn-icon btn-active-light-danger btn-sm"
+                      (click)="deleteTrip(row.trip)"
+                      [ngbTooltip]="'COMMON.BUTTON.DELETE' | translate"
+                    >
+                      <i class="ki-duotone ki-trash fs-4"
+                        ><span class="path1"></span><span class="path2"></span
+                      ></i>
+                    </button>
+                  </div>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </ng-container>
 
       <app-pagination
         *ngIf="(pagination$ | async)?.length"

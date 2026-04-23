@@ -315,7 +315,6 @@ export class TripDetailsComponent implements OnInit, OnDestroy {
       departureDate: [null, Validators.required],
       timezone: ['', Validators.required],
       currencyId: ['', Validators.required],
-      seatHoldMinutes: [15, [Validators.required, Validators.min(1)]],
       // Step 2 — Stops
       stopSchedule: this.fb.array([]),
       // Step 3 — Segments (auto-generated)
@@ -397,7 +396,6 @@ export class TripDetailsComponent implements OnInit, OnDestroy {
       departureDate: trip.departureDate || null,
       timezone: trip.timezone || '',
       currencyId: trip.currency?.id || '',
-      seatHoldMinutes: trip.seatHoldMinutes ?? 15,
     });
 
     // Track bus seats
@@ -624,7 +622,6 @@ export class TripDetailsComponent implements OnInit, OnDestroy {
           f.get('departureDate')!.valid &&
           f.get('timezone')!.valid &&
           f.get('currencyId')!.valid &&
-          f.get('seatHoldMinutes')!.valid &&
           !this.hasInsufficientBusCapacity
         );
       }
@@ -725,13 +722,9 @@ export class TripDetailsComponent implements OnInit, OnDestroy {
   private markCurrentStepTouched(): void {
     switch (this.currentStep) {
       case 0:
-        [
-          'busId',
-          'departureDate',
-          'timezone',
-          'currencyId',
-          'seatHoldMinutes',
-        ].forEach((name) => this.tripForm.get(name)?.markAsTouched());
+        ['busId', 'departureDate', 'timezone', 'currencyId'].forEach((name) =>
+          this.tripForm.get(name)?.markAsTouched(),
+        );
         break;
       case 1:
         this.stopSchedule.markAllAsTouched();
@@ -1222,7 +1215,6 @@ export class TripDetailsComponent implements OnInit, OnDestroy {
       departureDate: this.toISOString(raw.departureDate),
       timezone: raw.timezone,
       currencyId: raw.currencyId,
-      seatHoldMinutes: raw.seatHoldMinutes,
       stopSchedule: raw.stopSchedule.map((s: any, i: number) => ({
         placeId: s.place?.id || '',
         sequence: i,
@@ -1298,9 +1290,6 @@ export class TripDetailsComponent implements OnInit, OnDestroy {
       }),
       ...(changed.currencyId !== undefined && {
         currencyId: changed.currencyId,
-      }),
-      ...(changed.seatHoldMinutes !== undefined && {
-        seatHoldMinutes: changed.seatHoldMinutes,
       }),
       ...(changed.stopSchedule !== undefined && {
         stopSchedule: changed.stopSchedule.map((s: any, i: number) => ({

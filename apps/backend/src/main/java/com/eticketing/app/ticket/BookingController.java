@@ -4,6 +4,9 @@ import com.eticketing.app.account.AccountType;
 import com.eticketing.app.account.AccountTypeRepository;
 import com.eticketing.app.ticket.dto.BookingRequest;
 import com.eticketing.app.ticket.dto.BookingResponse;
+import com.eticketing.app.ticket.dto.GroupBookingRequest;
+import com.eticketing.app.ticket.dto.GroupBookingResponse;
+import com.eticketing.app.ticket.dto.GroupSeatUpdateRequest;
 import com.eticketing.app.user.UserType;
 import com.eticketing.app.user.UserTypeRepository;
 import jakarta.servlet.http.HttpServletRequest;
@@ -26,8 +29,21 @@ public class BookingController {
 
     private final BookingService bookingService;
     private final RefundRepository refundRepository;
+    private final TicketRepository ticketRepository;
+    private final OrderRepository orderRepository;
     private final UserTypeRepository userRepository;
     private final AccountTypeRepository accountRepository;
+
+    @GetMapping("/occupied-seats/{tripId}")
+    public ResponseEntity<java.util.List<String>> getOccupiedSeats(@PathVariable String tripId) {
+        java.util.List<String> seats = ticketRepository.findOccupiedSeatsByTripId(tripId)
+                .stream()
+                .map(TicketType::getSeatNo)
+                .filter(s -> s != null && !s.isBlank())
+                .distinct()
+                .toList();
+        return ResponseEntity.ok(seats);
+    }
 
     @PostMapping
     public ResponseEntity<BookingResponse> createBooking(
@@ -47,7 +63,8 @@ public class BookingController {
                 req.getDropoffPointId(),
                 req.getPassengerId(),
                 req.getIdempotencyKey(),
-            req.getLang(),
+                req.getLang(),
+                req.getSeatNo(),
                 companyId,
                 posId);
 
@@ -66,15 +83,69 @@ public class BookingController {
         return ResponseEntity.ok(toResponse(ticket));
     }
 
+    @PatchMapping("/{ticketId}/seat")
+    public ResponseEntity<BookingResponse> updateSeat(
+            @PathVariable String ticketId,
+            @RequestBody java.util.Map<String, String> body) {
+        String seatNo = body.get("seatNo");
+        TicketType ticket = bookingService.updateSeatNo(ticketId, seatNo);
+        return ResponseEntity.ok(toResponse(ticket));
+    }
+
+    // ── GROUP BOOKING (ORDER) ENDPOINTS ─────────────────────────────────
+    @PostMapping("/group")
+    public ResponseEntity<GroupBookingResponse> createGroupBooking(
+            @Valid @RequestBody GroupBookingRequest req,
+            @AuthenticationPrincipal User principal,
+            HttpServletRequest httpRequest) {
+
+        String[] ids = resolveCompanyAndPos(principal, httpRequest);
+        OrderType order = bookingService.createGroupBooking(req, ids[0], ids[1]);
+        java.util.List<TicketType> tickets = ticketRepository.findByOrderId(order.getId());
+        return ResponseEntity.status(HttpStatus.CREATED).body(toGroupResponse(order, tickets));
+    }
+
+    @PostMapping("/group/{orderId}/confirm")
+    public ResponseEntity<GroupBookingResponse> confirmOrder(@PathVariable String orderId) {
+        OrderType order = bookingService.confirmOrder(orderId);
+        java.util.List<TicketType> tickets = ticketRepository.findByOrderId(orderId);
+        return ResponseEntity.ok(toGroupResponse(order, tickets));
+    }
+
+    @PostMapping("/group/{orderId}/cancel")
+    public ResponseEntity<GroupBookingResponse> cancelOrder(@PathVariable String orderId) {
+        OrderType order = bookingService.cancelOrder(orderId, refundRepository);
+        java.util.List<TicketType> tickets = ticketRepository.findByOrderId(orderId);
+        return ResponseEntity.ok(toGroupResponse(order, tickets));
+    }
+
+    @PostMapping("/group/{orderId}/tickets/{ticketId}/cancel")
+    public ResponseEntity<GroupBookingResponse> cancelOrderTicket(
+            @PathVariable String orderId,
+            @PathVariable String ticketId) {
+        OrderType order = bookingService.cancelOrderTicket(orderId, ticketId, refundRepository);
+        java.util.List<TicketType> tickets = ticketRepository.findByOrderId(orderId);
+        return ResponseEntity.ok(toGroupResponse(order, tickets));
+    }
+
+    @PatchMapping("/group/{orderId}/seats")
+    public ResponseEntity<GroupBookingResponse> updateGroupSeats(
+            @PathVariable String orderId,
+            @Valid @RequestBody GroupSeatUpdateRequest req) {
+        OrderType order = bookingService.updateGroupSeats(orderId, req);
+        java.util.List<TicketType> tickets = ticketRepository.findByOrderId(orderId);
+        return ResponseEntity.ok(toGroupResponse(order, tickets));
+    }
+
     // ── Helpers ─────────────────────────────────────────────────────────
     /**
-     * Resolves companyId and posId from multiple sources:
-     * 1. X-Company-Id header (sent by frontend interceptor from localStorage)
-     * 2. User's account lookup (finds the user's account for the company)
-     * 3. Fallback to UserType.target
+     * Resolves companyId and posId from multiple sources: 1. X-Company-Id
+     * header (sent by frontend interceptor from localStorage) 2. User's account
+     * lookup (finds the user's account for the company) 3. Fallback to
+     * UserType.target
      *
-     * Note: companyId here is a hint — BookingService will override with
-     * the trip's actual company for security.
+     * Note: companyId here is a hint — BookingService will override with the
+     * trip's actual company for security.
      */
     private String[] resolveCompanyAndPos(User principal, HttpServletRequest httpRequest) {
         String headerCompanyId = httpRequest.getHeader("X-Company-Id");
@@ -122,6 +193,7 @@ public class BookingController {
         return BookingResponse.builder()
                 .id(ticket.getId())
                 .tripId(ticket.getTripId())
+                .orderId(ticket.getOrderId())
                 .companyId(ticket.getTarget() != null ? ticket.getTarget().getCompany() : null)
                 .posId(ticket.getTarget() != null ? ticket.getTarget().getPos() : null)
                 .segmentIds(ticket.getSegmentIds())
@@ -129,6 +201,9 @@ public class BookingController {
                 .pickupPointId(ticket.getPickupPointId())
                 .dropoffPointId(ticket.getDropoffPointId())
                 .passengerId(ticket.getPassengerId())
+                .guestFirstName(ticket.getGuestFirstName())
+                .guestLastName(ticket.getGuestLastName())
+                .seatNo(ticket.getSeatNo())
                 .appliedPrice(ticket.getAppliedPrice())
                 .currency(ticket.getCurrency())
                 .lang(ticket.getLang())
@@ -138,6 +213,26 @@ public class BookingController {
                 .createdAt(ticket.getCreatedAt())
                 .confirmedAt(ticket.getConfirmedAt())
                 .cancelledAt(ticket.getCancelledAt())
+                .build();
+    }
+
+    static GroupBookingResponse toGroupResponse(OrderType order, java.util.List<TicketType> tickets) {
+        return GroupBookingResponse.builder()
+                .orderId(order.getId())
+                .tripId(order.getTripId())
+                .companyId(order.getTarget() != null ? order.getTarget().getCompany() : null)
+                .posId(order.getTarget() != null ? order.getTarget().getPos() : null)
+                .contactCustomerId(order.getContactCustomerId())
+                .totalPrice(order.getTotalPrice())
+                .currency(order.getCurrency())
+                .status(order.getStatus())
+                .idempotencyKey(order.getIdempotencyKey())
+                .expiresAt(order.getExpiresAt())
+                .createdAt(order.getCreatedAt())
+                .confirmedAt(order.getConfirmedAt())
+                .cancelledAt(order.getCancelledAt())
+                .passengers(order.getPassengers())
+                .tickets(tickets.stream().map(BookingController::toResponse).toList())
                 .build();
     }
 }

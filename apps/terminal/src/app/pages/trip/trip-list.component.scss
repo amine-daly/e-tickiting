@@ -1,3 +1,15 @@
 :host {
   display: block;
 }
+
+.trip-seat-occupancy {
+  min-width: 60px;
+}
+
+.trip-seat-occupancy__bar {
+  height: 6px;
+}
+
+.trip-seat-occupancy .progress-bar {
+  transition: width 0.25s ease;
+}

@@ -199,6 +199,255 @@ public class TicketDocumentService {
         return view;
     }
 
+    // ════════════════════════════════════════════════════════════════════
+    // ORDER-LEVEL MASTER DOCUMENT
+    // ════════════════════════════════════════════════════════════════════
+    /**
+     * Builds ONE master ticket / itinerary for an entire order. Sent to the
+     * contact customer with a passenger manifest table.
+     */
+    public TicketDocumentView buildOrderDocument(OrderType order, List<TicketType> tickets) {
+        if (order == null || tickets == null || tickets.isEmpty()) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Order or tickets not found");
+        }
+        TicketType firstTicket = tickets.get(0);
+        TripType trip = tripRepository.findById(order.getTripId())
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Trip not found for order"));
+
+        // Contact customer
+        UserType contactUser = order.getContactCustomerId() != null
+                ? userRepository.findById(order.getContactCustomerId()).orElse(null)
+                : null;
+
+        String companyIdValue = order.getTarget() != null ? order.getTarget().getCompany() : null;
+        CompanyType company = companyIdValue != null
+                ? companyRepository.findById(companyIdValue).orElse(null)
+                : null;
+
+        String posId = order.getTarget() != null ? order.getTarget().getPos() : null;
+        PointOfSaleType pos = posId != null ? posRepository.findById(posId).orElse(null) : null;
+
+        String originId = resolveOriginPlaceId(trip, firstTicket);
+        String destinationId = resolveDestinationPlaceId(trip, firstTicket);
+        PlaceType origin = originId != null ? placeRepository.findById(originId).orElse(null) : null;
+        PlaceType destination = destinationId != null ? placeRepository.findById(destinationId).orElse(null) : null;
+        TicketLanguage language = TicketLanguage.fromCode(firstTicket.getLang());
+        LocalizedEmailContent localized = LocalizedEmailContent.forLanguage(language);
+
+        String contactName = contactUser != null
+                ? String.format("%s %s", defaultString(contactUser.getFirstName()), defaultString(contactUser.getLastName())).trim()
+                : localized.defaultPassengerName();
+        if (contactName.isBlank()) {
+            contactName = localized.defaultPassengerName();
+        }
+        String contactEmail = contactUser != null ? contactUser.getEmail() : null;
+
+        String companyName = company != null ? firstNonBlank(company.getName(), company.getLegalName()) : "";
+        if (companyName.isBlank()) {
+            companyName = localized.defaultCompanyName();
+        }
+        String companySubtitle = company != null
+                ? firstNonBlank(
+                        !defaultString(company.getLegalName()).equals(companyName) ? company.getLegalName() : null,
+                        company.getTaxId() != null && !company.getTaxId().isBlank() ? "MF " + company.getTaxId() : null)
+                : "";
+
+        String agencyName = firstNonBlank(pos != null ? pos.getTitle() : null, companyName, localized.defaultSalesChannel());
+        String agencyEmail = firstNonBlank(
+                pos != null ? pos.getEmail() : null,
+                company != null && company.getContact() != null ? company.getContact().getEmail() : null, "");
+        String agencyPhone = firstNonBlank(
+                formatPhone(pos != null ? pos.getPhone() : null),
+                formatPhone(company != null && company.getContact() != null ? company.getContact().getPhone() : null), "");
+        String supportLine = buildSupportLine(agencyEmail, agencyPhone, localized.supportUnavailable());
+        String companyLogoUrl = resolvePictureUrl(company != null ? company.getPicture() : null);
+        String companyLogoStyle = companyLogoUrl.isBlank() ? "display:none;" : "";
+        String salesChannel = pos != null ? pos.getTitle() : localized.defaultSalesChannel();
+        String routeLabel = String.format("%s > %s",
+                origin != null ? origin.getCity() : defaultString(originId),
+                destination != null ? destination.getCity() : defaultString(destinationId));
+        String pickupSummary = resolvePickupSummary(trip, firstTicket, origin, localized.notProvided());
+        String dropoffSummary = resolveDropoffSummary(trip, firstTicket, destination, localized.notProvided());
+
+        String reference = order.getId();
+        String totalAmount = order.getTotalPrice() != null ? order.getTotalPrice().toPlainString() : "-";
+        int passengerCount = order.getPassengers() != null ? order.getPassengers().size() : tickets.size();
+        String qrCodeDataUri = qrCodeService.generateDataUri(reference);
+        String qrCodeUrl = qrCodeService.generatePublicUrl(reference);
+        ZoneId tripZone = trip.getTimezone() != null ? ZoneId.of(trip.getTimezone()) : ZoneOffset.UTC;
+        String tripDate = formatTripDate(trip.getDepartureDate(), tripZone, language);
+        String tripTime = formatTripTime(trip.getDepartureDate(), tripZone, language);
+        String localizedStatus = translateOrderStatus(order.getStatus(), language);
+
+        // Build passenger manifest HTML table
+        String passengerTableHtml = buildPassengerManifestHtml(order, tickets, language);
+
+        String template = company != null && company.getEmailTemplate() != null && !company.getEmailTemplate().isBlank()
+                ? company.getEmailTemplate()
+                : TicketTemplateDefaults.defaultTemplate();
+
+        // Inject the passenger table into the template before rendering
+        // We insert it as part of the introText by appending after it
+        String orderIntroText = localized.orderIntroText(passengerCount) + passengerTableHtml;
+
+        Map<String, Object> context = new HashMap<>();
+        context.put("htmlLang", language.getHtmlLang());
+        context.put("direction", language.getDirection());
+        context.put("textAlign", language.getTextAlign());
+        context.put("heroLogoCellStyle", language.isRtl() ? "width:88px;padding-left:16px;" : "width:88px;padding-right:16px;");
+        context.put("eyebrowText", localized.orderEyebrowText());
+        context.put("reference", reference);
+        context.put("bookingReference", reference);
+        context.put("passengerName", contactName);
+        context.put("passengerEmail", contactEmail != null ? contactEmail : "");
+        context.put("greetingText", localized.greetingText());
+        context.put("introText", orderIntroText);
+        context.put("referenceLabel", localized.referenceLabel());
+        context.put("companyLabel", localized.companyLabel());
+        context.put("salesChannelLabel", localized.salesChannelLabel());
+        context.put("amountLabel", localized.amountLabel());
+        context.put("segmentsCoveredLabel", localized.passengersLabel());
+        context.put("statusLabel", localized.statusLabel());
+        context.put("passengerLabel", localized.passengerLabel());
+        context.put("supportContactLabel", localized.supportContactLabel());
+        context.put("pickupLabel", localized.pickupLabel());
+        context.put("dropoffLabel", localized.dropoffLabel());
+        context.put("ticketQrAltText", localized.ticketQrAltText());
+        context.put("qrHintText", localized.qrHintText());
+        context.put("footerText", localized.footerText(reference, companyName, supportLine));
+        context.put("heroSubtitle", localized.heroSubtitle(tripDate, tripTime, localizedStatus));
+        context.put("seats", passengerCount + " " + localized.passengersWord());
+        context.put("seatCount", passengerCount);
+        context.put("segmentLabel", passengerCount + " " + localized.passengersWord());
+        context.put("tripRoute", routeLabel);
+        context.put("tripDate", tripDate);
+        context.put("tripTime", tripTime);
+        context.put("currency", order.getCurrency());
+        context.put("totalAmount", totalAmount);
+        context.put("status", localizedStatus);
+        context.put("companyName", companyName);
+        context.put("companySubtitle", companySubtitle);
+        context.put("companyLogoUrl", companyLogoUrl);
+        context.put("companyLogoStyle", companyLogoStyle);
+        context.put("salesChannel", salesChannel);
+        context.put("agencyName", agencyName);
+        context.put("agencyEmail", agencyEmail);
+        context.put("agencyPhone", agencyPhone);
+        context.put("supportLine", supportLine);
+        context.put("pickupSummary", pickupSummary);
+        context.put("dropoffSummary", dropoffSummary);
+        context.put("qrCodeUrl", qrCodeUrl);
+        context.put("qrCode", qrCodeUrl);
+
+        String html = templateEngine.render(template, context);
+
+        TicketDocumentView view = new TicketDocumentView();
+        view.setTicketId(order.getId());
+        view.setReference(reference);
+        view.setQrCodeUrl(qrCodeUrl);
+        view.setQrCodeDataUri(qrCodeDataUri);
+        view.setHtmlContent(html);
+        view.setRenderedAt(Instant.now());
+        view.setPassengerEmail(contactEmail);
+        view.setSubject(localized.orderSubject(companyName, reference));
+        return view;
+    }
+
+    private String buildPassengerManifestHtml(OrderType order, List<TicketType> tickets, TicketLanguage language) {
+        LocalizedEmailContent localized = LocalizedEmailContent.forLanguage(language);
+        StringBuilder sb = new StringBuilder();
+        sb.append("<table role=\"presentation\" width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" style=\"margin-top:16px;border:1px solid #e2e8f0;border-radius:8px;overflow:hidden;\">");
+        sb.append("<tr style=\"background:#f1f5f9;\"><td style=\"padding:8px 12px;font-size:13px;font-weight:700;color:#0f172a;\">#</td>");
+        sb.append("<td style=\"padding:8px 12px;font-size:13px;font-weight:700;color:#0f172a;\">").append(localized.passengerLabel()).append("</td>");
+        sb.append("<td style=\"padding:8px 12px;font-size:13px;font-weight:700;color:#0f172a;\">").append(localized.seatLabel()).append("</td>");
+        sb.append("<td style=\"padding:8px 12px;font-size:13px;font-weight:700;color:#0f172a;text-align:right;\">").append(localized.amountLabel()).append("</td></tr>");
+
+        List<OrderType.OrderPassenger> passengers = order.getPassengers();
+        if (passengers != null && !passengers.isEmpty()) {
+            for (int i = 0; i < passengers.size(); i++) {
+                OrderType.OrderPassenger p = passengers.get(i);
+                String name = resolvePassengerName(p);
+                String seat = p.getSeatNo() != null && !p.getSeatNo().isBlank() ? p.getSeatNo() : localized.freeSeatingLabel();
+                String price = i < tickets.size() ? tickets.get(i).getAppliedPrice().toPlainString() + " " + tickets.get(i).getCurrency() : "-";
+                String bgColor = i % 2 == 0 ? "#ffffff" : "#f8fafc";
+                sb.append("<tr style=\"background:").append(bgColor).append(";\">");
+                sb.append("<td style=\"padding:8px 12px;font-size:14px;color:#334155;\">").append(i + 1).append("</td>");
+                sb.append("<td style=\"padding:8px 12px;font-size:14px;color:#334155;\">").append(escapeHtml(name)).append("</td>");
+                sb.append("<td style=\"padding:8px 12px;font-size:14px;color:#334155;\">").append(escapeHtml(seat)).append("</td>");
+                sb.append("<td style=\"padding:8px 12px;font-size:14px;color:#334155;text-align:right;\">").append(price).append("</td>");
+                sb.append("</tr>");
+            }
+        }
+        sb.append("</table>");
+        return sb.toString();
+    }
+
+    private String resolvePassengerName(OrderType.OrderPassenger p) {
+        String first = defaultString(p.getFirstName());
+        String last = defaultString(p.getLastName());
+        String combined = (first + " " + last).trim();
+        if (!combined.isBlank()) {
+            return combined;
+        }
+
+        // Fallback: resolve from registered user
+        if (p.getPassengerId() != null) {
+            UserType user = userRepository.findById(p.getPassengerId()).orElse(null);
+            if (user != null) {
+                return (defaultString(user.getFirstName()) + " " + defaultString(user.getLastName())).trim();
+            }
+        }
+        return "Passenger";
+    }
+
+    private String escapeHtml(String text) {
+        if (text == null) {
+            return "";
+        }
+        return text.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;").replace("\"", "&quot;");
+    }
+
+    private String translateOrderStatus(OrderStatusEnum status, TicketLanguage language) {
+        if (status == null) {
+            return "";
+        }
+        return switch (language) {
+            case EN_GB ->
+                switch (status) {
+                    case PENDING ->
+                        "Pending";
+                    case CONFIRMED ->
+                        "Confirmed";
+                    case CANCELLED ->
+                        "Cancelled";
+                    case EXPIRED ->
+                        "Expired";
+                };
+            case AR_SA ->
+                switch (status) {
+                    case PENDING ->
+                        "قيد الانتظار";
+                    case CONFIRMED ->
+                        "مؤكد";
+                    case CANCELLED ->
+                        "ملغى";
+                    case EXPIRED ->
+                        "منتهي";
+                };
+            case FR_FR ->
+                switch (status) {
+                    case PENDING ->
+                        "En attente";
+                    case CONFIRMED ->
+                        "Confirmé";
+                    case CANCELLED ->
+                        "Annulé";
+                    case EXPIRED ->
+                        "Expiré";
+                };
+        };
+    }
+
     private String resolvePickupSummary(TripType trip, TicketType ticket, PlaceType fallbackPlace, String fallbackValue) {
         if (trip.getPickupPoints() != null && ticket.getPickupPointId() != null) {
             for (var pickup : trip.getPickupPoints()) {
@@ -395,24 +644,39 @@ public class TicketDocumentService {
             return LocalizedEmailContent.forLanguage(language).unknownStatus();
         }
         return switch (language) {
-            case EN_GB -> switch (status) {
-                case PENDING -> "Pending";
-                case CONFIRMED -> "Confirmed";
-                case CANCELLED -> "Cancelled";
-                case EXPIRED -> "Expired";
-            };
-            case AR_SA -> switch (status) {
-                case PENDING -> "قيد الانتظار";
-                case CONFIRMED -> "مؤكد";
-                case CANCELLED -> "ملغى";
-                case EXPIRED -> "منتهي";
-            };
-            case FR_FR -> switch (status) {
-                case PENDING -> "En attente";
-                case CONFIRMED -> "Confirmé";
-                case CANCELLED -> "Annulé";
-                case EXPIRED -> "Expiré";
-            };
+            case EN_GB ->
+                switch (status) {
+                    case PENDING ->
+                        "Pending";
+                    case CONFIRMED ->
+                        "Confirmed";
+                    case CANCELLED ->
+                        "Cancelled";
+                    case EXPIRED ->
+                        "Expired";
+                };
+            case AR_SA ->
+                switch (status) {
+                    case PENDING ->
+                        "قيد الانتظار";
+                    case CONFIRMED ->
+                        "مؤكد";
+                    case CANCELLED ->
+                        "ملغى";
+                    case EXPIRED ->
+                        "منتهي";
+                };
+            case FR_FR ->
+                switch (status) {
+                    case PENDING ->
+                        "En attente";
+                    case CONFIRMED ->
+                        "Confirmé";
+                    case CANCELLED ->
+                        "Annulé";
+                    case EXPIRED ->
+                        "Expiré";
+                };
         };
     }
 
@@ -445,84 +709,87 @@ public class TicketDocumentService {
 
         static LocalizedEmailContent forLanguage(TicketLanguage language) {
             return switch (language) {
-                case EN_GB -> new LocalizedEmailContent(
-                        language,
-                        "Customer",
-                        "Operator",
-                        "Operator",
-                        "Support not available",
-                        "Not provided",
-                        "Unknown",
-                        "Travel ticket",
-                        "Hello",
-                        "Your ticket has been generated successfully. Keep this email and present the QR code during inspection.",
-                        "Reference",
-                        "Company",
-                        "Sales channel",
-                        "Amount",
-                        "Covered segments",
-                        "Status",
-                        "Passenger",
-                        "Support contact",
-                        "Boarding",
-                        "Drop-off",
-                        "Present this QR code during inspection.",
-                        "Ticket QR code",
-                        "Departure on %s at %s · Status %s",
-                        "Your ticket with %s - %s",
-                        "This ticket is personal and linked to booking %s. If needed, contact %s via %s.");
-                case AR_SA -> new LocalizedEmailContent(
-                        language,
-                        "العميل",
-                        "شركة النقل",
-                        "الشركة",
-                        "الدعم غير متوفر",
-                        "غير متوفر",
-                        "غير معروف",
-                        "تذكرة سفر",
-                        "مرحباً",
-                        "تم إصدار تذكرتك بنجاح. احتفظ بهذا البريد الإلكتروني وقدّم رمز QR عند التفقد.",
-                        "المرجع",
-                        "الشركة",
-                        "قناة البيع",
-                        "المبلغ",
-                        "المقاطع المشمولة",
-                        "الحالة",
-                        "المسافر",
-                        "معلومات الدعم",
-                        "الصعود",
-                        "النزول",
-                        "اعرض رمز QR هذا عند التفقد.",
-                        "رمز QR للتذكرة",
-                        "المغادرة يوم %s الساعة %s · الحالة %s",
-                        "تذكرتك مع %s - %s",
-                        "هذه التذكرة شخصية ومرتبطة بالحجز %s. عند الحاجة، تواصل مع %s عبر %s.");
-                case FR_FR -> new LocalizedEmailContent(
-                        language,
-                        "Client",
-                        "Compagnie",
-                        "Compagnie",
-                        "Support non renseigné",
-                        "Non renseigné",
-                        "Inconnu",
-                        "Billet de voyage",
-                        "Bonjour",
-                        "Votre billet a bien été généré. Conservez cet e-mail et présentez le QR code lors du contrôle.",
-                        "Référence",
-                        "Compagnie",
-                        "Canal d'origine",
-                        "Montant",
-                        "Segments couverts",
-                        "État",
-                        "Passager",
-                        "Contact support",
-                        "Embarquement",
-                        "Descente",
-                        "Présentez ce QR code lors du contrôle.",
-                        "QR code du billet",
-                        "Départ le %s à %s · Statut %s",
-                        "Votre billet %s - %s",
-                        "Ce billet est personnel et lié à la réservation %s. En cas de besoin, contactez %s via %s.");
+                case EN_GB ->
+                    new LocalizedEmailContent(
+                    language,
+                    "Customer",
+                    "Operator",
+                    "Operator",
+                    "Support not available",
+                    "Not provided",
+                    "Unknown",
+                    "Travel ticket",
+                    "Hello",
+                    "Your ticket has been generated successfully. Keep this email and present the QR code during inspection.",
+                    "Reference",
+                    "Company",
+                    "Sales channel",
+                    "Amount",
+                    "Covered segments",
+                    "Status",
+                    "Passenger",
+                    "Support contact",
+                    "Boarding",
+                    "Drop-off",
+                    "Present this QR code during inspection.",
+                    "Ticket QR code",
+                    "Departure on %s at %s · Status %s",
+                    "Your ticket with %s - %s",
+                    "This ticket is personal and linked to booking %s. If needed, contact %s via %s.");
+                case AR_SA ->
+                    new LocalizedEmailContent(
+                    language,
+                    "العميل",
+                    "شركة النقل",
+                    "الشركة",
+                    "الدعم غير متوفر",
+                    "غير متوفر",
+                    "غير معروف",
+                    "تذكرة سفر",
+                    "مرحباً",
+                    "تم إصدار تذكرتك بنجاح. احتفظ بهذا البريد الإلكتروني وقدّم رمز QR عند التفقد.",
+                    "المرجع",
+                    "الشركة",
+                    "قناة البيع",
+                    "المبلغ",
+                    "المقاطع المشمولة",
+                    "الحالة",
+                    "المسافر",
+                    "معلومات الدعم",
+                    "الصعود",
+                    "النزول",
+                    "اعرض رمز QR هذا عند التفقد.",
+                    "رمز QR للتذكرة",
+                    "المغادرة يوم %s الساعة %s · الحالة %s",
+                    "تذكرتك مع %s - %s",
+                    "هذه التذكرة شخصية ومرتبطة بالحجز %s. عند الحاجة، تواصل مع %s عبر %s.");
+                case FR_FR ->
+                    new LocalizedEmailContent(
+                    language,
+                    "Client",
+                    "Compagnie",
+                    "Compagnie",
+                    "Support non renseigné",
+                    "Non renseigné",
+                    "Inconnu",
+                    "Billet de voyage",
+                    "Bonjour",
+                    "Votre billet a bien été généré. Conservez cet e-mail et présentez le QR code lors du contrôle.",
+                    "Référence",
+                    "Compagnie",
+                    "Canal d'origine",
+                    "Montant",
+                    "Segments couverts",
+                    "État",
+                    "Passager",
+                    "Contact support",
+                    "Embarquement",
+                    "Descente",
+                    "Présentez ce QR code lors du contrôle.",
+                    "QR code du billet",
+                    "Départ le %s à %s · Statut %s",
+                    "Votre billet %s - %s",
+                    "Ce billet est personnel et lié à la réservation %s. En cas de besoin, contactez %s via %s.");
             };
         }
 
@@ -540,9 +807,89 @@ public class TicketDocumentService {
 
         String segmentSummary(int segmentCount) {
             return switch (language) {
-                case EN_GB -> segmentCount + (segmentCount == 1 ? " segment" : " segments");
-                case AR_SA -> segmentCount == 1 ? "مقطع واحد" : segmentCount + " مقاطع";
-                case FR_FR -> segmentCount + (segmentCount > 1 ? " segments" : " segment");
+                case EN_GB ->
+                    segmentCount + (segmentCount == 1 ? " segment" : " segments");
+                case AR_SA ->
+                    segmentCount == 1 ? "مقطع واحد" : segmentCount + " مقاطع";
+                case FR_FR ->
+                    segmentCount + (segmentCount > 1 ? " segments" : " segment");
+            };
+        }
+
+        String orderEyebrowText() {
+            return switch (language) {
+                case EN_GB ->
+                    "Group Booking Confirmation";
+                case AR_SA ->
+                    "تأكيد الحجز الجماعي";
+                case FR_FR ->
+                    "Confirmation de réservation groupe";
+            };
+        }
+
+        String orderSubject(String companyName, String reference) {
+            return switch (language) {
+                case EN_GB ->
+                    String.format("Your group booking with %s - %s", companyName, reference);
+                case AR_SA ->
+                    String.format("حجزك الجماعي مع %s - %s", companyName, reference);
+                case FR_FR ->
+                    String.format("Votre réservation groupe %s - %s", companyName, reference);
+            };
+        }
+
+        String orderIntroText(int passengerCount) {
+            return switch (language) {
+                case EN_GB ->
+                    String.format("Your group booking for %d passenger(s) has been generated successfully. Below is the passenger manifest. Present the QR code during inspection.", passengerCount);
+                case AR_SA ->
+                    String.format("تم إصدار حجزك الجماعي لـ %d مسافر(ين) بنجاح. فيما يلي قائمة المسافرين. اعرض رمز QR عند التفقد.", passengerCount);
+                case FR_FR ->
+                    String.format("Votre réservation groupe pour %d passager(s) a bien été générée. Voici la liste des passagers. Présentez le QR code lors du contrôle.", passengerCount);
+            };
+        }
+
+        String seatLabel() {
+            return switch (language) {
+                case EN_GB ->
+                    "Seat";
+                case AR_SA ->
+                    "المقعد";
+                case FR_FR ->
+                    "Siège";
+            };
+        }
+
+        String passengersLabel() {
+            return switch (language) {
+                case EN_GB ->
+                    "Passengers";
+                case AR_SA ->
+                    "المسافرون";
+                case FR_FR ->
+                    "Passagers";
+            };
+        }
+
+        String passengersWord() {
+            return switch (language) {
+                case EN_GB ->
+                    "passengers";
+                case AR_SA ->
+                    "مسافرين";
+                case FR_FR ->
+                    "passagers";
+            };
+        }
+
+        String freeSeatingLabel() {
+            return switch (language) {
+                case EN_GB ->
+                    "Free seating";
+                case AR_SA ->
+                    "مقعد حر";
+                case FR_FR ->
+                    "Libre";
             };
         }
     }

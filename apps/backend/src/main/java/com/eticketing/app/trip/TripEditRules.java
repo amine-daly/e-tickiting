@@ -146,7 +146,6 @@ public final class TripEditRules {
         return req.getDepartureDate() != null
                 || req.getTimezone() != null
                 || req.getCurrencyId() != null
-                || req.getSeatHoldMinutes() != null
                 || req.getBus() != null
                 || req.getStopSchedule() != null
                 || req.getPickupPoints() != null

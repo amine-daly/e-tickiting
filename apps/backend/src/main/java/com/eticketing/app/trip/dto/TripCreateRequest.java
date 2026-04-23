@@ -40,9 +40,6 @@ public class TripCreateRequest {
     @NotBlank
     private String currencyId;
 
-    // ── Layer 4 — Seat Hold ─────────────────────────────────────────────
-    private Integer seatHoldMinutes;
-
     // ── Layer 5 — Stop Schedule ─────────────────────────────────────────
     @NotEmpty
     @Valid

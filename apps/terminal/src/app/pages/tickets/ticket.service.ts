@@ -93,6 +93,13 @@ export class TicketService {
     );
   }
 
+  sendOrderEmail(orderId: string): Observable<TicketEmailResponse> {
+    return this.http.post<TicketEmailResponse>(
+      `${this.ticketsUrl}/orders/${orderId}/send-email`,
+      {},
+    );
+  }
+
   private mergeTicket(updated: Ticket): void {
     const current = this.tickets.value ?? [];
     const exists = current.some((ticket) => ticket.id === updated.id);

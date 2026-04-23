@@ -1,13 +1,13 @@
 package com.eticketing.app.ticket;
 
+import java.time.Instant;
+import java.util.List;
+import java.util.Optional;
+
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.mongodb.repository.MongoRepository;
 import org.springframework.data.mongodb.repository.Query;
-
-import java.time.Instant;
-import java.util.List;
-import java.util.Optional;
 
 public interface TicketRepository extends MongoRepository<TicketType, String> {
 
@@ -29,6 +29,13 @@ public interface TicketRepository extends MongoRepository<TicketType, String> {
 
     List<TicketType> findByTripIdAndStatus(String tripId, TicketStatusEnum status);
 
+    List<TicketType> findByTripIdInAndStatusIn(List<String> tripIds, List<TicketStatusEnum> statuses);
+
+    @Query(value = "{ 'tripId': ?0, 'status': { $in: ['PENDING', 'CONFIRMED'] }, 'seatNo': { $ne: null } }", fields = "{ 'seatNo': 1 }")
+    List<TicketType> findOccupiedSeatsByTripId(String tripId);
+
     @Query("{ 'status': 'PENDING', 'expiresAt': { $lt: ?0 } }")
     List<TicketType> findExpiredPendingTickets(Instant now);
+
+    List<TicketType> findByOrderId(String orderId);
 }

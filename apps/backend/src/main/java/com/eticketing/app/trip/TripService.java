@@ -186,7 +186,6 @@ public class TripService {
                 .status(TripStatusEnum.SCHEDULED)
                 .bus(TripBusRef.builder().busId(bus.getId()).build())
                 .currency(TripCurrency.builder().currencyId(currency.getId()).build())
-                .seatHoldMinutes(req.getSeatHoldMinutes() != null ? req.getSeatHoldMinutes() : 10)
                 .stopSchedule(stops)
                 .pickupPoints(pickupPoints)
                 .dropoffPoints(dropoffPoints)
@@ -372,10 +371,6 @@ public class TripService {
             CurrencyType currency = resolveCurrency(req.getCurrencyId());
             trip.setCurrency(TripCurrency.builder().currencyId(currency.getId()).build());
         }
-        if (req.getSeatHoldMinutes() != null) {
-            trip.setSeatHoldMinutes(req.getSeatHoldMinutes());
-        }
-
         // Bus reassignment
         if (req.getBus() != null) {
             // Check that new bus is not in another trip

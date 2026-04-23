@@ -26,13 +26,17 @@ export interface TicketUser {
 export interface Ticket {
   id: string;
   tripId: string;
+  orderId?: string | null;
   companyId?: string | null;
   posId?: string | null;
   segmentIds: string[];
   expressId?: string | null;
   pickupPointId?: string | null;
   dropoffPointId?: string | null;
-  passengerId: string;
+  passengerId?: string | null;
+  guestFirstName?: string | null;
+  guestLastName?: string | null;
+  seatNo?: string | null;
   appliedPrice: number;
   currency: string;
   lang?: string | null;

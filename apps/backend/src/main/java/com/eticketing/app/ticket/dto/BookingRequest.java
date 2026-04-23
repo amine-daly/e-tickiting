@@ -28,4 +28,6 @@ public class BookingRequest {
     private String idempotencyKey;
 
     private String lang;
+
+    private String seatNo;
 }

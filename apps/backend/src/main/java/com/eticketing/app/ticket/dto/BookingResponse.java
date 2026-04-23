@@ -14,6 +14,7 @@ public class BookingResponse {
 
     private String id;
     private String tripId;
+    private String orderId;
     private String companyId;
     private String posId;
     private List<String> segmentIds;
@@ -21,6 +22,9 @@ public class BookingResponse {
     private String pickupPointId;
     private String dropoffPointId;
     private String passengerId;
+    private String guestFirstName;
+    private String guestLastName;
+    private String seatNo;
     private BigDecimal appliedPrice;
     private String currency;
     private String lang;

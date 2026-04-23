@@ -1,625 +1,189 @@
-# Trip Business Model — Copilot Agent Specification
+# Trip Business Model - Current Specification
 
-> Attach this file to VS Code Copilot agent before generating any code related to trips, bookings, segments, or fares.
-> This is the single source of truth. Do not deviate from these definitions.
+Last updated: April 2026
+Status: Aligned with the live MongoDB trip implementation
 
----
+## 1. Purpose
 
-## 1. Core Principles
+This document defines the current trip model, edit rules, inventory behavior, and validation pipeline used by the backend.
 
-1. **Seats are physical, pricing is logical** — segments own inventory, express fares are pricing overlays only
-2. **Stop classification via flags** — `boardingAllowed` + `droppingAllowed` determine stop type, no `isCommercialStop` field
-3. **Segments are frozen after creation** — never add or remove segments post-creation
-4. **Ticket is an immutable financial snapshot** — never mutate a ticket, use Refund entity instead
-5. **Currency is global** — declared once at trip level, inherited by all price fields
-6. **UTC storage, timezone display** — store all timestamps in UTC, render in `trip.timezone`
-7. **Exactly-once booking semantics** — idempotency key required on all booking requests
+The implementation is document-based and MongoDB-backed. It does not use PostgreSQL/JPA, and trip-level seat-hold fields no longer exist.
 
----
+## 2. Trip Invariants
 
-## 1.1 Marketplace Scoping
+- Trip ownership is company-scoped through `target.company`.
+- `target.pos` is not part of the trip document.
+- Trips are stored as MongoDB documents.
+- Seats are managed through frozen segment inventory, not through a separate seat table.
+- `seatHoldMinutes` is not a field on the trip document.
+- Pending booking expiry is controlled centrally by the booking layer with a fixed 600-second hold.
+- Trip responses are reconciled against active tickets before they are returned to the client.
 
-The platform now uses a company + POS model.
+## 3. Trip Document Shape
 
-- `company` is the business ownership boundary
-- `pos` is the operational selling / attribution boundary inside that company
-
-Not every entity stores both fields:
-
-- Bus ownership is company-scoped
-- Trip ownership is company-scoped
-- Ticket attribution stores both company and POS
-
-All marketplace ownership queries must always filter by `target.company`.
-Operational ticket queries may additionally filter by `target.pos` when the use case is POS-specific.
-
-| Entity   | target field                    | Meaning                                                   |
-| -------- | ------------------------------- | --------------------------------------------------------- |
-| `Bus`    | `target.company`                | Which company owns this bus                               |
-| `Trip`   | `target.company`                | Which company owns / sells this trip                      |
-| `Ticket` | `target.company` + `target.pos` | Which company sold the ticket and which POS originated it |
-
----
-
-## 2. Trip Object — Full Schema
-
-```typescript
-interface Trip {
-  // Layer 1 — Identity
-  tripId: string; // system-generated
-  target: { company: string }; // owning company
-  departureDate: string; // ISO date, must be future, UTC
-  timezone: string; // MANDATORY — IANA e.g. "Africa/Tunis"
-  status: TripStatus; // default: SCHEDULED
-
-  // Layer 2 — Bus (pure reference — no snapshot) (done)
-  bus: {
-    busId: string; // reference only — totalSeats read live from Bus entity
-    // totalSeats locked on Bus entity when bus is in
-    // any SCHEDULED or ACTIVE trip — no snapshot needed
-  };
-
-  // Layer 3 — Global Currency
-  currency: string; // ISO 4217 e.g. "TND"
-  // inherited by ALL price fields
-  // no per-segment override allowed
-
-  // Layer 4 — Seat Hold
-  seatHoldMinutes: number; // default: 10
-  // how long PENDING ticket holds seats
-  // changing while ACTIVE affects new bookings only
-
-  // Layer 5 — Stop Schedule
-  stopSchedule: Stop[];
-
-  // Layer 6 — Pickup Points (required per commercial stop)
-  pickupPoints: PickupPoint[];
-
-  // Layer 7 — Dropoff Points (required per commercial stop)
-  dropoffPoints: DropoffPoint[];
-
-  // Layer 8 — Segments (inventory layer, frozen after creation)
-  segments: Segment[];
-
-  // Layer 9 — Express Fares (pricing overlay, no inventory)
-  expressFares: ExpressFare[];
-}
-```
-
----
-
-## 3. Enums
-
-```typescript
-enum TripStatus {
-  SCHEDULED = "SCHEDULED",
-  ACTIVE = "ACTIVE",
-  COMPLETED = "COMPLETED",
-  CANCELLED = "CANCELLED",
-}
-
-enum TicketStatus {
-  PENDING = "PENDING",
-  CONFIRMED = "CONFIRMED",
-  EXPIRED = "EXPIRED",
-  CANCELLED = "CANCELLED",
-}
-
-enum RefundStatus {
-  REQUESTED = "REQUESTED",
-  APPROVED = "APPROVED",
-  COMPLETED = "COMPLETED",
-  REJECTED = "REJECTED",
-}
-```
-
----
-
-## 4. Stop Schema
-
-```typescript
-interface Stop {
-  placeId: string;
-  sequence: number; // strictly ascending, unique per trip
-  arrivalTime: string | null; // null for first stop only (UTC)
-  departureTime: string | null; // null for last stop only (UTC)
-  boardingAllowed: boolean;
-  droppingAllowed: boolean;
-}
-
-// Stop type is derived — NO isCommercialStop field:
-// boarding=true  + dropping=false  → Origin
-// boarding=false + dropping=true   → Destination
-// boarding=true  + dropping=true   → Intermediate commercial
-// boarding=false + dropping=false  → Technical stop (skipped in segment generation)
-```
-
-### Stop Validation Rules
-
-- `sequence` strictly ascending, unique per trip
-- Timeline strictly increasing — no equal or backward timestamps
-- `departureTime >= arrivalTime` for all intermediate stops
-- At least 2 commercial stops required
-- First stop: `arrivalTime = null`
-- Last stop: `departureTime = null`
-
----
-
-## 5. Pickup & Dropoff Point Schemas
-
-```typescript
-interface PickupPoint {
-  pointId: string; // unique per trip
-  placeId: string; // must exist in stopSchedule, boardingAllowed=true
-  address: string;
-  scheduledDepartureTime: string; // UTC, must align with stopSchedule
-  active: boolean;
-  location?: {
-    latitude: number;
-    longitude: number;
-  };
-}
-
-interface DropoffPoint {
-  pointId: string; // unique per trip
-  placeId: string; // must exist in stopSchedule, droppingAllowed=true
-  address: string;
-  scheduledArrivalTime: string; // UTC, must align with stopSchedule
-  active: boolean;
-  location?: {
-    latitude: number;
-    longitude: number;
-  };
-}
-```
-
-> Pickup and dropoff points are MANDATORY — every commercial stop must have at least one entry.
-> `boardingAllowed = true` → at least one `PickupPoint` required for this `placeId`
-> `droppingAllowed = true` → at least one `DropoffPoint` required for this `placeId`
-> Trip creation is blocked if any commercial stop is missing its required pickup or dropoff point.
-
----
-
-## 6. Segment Schema
-
-```typescript
-interface Segment {
-  segmentId: string; // system-generated
-  sequence: number; // strictly ascending, unique per trip
-  fromPlaceId: string; // start commercial stop
-  toPlaceId: string; // end commercial stop
-  departureTime: string; // UTC, derived from stopSchedule
-  arrivalTime: string; // UTC, derived from stopSchedule
-  maxSeats: number; // admin-defined, must be <= bus.totalSeats
-  bookedSeats: number; // starts at 0, incremented via atomic CAS
-  basePrice: number; // in trip.currency
-  distanceKm: number; // owns physical distance data
-  durationMinutes: number; // owns physical duration data
-  // NO active field — segments are frozen and always exist
-  // NO currency field — inherited from trip.currency
-}
-```
-
-### Segment Rules
-
-- Auto-generated between consecutive commercial stops only
-- Technical stops (boarding=false + dropping=false) are skipped
-- **Frozen after creation** — no add or remove after trip is created
-- Two overlapping segments CAN both have `maxSeats = bus.totalSeats` — they are independent inventory
-- `distanceKm` and `durationMinutes` are owned by the segment
-
-### Atomic CAS — Oversell Prevention
-
-```sql
-UPDATE segments
-SET bookedSeats = bookedSeats + 1
-WHERE segmentId = :id
-AND bookedSeats + 1 <= maxSeats
-
--- 0 rows updated = no seats available → reject booking
--- Applied to ALL segments in the journey chain
-```
-
----
-
-## 7. Express Fare Schema
-
-```typescript
-interface ExpressFare {
-  expressId: string; // system-generated
-  fromPlaceId: string; // must match start of first covered segment
-  toPlaceId: string; // must match end of last covered segment
-  segmentsCovered: string[]; // ordered segmentIds, must form continuous chain
-  price: number; // in trip.currency — NO currency field on fare
-  validFrom: string | null; // null = active immediately
-  validUntil: string | null; // null = no expiry
-  active: boolean;
-  totalDistanceKm and totalDurationMinutes are COMPUTED at read time
-  from segmentsCovered - NOT stored in DB to avoid sync issues
-  // NO maxSeats — express fares have zero inventory
-  // NO bookedSeats — inventory tracked in segments only
-}
-```
-
-### Express Fare Rules
-
-- `segmentsCovered` must form an unbroken chain — `toPlaceId` of seg[n] must equal `fromPlaceId` of seg[n+1]
-- Fare application: if passenger journey matches express fare chain → apply express price, otherwise → sum segment `basePrice` values
-- Removing a stop that breaks a chain is hard-blocked: `STOP_REMOVAL_BLOCKED_EXPRESS_DEPENDENCY`
-- `totalDistanceKm` and `totalDurationMinutes` are computed, not stored independently
-
----
-
-## 8. Ticket Schema
-
-```typescript
-interface Ticket {
-  ticketId: string;
-  tripId: string;
-  target: {
-    company: string; // owning company of the trip
-    pos: string; // original POS attribution for the sale / reservation
-  };
-  segmentIds: string[]; // segments this ticket covers
-  expressId?: string; // if express fare was applied
-  pickupPointId: string; // MANDATORY - where passenger boards
-  dropoffPointId: string; // MANDATORY - where passenger drops
-  passengerId: string;
-  appliedPrice: number; // snapshot at booking time — NEVER changes
-  currency: string; // snapshot of trip.currency at booking time
-  status: TicketStatus;
-  idempotencyKey: string; // required, exactly-once semantics
-  expiresAt: string; // UTC — now() + seatHoldMinutes (PENDING only)
-  createdAt: string;
-  confirmedAt?: string;
-  cancelledAt?: string;
-}
-```
-
-> `Ticket.target.pos` captures the original operational POS attribution and should not be overwritten later if payment is completed by another POS in the same company.
-
-### Ticket State Machine
-
-```
-PENDING   → CONFIRMED  (payment success)
-PENDING   → EXPIRED    (payment failure or seatHoldMinutes elapsed)
-CONFIRMED → CANCELLED  (full cancellation — triggers Refund)
-EXPIRED   → terminal
-CANCELLED → terminal
-```
-
-> Tickets are immutable financial records. Never mutate `appliedPrice`, `currency`, or `segmentIds` after creation.
-
----
-
-## 9. Refund Schema
-
-```typescript
-interface Refund {
-  refundId: string;
-  ticketId: string; // reference to original ticket (unchanged)
-  segmentsRefunded: string[]; // which segments are being refunded
-  amount: number;
-  currency: string;
-  status: RefundStatus;
-  createdAt: string;
-  processedAt?: string;
-}
-
-// Revenue reconciliation:
-// NetRevenue = SUM(Tickets.appliedPrice) - SUM(Refunds.amount)
-```
-
-> Partial cancellation creates a Refund record. The original Ticket is never modified.
-
-### Refund Seat Release Rule
-
-```
-Refund status transitions:
-REQUESTED → APPROVED → COMPLETED
-REQUESTED → REJECTED
-
-bookedSeats is decremented ONLY when Refund.status transitions to APPROVED.
-
-Why not REQUESTED:
-  Refund could be REJECTED later — seats would be freed incorrectly.
-
-Why not COMPLETED:
-  Too late — money processing can take days, seat stays blocked unnecessarily.
-
-Why APPROVED:
-  A human or system has confirmed the cancellation is valid.
-  Safe to release the seat back into inventory at this point.
-```
-
-```typescript
-// On Refund APPROVED — atomic seat release:
-UPDATE segments
-SET bookedSeats = bookedSeats - 1
-WHERE segmentId IN refund.segmentsRefunded
-
-// Revenue reconciliation:
-// NetRevenue = SUM(Tickets.appliedPrice) - SUM(Refunds.amount WHERE status = APPROVED | COMPLETED)
-```
-
----
-
-## 10. Booking Flow
-
-```
-1. User selects journey (fromPlaceId → toPlaceId)
-  + 1.5. User selects pickupPoint (from available points at fromPlaceId)
-  + 1.6. User selects dropoffPoint (from available points at toPlaceId)
-2. System resolves segment chain or matching express fare
-3. Atomic CAS: bookedSeats + qty <= maxSeats for ALL segments in chain
-   └─ Fails → return "no seats available", no ticket created
-4. Create Ticket { target: { company, pos }, status: PENDING, expiresAt: now() + seatHoldMinutes }
-   └─ DB error → rollback CAS decrement
-5. Start expiry timer
-6. User completes payment
-   ├─ Success → Ticket { status: CONFIRMED }, snapshot appliedPrice + currency
-   └─ Failure or timeout → Ticket { status: EXPIRED }, decrement bookedSeats
-7. Store idempotencyKey → replay returns existing ticket, no duplicate created
-```
-
----
-
-## 10.1 — Seat Hold Expiry Worker
-
-```
-// Expiry worker runs periodically (e.g. every 1 minute):
-
-FOR EACH ticket WHERE status = PENDING AND expiresAt < now():
-    ticket.status = EXPIRED
-    FOR EACH segmentId IN ticket.segmentIds:
-        UPDATE segments
-        SET bookedSeats = bookedSeats - 1
-        WHERE segmentId = :id
-        // atomic decrement — seat returned to available pool
-
-// This worker is critical — without it, expired PENDING tickets
-// permanently hold seats and cause false "sold out" states.
-// Worker must be idempotent — safe to run multiple times on same ticket.
-```
-
----
-
-## 11. Trip Status Transitions
-
-```
-SCHEDULED ──→ ACTIVE      Admin publishes trip. Booking engine opens.
-SCHEDULED ──→ CANCELLED   Admin cancels before publish. No tickets, no refund flow.
-ACTIVE    ──→ COMPLETED   Final stop reached (auto or manual). Booking engine closes.
-ACTIVE    ──→ CANCELLED   Emergency. PENDING → EXPIRED (seats released).
-                          CONFIRMED → Refund records auto-created.
-COMPLETED ──→ terminal    No further transitions.
-CANCELLED ──→ terminal    No further transitions.
-```
-
----
-
-## 12. Edit Permissions
-
-| Field / Action                | SCHEDULED  | ACTIVE       | Rule                                                                                                                      |
-| ----------------------------- | ---------- | ------------ | ------------------------------------------------------------------------------------------------------------------------- |
-| All fields                    | ✅ Free    | —            | No tickets exist yet                                                                                                      |
-| Stop times                    | ✅ Free    | ⚠ Restricted | Blocked if any segment using this stop has bookedSeats > 0                                                                |
-| maxSeats                      | ✅ Free    | ⚠ Restricted | Cannot reduce below current bookedSeats                                                                                   |
-| seatHoldMinutes               | ✅ Free    | ⚠ Restricted | Change affects new bookings only                                                                                          |
-| basePrice (segment)           | ✅ Free    | ✅ Allowed   | Tickets are snapshots — existing tickets unaffected                                                                       |
-| Express fare price            | ✅ Free    | ✅ Allowed   | Tickets are snapshots — existing tickets unaffected                                                                       |
-| validFrom/Until               | ✅ Free    | ✅ Allowed   | Affects future bookings only                                                                                              |
-| Deactivate express fare       | ✅ Free    | ✅ Allowed   | Existing tickets unaffected                                                                                               |
-| Add/deactivate pickup/dropoff | ✅ Free    | ✅ Allowed   | Always allowed                                                                                                            |
-| Trip status                   | ✅ Free    | ✅ Allowed   | State machine rules only                                                                                                  |
-| Bus reassignment              | ✅ Free    | ⚠ Restricted | New bus totalSeats must be >= MAX(bookedSeats across all segments). Error: BUS_REASSIGNMENT_BLOCKED_INSUFFICIENT_CAPACITY |
-| departureDate / currency      | ✅ Free    | ❌ Blocked   | Cannot change after tickets exist                                                                                         |
-| Remove any stop               | ✅ Free    | ❌ Blocked   | Blocked if referenced by segment or express fare                                                                          |
-| Add / remove segments         | ❌ Blocked | ❌ Blocked   | Segments frozen at creation — create new trip if route changes                                                            |
-| Add/deactivate pickup/dropoff | ✅ Free    | ✅ Allowed   | Always allowed                                                                                                            |
-
-- Note: Deactivating a point does NOT affect existing CONFIRMED tickets
-- (ticket stores pickupPointId/dropoffPointId snapshot)
-
----
-
-## 13. Error Codes
-
-| Code                                             | Trigger                                                          |
-| ------------------------------------------------ | ---------------------------------------------------------------- |
-| `STOP_REMOVAL_BLOCKED_EXPRESS_DEPENDENCY`        | Removing a stop that breaks an express fare chain                |
-| `BUS_REASSIGNMENT_BLOCKED_INSUFFICIENT_CAPACITY` | New bus totalSeats < MAX(bookedSeats)                            |
-| `SEGMENT_CAPACITY_EXCEEDED`                      | CAS update returned 0 rows — no seats available                  |
-| `TICKET_IDEMPOTENCY_REPLAY`                      | Booking request replayed — existing ticket returned              |
-| `INVALID_EXPRESS_FARE_CHAIN`                     | segmentsCovered does not form a continuous chain                 |
-| `INVALID_STOP_SEQUENCE`                          | sequence not strictly ascending or duplicate                     |
-| `INVALID_TIMELINE`                               | Stop timestamps not strictly increasing                          |
-| `MAX_SEATS_BELOW_BOOKED`                         | Attempt to set maxSeats below current bookedSeats                |
-| `MISSING_PICKUP_POINT`                           | A stop with `boardingAllowed = true` has no PickupPoint defined  |
-| `MISSING_DROPOFF_POINT`                          | A stop with `droppingAllowed = true` has no DropoffPoint defined |
-
----
-
-## 14. Canonical JSON Example
-
-Route: **Djerba → Sfax → Sousse → Tunis** (all commercial stops)
-Two express fares: full journey + partial journey (Sfax → Tunis)
-
-```json
-{
-  "tripId": "TRIP_2025_04_15_DJE_TUN_01",
-  "target": { "company": "cmp_id" },
-  "departureDate": "2025-04-15",
-  "timezone": "Africa/Tunis",
-  "status": "SCHEDULED",
-  "bus": {
-    "busId": "BUS_12"
-    // pure reference — totalSeats read live from Bus entity
-    // totalSeats is locked on Bus when bus is in SCHEDULED or ACTIVE trip
-  },
-  "currency": "TND",
-  "seatHoldMinutes": 10,
-  "stopSchedule": [
-    {
-      "placeId": "PLACE_DJERBA",
-      "sequence": 1,
-      "arrivalTime": null,
-      "departureTime": "2025-04-15T06:00:00Z",
-      "boardingAllowed": true,
-      "droppingAllowed": false
-    },
-    {
-      "placeId": "PLACE_SFAX",
-      "sequence": 2,
-      "arrivalTime": "2025-04-15T08:30:00Z",
-      "departureTime": "2025-04-15T08:45:00Z",
-      "boardingAllowed": true,
-      "droppingAllowed": true
-    },
-    {
-      "placeId": "PLACE_SOUSSE",
-      "sequence": 3,
-      "arrivalTime": "2025-04-15T10:30:00Z",
-      "departureTime": "2025-04-15T10:45:00Z",
-      "boardingAllowed": true,
-      "droppingAllowed": true
-    },
-    {
-      "placeId": "PLACE_TUNIS",
-      "sequence": 4,
-      "arrivalTime": "2025-04-15T12:30:00Z",
-      "departureTime": null,
-      "boardingAllowed": false,
-      "droppingAllowed": true
-    }
-  ],
-  "pickupPoints": [
-    {
-      "pointId": "PP_DJE_01",
-      "placeId": "PLACE_DJERBA",
-      "address": "Houmet Souk Bus Station",
-      "scheduledDepartureTime": "2025-04-15T06:00:00Z",
-      "active": true,
-      "location": { "latitude": 33.8076, "longitude": 10.8451 }
-    },
-    {
-      "pointId": "PP_SFX_01",
-      "placeId": "PLACE_SFAX",
-      "address": "Sfax Central Bus Station",
-      "scheduledDepartureTime": "2025-04-15T08:45:00Z",
-      "active": true,
-      "location": { "latitude": 34.7406, "longitude": 10.7603 }
-    }
-  ],
-  "dropoffPoints": [
-    {
-      "pointId": "DP_SOU_01",
-      "placeId": "PLACE_SOUSSE",
-      "address": "Sousse Bus Station",
-      "scheduledArrivalTime": "2025-04-15T10:30:00Z",
-      "active": true,
-      "location": { "latitude": 35.8245, "longitude": 10.6346 }
-    },
-    {
-      "pointId": "DP_TUN_01",
-      "placeId": "PLACE_TUNIS",
-      "address": "Tunis Central Bus Terminal",
-      "scheduledArrivalTime": "2025-04-15T12:30:00Z",
-      "active": true,
-      "location": { "latitude": 36.8065, "longitude": 10.1815 }
-    }
-  ],
-  "segments": [
-    {
-      "segmentId": "SEG_DJE_SFX",
-      "sequence": 1,
-      "fromPlaceId": "PLACE_DJERBA",
-      "toPlaceId": "PLACE_SFAX",
-      "departureTime": "2025-04-15T06:00:00Z",
-      "arrivalTime": "2025-04-15T08:30:00Z",
-      "maxSeats": 50,
-      "bookedSeats": 0,
-      "basePrice": 25,
-      "distanceKm": 130,
-      "durationMinutes": 150
-    },
-    {
-      "segmentId": "SEG_SFX_SOU",
-      "sequence": 2,
-      "fromPlaceId": "PLACE_SFAX",
-      "toPlaceId": "PLACE_SOUSSE",
-      "departureTime": "2025-04-15T08:45:00Z",
-      "arrivalTime": "2025-04-15T10:30:00Z",
-      "maxSeats": 50,
-      "bookedSeats": 0,
-      "basePrice": 20,
-      "distanceKm": 80,
-      "durationMinutes": 105
-    },
-    {
-      "segmentId": "SEG_SOU_TUN",
-      "sequence": 3,
-      "fromPlaceId": "PLACE_SOUSSE",
-      "toPlaceId": "PLACE_TUNIS",
-      "departureTime": "2025-04-15T10:45:00Z",
-      "arrivalTime": "2025-04-15T12:30:00Z",
-      "maxSeats": 50,
-      "bookedSeats": 0,
-      "basePrice": 25,
-      "distanceKm": 60,
-      "durationMinutes": 105
-    }
-  ],
-  "expressFares": [
-    {
-      "expressId": "EXP_DJE_TUN",
-      "fromPlaceId": "PLACE_DJERBA",
-      "toPlaceId": "PLACE_TUNIS",
-      "segmentsCovered": ["SEG_DJE_SFX", "SEG_SFX_SOU", "SEG_SOU_TUN"],
-      "price": 55,
-      "validFrom": null,
-      "validUntil": null,
-      "active": true,
-      "totalDistanceKm": 270,
-      "totalDurationMinutes": 360
-    },
-    {
-      "expressId": "EXP_SFX_TUN",
-      "fromPlaceId": "PLACE_SFAX",
-      "toPlaceId": "PLACE_TUNIS",
-      "segmentsCovered": ["SEG_SFX_SOU", "SEG_SOU_TUN"],
-      "price": 38,
-      "validFrom": null,
-      "validUntil": null,
-      "active": true,
-      "totalDistanceKm": 140,
-      "totalDurationMinutes": 210
-    }
-  ]
-}
-```
-
----
-
-## 15. What Copilot Should Never Do
-
-- Add `isCommercialStop` field to stops — use `boardingAllowed` + `droppingAllowed` only
-- Add `currency` field to segments or express fares — it is inherited from `trip.currency`
-- Add `maxSeats` or `bookedSeats` to express fares — they have zero inventory
-- Add `active` field to segments — segments are frozen and always exist
-- Store `totalDistanceKm` / `totalDurationMinutes` independently on express fares without deriving from segments
-- Mutate a ticket after creation — use Refund entity for cancellations
-- Create a ticket after payment success — ticket must be created as PENDING first
-- Allow segments to be added or removed after trip creation
-- Allow bus reassignment without checking MAX(bookedSeats) across all segments
-- Use `stopId` — the canonical field name is `placeId`
-- Add `totalSeats` to `trip.bus` — it is a pure reference, no snapshot needed
-- Query trips without scoping by `target.company` — platform ownership is company-scoped
-- Query POS ticket work without respecting `target.company` and, when needed, `target.pos`
-
-## 16. Shared Models Pattern
-
-- One shared file: src/app/core/models/shared.model.ts
-- Any type reused across more than one entity belongs in shared.model.ts
-- Never redeclare shared types inside entity model files
-- Always import from shared.model.ts when the type is not entity-specific
+| Field | Meaning |
+| --- | --- |
+| `target.company` | Owning company |
+| `departureDate` | Trip departure instant |
+| `timezone` | IANA timezone used for display |
+| `status` | `SCHEDULED`, `ACTIVE`, `COMPLETED`, `CANCELLED` |
+| `bus.busId` | Bus reference only |
+| `currency` | Currency reference |
+| `stopSchedule` | Ordered stop definitions |
+| `pickupPoints` | Pickup sub-resources |
+| `dropoffPoints` | Dropoff sub-resources |
+| `segments` | Frozen inventory rows |
+| `expressFares` | Segment-chain pricing overlays |
+
+## 4. Validation Pipeline
+
+Trip creation currently follows this order:
+
+1. `StopValidator` validates the stop schedule.
+2. `BusService` loads the bus and confirms company ownership.
+3. `TripTypeRepository` checks that the bus is not already attached to a scheduled or active trip.
+4. `SegmentGenerator` builds the frozen segments from the commercial stop chain.
+5. `ExpressFareValidator` validates express fare chains and boundaries.
+6. `PickupDropoffValidator` ensures mandatory pickup and dropoff coverage.
+7. `TripService` persists the trip with `status = SCHEDULED`.
+
+## 5. Stop Rules
+
+The stop schedule is the source of route truth.
+
+### Requirements
+
+- `sequence` must be strictly ascending.
+- Arrival and departure times must move forward in time.
+- The first stop must not have an arrival time.
+- The last stop must not have a departure time.
+- There must be at least two commercial stops.
+- A stop is considered commercial when it participates in boarding or dropping.
+- Technical stops are allowed, but they are skipped when generating segments.
+
+### Derived stop type
+
+- Origin: boarding allowed, dropping not allowed
+- Destination: dropping allowed, boarding not allowed
+- Intermediate commercial stop: both flags true
+- Technical stop: both flags false
+
+## 6. Segment Rules
+
+Segments are the inventory layer.
+
+- Segments are generated between consecutive commercial stops only.
+- Segments are frozen after creation.
+- Each segment has its own `maxSeats`, `bookedSeats`, `basePrice`, `distanceKm`, and `durationMinutes`.
+- `bookedSeats` starts at 0.
+- `maxSeats` must never exceed the bus capacity.
+- Segment arrays are not part of the editable payload.
+- Individual segment price and max-seat changes are handled through dedicated service methods, not by replacing the whole array.
+
+### Inventory meaning
+
+- `bookedSeats` counts seats reserved by active tickets.
+- Pending and confirmed tickets count toward booked seats.
+- Expired and cancelled tickets do not.
+- Reconciliation is used to repair drift if a segment counter diverges from live ticket state.
+
+## 7. Express Fare Rules
+
+Express fares are pricing overlays, not inventory holders.
+
+- Each express fare references an ordered chain of segment IDs.
+- The chain must be continuous.
+- `fromPlaceId` must match the first segment in the chain.
+- `toPlaceId` must match the last segment in the chain.
+- The total distance and duration are derived from the covered segments.
+- No inventory fields belong to express fares.
+
+### Lifecycle constraints
+
+- New express fares cannot be added on `ACTIVE` trips.
+- Existing express fares can be updated or deactivated according to the service rules.
+- Express fares cannot be modified on `COMPLETED` or `CANCELLED` trips.
+- Removing a stop that would break an express fare chain is blocked.
+
+## 8. Pickup And Dropoff Rules
+
+Pickup and dropoff sub-resources are mandatory for commercial coverage.
+
+- Every boarding stop must have at least one pickup point.
+- Every dropping stop must have at least one dropoff point.
+- The `placeId` on the point must exist in the stop schedule.
+- `pickupPoints` and `dropoffPoints` are validated again after trip updates.
+- Points can be added or updated without replacing the trip document structure.
+
+## 9. Status Machine
+
+Allowed transitions:
+
+- `SCHEDULED` -> `ACTIVE`
+- `SCHEDULED` -> `CANCELLED`
+- `ACTIVE` -> `COMPLETED`
+- `ACTIVE` -> `CANCELLED`
+
+Terminal states:
+
+- `COMPLETED`
+- `CANCELLED`
+
+### Trip cancellation side effects
+
+When a trip transitions from `ACTIVE` to `CANCELLED`:
+
+- pending tickets are expired and their seats are released
+- confirmed tickets are cancelled
+- refund records are created for confirmed tickets
+
+## 10. Edit Permissions
+
+`TripEditRules` is the current source of truth for field-level permissions.
+
+| Status | Allowed | Blocked |
+| --- | --- | --- |
+| `SCHEDULED` | Most fields, stop schedule replacement, pickup/dropoff changes, bus changes, express fare creation and management | Segment array replacement |
+| `ACTIVE` | Pickup/dropoff changes, bus reassignment if capacity is sufficient, stop additions, stop-time changes when no bookings touch the stop, segment base-price updates, segment max-seat updates, existing express fare updates and deactivation | `departureDate`, `currency`, stop removal, stop-time changes when booked segments exist, new express fare creation |
+| `COMPLETED` / `CANCELLED` | Status transitions only | All non-status changes |
+
+### Additional details
+
+- Stop removal on `SCHEDULED` trips is allowed only if it does not break an express fare dependency.
+- Bus reassignment on `ACTIVE` trips requires the new bus to have at least as many seats as the current maximum booked-seats value across the trip segments.
+- Changing a stop time is blocked when any segment touching that stop already has bookings.
+- `TripUpdateRequest` no longer contains a seat-hold field.
+
+## 11. Read Model And Reconciliation
+
+`TripResponseEnricher` reconciles live trips before mapping them to API responses.
+
+Current flow:
+
+1. Load the requested trip or trip page.
+2. Recompute `segments.bookedSeats` from active tickets.
+3. Save any corrected trips.
+4. Enrich the trip with related bus, currency, and place data.
+
+This prevents stale inventory counters from leaking into the UI.
+
+## 12. Current Service Anchors
+
+- `TripService` owns create, update, search, delete, status transition, and sub-resource operations.
+- `TripEditRules` enforces edit permissions.
+- `TripStatusMachine` validates allowed status transitions.
+- `StopValidator` validates stop ordering and timing.
+- `SegmentGenerator` builds the frozen inventory chain.
+- `PickupDropoffValidator` enforces mandatory pickup/dropoff coverage.
+- `ExpressFareValidator` checks chain continuity and price overlays.
+- `ExpressFareStopGuard` blocks stop removals that would invalidate express fares.
+- `TripInventoryReconciliationService` repairs segment counters from active ticket state.
+
+## 13. Do Not Reintroduce
+
+- PostgreSQL or JPA trip persistence
+- `seatHoldMinutes` on the trip document
+- flat seat-map inventory on the trip
+- mutable segment arrays after creation
+- legacy origin/destination-only route modeling
+

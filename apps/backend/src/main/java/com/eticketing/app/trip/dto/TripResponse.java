@@ -29,7 +29,6 @@ public class TripResponse {
     private TripStatusEnum status;
     private BusSummary bus;
     private CurrencySummary currency;
-    private int seatHoldMinutes;
 
     private List<StopView> stopSchedule;
     private List<PickupPointView> pickupPoints;
@@ -171,7 +170,6 @@ public class TripResponse {
                 .status(trip.getStatus())
                 .bus(toBusSummary(trip.getBus(), busEntity))
                 .currency(toCurrencySummary(trip.getCurrency(), currEntity))
-                .seatHoldMinutes(trip.getSeatHoldMinutes())
                 .stopSchedule(mapStops(trip.getStopSchedule(), placeMap))
                 .pickupPoints(mapPickups(trip.getPickupPoints(), placeMap))
                 .dropoffPoints(mapDropoffs(trip.getDropoffPoints(), placeMap))

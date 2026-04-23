@@ -182,7 +182,10 @@ export class BusDetailsComponent implements OnInit, OnDestroy {
     return !!this.bus?.layoutTemplate;
   }
 
-  async onSeatEntryModeToggle(checked: boolean): Promise<void> {
+  async onSeatEntryModeToggle(
+    checked: boolean,
+    toggleInput: HTMLInputElement,
+  ): Promise<void> {
     const nextMode: SeatEntryMode = checked ? 'VISUAL' : 'MANUAL';
 
     if (nextMode === this.seatEntryMode) {
@@ -209,6 +212,7 @@ export class BusDetailsComponent implements OnInit, OnDestroy {
       });
 
       if (!result.isConfirmed) {
+        toggleInput.checked = this.isVisualMode;
         this.cdr.markForCheck();
         return;
       }
@@ -223,6 +227,7 @@ export class BusDetailsComponent implements OnInit, OnDestroy {
     );
     this.seatEntryMode = nextMode;
     this.applySeatEntryModeState();
+    toggleInput.checked = this.isVisualMode;
     this.cdr.markForCheck();
   }
 

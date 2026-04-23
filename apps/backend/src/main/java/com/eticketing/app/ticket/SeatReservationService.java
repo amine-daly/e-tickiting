@@ -33,15 +33,24 @@ public class SeatReservationService {
      * @return true if all segments were reserved; false if capacity exceeded.
      */
     public boolean reserveSeats(String tripId, List<String> segmentIds) {
-        // Try to increment each segment's bookedSeats atomically
+        return reserveSeats(tripId, segmentIds, 1);
+    }
+
+    /**
+     * Atomically reserves {@code count} seats on every segment in
+     * {@code segmentIds}. Used for group bookings where N passengers need seats
+     * on the same segments.
+     *
+     * @return true if all segments were reserved; false if capacity exceeded.
+     */
+    public boolean reserveSeats(String tripId, List<String> segmentIds, int count) {
         int reserved = 0;
         for (String segId : segmentIds) {
-            boolean ok = incrementSeat(tripId, segId);
+            boolean ok = incrementSeat(tripId, segId, count);
             if (!ok) {
-                // Roll back already-reserved segments
-                LOG.warn("SEGMENT_CAPACITY_EXCEEDED on segment {} for trip {}. Rolling back {} segments.",
-                        segId, tripId, reserved);
-                rollback(tripId, segmentIds.subList(0, reserved));
+                LOG.warn("SEGMENT_CAPACITY_EXCEEDED on segment {} for trip {} (count={}). Rolling back {} segments.",
+                        segId, tripId, count, reserved);
+                rollback(tripId, segmentIds.subList(0, reserved), count);
                 return false;
             }
             reserved++;
@@ -54,27 +63,25 @@ public class SeatReservationService {
      * for the given trip. Used when releasing seats (expiry, refund approval).
      */
     public void releaseSeats(String tripId, List<String> segmentIds) {
+        releaseSeats(tripId, segmentIds, 1);
+    }
+
+    /**
+     * Releases {@code count} seats on every segment. Used for group booking
+     * expiry/cancellation.
+     */
+    public void releaseSeats(String tripId, List<String> segmentIds, int count) {
         for (String segId : segmentIds) {
-            decrementSeat(tripId, segId);
+            decrementSeat(tripId, segId, count);
         }
     }
 
     // ── Internals ───────────────────────────────────────────────────────
     /**
-     * CAS increment: updates only if bookedSeats < maxSeats on the matching
-     * segment embedded inside the trip document.
+     * CAS increment: updates only if bookedSeats + count <= maxSeats on the
+     * matching segment embedded inside the trip document.
      */
-    private boolean incrementSeat(String tripId, String segmentId) {
-        Query query = new Query(Criteria.where("_id").is(tripId)
-                .and("segments.segmentId").is(segmentId));
-        // Use $expr to compare bookedSeats < maxSeats on the matched segment
-        // Simpler approach: use elemMatch with a $where-less pattern
-        // MongoDB supports $inc with a condition by matching on the current value
-        // We use the "positional $ operator" trick:
-        //   match: segments.segmentId = X AND segments.bookedSeats < segments.maxSeats
-        // Unfortunately, MongoDB doesn't allow cross-field comparisons in simple queries.
-        // So we use an Aggregation Pipeline Update.
-
+    private boolean incrementSeat(String tripId, String segmentId, int count) {
         // Step 1: Find the trip and check capacity
         Query findQuery = new Query(Criteria.where("_id").is(tripId));
         com.eticketing.app.trip.TripType trip = mongoTemplate.findOne(findQuery, com.eticketing.app.trip.TripType.class, "trips");
@@ -86,7 +93,7 @@ public class SeatReservationService {
                 .filter(s -> s.getSegmentId().equals(segmentId))
                 .findFirst()
                 .orElse(null);
-        if (seg == null || seg.getBookedSeats() >= seg.getMaxSeats()) {
+        if (seg == null || seg.getBookedSeats() + count > seg.getMaxSeats()) {
             return false;
         }
 
@@ -95,27 +102,26 @@ public class SeatReservationService {
                 .and("segments").elemMatch(
                 Criteria.where("segmentId").is(segmentId)
                         .and("bookedSeats").is(seg.getBookedSeats())));
-        Update update = new Update().inc("segments.$.bookedSeats", 1);
+        Update update = new Update().inc("segments.$.bookedSeats", count);
         UpdateResult result = mongoTemplate.updateFirst(casQuery, update, "trips");
         return result.getModifiedCount() == 1;
     }
 
-    private void decrementSeat(String tripId, String segmentId) {
-        // Decrement only if bookedSeats > 0
+    private void decrementSeat(String tripId, String segmentId, int count) {
         Query query = new Query(Criteria.where("_id").is(tripId)
                 .and("segments").elemMatch(
                 Criteria.where("segmentId").is(segmentId)
-                        .and("bookedSeats").gt(0)));
-        Update update = new Update().inc("segments.$.bookedSeats", -1);
+                        .and("bookedSeats").gte(count)));
+        Update update = new Update().inc("segments.$.bookedSeats", -count);
         UpdateResult result = mongoTemplate.updateFirst(query, update, "trips");
         if (result.getModifiedCount() != 1) {
-            LOG.warn("Seat decrement failed for trip={} segment={} — bookedSeats may already be 0", tripId, segmentId);
+            LOG.error("Seat decrement failed for trip={} segment={} count={} — bookedSeats may be insufficient and inventory reconciliation may be required", tripId, segmentId, count);
         }
     }
 
-    private void rollback(String tripId, List<String> segmentIds) {
+    private void rollback(String tripId, List<String> segmentIds, int count) {
         for (String segId : segmentIds) {
-            decrementSeat(tripId, segId);
+            decrementSeat(tripId, segId, count);
         }
     }
 }

@@ -20,8 +20,8 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Ticket document  TRIP_SPEC section 8.
- * Immutable financial record after creation: never mutate appliedPrice, currency, or segmentIds.
+ * Ticket document TRIP_SPEC section 8. Immutable financial record after
+ * creation: never mutate appliedPrice, currency, or segmentIds.
  */
 @Document("tickets")
 @CompoundIndexes({
@@ -43,6 +43,11 @@ public class TicketType {
 
     private String tripId;
 
+    /**
+     * If this ticket belongs to a group order.
+     */
+    private String orderId;
+
     private TargetInput target;
 
     @Builder.Default
@@ -57,12 +62,27 @@ public class TicketType {
     private String passengerId;
 
     /**
-     * Snapshot at booking time  NEVER changes.
+     * Plain-text first name for guest passengers without a registered account.
+     */
+    private String guestFirstName;
+
+    /**
+     * Plain-text last name for guest passengers without a registered account.
+     */
+    private String guestLastName;
+
+    /**
+     * Selected seat number from the bus layout (optional).
+     */
+    private String seatNo;
+
+    /**
+     * Snapshot at booking time NEVER changes.
      */
     private BigDecimal appliedPrice;
 
     /**
-     * Snapshot of trip.currency at booking time  NEVER changes.
+     * Snapshot of trip.currency at booking time NEVER changes.
      */
     private String currency;
 
@@ -76,13 +96,13 @@ public class TicketType {
     private TicketStatusEnum status = TicketStatusEnum.PENDING;
 
     /**
-     * Exactly-once semantics  unique index.
+     * Exactly-once semantics unique index.
      */
     @Indexed(unique = true)
     private String idempotencyKey;
 
     /**
-     * now() + seatHoldMinutes  only meaningful while PENDING.
+     * Expiry for the seat hold — only meaningful while PENDING.
      */
     private Instant expiresAt;
 

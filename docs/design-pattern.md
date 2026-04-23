@@ -130,7 +130,7 @@ Forget takeUntil(destroy$) on any subscription
 ❌ Write getters/setters manually — use Lombok @Data (Backend)
 ❌ Manual DTO mapping — use MapStruct (Backend)
 ❌ Manual null/empty checks — use Apache Commons (Backend)
-❌ String concatenation for queries — use JPA Specifications (Backend)
+❌ String concatenation for queries — use Spring Data MongoDB criteria or repository queries (Backend)
 ❌ Manual validation logic — use Bean Validation annotations (Backend)
 
 ═══════════════════════════════════════════════════════════════
@@ -139,7 +139,7 @@ GOLDEN RULE: If you're writing more than 3 lines for a common operation,
 there's probably a library function for it. USE IT.
 
 Frontend: lodash + date-fns + rxjs
-Backend: Apache Commons + Lombok + MapStruct + Bean Validation
+Backend: Spring Data MongoDB + Apache Commons + Lombok + MapStruct + Bean Validation
 
 ═══════════════════════════════════════════════════════════════
 
@@ -205,7 +205,7 @@ Backend (Spring Boot):
 - Custom validators with @Constraint
 - NEVER write manual validation logic
 
-✅ Spring Data JPA Specifications - For dynamic queries
+✅ Spring Data MongoDB criteria queries - For dynamic filters
 
 - NEVER build query strings manually
 - Use Specification<T> for complex filters
@@ -220,7 +220,7 @@ NEVER DO:
 ❌ Manual null checks when Apache Commons has it
 ❌ Manual getters/setters when Lombok can generate them
 ❌ Manual DTO mapping when MapStruct can do it
-❌ String concatenation for queries (use JPA Criteria or Specifications)
+❌ String concatenation for queries (use Spring Data MongoDB query APIs or criteria)
 ❌ Manual validation logic (use Bean Validation annotations)
 ❌ Reinventing collection utilities (use Apache Commons)
 

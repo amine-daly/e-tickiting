@@ -78,13 +78,6 @@ public class TripType {
      */
     private TripCurrency currency;
 
-    // ── Layer 4 — Seat Hold ─────────────────────────────────────────────
-    /**
-     * How long PENDING ticket holds seats. Default 10.
-     */
-    @Builder.Default
-    private int seatHoldMinutes = 10;
-
     // ── Layer 5 — Stop Schedule ─────────────────────────────────────────
     @Builder.Default
     private List<StopType> stopSchedule = new ArrayList<>();

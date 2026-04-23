@@ -1,91 +1,80 @@
-# Trip Edit Mode — Permission Audit
+# Trip Edit Audit
 
-## Backend Source of Truth: `TripEditRules.java` + express fare sub-resource methods in `TripService.java`
+Last updated: April 2026
+Status: Matches the current backend and terminal UI behavior
 
-### SCHEDULED
+## 1. Source Of Truth
 
-- **All fields editable** (departureDate, timezone, currencyId, seatHoldMinutes, bus, stops, pickup/dropoff points)
-- **Segments frozen** (always — managed via separate lifecycle)
-- **Express fares** — ALLOWED via sub-resource endpoints (add, update, delete)
-- **Stop removal guarded** by `ExpressFareStopGuard` — blocks if stop is referenced by an express fare
+The current edit rules are enforced in:
 
-### ACTIVE
+- `TripEditRules`
+- `TripService.update`
+- `TripService.updateSegmentPrice`
+- `TripService.updateSegmentMaxSeats`
+- `TripService.addExpressFare`
+- `TripService.updateExpressFare`
+- `TripService.deleteExpressFare`
+- `TripService.transitionStatus`
 
-- **departureDate** — BLOCKED
-- **currencyId** — BLOCKED
-- **Stop removal** — BLOCKED
-- **Stop addition** — ALLOWED
-- **Stop reorder** — BLOCKED (changing sequence on ACTIVE breaks segment integrity)
-- **Stop time changes** — CONDITIONAL: blocked if any adjacent segment has `bookedSeats > 0`
-- **Bus reassignment** — CONDITIONAL: `newBus.totalSeats >= max(bookedSeats)` across segments
-- **Express fare price / validFrom / validUntil / active flag** — ALLOWED via sub-resource endpoints
-- **Add express fare** — BLOCKED
-- **Delete express fare** — DEACTIVATES instead of deleting
-- **Other fields** (timezone, seatHoldMinutes, pickup/dropoff points) — ALLOWED
+The frontend trip detail editor has already been aligned to remove the old seat-hold field from the form and summary views.
 
-### COMPLETED / CANCELLED
+## 2. Current Permission Matrix
 
-- **All fields blocked** — only status transitions allowed (via `hasNonStatusChanges()`)
-- **Express fare sub-resource changes** — BLOCKED
+| Trip status | Allowed | Blocked |
+| --- | --- | --- |
+| `SCHEDULED` | Most updates, stop schedule replacement, pickup/dropoff updates, bus reassignment, express fare creation and management | Segment array replacement, stop removals that break express fare chains |
+| `ACTIVE` | Pickup/dropoff updates, bus reassignment if capacity allows, stop additions, stop-time changes when no bookings touch the stop, segment price changes, segment max-seat changes, existing express fare updates and deactivation | `departureDate`, `currency`, stop removal, stop-time changes when booked segments exist, new express fare creation |
+| `COMPLETED` / `CANCELLED` | Status transitions only | All non-status changes |
 
----
+## 3. Important Backend Rules
 
-## Bugs Fixed
+- Segments are always frozen as an array.
+- Segment price is editable as a separate service operation.
+- Segment max seats cannot be reduced below the current booked count.
+- A bus change on an active trip requires sufficient seat capacity.
+- Removing a stop on a scheduled trip is blocked if an express fare depends on it.
+- Removing a stop on an active trip is blocked outright.
+- Stop-time changes on an active trip are blocked only when a touching segment already has bookings.
+- Express fare creation is blocked on active trips.
+- Express fare updates and deactivation are blocked on completed or cancelled trips.
 
-### BUG 1 — `onFormChanges()` swapped parameter order (Medium)
+## 4. Trip Status Transitions
 
-- **Before:** `FormHelper.getChangedValues(this.initialValues, this.tripForm.getRawValue())`
-- **After:** `FormHelper.getChangedValues(this.tripForm.getRawValue(), this.initialValues)`
-- `FormHelper.getChangedValues(current, initial)` iterates keys of the first param. Swapped order meant it was iterating initial keys and comparing against current values — would miss newly added form array items and return wrong changed set.
+Allowed transitions:
 
-### BUG 2 — `submitUpdate()` raw spread leaked unrecognized fields (High)
+- `SCHEDULED` -> `ACTIVE`
+- `SCHEDULED` -> `CANCELLED`
+- `ACTIVE` -> `COMPLETED`
+- `ACTIVE` -> `CANCELLED`
 
-- **Before:** `const payload: Partial<TripUpdatePayload> = { ...changed };` then selectively overwrote known fields
-- **After:** `const payload: Partial<TripUpdatePayload> = {};` — only explicitly mapped fields are sent
-- The spread was copying raw form values (e.g. `busId`, `segments`, `expressFares`) directly into the payload, causing backend 400 UNRECOGNIZED_FIELD errors.
+Trip cancellation side effects remain in force:
 
-### BUG 3 — Debug `console.log` statements in `submitUpdate()` (Low)
+- pending tickets become expired and release their seats
+- confirmed tickets become cancelled and create refund records
 
-- Removed 4 `console.log` statements that leaked form data to browser console in production.
+## 5. Frontend Alignment
 
----
+The terminal trip editor is now aligned with the backend rules:
 
-## Gaps Fixed
+- The seat-hold field has been removed from the create and edit forms.
+- The trip info summary no longer displays seat-hold minutes.
+- The submit payload no longer sends `seatHoldMinutes`.
+- The edit form only sends the fields that still exist in the current backend DTOs.
 
-### GAP 1 — Add-stop button wrongly disabled for ACTIVE trips (Medium)
+## 6. Current Audit Result
 
-- **Before:** `[disabled]="isEditMode && trip?.status === 'ACTIVE'"` on add-stop button
-- **After:** Removed disabled binding — backend allows adding stops to ACTIVE trips
-- Remove-stop correctly stays disabled for ACTIVE (backend blocks it).
+The current workspace is internally consistent on trip-edit behavior.
 
-### GAP 2 — No stop-time-change guard for ACTIVE trips with bookings (Medium)
+No open doc mismatch remains for:
 
-- **Before:** `applyEditModeRestrictions()` only disabled `departureDate` and `currencyId` for ACTIVE
-- **After:** For each stop, checks if adjacent segments have `bookedSeats > 0`. If so, disables `arrivalTime` and `departureTime` on that stop.
-- Matches backend rule: stop time blocked if any segment touching stop has booked seats.
+- `seatHoldMinutes`
+- legacy PostgreSQL/JPA trip assumptions
+- flat seat-map editing on trips
+- unsupported express-fare creation on active trips
 
-### GAP 3 — Move-up/move-down buttons had no ACTIVE guard (Low → Medium)
+## 7. What To Watch Next
 
-- **Before:** Only disabled at array boundaries (`i === 0`, `i === last`)
-- **After:** Also disabled when `isEditMode && trip?.status === 'ACTIVE'`
-- Reordering stops on ACTIVE trips changes segment sequence integrity.
+- Keep backend and frontend edit matrices in sync when adding new trip fields.
+- Add regression tests for active-trip stop-time changes and bus reassignment capacity checks.
+- Keep the express-fare rules documented whenever the service-level guard changes.
 
-### GAP 4 — Frontend incorrectly froze express fares in edit mode (High)
-
-- **Before:** The UI disabled express fare controls and never called the backend express fare sub-resource endpoints, even though the backend already exposed add/update/delete operations.
-- **After:**
-  - **SCHEDULED:** express fares can be added, removed, or edited from the trip form
-  - **ACTIVE:** existing express fares can update `price`, `validFrom`, `validUntil`, and `active`; segment coverage stays locked
-  - **COMPLETED/CANCELLED:** express fares remain read-only
-  - Frontend now maps express fare edits to dedicated sub-resource endpoints instead of sending them through `TripUpdateRequest`
-  - Backend now blocks unsupported express fare mutations on `COMPLETED` / `CANCELLED` trips and blocks express-fare creation on `ACTIVE` trips
-
----
-
-## Remaining Items (Low Priority)
-
-| #   | Gap                                                         | Severity | Notes                                                                                            |
-| --- | ----------------------------------------------------------- | -------- | ------------------------------------------------------------------------------------------------ |
-| 5   | `TripUpdatePayload` missing `status` field                  | Low      | Status transitions use separate endpoint — by design                                             |
-| 6   | No frontend `ExpressFareStopGuard` equivalent for SCHEDULED | Low      | Backend enforces it; could add UX warning later                                                  |
-| 7   | No frontend bus capacity check for ACTIVE                   | Low      | Backend enforces `newBus.totalSeats >= max(bookedSeats)`; could add client-side validation later |

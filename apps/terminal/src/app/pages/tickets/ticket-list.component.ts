@@ -13,11 +13,12 @@ import {
   NgbTooltipModule,
 } from '@ng-bootstrap/ng-bootstrap';
 import { Subscription } from 'rxjs';
-import { finalize } from 'rxjs/operators';
+import { finalize, map } from 'rxjs/operators';
 
 import { AlertService } from '../../core/services/alert.service';
 import { Ticket, TicketStatus } from '../../core/models/ticket.model';
 import { TicketService } from './ticket.service';
+import { BookingService } from '../../core/services/booking.service';
 import { TranslateModule, TranslateService } from '@ngx-translate/core';
 import { PaginationComponent } from '../../shared/components/pagination/pagination.component';
 import { FormsModule } from '@angular/forms';
@@ -49,6 +50,9 @@ import { RouterModule } from '@angular/router';
 })
 export class TicketListComponent implements OnInit, OnDestroy {
   tickets$ = this.ticketService.tickets$;
+  displayRows$ = this.tickets$.pipe(
+    map((tickets) => this.buildDisplayRows(tickets)),
+  );
   loading$ = this.ticketService.loading$;
   pagination$ = this.ticketService.pagination$;
 
@@ -78,12 +82,14 @@ export class TicketListComponent implements OnInit, OnDestroy {
   };
 
   selectedTicket: Ticket | null = null;
+  selectedTickets: Ticket[] = [];
   private subscriptions = new Subscription();
   statusUpdating: Record<string, boolean> = {};
   emailSending: Record<string, boolean> = {};
 
   constructor(
     private ticketService: TicketService,
+    private bookingService: BookingService,
     private modalService: NgbModal,
     private alert: AlertService,
     private translate: TranslateService,
@@ -114,8 +120,13 @@ export class TicketListComponent implements OnInit, OnDestroy {
     this.loadTickets(1);
   }
 
-  openTicketModal(modal: TemplateRef<any>, ticket: Ticket): void {
+  openTicketModal(
+    modal: TemplateRef<any>,
+    ticket: Ticket,
+    tickets: Ticket[] = [ticket],
+  ): void {
     this.selectedTicket = ticket;
+    this.selectedTickets = tickets.length ? tickets : [ticket];
     this.modalService.open(modal, { size: 'lg' });
   }
 
@@ -147,6 +158,10 @@ export class TicketListComponent implements OnInit, OnDestroy {
 
   async cancelTicket(ticket: Ticket): Promise<void> {
     if (!ticket || ticket.status === TicketStatus.CANCELLED) return;
+    if (ticket.orderId?.trim() && this.isActiveOrderTicket(ticket)) {
+      await this.cancelOrderPassenger(ticket.orderId, ticket);
+      return;
+    }
     const result = await this.alert.confirm(
       this.t('TICKETS.MESSAGES.STATUS_CONFIRM_TITLE'),
       this.t('TICKETS.MESSAGES.CANCEL_TEXT'),
@@ -204,8 +219,208 @@ export class TicketListComponent implements OnInit, OnDestroy {
     return ticket?.id;
   }
 
+  trackDisplayRow(_: number, row: DisplayRow): string {
+    return row.type === 'order'
+      ? `order:${row.orderId}`
+      : `ticket:${row.ticket?.id}`;
+  }
+
+  /** Group tickets into display rows: standalone tickets + collapsed order rows. */
+  buildDisplayRows(tickets: Ticket[]): DisplayRow[] {
+    const orderMap = new Map<string, Ticket[]>();
+    const standaloneTickets: Ticket[] = [];
+
+    for (const ticket of tickets) {
+      const orderId = ticket.orderId?.trim();
+      if (orderId && this.isActiveOrderTicket(ticket)) {
+        const list = orderMap.get(orderId) || [];
+        list.push(ticket);
+        orderMap.set(orderId, list);
+        continue;
+      }
+
+      standaloneTickets.push(ticket);
+    }
+
+    const rows: DisplayRow[] = standaloneTickets.map((ticket) => ({
+      type: 'ticket',
+      ticket,
+    }));
+
+    for (const [orderId, orderTickets] of orderMap) {
+      const contactTicket = this.resolveOrderContactTicket(orderTickets);
+      const totalPrice = orderTickets.reduce(
+        (s, t) => s + (t.appliedPrice || 0),
+        0,
+      );
+      rows.push({
+        type: 'order',
+        orderId,
+        tickets: orderTickets,
+        contactTicket,
+        passengerCount: orderTickets.length,
+        totalPrice,
+        currency: contactTicket?.currency || orderTickets[0]?.currency,
+        status: this.resolveOrderStatus(orderTickets),
+      });
+    }
+
+    return rows.sort(
+      (left, right) => this.getRowTimestamp(right) - this.getRowTimestamp(left),
+    );
+  }
+
+  isOrderRow(row: DisplayRow): boolean {
+    return row.type === 'order';
+  }
+
+  async confirmOrder(row: DisplayRow): Promise<void> {
+    if (
+      row.type !== 'order' ||
+      !row.orderId ||
+      row.status !== TicketStatus.PENDING
+    )
+      return;
+    const result = await this.alert.confirm(
+      this.t('TICKETS.MESSAGES.STATUS_CONFIRM_TITLE'),
+      this.t('TICKETS.MESSAGES.CONFIRM_ORDER_TEXT', {
+        count: row.passengerCount,
+      }),
+      this.t('TICKETS.MESSAGES.STATUS_CONFIRM_OK'),
+      this.t('COMMON.BUTTON.CANCEL'),
+    );
+    if (!result.isConfirmed) return;
+    this.statusUpdating[row.orderId] = true;
+    const sub = this.bookingService
+      .confirmOrder(row.orderId)
+      .pipe(
+        finalize(() => {
+          this.statusUpdating[row.orderId!] = false;
+          this.cdr.markForCheck();
+        }),
+      )
+      .subscribe({
+        next: () => {
+          this.alert.success(this.t('TICKETS.MESSAGES.STATUS_SUCCESS'));
+          this.loadTickets(this.page);
+        },
+        error: () => this.alert.error(this.t('TICKETS.MESSAGES.STATUS_ERROR')),
+      });
+    this.subscriptions.add(sub);
+  }
+
+  async cancelOrder(row: DisplayRow): Promise<void> {
+    if (row.type !== 'order' || !row.orderId) return;
+    const result = await this.alert.confirm(
+      this.t('TICKETS.MESSAGES.STATUS_CONFIRM_TITLE'),
+      this.t('TICKETS.MESSAGES.CANCEL_ORDER_TEXT', {
+        count: row.passengerCount,
+      }),
+      this.t('TICKETS.MESSAGES.STATUS_CONFIRM_OK'),
+      this.t('COMMON.BUTTON.CANCEL'),
+    );
+    if (!result.isConfirmed) return;
+    this.statusUpdating[row.orderId] = true;
+    const sub = this.bookingService
+      .cancelOrder(row.orderId)
+      .pipe(
+        finalize(() => {
+          this.statusUpdating[row.orderId!] = false;
+          this.cdr.markForCheck();
+        }),
+      )
+      .subscribe({
+        next: () => {
+          this.alert.success(this.t('TICKETS.MESSAGES.STATUS_SUCCESS'));
+          this.loadTickets(this.page);
+        },
+        error: () => this.alert.error(this.t('TICKETS.MESSAGES.STATUS_ERROR')),
+      });
+    this.subscriptions.add(sub);
+  }
+
+  async cancelOrderPassenger(orderId: string, ticket: Ticket): Promise<void> {
+    if (!orderId || !ticket || !this.isActiveOrderTicket(ticket)) return;
+
+    const result = await this.alert.confirm(
+      this.t('TICKETS.MESSAGES.STATUS_CONFIRM_TITLE'),
+      this.t('TICKETS.MESSAGES.CANCEL_PASSENGER_TEXT', {
+        passenger: this.getTicketPassengerName(ticket),
+      }),
+      this.t('TICKETS.MESSAGES.STATUS_CONFIRM_OK'),
+      this.t('COMMON.BUTTON.CANCEL'),
+    );
+    if (!result.isConfirmed) return;
+
+    this.statusUpdating[ticket.id] = true;
+    const sub = this.bookingService
+      .cancelOrderPassenger(orderId, ticket.id)
+      .pipe(
+        finalize(() => {
+          this.statusUpdating[ticket.id] = false;
+          this.cdr.markForCheck();
+        }),
+      )
+      .subscribe({
+        next: () => {
+          this.syncSelectedOrderAfterPassengerCancel(orderId, ticket.id);
+          this.alert.success(this.t('TICKETS.MESSAGES.STATUS_SUCCESS'));
+          this.loadTickets(this.page);
+        },
+        error: () => this.alert.error(this.t('TICKETS.MESSAGES.STATUS_ERROR')),
+      });
+    this.subscriptions.add(sub);
+  }
+
+  async sendOrderEmail(row: DisplayRow): Promise<void> {
+    if (row.type !== 'order' || !row.orderId) return;
+    const contactName = this.getTicketUserName(row.contactTicket!);
+    const contactEmail = this.getTicketUserEmail(row.contactTicket!);
+    const result = await this.alert.confirm(
+      this.t('TICKETS.MESSAGES.EMAIL_CONFIRM_TITLE'),
+      this.t('TICKETS.MESSAGES.EMAIL_ORDER_CONFIRM_TEXT', {
+        email: contactEmail || contactName,
+      }),
+      this.t('TICKETS.MESSAGES.EMAIL_CONFIRM_OK'),
+      this.t('COMMON.BUTTON.CANCEL'),
+    );
+    if (!result.isConfirmed) return;
+    this.emailSending[row.orderId] = true;
+    const sub = this.ticketService
+      .sendOrderEmail(row.orderId)
+      .pipe(
+        finalize(() => {
+          this.emailSending[row.orderId!] = false;
+          this.cdr.markForCheck();
+        }),
+      )
+      .subscribe({
+        next: () =>
+          this.alert.success(this.t('TICKETS.MESSAGES.EMAIL_SUCCESS_TITLE')),
+        error: () => this.alert.error(this.t('TICKETS.MESSAGES.EMAIL_ERROR')),
+      });
+    this.subscriptions.add(sub);
+  }
+
   getTicketUserName(ticket: Ticket): string {
-    return ticket.user?.name || ticket.user?.id || ticket.id;
+    return this.getTicketPassengerName(ticket);
+  }
+
+  getTicketPassengerName(ticket: Ticket): string {
+    const registeredName = ticket.user?.name?.trim();
+    if (registeredName) {
+      return registeredName;
+    }
+
+    const guestName = [ticket.guestFirstName, ticket.guestLastName]
+      .filter((value): value is string => !!value && !!value.trim())
+      .join(' ')
+      .trim();
+    if (guestName) {
+      return guestName;
+    }
+
+    return ticket.passengerId || ticket.user?.id || ticket.id;
   }
 
   getTicketUserEmail(ticket: Ticket): string | null {
@@ -242,6 +457,10 @@ export class TicketListComponent implements OnInit, OnDestroy {
     return this.getTicketUserName(ticket).charAt(0).toUpperCase();
   }
 
+  canCancelPassenger(ticket: Ticket): boolean {
+    return !!ticket.orderId?.trim() && this.isActiveOrderTicket(ticket);
+  }
+
   ngOnDestroy(): void {
     this.subscriptions.unsubscribe();
   }
@@ -249,4 +468,83 @@ export class TicketListComponent implements OnInit, OnDestroy {
   private t(key: string, params?: Record<string, unknown>): string {
     return this.translate.instant(key, params);
   }
+
+  private resolveOrderContactTicket(orderTickets: Ticket[]): Ticket {
+    return (
+      orderTickets.find((ticket) => !!ticket.passengerId) ||
+      orderTickets.find(
+        (ticket) =>
+          !!ticket.user?.email ||
+          !!ticket.user?.phone?.number ||
+          !!ticket.user?.name,
+      ) ||
+      orderTickets[0]
+    );
+  }
+
+  private resolveOrderStatus(orderTickets: Ticket[]): TicketStatus {
+    return orderTickets.some((ticket) => ticket.status === TicketStatus.PENDING)
+      ? TicketStatus.PENDING
+      : TicketStatus.CONFIRMED;
+  }
+
+  private isActiveOrderTicket(ticket: Ticket): boolean {
+    return (
+      ticket.status === TicketStatus.PENDING ||
+      ticket.status === TicketStatus.CONFIRMED
+    );
+  }
+
+  private syncSelectedOrderAfterPassengerCancel(
+    orderId: string,
+    cancelledTicketId: string,
+  ): void {
+    if (this.selectedTicket?.orderId !== orderId) {
+      return;
+    }
+
+    const remainingTickets = this.selectedTickets.filter(
+      (ticket) => ticket.id !== cancelledTicketId,
+    );
+
+    if (!remainingTickets.length) {
+      this.selectedTicket = null;
+      this.selectedTickets = [];
+      this.modalService.dismissAll();
+      return;
+    }
+
+    this.selectedTickets = remainingTickets;
+    if (this.selectedTicket?.id === cancelledTicketId) {
+      this.selectedTicket = this.resolveOrderContactTicket(remainingTickets);
+    }
+  }
+
+  private getRowTimestamp(row: DisplayRow): number {
+    if (row.type === 'order') {
+      return Math.max(
+        ...(row.tickets || []).map((ticket) => this.getTicketTimestamp(ticket)),
+        0,
+      );
+    }
+
+    return row.ticket ? this.getTicketTimestamp(row.ticket) : 0;
+  }
+
+  private getTicketTimestamp(ticket: Ticket): number {
+    const timestamp = ticket.createdAt ? Date.parse(ticket.createdAt) : NaN;
+    return Number.isNaN(timestamp) ? 0 : timestamp;
+  }
+}
+
+export interface DisplayRow {
+  type: 'ticket' | 'order';
+  ticket?: Ticket;
+  orderId?: string;
+  tickets?: Ticket[];
+  contactTicket?: Ticket;
+  passengerCount?: number;
+  totalPrice?: number;
+  currency?: string;
+  status?: TicketStatus;
 }

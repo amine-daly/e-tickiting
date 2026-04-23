@@ -12,8 +12,8 @@ import {
   NgbDropdownModule,
   NgbTooltipModule,
 } from '@ng-bootstrap/ng-bootstrap';
-import { Subject, Subscription } from 'rxjs';
-import { finalize } from 'rxjs/operators';
+import { Subscription } from 'rxjs';
+import { finalize, map } from 'rxjs/operators';
 import { TranslateModule, TranslateService } from '@ngx-translate/core';
 import {
   NgLabelTemplateDirective,
@@ -32,6 +32,21 @@ import { AlertService } from '../../core/services/alert.service';
 import { PaginationComponent } from 'src/app/shared/components/pagination/pagination.component';
 import { ToolbarComponent } from 'src/app/_metronic/layout/components/toolbar/toolbar.component';
 import { PageInfoService } from 'src/app/_metronic/layout/core/page-info.service';
+
+interface TripSeatLoad {
+  bookedSeats: number;
+  totalSeats: number;
+  percentage: number;
+  label: string;
+  barClass: string;
+}
+
+interface TripListRow {
+  trip: TripType;
+  routePreview: string;
+  stopCount: number;
+  seatLoad: TripSeatLoad;
+}
 
 @Component({
   standalone: true,
@@ -54,10 +69,19 @@ import { PageInfoService } from 'src/app/_metronic/layout/core/page-info.service
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class TripListComponent implements OnInit, OnDestroy {
-  private destroy$ = new Subject<void>();
   private subscriptions = new Subscription();
 
   trips$ = this.tripService.trips$;
+  tripRows$ = this.trips$.pipe(
+    map((trips) =>
+      trips.map((trip) => ({
+        trip,
+        routePreview: this.routePreview(trip),
+        stopCount: trip.stopSchedule?.length || 0,
+        seatLoad: this.buildSeatLoad(trip),
+      })),
+    ),
+  );
   loading$ = this.tripService.loading$;
   pagination$ = this.tripService.pagination$;
 
@@ -183,6 +207,47 @@ export class TripListComponent implements OnInit, OnDestroy {
     return `${first} → ${last}`;
   }
 
+  trackByTripId(_: number, row: TripListRow): string {
+    return row.trip.id;
+  }
+
+  private buildSeatLoad(trip: TripType): TripSeatLoad {
+    const segments = trip?.segments ?? [];
+    const bookedSeats = segments.reduce(
+      (peak, segment) => Math.max(peak, segment.bookedSeats ?? 0),
+      0,
+    );
+    const fallbackCapacity = segments.reduce(
+      (max, segment) => Math.max(max, segment.maxSeats ?? 0),
+      0,
+    );
+    const totalSeats = trip?.bus?.totalSeats || fallbackCapacity;
+    const percentage =
+      totalSeats > 0
+        ? Math.min(100, Math.round((bookedSeats / totalSeats) * 100))
+        : 0;
+
+    return {
+      bookedSeats,
+      totalSeats,
+      percentage,
+      label: totalSeats > 0 ? `${bookedSeats} / ${totalSeats}` : '-',
+      barClass: this.getSeatLoadBarClass(bookedSeats, totalSeats, percentage),
+    };
+  }
+
+  private getSeatLoadBarClass(
+    bookedSeats: number,
+    totalSeats: number,
+    percentage: number,
+  ): string {
+    if (totalSeats <= 0) return 'bg-secondary';
+    if (bookedSeats >= totalSeats) return 'bg-danger';
+    if (percentage >= 80) return 'bg-warning';
+    if (percentage >= 50) return 'bg-primary';
+    return 'bg-success';
+  }
+
   // ─── STATUS ACTION ─────────────────────────────────────
   async changeStatus(
     trip: TripType,
@@ -280,8 +345,6 @@ export class TripListComponent implements OnInit, OnDestroy {
   }
 
   ngOnDestroy(): void {
-    this.destroy$.next();
-    this.destroy$.complete();
     this.subscriptions.unsubscribe();
   }
 }

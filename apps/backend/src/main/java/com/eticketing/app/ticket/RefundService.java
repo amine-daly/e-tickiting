@@ -10,8 +10,9 @@ import org.springframework.stereotype.Service;
 import java.time.Instant;
 
 /**
- * Refund lifecycle — TRIP_SPEC section 9. Seats are decremented ONLY on
- * REQUESTED → APPROVED transition.
+ * Refund lifecycle — TRIP_SPEC section 9. Seats are normally decremented on
+ * REQUESTED → APPROVED, but order-member cancellation can pre-release the seat
+ * and mark the refund accordingly.
  */
 @Service
 @RequiredArgsConstructor
@@ -34,18 +35,22 @@ public class RefundService {
             throw new ConflictException("INVALID_REFUND_TRANSITION: expected REQUESTED, got " + refund.getStatus());
         }
 
-        // Release seats atomically
-        TicketType ticket = ticketRepository.findById(refund.getTicketId())
+        Instant now = Instant.now();
+        if (!refund.isSeatReleased()) {
+            TicketType ticket = ticketRepository.findById(refund.getTicketId())
                 .orElseThrow(() -> new NotFoundException("Ticket not found for refund: " + refund.getTicketId()));
 
-        seatReservationService.releaseSeats(ticket.getTripId(), refund.getSegmentsRefunded());
+            seatReservationService.releaseSeats(ticket.getTripId(), refund.getSegmentsRefunded());
+            refund.setSeatReleased(true);
+            refund.setSeatReleasedAt(now);
+        }
 
         refund.setStatus(RefundStatusEnum.APPROVED);
-        refund.setProcessedAt(Instant.now());
+        refund.setProcessedAt(now);
         RefundType saved = refundRepository.save(refund);
 
-        LOG.info("Refund {} APPROVED — seats released on {} segments for ticket {}",
-                refundId, refund.getSegmentsRefunded().size(), refund.getTicketId());
+        LOG.info("Refund {} APPROVED - seatReleased={} for ticket {}",
+            refundId, refund.isSeatReleased(), refund.getTicketId());
         return saved;
     }
 

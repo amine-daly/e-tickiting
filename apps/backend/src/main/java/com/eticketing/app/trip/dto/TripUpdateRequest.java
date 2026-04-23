@@ -24,9 +24,6 @@ public class TripUpdateRequest {
     private String timezone;
     private String currencyId;
 
-    // ── Seat hold (always allowed — affects new bookings only) ──────────
-    private Integer seatHoldMinutes;
-
     // ── Bus reassignment (ACTIVE: capacity check required) ──────────────
     @Valid
     private BusInput bus;

@@ -48,12 +48,13 @@
 
           <div class="form-check form-switch form-check-custom form-check-solid mb-0">
             <input
+              #seatEntryModeToggle
               id="bus-seat-entry-mode"
               type="checkbox"
               class="form-check-input w-45px h-30px"
               [checked]="isVisualMode"
               [disabled]="!canToggleSeatEntryMode"
-              (change)="onSeatEntryModeToggle($any($event.target).checked)"
+              (change)="onSeatEntryModeToggle($any($event.target).checked, seatEntryModeToggle)"
             />
           </div>
 

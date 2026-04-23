@@ -11,86 +11,67 @@
             class="badge"
             [class.badge-primary]="step === 1"
             [class.badge-light]="step !== 1"
-            >1. {{ "TICKETS.SELL.STEP_CUSTOMER" | translate }}</span
+            >1. {{ "TICKETS.SELL.STEP_TRIP" | translate }}</span
           >
           <span
             class="badge"
             [class.badge-primary]="step === 2"
             [class.badge-light]="step !== 2"
-            >2. {{ "TICKETS.SELL.STEP_TRIP" | translate }}</span
+            >2. {{ "TICKETS.SELL.STEP_CUSTOMER" | translate }}</span
           >
           <span
             class="badge"
             [class.badge-primary]="step === 3"
             [class.badge-light]="step !== 3"
-            >3. {{ "TICKETS.SELL.STEP_REVIEW" | translate }}</span
+            >3. {{ "TICKETS.SELL.STEP_SEAT" | translate }}</span
+          >
+          <span
+            class="badge"
+            [class.badge-primary]="step === 4"
+            [class.badge-light]="step !== 4"
+            >4. {{ "TICKETS.SELL.STEP_REVIEW" | translate }}</span
           >
         </div>
       </div>
 
-      <!-- ─── Step 1: Customer Search ─── -->
-      <div *ngIf="step === 1">
-        <h5 class="fw-bold mb-3">
-          {{ "TICKETS.SELL.SEARCH_CUSTOMER" | translate }}
-        </h5>
-        <ng-select
-          [items]="customers"
-          [loading]="customerLoading"
-          [typeahead]="customerSearch$"
-          [virtualScroll]="true"
-          [minTermLength]="2"
-          bindLabel="firstName"
-          [placeholder]="'TICKETS.SELL.CUSTOMER_PLACEHOLDER' | translate"
-          (change)="selectCustomer($event)"
-          (scrollToEnd)="loadMoreCustomers()"
+      <!-- ─── Countdown Banner (FlixBus-style persistent timer) ─── -->
+      <div
+        *ngIf="pendingBooking && !booked"
+        class="alert d-flex align-items-center gap-3 py-3 mb-4"
+        [class.alert-warning]="!countdownExpired"
+        [class.alert-danger]="countdownExpired"
+      >
+        <i
+          class="ki-duotone ki-timer fs-2"
+          [class.text-warning]="!countdownExpired"
+          [class.text-danger]="countdownExpired"
         >
-          <ng-template ng-label-tmp let-item="item">
-            {{ item.firstName }} {{ item.lastName }} —
-            {{ item.email || item.phone?.number }}
-          </ng-template>
-          <ng-template ng-option-tmp let-item="item">
-            <div class="fw-semibold">
-              {{ item.firstName }} {{ item.lastName }}
-            </div>
-            <div class="text-muted small">
-              {{ item.email }}
-              {{ item.phone?.number ? "— " + item.phone.number : "" }}
-            </div>
-          </ng-template>
-        </ng-select>
-
-        <div *ngIf="selectedCustomer" class="mt-4 p-3 bg-light rounded">
-          <div class="fw-bold">
-            {{ selectedCustomer.firstName }} {{ selectedCustomer.lastName }}
+          <span class="path1"></span><span class="path2"></span
+          ><span class="path3"></span>
+        </i>
+        <div class="flex-grow-1">
+          <div class="fw-semibold small">
+            {{ "TICKETS.SELL.SESSION_TIMER" | translate }}
           </div>
-          <div class="text-muted">{{ selectedCustomer.email }}</div>
-          <div class="text-muted" *ngIf="selectedCustomer.phone">
-            {{ selectedCustomer.phone.countryCode }}
-            {{ selectedCustomer.phone.number }}
+          <div class="text-muted small">
+            {{ "TICKETS.SELL.PENDING_MESSAGE" | translate }}
           </div>
         </div>
-
-        <div class="mt-4 text-end">
-          <button
-            class="btn btn-primary"
-            [disabled]="!selectedCustomer"
-            (click)="goToStep2()"
-          >
-            {{ "COMMON.BUTTON.NEXT" | translate }}
-          </button>
+        <div
+          class="fs-3 fw-bolder font-monospace"
+          [class.text-warning]="!countdownExpired"
+          [class.text-danger]="countdownExpired"
+        >
+          {{ countdownDisplay }}
         </div>
       </div>
 
-      <!-- ─── Step 2: Trip Selection ─── -->
-      <div *ngIf="step === 2">
+      <!-- ─── Step 1: Trip Selection ─── -->
+      <div *ngIf="step === 1">
         <div class="d-flex justify-content-between align-items-center mb-3">
           <h5 class="fw-bold mb-0">
             {{ "TICKETS.SELL.SELECT_TRIP" | translate }}
           </h5>
-          <button class="btn btn-sm btn-light" (click)="goBack()">
-            <i class="ki-duotone ki-arrow-left fs-4"></i>
-            {{ "COMMON.BUTTON.BACK" | translate }}
-          </button>
         </div>
 
         <div *ngIf="tripsLoading" class="text-center my-5">
@@ -136,64 +117,8 @@
           </button>
         </div>
 
-        <div class="mt-4 text-end">
-          <button
-            class="btn btn-primary"
-            [disabled]="!selectedTrip"
-            (click)="goToStep3()"
-          >
-            {{ "COMMON.BUTTON.NEXT" | translate }}
-          </button>
-        </div>
-      </div>
-
-      <!-- ─── Step 3: Review & Confirm ─── -->
-      <div *ngIf="step === 3 && !booked">
-        <div class="d-flex justify-content-between align-items-center mb-3">
-          <h5 class="fw-bold mb-0">{{ "TICKETS.SELL.REVIEW" | translate }}</h5>
-          <button class="btn btn-sm btn-light" (click)="goBack()">
-            <i class="ki-duotone ki-arrow-left fs-4"></i>
-            {{ "COMMON.BUTTON.BACK" | translate }}
-          </button>
-        </div>
-
-        <div class="row g-4 mb-4">
-          <div class="col-md-6">
-            <div class="card bg-light">
-              <div class="card-body">
-                <h6 class="text-muted text-uppercase mb-2">
-                  {{ "TICKETS.SELL.CUSTOMER_LABEL" | translate }}
-                </h6>
-                <div class="fw-bold">
-                  {{ selectedCustomer?.firstName }}
-                  {{ selectedCustomer?.lastName }}
-                </div>
-                <div class="text-muted">{{ selectedCustomer?.email }}</div>
-              </div>
-            </div>
-          </div>
-          <div class="col-md-6">
-            <div class="card bg-light">
-              <div class="card-body">
-                <h6 class="text-muted text-uppercase mb-2">
-                  {{ "TICKETS.SELL.TRIP_LABEL" | translate }}
-                </h6>
-                <div class="fw-bold">
-                  {{ selectedTrip?.departureDate | date: "dd-MM-yyyy hh:mm a" }}
-                </div>
-                <div class="text-muted">
-                  {{ "TRIPS.STATUS." + selectedTrip?.status | translate }}
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <!-- Pickup / Dropoff -->
-        <div
-          class="row g-4 mb-4"
-          *ngIf="activePickups.length || activeDropoffs.length"
-        >
+        <!-- Pickup / Dropoff & Capacity -->
+        <div *ngIf="selectedTrip" class="row g-4 mt-3">
           <div class="col-md-6" *ngIf="activePickups.length">
             <label class="form-label fw-semibold">{{
               "TICKETS.SELL.PICKUP" | translate
@@ -222,10 +147,482 @@
             >
             </ng-select>
           </div>
+          <div class="col-12" *ngIf="selectedPickupId && selectedDropoffId">
+            <span
+              class="badge"
+              [class.badge-light-success]="availableSeats > 0"
+              [class.badge-light-danger]="availableSeats === 0"
+            >
+              {{ "TICKETS.SELL.AVAILABLE_SEATS" | translate }}:
+              {{ availableSeats }}
+            </span>
+          </div>
         </div>
 
-        <!-- Price -->
-        <div class="p-4 bg-primary bg-opacity-10 rounded mb-4 text-center">
+        <div class="mt-4 text-end">
+          <button
+            class="btn btn-primary"
+            [disabled]="!canProceedStep1"
+            (click)="goToStep2()"
+          >
+            {{ "COMMON.BUTTON.NEXT" | translate }}
+          </button>
+        </div>
+      </div>
+
+      <!-- ─── Step 2: Passengers ─── -->
+      <div *ngIf="step === 2">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+          <div>
+            <h5 class="fw-bold mb-0">
+              {{ "TICKETS.SELL.CONTACT_CUSTOMER" | translate }}
+            </h5>
+            <span *ngIf="availableSeats > 0" class="text-muted small">
+              {{ "TICKETS.SELL.AVAILABLE_SEATS" | translate }}:
+              {{ availableSeats }}
+            </span>
+          </div>
+          <button class="btn btn-sm btn-light" (click)="goBack()">
+            <i class="ki-duotone ki-arrow-left fs-4"></i>
+            {{ "COMMON.BUTTON.BACK" | translate }}
+          </button>
+        </div>
+
+        <ng-select
+          [items]="customers"
+          [loading]="customerLoading"
+          [typeahead]="customerSearch$"
+          [virtualScroll]="true"
+          [minTermLength]="2"
+          bindLabel="firstName"
+          [placeholder]="'TICKETS.SELL.CUSTOMER_PLACEHOLDER' | translate"
+          (change)="addPassenger($event)"
+          (scrollToEnd)="loadMoreCustomers()"
+        >
+          <ng-template ng-label-tmp let-item="item">
+            {{ item.firstName }} {{ item.lastName }} —
+            {{ item.email || item.phone?.number }}
+          </ng-template>
+          <ng-template ng-option-tmp let-item="item">
+            <div class="fw-semibold">
+              {{ item.firstName }} {{ item.lastName }}
+            </div>
+            <div class="text-muted small">
+              {{ item.email }}
+              {{ item.phone?.number ? "— " + item.phone.number : "" }}
+            </div>
+          </ng-template>
+        </ng-select>
+
+        <!-- Contact customer badge -->
+        <div *ngIf="contactCustomer" class="mt-3">
+          <div
+            class="alert alert-light-primary d-flex align-items-center py-2 px-3 mb-0"
+          >
+            <span class="badge badge-primary me-2">{{
+              "TICKETS.SELL.CONTACT" | translate
+            }}</span>
+            <span class="fw-bold"
+              >{{ contactCustomer.firstName }}
+              {{ contactCustomer.lastName }}</span
+            >
+            <span class="text-muted ms-2">{{ contactCustomer.email }}</span>
+          </div>
+        </div>
+
+        <!-- Additional passengers (guests) -->
+        <div
+          class="d-flex justify-content-between align-items-center mt-4 mb-2"
+        >
+          <h6 class="fw-semibold text-muted mb-0">
+            {{ "TICKETS.SELL.PASSENGERS" | translate }}
+            ({{ passengers.length }})
+          </h6>
+          <button
+            class="btn btn-sm btn-light-primary"
+            (click)="addGuestPassenger()"
+            [disabled]="
+              this.availableSeats === 0 ||
+              this.passengers.length === this.availableSeats
+            "
+          >
+            <i class="ki-duotone ki-plus fs-5"></i>
+            {{ "TICKETS.SELL.ADD_GUEST" | translate }}
+          </button>
+        </div>
+
+        <!-- Passenger list -->
+        <div *ngIf="passengers.length" class="mt-2">
+          <div class="list-group">
+            <div
+              *ngFor="let p of passengers; let i = index"
+              class="list-group-item"
+            >
+              <div class="d-flex justify-content-between align-items-center">
+                <div *ngIf="!p.isGuest" class="d-flex align-items-center">
+                  <span class="badge badge-light-primary me-2">
+                    {{ "TICKETS.SELL.CONTACT" | translate }}
+                  </span>
+                  <span class="fw-bold"
+                    >{{ p.customer?.firstName }}
+                    {{ p.customer?.lastName }}</span
+                  >
+                  <span class="text-muted ms-2">{{ p.customer?.email }}</span>
+                </div>
+                <div
+                  *ngIf="p.isGuest"
+                  class="d-flex align-items-center gap-2 flex-grow-1 me-3"
+                >
+                  <span class="badge badge-light-warning me-1">{{
+                    "TICKETS.SELL.GUEST" | translate
+                  }}</span>
+                  <input
+                    type="text"
+                    class="form-control form-control-sm"
+                    [placeholder]="'TICKETS.SELL.FIRST_NAME' | translate"
+                    [(ngModel)]="p.firstName"
+                    style="max-width: 180px"
+                  />
+                  <input
+                    type="text"
+                    class="form-control form-control-sm"
+                    [placeholder]="'TICKETS.SELL.LAST_NAME' | translate"
+                    [(ngModel)]="p.lastName"
+                    style="max-width: 180px"
+                  />
+                </div>
+                <button
+                  *ngIf="i > 0"
+                  class="btn btn-sm btn-icon btn-light-danger"
+                  (click)="removePassenger(i)"
+                  [attr.title]="'COMMON.BUTTON.REMOVE' | translate"
+                >
+                  <i class="ki-duotone ki-trash fs-5"
+                    ><span class="path1"></span><span class="path2"></span
+                    ><span class="path3"></span><span class="path4"></span
+                    ><span class="path5"></span
+                  ></i>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="mt-4 text-end">
+          <button
+            class="btn btn-primary"
+            [disabled]="!canProceedStep2 || booking"
+            (click)="goToStep3()"
+          >
+            <span
+              *ngIf="booking"
+              class="spinner-border spinner-border-sm me-1"
+            ></span>
+            {{ "COMMON.BUTTON.NEXT" | translate }}
+          </button>
+        </div>
+      </div>
+
+      <!-- ─── Step 3: Seat Selection ─── -->
+      <div *ngIf="step === 3">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+          <h5 class="fw-bold mb-0">
+            {{ "TICKETS.SELL.SELECT_SEAT" | translate }}
+          </h5>
+          <button class="btn btn-sm btn-light" (click)="goBack()">
+            <i class="ki-duotone ki-arrow-left fs-4"></i>
+            {{ "COMMON.BUTTON.BACK" | translate }}
+          </button>
+        </div>
+
+        <div *ngIf="layoutLoading" class="text-center my-5">
+          <span class="spinner-border spinner-border-lg"></span>
+        </div>
+
+        <ng-container *ngIf="!layoutLoading && busLayout">
+          <!-- Legend -->
+          <div class="d-flex gap-3 mb-3 flex-wrap">
+            <span class="d-flex align-items-center gap-1">
+              <span class="seat-legend seat-legend--available"></span>
+              {{ "TICKETS.SELL.SEAT_AVAILABLE" | translate }}
+            </span>
+            <span class="d-flex align-items-center gap-1">
+              <span class="seat-legend seat-legend--selected"></span>
+              {{ "TICKETS.SELL.SEAT_SELECTED" | translate }}
+            </span>
+            <span class="d-flex align-items-center gap-1">
+              <span class="seat-legend seat-legend--occupied"></span>
+              {{ "TICKETS.SELL.SEAT_OCCUPIED" | translate }}
+            </span>
+          </div>
+
+          <!-- Lower Deck -->
+          <div
+            *ngIf="busLayout.lowerDeck?.length"
+            class="seat-map-grid mb-4"
+            [style.grid-template-columns]="
+              'repeat(' + busLayout.gridColumns + ', 1fr)'
+            "
+            [style.grid-template-rows]="
+              'repeat(' + busLayout.gridRows + ', 1fr)'
+            "
+          >
+            <ng-container *ngFor="let el of busLayout.lowerDeck">
+              <div
+                class="seat-cell"
+                [style.grid-column]="el.gridX"
+                [style.grid-row]="el.gridY"
+                [ngClass]="{
+                  'seat-available':
+                    el.type === LayoutElementType.SEAT &&
+                    el.seatNo &&
+                    !isSeatOccupied(el.seatNo) &&
+                    !isSeatSelectedByGroup(el.seatNo),
+                  'seat-selected':
+                    el.type === LayoutElementType.SEAT &&
+                    el.seatNo &&
+                    isSeatSelectedByGroup(el.seatNo),
+                  'seat-occupied':
+                    el.type === LayoutElementType.SEAT &&
+                    el.seatNo &&
+                    isSeatOccupied(el.seatNo),
+                  'element-env': el.type !== LayoutElementType.SEAT,
+                }"
+                [class.element-driver]="el.type === LayoutElementType.DRIVER"
+                [class.element-door]="el.type === LayoutElementType.DOOR"
+                [class.element-stairs]="el.type === LayoutElementType.STAIRS"
+                [class.element-toilet]="el.type === LayoutElementType.TOILET"
+                (click)="
+                  el.type === LayoutElementType.SEAT
+                    ? selectSeat(el.seatNo)
+                    : null
+                "
+              >
+                <span *ngIf="el.type === LayoutElementType.SEAT">{{
+                  el.seatNo
+                }}</span>
+                <i
+                  *ngIf="el.type === LayoutElementType.DRIVER"
+                  class="ki-duotone ki-user fs-4"
+                  ><span class="path1"></span><span class="path2"></span
+                ></i>
+                <i
+                  *ngIf="el.type === LayoutElementType.DOOR"
+                  class="ki-duotone ki-door-open fs-4"
+                  ><span class="path1"></span><span class="path2"></span
+                ></i>
+                <i
+                  *ngIf="el.type === LayoutElementType.STAIRS"
+                  class="ki-duotone ki-arrow-up fs-4"
+                  ><span class="path1"></span><span class="path2"></span
+                ></i>
+                <i
+                  *ngIf="el.type === LayoutElementType.TOILET"
+                  class="ki-duotone ki-droplet fs-4"
+                  ><span class="path1"></span><span class="path2"></span
+                ></i>
+              </div>
+            </ng-container>
+          </div>
+
+          <!-- Upper Deck -->
+          <ng-container
+            *ngIf="busLayout.hasDecks && busLayout.upperDeck?.length"
+          >
+            <h6 class="fw-semibold text-muted mb-2">
+              {{ "TICKETS.SELL.UPPER_DECK" | translate }}
+            </h6>
+            <div
+              class="seat-map-grid mb-4"
+              [style.grid-template-columns]="
+                'repeat(' + busLayout.gridColumns + ', 1fr)'
+              "
+              [style.grid-template-rows]="
+                'repeat(' + busLayout.gridRows + ', 1fr)'
+              "
+            >
+              <ng-container *ngFor="let el of busLayout.upperDeck">
+                <div
+                  class="seat-cell"
+                  [style.grid-column]="el.gridX"
+                  [style.grid-row]="el.gridY"
+                  [ngClass]="{
+                    'seat-available':
+                      el.type === LayoutElementType.SEAT &&
+                      el.seatNo &&
+                      !isSeatOccupied(el.seatNo) &&
+                      !isSeatSelectedByGroup(el.seatNo),
+                    'seat-selected':
+                      el.type === LayoutElementType.SEAT &&
+                      el.seatNo &&
+                      isSeatSelectedByGroup(el.seatNo),
+                    'seat-occupied':
+                      el.type === LayoutElementType.SEAT &&
+                      el.seatNo &&
+                      isSeatOccupied(el.seatNo),
+                    'element-env': el.type !== LayoutElementType.SEAT,
+                  }"
+                  [class.element-driver]="el.type === LayoutElementType.DRIVER"
+                  [class.element-door]="el.type === LayoutElementType.DOOR"
+                  [class.element-stairs]="el.type === LayoutElementType.STAIRS"
+                  [class.element-toilet]="el.type === LayoutElementType.TOILET"
+                  (click)="
+                    el.type === LayoutElementType.SEAT
+                      ? selectSeat(el.seatNo)
+                      : null
+                  "
+                >
+                  <span *ngIf="el.type === LayoutElementType.SEAT">{{
+                    el.seatNo
+                  }}</span>
+                  <i
+                    *ngIf="el.type === LayoutElementType.DRIVER"
+                    class="ki-duotone ki-user fs-4"
+                    ><span class="path1"></span><span class="path2"></span
+                  ></i>
+                  <i
+                    *ngIf="el.type === LayoutElementType.DOOR"
+                    class="ki-duotone ki-door-open fs-4"
+                    ><span class="path1"></span><span class="path2"></span
+                  ></i>
+                  <i
+                    *ngIf="el.type === LayoutElementType.STAIRS"
+                    class="ki-duotone ki-arrow-up fs-4"
+                    ><span class="path1"></span><span class="path2"></span
+                  ></i>
+                  <i
+                    *ngIf="el.type === LayoutElementType.TOILET"
+                    class="ki-duotone ki-droplet fs-4"
+                    ><span class="path1"></span><span class="path2"></span
+                  ></i>
+                </div>
+              </ng-container>
+            </div>
+          </ng-container>
+        </ng-container>
+
+        <!-- Seat assignment progress -->
+        <div *ngIf="passengers.length > 0" class="mb-3">
+          <h6 class="fw-semibold text-muted mb-2">
+            {{ "TICKETS.SELL.SEAT_ASSIGNMENTS" | translate }}
+          </h6>
+          <div class="d-flex gap-2 flex-wrap">
+            <span
+              *ngFor="let p of passengers; let i = index"
+              class="badge"
+              [class.badge-primary]="currentSeatAssignIndex === i && !p.seatNo"
+              [class.badge-light-success]="!!p.seatNo"
+              [class.badge-light]="currentSeatAssignIndex !== i && !p.seatNo"
+            >
+              {{ passengerDisplayName(p) }}:
+              {{ p.seatNo || ("TICKETS.SELL.SEAT_PENDING" | translate) }}
+            </span>
+          </div>
+          <div *ngIf="currentAssignPassenger" class="mt-2 text-info small">
+            {{ "TICKETS.SELL.ASSIGN_SEAT_FOR" | translate }}
+            <strong>{{ passengerDisplayName(currentAssignPassenger) }}</strong>
+          </div>
+        </div>
+
+        <div class="mt-4 text-end">
+          <button
+            class="btn btn-primary"
+            [disabled]="!allSeatsAssigned || booking"
+            (click)="goToStep4()"
+          >
+            <span
+              *ngIf="booking"
+              class="spinner-border spinner-border-sm me-1"
+            ></span>
+            {{ "COMMON.BUTTON.NEXT" | translate }}
+          </button>
+        </div>
+      </div>
+
+      <!-- ─── Step 4: Review & Confirm ─── -->
+      <div *ngIf="step === 4 && !booked">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+          <h5 class="fw-bold mb-0">{{ "TICKETS.SELL.REVIEW" | translate }}</h5>
+        </div>
+
+        <!-- Trip info card -->
+        <div class="card bg-light mb-4">
+          <div class="card-body">
+            <h6 class="text-muted text-uppercase mb-2">
+              {{ "TICKETS.SELL.TRIP_LABEL" | translate }}
+            </h6>
+            <div class="fw-bold">
+              {{ selectedTrip?.departureDate | date: "dd-MM-yyyy hh:mm a" }}
+            </div>
+            <div class="text-muted">
+              {{ routePreview(selectedTrip!) }}
+            </div>
+          </div>
+        </div>
+
+        <!-- Passengers table -->
+        <div class="table-responsive mb-4">
+          <table class="table table-bordered align-middle mb-0">
+            <thead class="table-light">
+              <tr>
+                <th>#</th>
+                <th>{{ "TICKETS.SELL.PASSENGER_NAME" | translate }}</th>
+                <th>{{ "TICKETS.SELL.SEAT_LABEL" | translate }}</th>
+                <th class="text-end">
+                  {{ "TICKETS.SELL.PRICE_LABEL" | translate }}
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let p of passengers; let i = index">
+                <td>
+                  {{ i + 1 }}
+                  <span *ngIf="i === 0" class="badge badge-light-primary ms-1">
+                    {{ "TICKETS.SELL.CONTACT" | translate }}
+                  </span>
+                </td>
+                <td>
+                  <div class="fw-bold">
+                    {{ passengerDisplayName(p) }}
+                  </div>
+                  <div *ngIf="p.customer?.email" class="text-muted small">
+                    {{ p.customer.email }}
+                  </div>
+                  <span
+                    *ngIf="p.isGuest"
+                    class="badge badge-light-warning badge-sm"
+                    >{{ "TICKETS.SELL.GUEST" | translate }}</span
+                  >
+                </td>
+                <td>
+                  <span *ngIf="p.seatNo" class="fw-bold">{{ p.seatNo }}</span>
+                  <span *ngIf="!p.seatNo" class="badge badge-light-info">
+                    {{ "TICKETS.SELL.FREE_SEATING" | translate }}
+                  </span>
+                </td>
+                <td class="text-end fw-semibold">
+                  {{ displayPrice | number: "1.2-2" }} {{ currency }}
+                </td>
+              </tr>
+            </tbody>
+            <tfoot *ngIf="isGroupBooking">
+              <tr class="table-primary">
+                <td colspan="3" class="fw-bold text-end">
+                  {{ "TICKETS.SELL.GRAND_TOTAL" | translate }}
+                </td>
+                <td class="text-end fw-bold fs-5">
+                  {{ grandTotal | number: "1.2-2" }} {{ currency }}
+                </td>
+              </tr>
+            </tfoot>
+          </table>
+        </div>
+
+        <!-- Price summary (single passenger) -->
+        <div
+          *ngIf="!isGroupBooking"
+          class="p-4 bg-primary bg-opacity-10 rounded mb-4 text-center"
+        >
           <div class="text-muted small mb-1">
             {{ "TICKETS.SELL.PRICE_LABEL" | translate }}
           </div>
@@ -234,27 +631,34 @@
           </div>
         </div>
 
-        <div class="text-end">
+        <div class="d-flex justify-content-end gap-3">
+          <button
+            class="btn btn-light btn-lg"
+            (click)="cancelPendingBooking()"
+            [disabled]="confirming"
+          >
+            {{ "COMMON.BUTTON.CANCEL" | translate }}
+          </button>
           <button
             class="btn btn-success btn-lg"
-            [disabled]="booking"
-            (click)="confirmBooking()"
+            [disabled]="confirming || countdownExpired"
+            (click)="confirmPayment()"
           >
             <span
-              *ngIf="booking"
+              *ngIf="confirming"
               class="spinner-border spinner-border-sm me-1"
             ></span>
             {{
-              booking
-                ? ("TICKETS.SELL.BOOKING" | translate)
-                : ("TICKETS.SELL.CONFIRM" | translate)
+              confirming
+                ? ("TICKETS.SELL.CONFIRMING" | translate)
+                : ("TICKETS.SELL.CONFIRM_PAYMENT" | translate)
             }}
           </button>
         </div>
       </div>
 
-      <!-- ─── Success ─── -->
-      <div *ngIf="booked && bookingResult">
+      <!-- ─── Success (Single) ─── -->
+      <div *ngIf="booked && bookingResult && !groupBookingResult">
         <div class="text-center py-10">
           <i class="ki-duotone ki-check-circle fs-3x text-success mb-4">
             <span class="path1"></span><span class="path2"></span>
@@ -274,6 +678,77 @@
               >{{ bookingResult.appliedPrice | number: "1.2-2" }}
               {{ bookingResult.currency }}</span
             >
+          </div>
+          <button class="btn btn-primary" (click)="goToTickets()">
+            {{ "TICKETS.SELL.GO_TO_TICKETS" | translate }}
+          </button>
+        </div>
+      </div>
+
+      <!-- ─── Success (Group) ─── -->
+      <div *ngIf="booked && groupBookingResult">
+        <div class="text-center py-10">
+          <i class="ki-duotone ki-check-circle fs-3x text-success mb-4">
+            <span class="path1"></span><span class="path2"></span>
+          </i>
+          <h4 class="fw-bold mb-2">
+            {{ "TICKETS.SELL.SUCCESS_TITLE" | translate }}
+          </h4>
+          <p class="text-muted mb-2">
+            {{ "TICKETS.SELL.ORDER_ID" | translate }}:
+            <span class="fw-bold">{{ groupBookingResult.orderId }}</span>
+          </p>
+          <div class="mb-4">
+            <span class="badge badge-light-primary me-2">{{
+              groupBookingResult.status
+            }}</span>
+            <span class="fw-semibold"
+              >{{ groupBookingResult.totalPrice | number: "1.2-2" }}
+              {{ groupBookingResult.currency }}</span
+            >
+            <span class="text-muted ms-2">
+              ({{ groupBookingResult.tickets.length }}
+              {{ "TICKETS.SELL.TICKETS_COUNT" | translate }})
+            </span>
+          </div>
+          <div class="table-responsive mb-4 mx-auto" style="max-width: 600px">
+            <table class="table table-sm table-bordered mb-0">
+              <thead class="table-light">
+                <tr>
+                  <th>#</th>
+                  <th>{{ "TICKETS.SELL.PASSENGER_LABEL" | translate }}</th>
+                  <th>{{ "TICKETS.SELL.SEAT_LABEL" | translate }}</th>
+                  <th class="text-end">
+                    {{ "TICKETS.SELL.PRICE_LABEL" | translate }}
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr
+                  *ngFor="let p of groupBookingResult.passengers; let i = index"
+                >
+                  <td>{{ i + 1 }}</td>
+                  <td>
+                    {{ p.firstName }} {{ p.lastName }}
+                    <span
+                      *ngIf="i === 0"
+                      class="badge badge-light-primary badge-sm ms-1"
+                      >{{ "TICKETS.SELL.CONTACT" | translate }}</span
+                    >
+                  </td>
+                  <td>
+                    {{ p.seatNo || ("TICKETS.SELL.FREE_SEATING" | translate) }}
+                  </td>
+                  <td class="text-end">
+                    {{
+                      groupBookingResult.tickets[i]?.appliedPrice || 0
+                        | number: "1.2-2"
+                    }}
+                    {{ groupBookingResult.currency }}
+                  </td>
+                </tr>
+              </tbody>
+            </table>
           </div>
           <button class="btn btn-primary" (click)="goToTickets()">
             {{ "TICKETS.SELL.GO_TO_TICKETS" | translate }}

@@ -25,6 +25,7 @@ public class TripResponseEnricher {
     private final PlaceRepository placeRepository;
     private final BusRepository busRepository;
     private final CurrencyRepository currencyRepository;
+    private final TripInventoryReconciliationService tripInventoryReconciliationService;
 
     public TripResponse enrich(TripType trip) {
         return enrich(List.of(trip)).get(0);
@@ -35,12 +36,14 @@ public class TripResponseEnricher {
             return List.of();
         }
 
+        List<TripType> reconciledTrips = tripInventoryReconciliationService.reconcile(trips);
+
         // Collect all referenced IDs across all trips
         Set<String> placeIds = new HashSet<>();
         Set<String> busIds = new HashSet<>();
         Set<String> currencyIds = new HashSet<>();
 
-        for (TripType trip : trips) {
+        for (TripType trip : reconciledTrips) {
             if (trip.getBus() != null && trip.getBus().getBusId() != null) {
                 busIds.add(trip.getBus().getBusId());
             }
@@ -67,7 +70,7 @@ public class TripResponseEnricher {
                         .collect(Collectors.toMap(CurrencyType::getId, Function.identity()));
 
         // Map each trip to an enriched response
-        return trips.stream()
+        return reconciledTrips.stream()
                 .map(trip -> TripResponse.from(trip, placeMap, busMap, currencyMap))
                 .toList();
     }

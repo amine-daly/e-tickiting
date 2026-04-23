@@ -1,1 +1,109 @@
 /* sell-ticket component styles */
+
+// ─── Seat Map Grid ───
+.seat-map-grid {
+  display: grid;
+  gap: 6px;
+  max-width: 480px;
+  margin: 0 auto;
+}
+
+.seat-cell {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 42px;
+  height: 42px;
+  border-radius: 6px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  user-select: none;
+  transition: background-color 0.15s, border-color 0.15s, transform 0.1s;
+}
+
+// Seat states
+.seat-available {
+  background-color: #f1f3f5;
+  border: 2px solid #dee2e6;
+  color: #495057;
+  cursor: pointer;
+
+  &:hover {
+    background-color: #e2e6ea;
+    border-color: #adb5bd;
+    transform: scale(1.08);
+  }
+}
+
+.seat-selected {
+  background-color: #0d6efd;
+  border: 2px solid #0b5ed7;
+  color: #fff;
+  cursor: pointer;
+  transform: scale(1.08);
+}
+
+.seat-occupied {
+  background-color: #e9ecef;
+  border: 2px solid #ced4da;
+  color: #adb5bd;
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+// Environment elements (non-clickable)
+.element-env {
+  background-color: transparent;
+  border: 1px dashed #dee2e6;
+  color: #868e96;
+  cursor: default;
+  pointer-events: none;
+}
+
+.element-driver {
+  background-color: #fff3cd;
+  border: 1px solid #ffc107;
+  color: #856404;
+}
+
+.element-door {
+  background-color: #d1ecf1;
+  border: 1px solid #0dcaf0;
+  color: #0c5460;
+}
+
+.element-stairs {
+  background-color: #e2d5f1;
+  border: 1px solid #6f42c1;
+  color: #5a2d9e;
+}
+
+.element-toilet {
+  background-color: #d4edda;
+  border: 1px solid #28a745;
+  color: #155724;
+}
+
+// ─── Legend ───
+.seat-legend {
+  display: inline-block;
+  width: 16px;
+  height: 16px;
+  border-radius: 3px;
+
+  &--available {
+    background-color: #f1f3f5;
+    border: 2px solid #dee2e6;
+  }
+
+  &--selected {
+    background-color: #0d6efd;
+    border: 2px solid #0b5ed7;
+  }
+
+  &--occupied {
+    background-color: #e9ecef;
+    border: 2px solid #ced4da;
+    opacity: 0.6;
+  }
+}

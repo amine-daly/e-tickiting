@@ -62,7 +62,6 @@ export interface TripCreatePayload {
   departureDate: string;
   timezone: string;
   currencyId: string;
-  seatHoldMinutes: number;
   stopSchedule: StopInput[];
   segmentInputs: SegmentCreateInput[];
   pickupPoints: PickupPointPayload[];
@@ -75,7 +74,6 @@ export interface TripUpdatePayload {
   departureDate?: string;
   timezone?: string;
   currencyId?: string;
-  seatHoldMinutes?: number;
   stopSchedule?: StopInput[];
   pickupPoints?: PickupPointPayload[];
   dropoffPoints?: DropoffPointPayload[];
