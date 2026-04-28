@@ -16,7 +16,10 @@ import { TripService } from '../../../modules/pages/bus/trip.service';
 import { ToasterService } from '../toast/toaster.service';
 import { RecentSearchesService } from '../../../core/services/recent-searches.service';
 import { PlaceType } from '../../../core/models/place-type';
-import { TripSearchParams } from '../../../core/models/trip.model';
+import {
+  TripSearchParams,
+  TripStatusEnum,
+} from '../../../core/models/trip.model';
 
 @Component({
   selector: 'search-card',
@@ -38,7 +41,7 @@ export class SearchCardComponent implements OnInit, OnDestroy {
     private tripService: TripService,
     private placesService: PlacesService,
     private toasterService: ToasterService,
-    private recentSearchesService: RecentSearchesService
+    private recentSearchesService: RecentSearchesService,
   ) {
     this.placesForm = this.fb.group({
       origin: [null, Validators.required],
@@ -71,7 +74,7 @@ export class SearchCardComponent implements OnInit, OnDestroy {
               destination: selected.destination || null,
               date: selected.date || '',
             },
-            { emitEvent: false }
+            { emitEvent: false },
           );
         }
         // Filter origins (exclude selected destination)
@@ -105,21 +108,18 @@ export class SearchCardComponent implements OnInit, OnDestroy {
 
     const params: TripSearchParams = {
       originPlaceId: origin.id,
+      status: TripStatusEnum.ACTIVE,
       destinationPlaceId: destination.id,
       ...(date ? { date } : {}),
     };
-    this.tripService
-      .searchTrips(params)
-      .pipe(takeUntil(this.destroy$))
-      .subscribe((res) => {
-        if (!res || res.length === 0) {
-          this.toasterService.error(
-            'No trips found for the selected criteria.'
-          );
-          return;
-        }
-        this.router.navigate(['/bus-listing'], { queryParams: params });
-      });
+
+    this.tripService.selectedDestination$ = {
+      origin,
+      destination,
+      ...(date ? { date } : {}),
+    };
+
+    this.router.navigate(['/bus-listing'], { queryParams: params });
   }
 
   ngOnDestroy(): void {

@@ -24,6 +24,7 @@ export class BusDetailsComponent implements OnInit, OnDestroy {
   trip: TripType | null = null;
   originPlaceId: string | null = null;
   destPlaceId: string | null = null;
+  travelDate: string | null = null;
 
   selectedPickup: PickupPointType | null = null;
   selectedDropoff: DropoffPointType | null = null;
@@ -46,6 +47,7 @@ export class BusDetailsComponent implements OnInit, OnDestroy {
     this.originPlaceId = this.route.snapshot.queryParamMap.get('originPlaceId');
     this.destPlaceId =
       this.route.snapshot.queryParamMap.get('destinationPlaceId');
+    this.travelDate = this.route.snapshot.queryParamMap.get('date');
 
     this.tripService
       .getTripById(tripId)

@@ -244,10 +244,10 @@ public class TripService {
         }
         if (searchTerm != null && !searchTerm.isBlank()) {
             String trimmedSearchTerm = searchTerm.trim();
-            List<String> matchingBusIds = busRepository
-                    .findByTargetCompanyAndNameLike(companyId, trimmedSearchTerm, PageRequest.of(0, 100))
-                    .getContent()
-                    .stream()
+            Page<BusType> matchingBuses = (companyId != null && !companyId.isBlank())
+                    ? busRepository.findByTargetCompanyAndNameLike(companyId, trimmedSearchTerm, PageRequest.of(0, 100))
+                    : busRepository.findByNameLike(trimmedSearchTerm, PageRequest.of(0, 100));
+            List<String> matchingBusIds = matchingBuses.getContent().stream()
                     .map(BusType::getId)
                     .toList();
             List<String> matchingPlaceIds = placeRepository
@@ -277,15 +277,25 @@ public class TripService {
             Instant end = date.plusDays(1).atStartOfDay().toInstant(ZoneOffset.UTC);
             q.addCriteria(Criteria.where("departureDate").gte(start).lt(end));
         }
+        Criteria originCriteria = null;
+        Criteria destCriteria = null;
         if (originPlaceId != null && !originPlaceId.isBlank()) {
-            q.addCriteria(Criteria.where("stopSchedule")
+            originCriteria = Criteria.where("stopSchedule")
                     .elemMatch(Criteria.where("placeId").is(originPlaceId)
-                            .and("boardingAllowed").is(true)));
+                            .and("boardingAllowed").is(true));
         }
         if (destinationPlaceId != null && !destinationPlaceId.isBlank()) {
-            q.addCriteria(Criteria.where("stopSchedule")
+            destCriteria = Criteria.where("stopSchedule")
                     .elemMatch(Criteria.where("placeId").is(destinationPlaceId)
-                            .and("droppingAllowed").is(true)));
+                            .and("droppingAllowed").is(true));
+        }
+
+        if (originCriteria != null && destCriteria != null) {
+            q.addCriteria(new Criteria().andOperator(originCriteria, destCriteria));
+        } else if (originCriteria != null) {
+            q.addCriteria(originCriteria);
+        } else if (destCriteria != null) {
+            q.addCriteria(destCriteria);
         }
         long total = mongoTemplate.count(q, TripType.class);
         q.with(pageable);

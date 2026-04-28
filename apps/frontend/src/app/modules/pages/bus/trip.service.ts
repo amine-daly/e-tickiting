@@ -3,20 +3,23 @@ import { Injectable } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
 
 import { environment } from '../../../environments/environment';
+import { PaginateResponse } from '../../../core/models/paginate-response.model';
 import {
   TripDestinationForm,
   TripSearchParams,
+  TripStatusEnum,
   TripType,
 } from '../../../core/models/trip.model';
 
 @Injectable({ providedIn: 'root' })
 export class TripService {
   private baseUrl = `${environment.apiBase}/trips`;
-  private trip = new BehaviorSubject<TripType | null>(null);
+  private defaultSearchLimit = 100;
+  private trip = new BehaviorSubject<TripType>(null);
   private allTrips = new BehaviorSubject<TripType[]>([]);
   private filtredTrips = new BehaviorSubject<TripType[]>([]);
   private selectedDestination = new BehaviorSubject<TripDestinationForm | null>(
-    null
+    null,
   );
 
   get trip$(): Observable<TripType | null> {
@@ -45,43 +48,78 @@ export class TripService {
       map((data: TripType) => {
         this.trip.next(data);
         return data;
-      })
+      }),
     );
   }
 
   getTrips(): Observable<TripType[]> {
-    return this.http.get<TripType[]>(`${this.baseUrl}/search`, {}).pipe(
-      map((data: TripType[]) => {
-        this.allTrips.next(data);
-        return data;
+    return this.http
+      .get<PaginateResponse<TripType> | TripType[]>(`${this.baseUrl}/search`, {
+        params: this.buildHttpParams(
+          { status: TripStatusEnum.ACTIVE },
+          this.defaultSearchLimit,
+        ),
       })
-    );
+      .pipe(
+        map((response) => {
+          const trips = this.extractTrips(response);
+          this.allTrips.next(trips);
+          return trips;
+        }),
+      );
   }
 
   searchTrips(params: TripSearchParams): Observable<TripType[]> {
-    let httpParams = new HttpParams();
+    return this.http
+      .get<PaginateResponse<TripType> | TripType[]>(`${this.baseUrl}/search`, {
+        params: this.buildHttpParams(params, this.defaultSearchLimit),
+      })
+      .pipe(
+        map((response) => {
+          const trips = this.extractTrips(response);
+          this.filtredTrips.next(trips);
+          return trips;
+        }),
+      );
+  }
+
+  private buildHttpParams(params: TripSearchParams, limit: number): HttpParams {
+    let httpParams = new HttpParams().set('limit', String(limit));
+    const companyId = params.companyId || this.getStoredCompanyId();
+
     if (params.originPlaceId) {
       httpParams = httpParams.set('originPlaceId', params.originPlaceId);
     }
     if (params.destinationPlaceId) {
-      httpParams = httpParams.set('destinationPlaceId', params.destinationPlaceId);
+      httpParams = httpParams.set(
+        'destinationPlaceId',
+        params.destinationPlaceId,
+      );
     }
     if (params.date) {
       httpParams = httpParams.set('date', params.date);
     }
-    if (params.companyId) {
-      httpParams = httpParams.set('companyId', params.companyId);
+    if (companyId) {
+      httpParams = httpParams.set('companyId', companyId);
     }
     if (params.status) {
       httpParams = httpParams.set('status', params.status);
     }
-    return this.http
-      .get<TripType[]>(`${this.baseUrl}/search`, { params: httpParams })
-      .pipe(
-        map((data: TripType[]) => {
-          this.filtredTrips.next(data);
-          return data;
-        })
-      );
+
+    return httpParams;
+  }
+
+  private extractTrips(
+    response: PaginateResponse<TripType> | TripType[],
+  ): TripType[] {
+    return Array.isArray(response) ? response : response?.objects || [];
+  }
+
+  private getStoredCompanyId(): string | null {
+    if (typeof window === 'undefined') {
+      return null;
+    }
+
+    return localStorage.getItem('companyId');
   }
 }

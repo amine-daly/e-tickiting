@@ -20,6 +20,12 @@ public interface BusRepository extends MongoRepository<BusType, String> {
     Page<BusType> findByTargetCompanyAndNameLike(String companyId, String name, Pageable pageable);
 
     /**
+     * Find buses across all companies with case-insensitive name search.
+     */
+    @Query("{ 'name': { $regex: ?0, $options: 'i' } }")
+    Page<BusType> findByNameLike(String name, Pageable pageable);
+
+    /**
      * Check if any bus exists for the given company.
      */
     boolean existsByTargetCompany(String companyId);

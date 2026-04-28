@@ -114,7 +114,7 @@ public class TripController {
             @AuthenticationPrincipal User principal) {
         String scopedCompanyId = (companyId != null && !companyId.isBlank())
                 ? companyId
-                : resolveCompanyId(principal);
+                : principal != null ? resolveCompanyId(principal) : null;
         TripStatusEnum statusEnum = (status != null && !status.isBlank())
                 ? TripStatusEnum.fromValue(status) : null;
         Page<TripType> result = tripService.search(

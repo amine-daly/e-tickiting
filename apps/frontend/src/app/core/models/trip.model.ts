@@ -1,4 +1,4 @@
-import { TargetType } from './shared.model';
+import { Picture, TargetType } from './shared.model';
 
 export { TargetType };
 
@@ -19,10 +19,46 @@ export interface PlaceSummary {
   city: string | null;
 }
 
+export interface MarketplaceCompany {
+  id: string | null;
+  name: string | null;
+  pictureUrl: string | null;
+}
+
+export interface MarketplaceRoutePoint {
+  placeId: string;
+  city: string;
+}
+
+export interface MarketplaceRoute {
+  origin: MarketplaceRoutePoint;
+  destination: MarketplaceRoutePoint;
+}
+
+export interface MarketplaceSchedule {
+  departureDate: string;
+  travelDate: string | null;
+  departureTime: string | null;
+  arrivalTime: string | null;
+  durationMinutes: number;
+}
+
+export interface MarketplacePricing {
+  displayPrice: number;
+  currencyCode: string;
+}
+
+export interface MarketplaceCapacity {
+  availableSeats: number;
+}
+
+import { AmenityEnum } from './amenity.enum';
+
 export interface BusSummary {
   busId: string;
   name: string | null;
   totalSeats: number;
+  amenities?: AmenityEnum[];
 }
 
 export interface CurrencySummary {
@@ -30,6 +66,12 @@ export interface CurrencySummary {
   code: string;
   name: string | null;
   iconFlag: string | null;
+}
+
+export interface CompanySummary {
+  id: string;
+  name: string | null;
+  picture?: Picture | null;
 }
 
 export interface StopType {
@@ -96,6 +138,7 @@ export interface DropoffPointType {
 export interface TripType {
   id: string;
   target: TargetType;
+  company?: CompanySummary | null;
   departureDate: string;
   timezone: string;
   status: TripStatusEnum;
@@ -116,11 +159,29 @@ export interface TripSearchParams {
   destinationPlaceId?: string;
   date?: string;
   companyId?: string;
-  status?: string;
+  status: TripStatusEnum;
 }
 
 export interface TripDestinationForm {
   origin?: { city: string; id?: string };
   destination?: { city: string; id?: string };
   date?: string;
+}
+
+export interface TripRouteSelection {
+  originPlaceId?: string | null;
+  destinationPlaceId?: string | null;
+  date?: string | null;
+}
+
+export interface MarketplaceTrip {
+  key: string;
+  tripId: string;
+  company: MarketplaceCompany;
+  bus: BusSummary;
+  route: MarketplaceRoute;
+  schedule: MarketplaceSchedule;
+  pricing: MarketplacePricing;
+  capacity: MarketplaceCapacity;
+  amenities?: AmenityEnum[];
 }

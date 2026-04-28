@@ -258,6 +258,12 @@ List<BusDTO> dtos = busMapper.toDtoList(buses); // MapStruct
 
 - Prefer simple, readable code over clever abstractions. If a helper adds more than 3 lines and is used only once, inline it.
 - Do not preemptively optimize or generalize: extract helpers when multiple call-sites appear or when tests show duplication.
+
+13. Marketplace View Model Pattern
+
+- Keep marketplace cards on nested view models instead of flattening domain data into top-level fields.
+- Group company branding under `company`, vehicle data under `bus`, route data under `route`, timing under `schedule`, fare under `pricing`, and seat availability under `capacity`.
+- If the UI needs a display label, derive it from nested objects in the service or component instead of duplicating flat fields like `operatorName` or `companyName`.
 - Avoid hardcoding domain values, strings, or IDs in code or templates. Use i18n keys, environment/config, or enums.
 - Keep form values as plain objects when the form already provides them; map to API DTOs only at submit time.
 - Use library utilities (lodash, date-fns) for common operations — but don't wrap them in extra layers unless necessary.

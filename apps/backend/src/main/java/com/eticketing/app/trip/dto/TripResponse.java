@@ -2,6 +2,7 @@ package com.eticketing.app.trip.dto;
 
 import com.eticketing.app.bus.BusType;
 import com.eticketing.app.common.TargetInput;
+import com.eticketing.app.company.CompanyType;
 import com.eticketing.app.currency.CurrencyType;
 import com.eticketing.app.place.PlaceType;
 import com.eticketing.app.trip.*;
@@ -28,6 +29,7 @@ public class TripResponse {
     private String timezone;
     private TripStatusEnum status;
     private BusSummary bus;
+    private CompanySummary company;
     private CurrencySummary currency;
 
     private List<StopView> stopSchedule;
@@ -47,6 +49,24 @@ public class TripResponse {
         private String busId;
         private String name;
         private int totalSeats;
+        private java.util.List<com.eticketing.app.bus.AmenityEnum> amenities;
+    }
+
+    @Data
+    @Builder
+    public static class PictureSummary {
+
+        private String baseUrl;
+        private String path;
+    }
+
+    @Data
+    @Builder
+    public static class CompanySummary {
+
+        private String id;
+        private String name;
+        private PictureSummary picture;
     }
 
     @Data
@@ -154,9 +174,13 @@ public class TripResponse {
     public static TripResponse from(TripType trip,
             Map<String, PlaceType> placeMap,
             Map<String, BusType> busMap,
-            Map<String, CurrencyType> currencyMap) {
+            Map<String, CurrencyType> currencyMap,
+            Map<String, CompanyType> companyMap) {
 
         BusType busEntity = trip.getBus() != null ? busMap.get(trip.getBus().getBusId()) : null;
+        CompanyType companyEntity = trip.getTarget() != null && trip.getTarget().getCompany() != null
+                ? companyMap.get(trip.getTarget().getCompany())
+                : null;
         CurrencyType currEntity = trip.getCurrency() != null
                 ? currencyMap.get(trip.getCurrency().getCurrencyId())
                 : null;
@@ -169,6 +193,7 @@ public class TripResponse {
                 .timezone(trip.getTimezone())
                 .status(trip.getStatus())
                 .bus(toBusSummary(trip.getBus(), busEntity))
+                .company(toCompanySummary(trip.getTarget(), companyEntity))
                 .currency(toCurrencySummary(trip.getCurrency(), currEntity))
                 .stopSchedule(mapStops(trip.getStopSchedule(), placeMap))
                 .pickupPoints(mapPickups(trip.getPickupPoints(), placeMap))
@@ -189,6 +214,7 @@ public class TripResponse {
                 .busId(ref.getBusId())
                 .name(bus != null ? bus.getName() : null)
                 .totalSeats(bus != null ? bus.getTotalSeats() : 0)
+                .amenities(bus != null ? bus.getAmenities() : java.util.List.of())
                 .build();
     }
 
@@ -201,6 +227,30 @@ public class TripResponse {
                 .code(c != null ? c.getCode() : null)
                 .name(c != null ? c.getName() : null)
                 .iconFlag(c != null ? c.getIconFlag() : null)
+                .build();
+    }
+
+    private static CompanySummary toCompanySummary(TargetInput target, CompanyType company) {
+        String companyId = target != null ? target.getCompany() : null;
+        if (companyId == null && company == null) {
+            return null;
+        }
+
+        return CompanySummary.builder()
+                .id(company != null ? company.getId() : companyId)
+                .name(company != null ? company.getName() : null)
+                .picture(toPictureSummary(company != null ? company.getPicture() : null))
+                .build();
+    }
+
+    private static PictureSummary toPictureSummary(com.eticketing.app.common.PictureType picture) {
+        if (picture == null) {
+            return null;
+        }
+
+        return PictureSummary.builder()
+                .baseUrl(picture.getBaseUrl())
+                .path(picture.getPath())
                 .build();
     }
 

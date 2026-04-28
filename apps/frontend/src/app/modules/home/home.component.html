@@ -5,9 +5,13 @@
   <h6 class="section-header">Popular Routes</h6>
   <div class="scroll-container ms-3">
     <a
-      *ngFor="let route of explicitTrips$ | async"
+      *ngFor="let route of popularRoutes$ | async"
       routerLink="/bus-listing"
-      [queryParams]="{ originPlaceId: route.originPlaceId, destinationPlaceId: route.destinationPlaceId }"
+      [queryParams]="{
+        originPlaceId: route.route.origin.placeId,
+        destinationPlaceId: route.route.destination.placeId,
+        date: route.schedule.travelDate,
+      }"
       class="scroll-item"
     >
       <div class="route-visual">
@@ -15,20 +19,24 @@
         <div class="route-line"></div>
         <div class="route-point end"></div>
         <div class="route-cities">
-          <div class="fw-semibold">{{ route.originLabel }}</div>
-          <div class="fw-semibold">{{ route.destinationLabel }}</div>
+          <div class="fw-semibold">{{ route.route.origin.city }}</div>
+          <div class="fw-semibold">{{ route.route.destination.city }}</div>
         </div>
       </div>
 
       <div class="mt-3">
         <div class="fw-bold text-primary-color">
-          {{ route.price | number : "1.2-2" }} {{ route.currency }}
+          {{ route.pricing.displayPrice | number: "1.2-2" }}
+          {{ route.pricing.currencyCode }}
         </div>
+        <div class="text-muted small mt-1">{{ route.company.name }}</div>
         <div class="d-flex align-items-center mt-1">
           <i class="bi bi-clock me-1 fs-12 text-secondary-color"></i>
           <span class="text-muted small">
-            {{ route.departureDate | date : "mediumDate" }}
-            {{ route.departureDate | date : "hh:mm a" }}
+            {{ route.schedule.departureDate | date: "mediumDate" }}
+            <ng-container *ngIf="route.schedule.departureTime">
+              {{ route.schedule.departureTime | date: "hh:mm a" }}
+            </ng-container>
           </span>
         </div>
       </div>
@@ -46,7 +54,7 @@
       [queryParams]="{
         originPlaceId: search.originId,
         destinationPlaceId: search.destinationId,
-        date: search.date
+        date: search.date,
       }"
       class="route-card d-block"
     >
@@ -64,7 +72,7 @@
           <div class="d-flex align-items-center mt-2" *ngIf="search.date">
             <i class="bi bi-calendar3 me-2 fs-12 text-secondary-color"></i>
             <span class="text-muted small">{{
-              search.date | date : "mediumDate"
+              search.date | date: "mediumDate"
             }}</span>
           </div>
         </div>

@@ -2,6 +2,8 @@ package com.eticketing.app.trip;
 
 import com.eticketing.app.bus.BusRepository;
 import com.eticketing.app.bus.BusType;
+import com.eticketing.app.company.CompanyRepository;
+import com.eticketing.app.company.CompanyType;
 import com.eticketing.app.currency.CurrencyRepository;
 import com.eticketing.app.currency.CurrencyType;
 import com.eticketing.app.place.PlaceRepository;
@@ -24,6 +26,7 @@ public class TripResponseEnricher {
 
     private final PlaceRepository placeRepository;
     private final BusRepository busRepository;
+    private final CompanyRepository companyRepository;
     private final CurrencyRepository currencyRepository;
     private final TripInventoryReconciliationService tripInventoryReconciliationService;
 
@@ -41,11 +44,15 @@ public class TripResponseEnricher {
         // Collect all referenced IDs across all trips
         Set<String> placeIds = new HashSet<>();
         Set<String> busIds = new HashSet<>();
+        Set<String> companyIds = new HashSet<>();
         Set<String> currencyIds = new HashSet<>();
 
         for (TripType trip : reconciledTrips) {
             if (trip.getBus() != null && trip.getBus().getBusId() != null) {
                 busIds.add(trip.getBus().getBusId());
+            }
+            if (trip.getTarget() != null && trip.getTarget().getCompany() != null) {
+                companyIds.add(trip.getTarget().getCompany());
             }
             if (trip.getCurrency() != null && trip.getCurrency().getCurrencyId() != null) {
                 currencyIds.add(trip.getCurrency().getCurrencyId());
@@ -64,6 +71,11 @@ public class TripResponseEnricher {
                 : busRepository.findAllById(busIds).stream()
                         .collect(Collectors.toMap(BusType::getId, Function.identity()));
 
+        Map<String, CompanyType> companyMap = companyIds.isEmpty()
+            ? Map.of()
+            : companyRepository.findAllById(companyIds).stream()
+                .collect(Collectors.toMap(CompanyType::getId, Function.identity()));
+
         Map<String, CurrencyType> currencyMap = currencyIds.isEmpty()
                 ? Map.of()
                 : currencyRepository.findAllById(currencyIds).stream()
@@ -71,7 +83,7 @@ public class TripResponseEnricher {
 
         // Map each trip to an enriched response
         return reconciledTrips.stream()
-                .map(trip -> TripResponse.from(trip, placeMap, busMap, currencyMap))
+            .map(trip -> TripResponse.from(trip, placeMap, busMap, currencyMap, companyMap))
                 .toList();
     }
 

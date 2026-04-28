@@ -16,6 +16,7 @@ export const modulesRoutes: Routes = [
       {
         path: 'bus-listing',
         resolve: { trips: TripResolver },
+        runGuardsAndResolvers: 'paramsOrQueryParamsChange',
         loadChildren: () =>
           import('./pages/bus/bus.routes').then((m) => m.busRoutes),
       },
