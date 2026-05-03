@@ -1,6 +1,6 @@
 # Trip Edit Audit
 
-Last updated: April 2026
+Last updated: May 2026
 Status: Matches the current backend and terminal UI behavior
 
 ## 1. Source Of Truth
@@ -10,33 +10,33 @@ The current edit rules are enforced in:
 - `TripEditRules`
 - `TripService.update`
 - `TripService.updateSegmentPrice`
-- `TripService.updateSegmentMaxSeats`
-- `TripService.addExpressFare`
-- `TripService.updateExpressFare`
-- `TripService.deleteExpressFare`
+- `TripService.updateSegmentMaxBooking`
+- `TripService.addExpressSegment`
+- `TripService.updateExpressSegment`
+- `TripService.deleteExpressSegment`
 - `TripService.transitionStatus`
 
 The frontend trip detail editor has already been aligned to remove the old seat-hold field from the form and summary views.
 
 ## 2. Current Permission Matrix
 
-| Trip status | Allowed | Blocked |
-| --- | --- | --- |
-| `SCHEDULED` | Most updates, stop schedule replacement, pickup/dropoff updates, bus reassignment, express fare creation and management | Segment array replacement, stop removals that break express fare chains |
-| `ACTIVE` | Pickup/dropoff updates, bus reassignment if capacity allows, stop additions, stop-time changes when no bookings touch the stop, segment price changes, segment max-seat changes, existing express fare updates and deactivation | `departureDate`, `currency`, stop removal, stop-time changes when booked segments exist, new express fare creation |
-| `COMPLETED` / `CANCELLED` | Status transitions only | All non-status changes |
+| Trip status               | Allowed                                                                                                                                                                                                                               | Blocked                                                                                                               |
+| ------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------- |
+| `SCHEDULED`               | Most updates, stop schedule replacement, pickup/dropoff updates, bus reassignment, express segment creation and management                                                                                                            | Segment array replacement, stop removals that break express segment chains                                            |
+| `ACTIVE`                  | Pickup/dropoff updates, bus reassignment if capacity allows, stop additions, stop-time changes when no bookings touch the stop, segment price changes, segment max-booking changes, existing express segment updates and deactivation | `departureDate`, `currency`, stop removal, stop-time changes when booked segments exist, new express segment creation |
+| `COMPLETED` / `CANCELLED` | Status transitions only                                                                                                                                                                                                               | All non-status changes                                                                                                |
 
 ## 3. Important Backend Rules
 
 - Segments are always frozen as an array.
 - Segment price is editable as a separate service operation.
-- Segment max seats cannot be reduced below the current booked count.
-- A bus change on an active trip requires sufficient seat capacity.
-- Removing a stop on a scheduled trip is blocked if an express fare depends on it.
+- Segment max booking cannot be reduced below the current booked count.
+- A bus change on an active trip requires sufficient physical seat capacity.
+- Removing a stop on a scheduled trip is blocked if an express segment depends on it.
 - Removing a stop on an active trip is blocked outright.
-- Stop-time changes on an active trip are blocked only when a touching segment already has bookings.
-- Express fare creation is blocked on active trips.
-- Express fare updates and deactivation are blocked on completed or cancelled trips.
+- Stop-time changes on an active trip are blocked only when a touching segment already has physical occupancy.
+- Express segment creation is blocked on active trips.
+- Express segment updates and deactivation are blocked on completed or cancelled trips.
 
 ## 4. Trip Status Transitions
 
@@ -77,4 +77,3 @@ No open doc mismatch remains for:
 - Keep backend and frontend edit matrices in sync when adding new trip fields.
 - Add regression tests for active-trip stop-time changes and bus reassignment capacity checks.
 - Keep the express-fare rules documented whenever the service-level guard changes.
-

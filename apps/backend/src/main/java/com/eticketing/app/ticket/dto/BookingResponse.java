@@ -18,7 +18,7 @@ public class BookingResponse {
     private String companyId;
     private String posId;
     private List<String> segmentIds;
-    private String expressId;
+    private String expressSegmentId;
     private String pickupPointId;
     private String dropoffPointId;
     private String passengerId;

@@ -53,7 +53,7 @@ public class TicketType {
     @Builder.Default
     private List<String> segmentIds = new ArrayList<>();
 
-    private String expressId;
+    private String expressSegmentId;
 
     private String pickupPointId;
 

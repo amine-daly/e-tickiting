@@ -11,11 +11,11 @@ import java.time.Instant;
 import java.util.List;
 
 /**
- * DTO for adding an express fare to a trip. {@code segmentIds} references
+ * DTO for adding an express segment to a trip. {@code segmentIds} references
  * existing segment IDs on the trip.
  */
 @Data
-public class ExpressFareRequest {
+public class ExpressSegmentRequest {
 
     @NotBlank
     private String fromPlaceId;

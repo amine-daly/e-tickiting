@@ -16,7 +16,7 @@ import java.util.Map;
 
 /**
  * Read-facing trip response DTO with expanded reference names and computed
- * express fare fields.
+ * express segment fields.
  */
 @Data
 @Builder
@@ -36,7 +36,8 @@ public class TripResponse {
     private List<PickupPointView> pickupPoints;
     private List<DropoffPointView> dropoffPoints;
     private List<SegmentView> segments;
-    private List<EnrichedExpressFare> expressFares;
+    private List<EnrichedExpressSegment> expressSegments;
+    private MarketplaceView marketplace;
 
     private Instant createdAt;
     private Instant updatedAt;
@@ -112,8 +113,8 @@ public class TripResponse {
         private PlaceSummary toPlace;
         private Instant departureTime;
         private Instant arrivalTime;
-        private int maxSeats;
-        private int bookedSeats;
+        private int maxBooking;
+        private int bookedCount;
         private BigDecimal basePrice;
         private double distanceKm;
         private int durationMinutes;
@@ -147,20 +148,73 @@ public class TripResponse {
 
     @Data
     @Builder
-    public static class EnrichedExpressFare {
+    public static class EnrichedExpressSegment {
 
-        private String expressId;
+        private String expressSegmentId;
         private String fromPlaceId;
         private PlaceSummary fromPlace;
         private String toPlaceId;
         private PlaceSummary toPlace;
         private List<String> segmentsCovered;
         private BigDecimal price;
+        private int bookedCount;
         private Instant validFrom;
         private Instant validUntil;
         private boolean active;
         private double totalDistanceKm;
         private int totalDurationMinutes;
+    }
+
+    @Data
+    @Builder
+    public static class MarketplaceRoutePoint {
+
+        private String placeId;
+        private String city;
+    }
+
+    @Data
+    @Builder
+    public static class MarketplaceRoute {
+
+        private MarketplaceRoutePoint origin;
+        private MarketplaceRoutePoint destination;
+    }
+
+    @Data
+    @Builder
+    public static class MarketplaceSchedule {
+
+        private Instant departureDate;
+        private String travelDate;
+        private Instant departureTime;
+        private Instant arrivalTime;
+        private int durationMinutes;
+    }
+
+    @Data
+    @Builder
+    public static class MarketplacePricing {
+
+        private BigDecimal displayPrice;
+        private String currencyCode;
+    }
+
+    @Data
+    @Builder
+    public static class MarketplaceCapacity {
+
+        private int availableSeats;
+    }
+
+    @Data
+    @Builder
+    public static class MarketplaceView {
+
+        private MarketplaceRoute route;
+        private MarketplaceSchedule schedule;
+        private MarketplacePricing pricing;
+        private MarketplaceCapacity capacity;
     }
 
     // ── Factory methods ─────────────────────────────────────────────────
@@ -176,6 +230,15 @@ public class TripResponse {
             Map<String, BusType> busMap,
             Map<String, CurrencyType> currencyMap,
             Map<String, CompanyType> companyMap) {
+        return from(trip, placeMap, busMap, currencyMap, companyMap, null);
+    }
+
+    public static TripResponse from(TripType trip,
+            Map<String, PlaceType> placeMap,
+            Map<String, BusType> busMap,
+            Map<String, CurrencyType> currencyMap,
+            Map<String, CompanyType> companyMap,
+            MarketplaceView marketplace) {
 
         BusType busEntity = trip.getBus() != null ? busMap.get(trip.getBus().getBusId()) : null;
         CompanyType companyEntity = trip.getTarget() != null && trip.getTarget().getCompany() != null
@@ -199,7 +262,8 @@ public class TripResponse {
                 .pickupPoints(mapPickups(trip.getPickupPoints(), placeMap))
                 .dropoffPoints(mapDropoffs(trip.getDropoffPoints(), placeMap))
                 .segments(mapSegments(trip.getSegments(), placeMap))
-                .expressFares(enrichExpressFares(trip.getExpressFares(), trip.getSegments(), placeMap))
+                .expressSegments(enrichExpressSegments(trip.getExpressSegments(), trip.getSegments(), placeMap))
+                .marketplace(marketplace)
                 .createdAt(trip.getCreatedAt())
                 .updatedAt(trip.getUpdatedAt())
                 .build();
@@ -293,8 +357,8 @@ public class TripResponse {
                 .toPlace(toPlaceSummary(s.getToPlaceId(), placeMap))
                 .departureTime(s.getDepartureTime())
                 .arrivalTime(s.getArrivalTime())
-                .maxSeats(s.getMaxSeats())
-                .bookedSeats(s.getBookedSeats())
+                .maxBooking(s.getMaxBooking())
+                .bookedCount(s.getBookedCount())
                 .basePrice(s.getBasePrice())
                 .distanceKm(s.getDistanceKm())
                 .durationMinutes(s.getDurationMinutes())
@@ -331,24 +395,25 @@ public class TripResponse {
                 .build()).toList();
     }
 
-    private static List<EnrichedExpressFare> enrichExpressFares(
-            List<ExpressFareType> fares, List<SegmentType> segments, Map<String, PlaceType> placeMap) {
-        if (fares == null) {
+    private static List<EnrichedExpressSegment> enrichExpressSegments(
+            List<ExpressSegmentType> expressSegments, List<SegmentType> segments, Map<String, PlaceType> placeMap) {
+        if (expressSegments == null) {
             return List.of();
         }
-        return fares.stream().map(f -> EnrichedExpressFare.builder()
-                .expressId(f.getExpressId())
-                .fromPlaceId(f.getFromPlaceId())
-                .fromPlace(toPlaceSummary(f.getFromPlaceId(), placeMap))
-                .toPlaceId(f.getToPlaceId())
-                .toPlace(toPlaceSummary(f.getToPlaceId(), placeMap))
-                .segmentsCovered(f.getSegmentsCovered())
-                .price(f.getPrice())
-                .validFrom(f.getValidFrom())
-                .validUntil(f.getValidUntil())
-                .active(f.isActive())
-                .totalDistanceKm(ExpressFareValidator.computeTotalDistanceKm(f, segments))
-                .totalDurationMinutes(ExpressFareValidator.computeTotalDurationMinutes(f, segments))
+        return expressSegments.stream().map(expressSegment -> EnrichedExpressSegment.builder()
+                .expressSegmentId(expressSegment.getExpressSegmentId())
+                .fromPlaceId(expressSegment.getFromPlaceId())
+                .fromPlace(toPlaceSummary(expressSegment.getFromPlaceId(), placeMap))
+                .toPlaceId(expressSegment.getToPlaceId())
+                .toPlace(toPlaceSummary(expressSegment.getToPlaceId(), placeMap))
+                .segmentsCovered(expressSegment.getSegmentsCovered())
+                .price(expressSegment.getPrice())
+                .bookedCount(expressSegment.getBookedCount())
+                .validFrom(expressSegment.getValidFrom())
+                .validUntil(expressSegment.getValidUntil())
+                .active(expressSegment.isActive())
+                .totalDistanceKm(ExpressSegmentValidator.computeTotalDistanceKm(expressSegment, segments))
+                .totalDurationMinutes(ExpressSegmentValidator.computeTotalDurationMinutes(expressSegment, segments))
                 .build()
         ).toList();
     }

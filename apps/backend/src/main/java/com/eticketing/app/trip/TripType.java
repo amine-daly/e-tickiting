@@ -22,7 +22,7 @@ import java.util.List;
  * Trip document — the 9-layer schema per TRIP_SPEC.
  * <p>
  * Layers: Identity → Bus ref → Currency ref → Seat hold → Stop schedule →
- * Pickup points → Dropoff points → Segments → Express fares.
+ * Pickup points → Dropoff points → Segments → Express segments.
  */
 @Document("trips")
 @CompoundIndexes({
@@ -94,9 +94,9 @@ public class TripType {
     @Builder.Default
     private List<SegmentType> segments = new ArrayList<>();
 
-    // ── Layer 9 — Express Fares (pricing overlay) ───────────────────────
+    // ── Layer 9 — Express Segments (route-level contract) ───────────────
     @Builder.Default
-    private List<ExpressFareType> expressFares = new ArrayList<>();
+    private List<ExpressSegmentType> expressSegments = new ArrayList<>();
 
     // ── Audit ───────────────────────────────────────────────────────────
     @CreatedDate

@@ -1,10 +1,12 @@
 import { Injectable } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { BehaviorSubject, finalize, map, Observable, of } from 'rxjs';
+
+import { environment } from 'src/environments/environment';
 import { IPagination } from 'src/app/core/models/paginate-model';
 import { PhoneType, RoleEnum, UserType } from 'src/app/core/models/user-type';
 
-const API_USERS_URL = '/api/users';
+const API_USERS_URL = `${environment.apiBase}/users`;
 
 export interface CustomerCreatePayload {
   firstName: string;

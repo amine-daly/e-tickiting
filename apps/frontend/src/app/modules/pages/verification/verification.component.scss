@@ -1,36 +1,36 @@
 /* Responsive bottom bar for desktop */
 .bottom-fixed-bar {
-    position: fixed;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background: #fff;
-    box-shadow: 0 -2px 16px rgba(0, 0, 0, 0.04);
-    z-index: 100;
-    width: 100%;
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: #fff;
+  box-shadow: 0 -2px 16px rgba(0, 0, 0, 0.04);
+  z-index: 100;
+  width: 100%;
 }
 
 @media (min-width: 992px) {
-    .bottom-fixed-bar {
-        left: 50%;
-        transform: translateX(-50%);
-        width: 900px;
-        border-radius: 12px 12px 0 0;
-        box-shadow: 0 -2px 24px rgba(0, 0, 0, 0.08);
-        margin-bottom: 0;
-    }
+  .bottom-fixed-bar {
+    left: 50%;
+    transform: translateX(-50%);
+    width: 900px;
+    border-radius: 12px 12px 0 0;
+    box-shadow: 0 -2px 24px rgba(0, 0, 0, 0.08);
+    margin-bottom: 0;
+  }
 
-    .bottom-fixed-bar .d-flex {
-        gap: 32px;
-    }
+  .bottom-fixed-bar .d-flex {
+    gap: 32px;
+  }
 
-    .bottom-fixed-bar .btn-app {
-        min-width: 220px;
-        font-size: 1.15rem;
-    }
+  .bottom-fixed-bar .btn-app {
+    min-width: 220px;
+    font-size: 1.15rem;
+  }
 
-    .bottom-fixed-bar .lh-sm {
-        min-width: 120px;
-        text-align: left;
-    }
+  .bottom-fixed-bar .lh-sm {
+    min-width: 120px;
+    text-align: left;
+  }
 }

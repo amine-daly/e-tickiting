@@ -38,9 +38,9 @@ public class RefundService {
         Instant now = Instant.now();
         if (!refund.isSeatReleased()) {
             TicketType ticket = ticketRepository.findById(refund.getTicketId())
-                .orElseThrow(() -> new NotFoundException("Ticket not found for refund: " + refund.getTicketId()));
+                    .orElseThrow(() -> new NotFoundException("Ticket not found for refund: " + refund.getTicketId()));
 
-            seatReservationService.releaseSeats(ticket.getTripId(), refund.getSegmentsRefunded());
+            seatReservationService.releaseSeats(ticket.getTripId(), refund.getSegmentsRefunded(), ticket.getExpressSegmentId());
             refund.setSeatReleased(true);
             refund.setSeatReleasedAt(now);
         }
@@ -50,7 +50,7 @@ public class RefundService {
         RefundType saved = refundRepository.save(refund);
 
         LOG.info("Refund {} APPROVED - seatReleased={} for ticket {}",
-            refundId, refund.isSeatReleased(), refund.getTicketId());
+                refundId, refund.isSeatReleased(), refund.getTicketId());
         return saved;
     }
 

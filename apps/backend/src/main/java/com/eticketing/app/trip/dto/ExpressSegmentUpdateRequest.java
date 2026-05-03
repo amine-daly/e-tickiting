@@ -7,11 +7,11 @@ import java.math.BigDecimal;
 import java.time.Instant;
 
 /**
- * DTO for updating mutable fields of an express fare. Cannot change:
+ * DTO for updating mutable fields of an express segment. Cannot change:
  * segmentsCovered, fromPlaceId, toPlaceId.
  */
 @Data
-public class ExpressFareUpdateRequest {
+public class ExpressSegmentUpdateRequest {
 
     @PositiveOrZero
     private BigDecimal price;

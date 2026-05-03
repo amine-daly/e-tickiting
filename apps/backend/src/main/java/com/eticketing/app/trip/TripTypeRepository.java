@@ -5,6 +5,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.mongodb.repository.MongoRepository;
 import org.springframework.data.mongodb.repository.Query;
 
+import java.time.Instant;
 import java.util.List;
 
 public interface TripTypeRepository extends MongoRepository<TripType, String> {
@@ -26,4 +27,7 @@ public interface TripTypeRepository extends MongoRepository<TripType, String> {
      * Bus lock check — finds trips with a given busId in specified statuses.
      */
     List<TripType> findByBusBusIdAndStatusIn(String busId, List<TripStatusEnum> statuses);
+
+    @Query("{ 'expressSegments': { $elemMatch: { 'active': true, 'validUntil': { $lte: ?0 } } } }")
+    List<TripType> findByActiveExpressSegmentsExpiredBefore(Instant cutoff);
 }

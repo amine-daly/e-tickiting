@@ -20,7 +20,7 @@ export interface BookingResponse {
   companyId: string;
   posId?: string;
   segmentIds: string[];
-  expressId?: string;
+  expressSegmentId?: string;
   pickupPointId: string;
   dropoffPointId: string;
   passengerId: string;
@@ -47,14 +47,14 @@ export class BookingService {
   confirmBooking(ticketId: string): Observable<BookingResponse> {
     return this.http.post<BookingResponse>(
       `${this.baseUrl}/${ticketId}/confirm`,
-      {}
+      {},
     );
   }
 
   cancelBooking(ticketId: string): Observable<BookingResponse> {
     return this.http.post<BookingResponse>(
       `${this.baseUrl}/${ticketId}/cancel`,
-      {}
+      {},
     );
   }
 
@@ -67,8 +67,6 @@ export class BookingService {
   }
 
   getTicketDocument(id: string): Observable<any> {
-    return this.http.get<any>(
-      `${environment.apiBase}/tickets/${id}/document`
-    );
+    return this.http.get<any>(`${environment.apiBase}/tickets/${id}/document`);
   }
 }

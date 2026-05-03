@@ -66,26 +66,22 @@ public class OrderExpiryWorker {
 
     private void expireOrder(OrderType order, Instant now) {
         List<TicketType> tickets = ticketRepository.findByOrderId(order.getId());
-        int seatCount = 0;
-        List<String> segmentIds = List.of();
+        List<TicketType> expiredTickets = new java.util.ArrayList<>();
 
         // Expire all PENDING child tickets
         for (TicketType ticket : tickets) {
             if (ticket.getStatus() == TicketStatusEnum.PENDING) {
                 ticket.setStatus(TicketStatusEnum.EXPIRED);
                 ticket.setExpiresAt(now);
-                seatCount++;
-                if (segmentIds.isEmpty()) {
-                    segmentIds = ticket.getSegmentIds();
-                }
+                expiredTickets.add(ticket);
             }
         }
         ticketRepository.saveAll(tickets);
 
-        if (seatCount > 0 && !segmentIds.isEmpty()) {
-            seatReservationService.releaseSeats(order.getTripId(), segmentIds, seatCount);
+        if (!expiredTickets.isEmpty()) {
+            seatReservationService.releaseReservations(order.getTripId(), expiredTickets);
             LOG.info("EXPIRY_WORKER: released {} seats on trip {} for expired order {}",
-                    seatCount, order.getTripId(), order.getId());
+                    expiredTickets.size(), order.getTripId(), order.getId());
         }
 
         // Mark order as expired
@@ -99,7 +95,7 @@ public class OrderExpiryWorker {
         ticket.setExpiresAt(now);
         ticketRepository.save(ticket);
 
-        seatReservationService.releaseSeats(ticket.getTripId(), ticket.getSegmentIds());
+        seatReservationService.releaseSeats(ticket.getTripId(), ticket.getSegmentIds(), ticket.getExpressSegmentId());
         LOG.info("EXPIRY_WORKER: expired standalone ticket {} and released seats on trip {}",
                 ticket.getId(), ticket.getTripId());
     }

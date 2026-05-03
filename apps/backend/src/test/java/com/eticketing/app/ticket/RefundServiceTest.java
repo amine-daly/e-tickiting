@@ -54,7 +54,7 @@ class RefundServiceTest {
         assertEquals(RefundStatusEnum.APPROVED, result.getStatus());
         assertNotNull(result.getProcessedAt());
         assertNotNull(result.getSeatReleasedAt());
-        verify(seatReservationService).releaseSeats("trip-1", List.of("seg-1"));
+        verify(seatReservationService).releaseSeats("trip-1", List.of("seg-1"), (String) null);
     }
 
     @Test
@@ -76,7 +76,7 @@ class RefundServiceTest {
         assertEquals(RefundStatusEnum.APPROVED, result.getStatus());
         assertNotNull(result.getProcessedAt());
         assertEquals(Instant.parse("2026-04-23T12:00:00Z"), result.getSeatReleasedAt());
-        verify(seatReservationService, never()).releaseSeats("trip-2", List.of("seg-2"));
+        verify(seatReservationService, never()).releaseSeats("trip-2", List.of("seg-2"), (String) null);
         verify(ticketRepository, never()).findById("ticket-2");
     }
 }

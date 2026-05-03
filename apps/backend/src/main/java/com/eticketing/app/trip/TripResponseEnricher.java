@@ -8,6 +8,7 @@ import com.eticketing.app.currency.CurrencyRepository;
 import com.eticketing.app.currency.CurrencyType;
 import com.eticketing.app.place.PlaceRepository;
 import com.eticketing.app.place.PlaceType;
+import com.eticketing.app.trip.dto.TripRouteAvailabilityResponse;
 import com.eticketing.app.trip.dto.TripResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
@@ -31,15 +32,20 @@ public class TripResponseEnricher {
     private final TripInventoryReconciliationService tripInventoryReconciliationService;
 
     public TripResponse enrich(TripType trip) {
-        return enrich(List.of(trip)).get(0);
+        return enrich(List.of(trip), null, null).get(0);
     }
 
     public List<TripResponse> enrich(List<TripType> trips) {
+        return enrich(trips, null, null);
+    }
+
+    public List<TripResponse> enrich(List<TripType> trips, String originPlaceId, String destinationPlaceId) {
         if (trips == null || trips.isEmpty()) {
             return List.of();
         }
 
         List<TripType> reconciledTrips = tripInventoryReconciliationService.reconcile(trips);
+        boolean includeMarketplaceProjection = hasText(originPlaceId) && hasText(destinationPlaceId);
 
         // Collect all referenced IDs across all trips
         Set<String> placeIds = new HashSet<>();
@@ -72,9 +78,9 @@ public class TripResponseEnricher {
                         .collect(Collectors.toMap(BusType::getId, Function.identity()));
 
         Map<String, CompanyType> companyMap = companyIds.isEmpty()
-            ? Map.of()
-            : companyRepository.findAllById(companyIds).stream()
-                .collect(Collectors.toMap(CompanyType::getId, Function.identity()));
+                ? Map.of()
+                : companyRepository.findAllById(companyIds).stream()
+                        .collect(Collectors.toMap(CompanyType::getId, Function.identity()));
 
         Map<String, CurrencyType> currencyMap = currencyIds.isEmpty()
                 ? Map.of()
@@ -83,8 +89,48 @@ public class TripResponseEnricher {
 
         // Map each trip to an enriched response
         return reconciledTrips.stream()
-            .map(trip -> TripResponse.from(trip, placeMap, busMap, currencyMap, companyMap))
+                .map(trip -> {
+                    BusType busEntity = trip.getBus() != null ? busMap.get(trip.getBus().getBusId()) : null;
+                    CurrencyType currencyEntity = trip.getCurrency() != null
+                            ? currencyMap.get(trip.getCurrency().getCurrencyId())
+                            : null;
+                    TripResponse.MarketplaceView marketplace = includeMarketplaceProjection
+                            ? TripMarketplaceProjectionFactory.build(
+                                    trip,
+                                    originPlaceId,
+                                    destinationPlaceId,
+                                    busEntity,
+                                    currencyEntity != null ? currencyEntity.getCode() : "DT",
+                                    placeMap)
+                            : null;
+                    return TripResponse.from(trip, placeMap, busMap, currencyMap, companyMap, marketplace);
+                })
+                .filter(response -> !includeMarketplaceProjection || response.getMarketplace() != null)
                 .toList();
+    }
+
+    public TripRouteAvailabilityResponse routeAvailability(
+            TripType trip,
+            String originPlaceId,
+            String destinationPlaceId) {
+        if (trip == null) {
+            return null;
+        }
+
+        TripType reconciledTrip = tripInventoryReconciliationService.reconcile(List.of(trip)).get(0);
+        BusType busEntity = reconciledTrip.getBus() != null && reconciledTrip.getBus().getBusId() != null
+                ? busRepository.findById(reconciledTrip.getBus().getBusId()).orElse(null)
+                : null;
+        CurrencyType currencyEntity = reconciledTrip.getCurrency() != null
+                ? currencyRepository.findById(reconciledTrip.getCurrency().getCurrencyId()).orElse(null)
+                : null;
+
+        return TripMarketplaceProjectionFactory.buildRouteAvailability(
+                reconciledTrip,
+                originPlaceId,
+                destinationPlaceId,
+                busEntity,
+                currencyEntity != null ? currencyEntity.getCode() : "DT");
     }
 
     private void collectPlaceIds(TripType trip, Set<String> placeIds) {
@@ -97,10 +143,10 @@ public class TripResponseEnricher {
                 addIfPresent(placeIds, s.getToPlaceId());
             });
         }
-        if (trip.getExpressFares() != null) {
-            trip.getExpressFares().forEach(f -> {
-                addIfPresent(placeIds, f.getFromPlaceId());
-                addIfPresent(placeIds, f.getToPlaceId());
+        if (trip.getExpressSegments() != null) {
+            trip.getExpressSegments().forEach(segment -> {
+                addIfPresent(placeIds, segment.getFromPlaceId());
+                addIfPresent(placeIds, segment.getToPlaceId());
             });
         }
         if (trip.getPickupPoints() != null) {
@@ -115,5 +161,9 @@ public class TripResponseEnricher {
         if (value != null && !value.isBlank()) {
             set.add(value);
         }
+    }
+
+    private boolean hasText(String value) {
+        return value != null && !value.isBlank();
     }
 }

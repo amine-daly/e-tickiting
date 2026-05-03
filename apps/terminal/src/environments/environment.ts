@@ -8,5 +8,5 @@ export const environment = {
   USERDATA_KEY: 'auth',
   isMockEnabled: false, // disable in-memory mocks
   apiBase: 'http://localhost:8080/api', // direct backend URL, no proxy
+  /* apiBase: 'http://13.61.196.160/api', */
 };
-export const GOOGLEMAPS_API_KEY = 'AIzaSyArN_5tS2hZfTjISRouwsFe9eID_3RTVq0';

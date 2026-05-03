@@ -22,7 +22,7 @@ public final class SegmentGenerator {
      */
     public record SegmentInput(
             BigDecimal basePrice,
-            int maxSeats,
+            int maxBooking,
             double distanceKm,
             Integer durationMinutesOverride
             ) {
@@ -35,7 +35,7 @@ public final class SegmentGenerator {
      * @param stops validated stop schedule (already passed StopValidator)
      * @param segmentInputs admin inputs, ordered by segment index (0 = first
      * pair of commercial stops)
-     * @param busTotalSeats fallback maxSeats if admin input is missing
+     * @param busTotalSeats fallback maxBooking if admin input is missing
      * @return list of segments
      */
     public static List<SegmentType> generate(
@@ -68,7 +68,7 @@ public final class SegmentGenerator {
 
             SegmentInput input = (segmentInputs != null) ? segmentInputs.get(i) : null;
 
-            int maxSeats = (input != null && input.maxSeats() > 0) ? input.maxSeats() : busTotalSeats;
+            int maxBooking = (input != null && input.maxBooking() > 0) ? input.maxBooking() : busTotalSeats;
             BigDecimal basePrice = (input != null && input.basePrice() != null) ? input.basePrice() : BigDecimal.ZERO;
             double distanceKm = (input != null) ? input.distanceKm() : 0;
 
@@ -88,8 +88,8 @@ public final class SegmentGenerator {
                     .toPlaceId(to.getPlaceId())
                     .departureTime(from.getDepartureTime())
                     .arrivalTime(to.getArrivalTime())
-                    .maxSeats(maxSeats)
-                    .bookedSeats(0)
+                    .maxBooking(maxBooking)
+                    .bookedCount(0)
                     .basePrice(basePrice)
                     .distanceKm(distanceKm)
                     .durationMinutes(durationMinutes)

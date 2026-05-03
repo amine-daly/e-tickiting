@@ -1,10 +1,12 @@
 import { Injectable } from '@angular/core';
 
+import { computeRouteAvailableSeats } from '../helpers/trip-inventory.helper';
 import { Picture } from '../models/shared.model';
 import {
   MarketplaceCompany,
   MarketplaceCapacity,
-  ExpressFareType,
+  ExpressSegmentType,
+  MarketplaceProjection,
   MarketplacePricing,
   MarketplaceRoute,
   MarketplaceSchedule,
@@ -65,18 +67,29 @@ export class TripMarketplaceService {
     trip: TripType,
     selection: TripRouteSelection = {},
   ): MarketplaceTrip | null {
+    const precomputedMarketplace = this.resolvePrecomputedMarketplace(
+      trip,
+      selection,
+    );
+    if (precomputedMarketplace) {
+      return this.buildMarketplaceTrip(trip, precomputedMarketplace);
+    }
+
+    if (this.hasExplicitSelection(selection)) {
+      return null;
+    }
+
     const resolvedRoute = this.resolveRoute(trip, selection);
     if (!resolvedRoute) {
       return null;
     }
 
     const { originStop, destinationStop, chain } = resolvedRoute;
-    const expressFare = this.findExactExpressFare(
-      trip,
-      originStop.placeId,
-      destinationStop.placeId,
-    );
-    const company = this.resolveCompany(trip);
+    const expressSegment = this.findExactExpressSegment(trip, chain);
+    if (!this.isRouteMarketable(chain, expressSegment)) {
+      return null;
+    }
+
     const route: MarketplaceRoute = {
       origin: {
         placeId: originStop.placeId,
@@ -93,29 +106,25 @@ export class TripMarketplaceService {
       departureTime: originStop.departureTime,
       arrivalTime: destinationStop.arrivalTime,
       durationMinutes:
-        expressFare?.totalDurationMinutes ??
+        expressSegment?.totalDurationMinutes ??
         chain.reduce((sum, segment) => sum + (segment.durationMinutes || 0), 0),
     };
     const pricing: MarketplacePricing = {
       displayPrice:
-        expressFare?.price ??
+        expressSegment?.price ??
         chain.reduce((sum, segment) => sum + (segment.basePrice || 0), 0),
       currencyCode: trip.currency?.code || 'DT',
     };
     const capacity: MarketplaceCapacity = {
-      availableSeats: this.computeAvailableSeats(chain),
+      availableSeats: computeRouteAvailableSeats(trip, chain),
     };
 
-    return {
-      key: `${trip.id}:${originStop.placeId}:${destinationStop.placeId}`,
-      tripId: trip.id,
-      company,
-      bus: trip.bus,
+    return this.buildMarketplaceTrip(trip, {
       route,
       schedule,
       pricing,
       capacity,
-    };
+    });
   }
 
   private buildCandidateSelections(trip: TripType): TripRouteSelection[] {
@@ -137,14 +146,14 @@ export class TripMarketplaceService {
       });
     }
 
-    for (const fare of trip.expressFares || []) {
-      if (!fare.active) {
+    for (const expressSegment of trip.expressSegments || []) {
+      if (!this.isExpressSegmentCurrentlyValid(expressSegment)) {
         continue;
       }
 
       selections.push({
-        originPlaceId: fare.fromPlaceId,
-        destinationPlaceId: fare.toPlaceId,
+        originPlaceId: expressSegment.fromPlaceId,
+        destinationPlaceId: expressSegment.toPlaceId,
       });
     }
 
@@ -258,29 +267,96 @@ export class TripMarketplaceService {
     );
   }
 
-  private computeAvailableSeats(segments: SegmentType[]): number {
-    if (!segments.length) {
-      return 0;
+  private findExactExpressSegment(
+    trip: TripType,
+    chain: SegmentType[],
+  ): ExpressSegmentType | undefined {
+    if (chain.length < 2) {
+      return undefined;
     }
 
-    return Math.max(
-      Math.min(
-        ...segments.map((segment) => segment.maxSeats - segment.bookedSeats),
-      ),
-      0,
+    const originPlaceId = chain[0]?.fromPlaceId;
+    const destinationPlaceId = chain[chain.length - 1]?.toPlaceId;
+    const segmentIds = chain.map((segment) => segment.segmentId);
+
+    return (trip.expressSegments || []).find(
+      (expressSegment) =>
+        this.isExpressSegmentCurrentlyValid(expressSegment) &&
+        expressSegment.fromPlaceId === originPlaceId &&
+        expressSegment.toPlaceId === destinationPlaceId &&
+        this.segmentsCoveredMatchesChain(expressSegment, segmentIds),
     );
   }
 
-  private findExactExpressFare(
+  private segmentsCoveredMatchesChain(
+    expressSegment: ExpressSegmentType,
+    segmentIds: string[],
+  ): boolean {
+    if (expressSegment.segmentsCovered.length !== segmentIds.length) {
+      return false;
+    }
+
+    return expressSegment.segmentsCovered.every(
+      (segmentId, index) => segmentId === segmentIds[index],
+    );
+  }
+
+  private isRouteMarketable(
+    chain: SegmentType[],
+    expressSegment: ExpressSegmentType | undefined,
+  ): boolean {
+    return chain.length === 1 || !!expressSegment;
+  }
+
+  private resolvePrecomputedMarketplace(
     trip: TripType,
-    originPlaceId: string,
-    destinationPlaceId: string,
-  ): ExpressFareType | undefined {
-    return (trip.expressFares || []).find(
-      (fare) =>
-        fare.active &&
-        fare.fromPlaceId === originPlaceId &&
-        fare.toPlaceId === destinationPlaceId,
+    selection: TripRouteSelection,
+  ): MarketplaceProjection | null {
+    if (!this.hasExplicitSelection(selection) || !trip.marketplace) {
+      return null;
+    }
+
+    if (
+      trip.marketplace.route.origin.placeId !== selection.originPlaceId ||
+      trip.marketplace.route.destination.placeId !==
+        selection.destinationPlaceId
+    ) {
+      return null;
+    }
+
+    return trip.marketplace;
+  }
+
+  private hasExplicitSelection(selection: TripRouteSelection): boolean {
+    return !!selection.originPlaceId && !!selection.destinationPlaceId;
+  }
+
+  private buildMarketplaceTrip(
+    trip: TripType,
+    marketplace: MarketplaceProjection,
+  ): MarketplaceTrip {
+    return {
+      key: `${trip.id}:${marketplace.route.origin.placeId}:${marketplace.route.destination.placeId}`,
+      tripId: trip.id,
+      company: this.resolveCompany(trip),
+      bus: trip.bus,
+      route: marketplace.route,
+      schedule: marketplace.schedule,
+      pricing: marketplace.pricing,
+      capacity: marketplace.capacity,
+    };
+  }
+
+  private isExpressSegmentCurrentlyValid(
+    expressSegment: ExpressSegmentType,
+  ): boolean {
+    const now = new Date();
+
+    return (
+      expressSegment.active &&
+      (!expressSegment.validFrom ||
+        now >= new Date(expressSegment.validFrom)) &&
+      (!expressSegment.validUntil || now <= new Date(expressSegment.validUntil))
     );
   }
 

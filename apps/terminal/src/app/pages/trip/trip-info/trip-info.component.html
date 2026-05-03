@@ -191,10 +191,10 @@
               <th>{{ "TRIPS.SEGMENTS.FROM" | translate }}</th>
               <th>{{ "TRIPS.SEGMENTS.TO" | translate }}</th>
               <th class="text-center">
-                {{ "TRIPS.SEGMENTS.MAX_SEATS" | translate }}
+                {{ "TRIPS.SEGMENTS.MAX_BOOKING" | translate }}
               </th>
               <th class="text-center">
-                {{ "TRIPS.SEGMENTS.BOOKED_SEATS" | translate }}
+                {{ "TRIPS.SEGMENTS.BOOKED_COUNT" | translate }}
               </th>
               <th>
                 {{ "TRIPS.SEGMENTS.BASE_PRICE" | translate }}
@@ -216,16 +216,16 @@
               <td class="fw-semibold">
                 {{ seg.toPlace?.city || seg.toPlaceId }}
               </td>
-              <td class="text-center">{{ seg.maxSeats }}</td>
+              <td class="text-center">{{ seg.maxBooking }}</td>
               <td class="text-center">
                 <span
                   [ngClass]="
-                    seg.bookedSeats >= seg.maxSeats
+                    seg.bookedCount >= seg.maxBooking
                       ? 'text-danger fw-bold'
                       : 'text-dark'
                   "
                 >
-                  {{ seg.bookedSeats }}
+                  {{ seg.bookedCount }}
                 </span>
               </td>
               <td>
@@ -233,7 +233,7 @@
                 {{ trip.currency?.code || "-" }}
               </td>
               <td>{{ seg.distanceKm | number: "1.1-1" }}</td>
-              <td>{{ seg.durationMinutes }}</td>
+              <td>{{ seg.durationMinutes | duration }}</td>
             </tr>
           </tbody>
         </table>
@@ -241,11 +241,11 @@
     </div>
   </div>
 
-  <!-- ─── EXPRESS FARES ─────────────────────────────────── -->
-  <div class="card mb-6" *ngIf="activeFares.length">
+  <!-- ─── EXPRESS SEGMENTS ──────────────────────────────── -->
+  <div class="card mb-6" *ngIf="activeExpressSegments.length">
     <div class="card-header">
       <h3 class="card-title fw-bold">
-        {{ "TRIPS.EXPRESS_FARES.TITLE" | translate }}
+        {{ "TRIPS.EXPRESS_SEGMENTS.TITLE" | translate }}
       </h3>
     </div>
     <div class="card-body py-4">
@@ -257,47 +257,53 @@
             <tr class="fw-bolder text-muted fs-7">
               <th>{{ "TRIPS.SEGMENTS.FROM" | translate }}</th>
               <th>{{ "TRIPS.SEGMENTS.TO" | translate }}</th>
-              <th>{{ "TRIPS.EXPRESS_FARES.SEGMENTS_COVERED" | translate }}</th>
               <th>
-                {{ "TRIPS.EXPRESS_FARES.PRICE" | translate }}
+                {{ "TRIPS.EXPRESS_SEGMENTS.SEGMENTS_COVERED" | translate }}
               </th>
-              <th>{{ "TRIPS.EXPRESS_FARES.VALID_FROM" | translate }}</th>
-              <th>{{ "TRIPS.EXPRESS_FARES.VALID_UNTIL" | translate }}</th>
+              <th>
+                {{ "TRIPS.EXPRESS_SEGMENTS.PRICE" | translate }}
+              </th>
+              <th>{{ "TRIPS.EXPRESS_SEGMENTS.BOOKED_COUNT" | translate }}</th>
+              <th>{{ "TRIPS.EXPRESS_SEGMENTS.VALID_FROM" | translate }}</th>
+              <th>{{ "TRIPS.EXPRESS_SEGMENTS.VALID_UNTIL" | translate }}</th>
               <th class="text-center">
-                {{ "TRIPS.EXPRESS_FARES.ACTIVE" | translate }}
+                {{ "TRIPS.EXPRESS_SEGMENTS.ACTIVE" | translate }}
               </th>
               <th>
-                {{ "TRIPS.EXPRESS_FARES.TOTAL_DISTANCE" | translate }}
+                {{ "TRIPS.EXPRESS_SEGMENTS.TOTAL_DISTANCE" | translate }}
               </th>
               <th>
-                {{ "TRIPS.EXPRESS_FARES.TOTAL_DURATION" | translate }}
+                {{ "TRIPS.EXPRESS_SEGMENTS.TOTAL_DURATION" | translate }}
               </th>
             </tr>
           </thead>
           <tbody>
-            <tr *ngFor="let fare of activeFares">
+            <tr *ngFor="let expressSegment of activeExpressSegments">
               <td class="fw-semibold">
-                {{ fare.fromPlace?.city || fare.fromPlaceId }}
+                {{
+                  expressSegment.fromPlace?.city || expressSegment.fromPlaceId
+                }}
               </td>
               <td class="fw-semibold">
-                {{ fare.toPlace?.city || fare.toPlaceId }}
+                {{ expressSegment.toPlace?.city || expressSegment.toPlaceId }}
               </td>
-              <td>{{ fare.segmentsCovered?.length || 0 }}</td>
+              <td>{{ expressSegment.segmentsCovered?.length || 0 }}</td>
               <td class="fw-bold">
-                {{ fare.price | number: "1.2-2" }}
+                {{ expressSegment.price | number: "1.2-2" }}
                 {{ trip.currency?.code || "-" }}
               </td>
+              <td>{{ expressSegment.bookedCount || 0 }}</td>
               <td>
                 {{
-                  fare.validFrom
-                    ? (fare.validFrom | date: "yyyy-MM-dd HH:mm a")
+                  expressSegment.validFrom
+                    ? (expressSegment.validFrom | date: "yyyy-MM-dd HH:mm a")
                     : "-"
                 }}
               </td>
               <td>
                 {{
-                  fare.validUntil
-                    ? (fare.validUntil | date: "yyyy-MM-dd HH:mm a")
+                  expressSegment.validUntil
+                    ? (expressSegment.validUntil | date: "yyyy-MM-dd HH:mm a")
                     : "-"
                 }}
               </td>
@@ -305,20 +311,22 @@
                 <span
                   class="badge"
                   [ngClass]="
-                    fare.active ? 'badge-light-success' : 'badge-light-danger'
+                    expressSegment.active
+                      ? 'badge-light-success'
+                      : 'badge-light-danger'
                   "
                 >
                   {{
-                    fare.active
+                    expressSegment.active
                       ? ("COMMON.LABEL.YES" | translate)
                       : ("COMMON.LABEL.NO" | translate)
                   }}
                 </span>
               </td>
               <td>
-                {{ fare.totalDistanceKm | number: "1.1-1" }}
+                {{ expressSegment.totalDistanceKm | number: "1.1-1" }}
               </td>
-              <td>{{ fare.totalDurationMinutes }}</td>
+              <td>{{ expressSegment.totalDurationMinutes | duration }}</td>
             </tr>
           </tbody>
         </table>

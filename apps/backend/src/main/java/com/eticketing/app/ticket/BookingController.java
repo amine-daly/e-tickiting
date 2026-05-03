@@ -197,7 +197,7 @@ public class BookingController {
                 .companyId(ticket.getTarget() != null ? ticket.getTarget().getCompany() : null)
                 .posId(ticket.getTarget() != null ? ticket.getTarget().getPos() : null)
                 .segmentIds(ticket.getSegmentIds())
-                .expressId(ticket.getExpressId())
+                .expressSegmentId(ticket.getExpressSegmentId())
                 .pickupPointId(ticket.getPickupPointId())
                 .dropoffPointId(ticket.getDropoffPointId())
                 .passengerId(ticket.getPassengerId())

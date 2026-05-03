@@ -96,15 +96,15 @@ export class BusDetailsComponent implements OnInit, OnDestroy {
     if (!this.trip) return;
     const chain = this.getSegmentChain();
 
-    // Check express fare first
-    const express = (this.trip.expressFares || []).find(
-      (f) =>
-        f.fromPlaceId === this.originPlaceId &&
-        f.toPlaceId === this.destPlaceId &&
-        f.active,
+    // Check express segment first
+    const expressSegment = (this.trip.expressSegments || []).find(
+      (candidate) =>
+        candidate.fromPlaceId === this.originPlaceId &&
+        candidate.toPlaceId === this.destPlaceId &&
+        candidate.active,
     );
-    this.displayPrice = express
-      ? express.price
+    this.displayPrice = expressSegment
+      ? expressSegment.price
       : chain.reduce((s, seg) => s + (seg.basePrice || 0), 0);
     this.duration = chain.reduce((s, seg) => s + (seg.durationMinutes || 0), 0);
   }

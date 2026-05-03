@@ -1,127 +1,285 @@
 package com.eticketing.app.ticket;
 
-import com.mongodb.client.result.UpdateResult;
+import com.eticketing.app.bus.BusService;
+import com.eticketing.app.bus.BusType;
+import com.eticketing.app.trip.ExpressSegmentType;
+import com.eticketing.app.trip.SegmentType;
+import com.eticketing.app.trip.TripInventoryAvailabilityCalculator;
+import com.eticketing.app.trip.TripType;
+import com.eticketing.app.trip.TripTypeRepository;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.data.mongodb.core.MongoTemplate;
-import org.springframework.data.mongodb.core.query.Criteria;
-import org.springframework.data.mongodb.core.query.Query;
-import org.springframework.data.mongodb.core.query.Update;
+import org.springframework.dao.OptimisticLockingFailureException;
 import org.springframework.stereotype.Service;
 
+import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.stream.Collectors;
 
 /**
- * Atomic CAS (Compare-And-Swap) seat reservation on trip segments. Uses MongoDB
- * updateOne with $inc and a capacity guard to guarantee no over-booking — per
- * TRIP_SPEC section 10 step 3.
+ * Atomic seat reservation on trip inventory using optimistic CAS on the trip
+ * document version. Local bookings increment segment.bookedCount, while express
+ * bookings increment expressSegment.bookedCount and derive physical
+ * availability from bus.totalSeats.
  */
 @Service
 @RequiredArgsConstructor
 public class SeatReservationService {
 
     private static final Logger LOG = LoggerFactory.getLogger(SeatReservationService.class);
+    private static final int MAX_CAS_RETRIES = 5;
 
-    private final MongoTemplate mongoTemplate;
+    private final TripTypeRepository tripRepository;
+    private final BusService busService;
 
-    /**
-     * Atomically increments bookedSeats on every segment in {@code segmentIds}
-     * for the given trip. If ANY segment lacks capacity the entire operation is
-     * rolled back (decrements already-incremented segments).
-     *
-     * @return true if all segments were reserved; false if capacity exceeded.
-     */
     public boolean reserveSeats(String tripId, List<String> segmentIds) {
-        return reserveSeats(tripId, segmentIds, 1);
+        return reserveSeats(tripId, segmentIds, null, 1);
     }
 
-    /**
-     * Atomically reserves {@code count} seats on every segment in
-     * {@code segmentIds}. Used for group bookings where N passengers need seats
-     * on the same segments.
-     *
-     * @return true if all segments were reserved; false if capacity exceeded.
-     */
     public boolean reserveSeats(String tripId, List<String> segmentIds, int count) {
-        int reserved = 0;
-        for (String segId : segmentIds) {
-            boolean ok = incrementSeat(tripId, segId, count);
-            if (!ok) {
-                LOG.warn("SEGMENT_CAPACITY_EXCEEDED on segment {} for trip {} (count={}). Rolling back {} segments.",
-                        segId, tripId, count, reserved);
-                rollback(tripId, segmentIds.subList(0, reserved), count);
+        return reserveSeats(tripId, segmentIds, null, count);
+    }
+
+    public boolean reserveSeats(String tripId, List<String> segmentIds, String expressSegmentId) {
+        return reserveSeats(tripId, segmentIds, expressSegmentId, 1);
+    }
+
+    public boolean reserveSeats(String tripId, List<String> segmentIds, String expressSegmentId, int count) {
+        validateCount(count);
+        List<String> normalizedSegmentIds = normalizeSegmentIds(segmentIds);
+        if (normalizedSegmentIds.isEmpty()) {
+            return true;
+        }
+
+        boolean expressReservation = isExpressReservation(expressSegmentId);
+        for (int attempt = 1; attempt <= MAX_CAS_RETRIES; attempt++) {
+            TripType trip = tripRepository.findById(tripId).orElse(null);
+            if (trip == null) {
+                LOG.warn("Seat reservation failed: trip {} not found", tripId);
                 return false;
             }
-            reserved++;
+
+            List<SegmentType> requestedSegments = resolveSegments(trip, normalizedSegmentIds);
+            if (requestedSegments == null) {
+                return false;
+            }
+
+            ExpressSegmentType expressSegment = resolveExpressSegment(trip, expressSegmentId, normalizedSegmentIds);
+            if (expressReservation && expressSegment == null) {
+                return false;
+            }
+
+            int busTotalSeats = resolveBusTotalSeats(trip);
+            if (busTotalSeats < 0) {
+                return false;
+            }
+
+            Map<String, Integer> expressBookedBySegmentId = TripInventoryAvailabilityCalculator.buildExpressBookedBySegmentId(
+                    trip,
+                    normalizedSegmentIds);
+            int availableSeats = expressReservation
+                    ? TripInventoryAvailabilityCalculator.computeExpressAvailability(
+                            requestedSegments,
+                            expressBookedBySegmentId,
+                            busTotalSeats)
+                    : TripInventoryAvailabilityCalculator.computeLocalAvailability(
+                            requestedSegments,
+                            expressBookedBySegmentId,
+                            busTotalSeats);
+
+            if (availableSeats < count) {
+                LOG.warn("SEGMENT_CAPACITY_EXCEEDED: trip={} expressSegmentId={} requested={} available={} segments={}",
+                        tripId, expressSegmentId, count, availableSeats, normalizedSegmentIds);
+                return false;
+            }
+
+            if (expressReservation) {
+                expressSegment.setBookedCount(expressSegment.getBookedCount() + count);
+            } else {
+                requestedSegments.forEach(segment -> segment.setBookedCount(segment.getBookedCount() + count));
+            }
+
+            try {
+                tripRepository.save(trip);
+                return true;
+            } catch (OptimisticLockingFailureException ex) {
+                LOG.debug("Seat reservation CAS retry {}/{} for trip={} expressSegmentId={} segments={}",
+                        attempt, MAX_CAS_RETRIES, tripId, expressSegmentId, normalizedSegmentIds);
+            }
         }
-        return true;
+
+        LOG.warn("Seat reservation CAS retries exhausted for trip={} expressSegmentId={} count={} segments={}",
+                tripId, expressSegmentId, count, normalizedSegmentIds);
+        return false;
     }
 
-    /**
-     * Atomically decrements bookedSeats on every segment in {@code segmentIds}
-     * for the given trip. Used when releasing seats (expiry, refund approval).
-     */
     public void releaseSeats(String tripId, List<String> segmentIds) {
-        releaseSeats(tripId, segmentIds, 1);
+        releaseSeats(tripId, segmentIds, null, 1);
     }
 
-    /**
-     * Releases {@code count} seats on every segment. Used for group booking
-     * expiry/cancellation.
-     */
     public void releaseSeats(String tripId, List<String> segmentIds, int count) {
-        for (String segId : segmentIds) {
-            decrementSeat(tripId, segId, count);
-        }
+        releaseSeats(tripId, segmentIds, null, count);
     }
 
-    // ── Internals ───────────────────────────────────────────────────────
-    /**
-     * CAS increment: updates only if bookedSeats + count <= maxSeats on the
-     * matching segment embedded inside the trip document.
-     */
-    private boolean incrementSeat(String tripId, String segmentId, int count) {
-        // Step 1: Find the trip and check capacity
-        Query findQuery = new Query(Criteria.where("_id").is(tripId));
-        com.eticketing.app.trip.TripType trip = mongoTemplate.findOne(findQuery, com.eticketing.app.trip.TripType.class, "trips");
-        if (trip == null) {
-            return false;
+    public void releaseSeats(String tripId, List<String> segmentIds, String expressSegmentId) {
+        releaseSeats(tripId, segmentIds, expressSegmentId, 1);
+    }
+
+    public void releaseSeats(String tripId, List<String> segmentIds, String expressSegmentId, int count) {
+        validateCount(count);
+        List<String> normalizedSegmentIds = normalizeSegmentIds(segmentIds);
+        if (normalizedSegmentIds.isEmpty()) {
+            return;
         }
 
-        com.eticketing.app.trip.SegmentType seg = trip.getSegments().stream()
-                .filter(s -> s.getSegmentId().equals(segmentId))
+        boolean expressReservation = isExpressReservation(expressSegmentId);
+        for (int attempt = 1; attempt <= MAX_CAS_RETRIES; attempt++) {
+            TripType trip = tripRepository.findById(tripId).orElse(null);
+            if (trip == null) {
+                LOG.error("Seat release failed: trip {} not found", tripId);
+                return;
+            }
+
+            if (expressReservation) {
+                ExpressSegmentType expressSegment = resolveExpressSegment(trip, expressSegmentId, normalizedSegmentIds);
+                if (expressSegment == null) {
+                    return;
+                }
+                if (expressSegment.getBookedCount() < count) {
+                    LOG.error("Seat release failed for trip={} expressSegmentId={} count={} — express bookedCount is only {}",
+                            tripId, expressSegmentId, count, expressSegment.getBookedCount());
+                    return;
+                }
+                expressSegment.setBookedCount(expressSegment.getBookedCount() - count);
+            } else {
+                List<SegmentType> requestedSegments = resolveSegments(trip, normalizedSegmentIds);
+                if (requestedSegments == null) {
+                    return;
+                }
+                if (requestedSegments.stream().anyMatch(segment -> segment.getBookedCount() < count)) {
+                    LOG.error("Seat release failed for trip={} count={} segments={} — local bookedCount is insufficient",
+                            tripId, count, normalizedSegmentIds);
+                    return;
+                }
+                requestedSegments.forEach(segment -> segment.setBookedCount(segment.getBookedCount() - count));
+            }
+
+            try {
+                tripRepository.save(trip);
+                return;
+            } catch (OptimisticLockingFailureException ex) {
+                LOG.debug("Seat release CAS retry {}/{} for trip={} expressSegmentId={} segments={}",
+                        attempt, MAX_CAS_RETRIES, tripId, expressSegmentId, normalizedSegmentIds);
+            }
+        }
+
+        LOG.error("Seat release CAS retries exhausted for trip={} expressSegmentId={} count={} segments={}",
+                tripId, expressSegmentId, count, normalizedSegmentIds);
+    }
+
+    public void releaseReservations(String tripId, List<TicketType> tickets) {
+        if (tickets == null || tickets.isEmpty()) {
+            return;
+        }
+
+        Map<ReservationKey, Long> countsByReservation = tickets.stream()
+                .filter(ticket -> ticket.getSegmentIds() != null && !ticket.getSegmentIds().isEmpty())
+                .collect(Collectors.groupingBy(
+                        ticket -> new ReservationKey(ticket.getExpressSegmentId(), List.copyOf(normalizeSegmentIds(ticket.getSegmentIds()))),
+                        LinkedHashMap::new,
+                        Collectors.counting()));
+
+        countsByReservation.forEach((reservation, ticketCount) -> {
+            if (!reservation.segmentIds().isEmpty()) {
+                releaseSeats(tripId, reservation.segmentIds(), reservation.expressSegmentId(), Math.toIntExact(ticketCount));
+            }
+        });
+    }
+
+    private List<SegmentType> resolveSegments(TripType trip, List<String> segmentIds) {
+        Map<String, SegmentType> segmentsById = trip.getSegments() == null
+                ? Map.of()
+                : trip.getSegments().stream()
+                        .collect(Collectors.toMap(SegmentType::getSegmentId, segment -> segment));
+
+        List<SegmentType> resolvedSegments = segmentIds.stream()
+                .map(segmentsById::get)
+                .toList();
+
+        if (resolvedSegments.stream().anyMatch(Objects::isNull)) {
+            LOG.warn("Inventory mutation failed: trip={} is missing one of the segments {}", trip.getId(), segmentIds);
+            return null;
+        }
+
+        return resolvedSegments;
+    }
+
+    private ExpressSegmentType resolveExpressSegment(TripType trip, String expressSegmentId, List<String> segmentIds) {
+        if (!isExpressReservation(expressSegmentId)) {
+            return null;
+        }
+        if (trip.getExpressSegments() == null) {
+            LOG.warn("Inventory mutation failed: trip={} has no express segments but expressSegmentId={} was requested",
+                    trip.getId(), expressSegmentId);
+            return null;
+        }
+
+        ExpressSegmentType expressSegment = trip.getExpressSegments().stream()
+                .filter(segment -> expressSegmentId.equals(segment.getExpressSegmentId()))
                 .findFirst()
                 .orElse(null);
-        if (seg == null || seg.getBookedSeats() + count > seg.getMaxSeats()) {
-            return false;
+        if (expressSegment == null) {
+            LOG.warn("Inventory mutation failed: express segment {} not found on trip {}", expressSegmentId, trip.getId());
+            return null;
         }
-
-        // Step 2: Atomic CAS — increment only if bookedSeats hasn't changed
-        Query casQuery = new Query(Criteria.where("_id").is(tripId)
-                .and("segments").elemMatch(
-                Criteria.where("segmentId").is(segmentId)
-                        .and("bookedSeats").is(seg.getBookedSeats())));
-        Update update = new Update().inc("segments.$.bookedSeats", count);
-        UpdateResult result = mongoTemplate.updateFirst(casQuery, update, "trips");
-        return result.getModifiedCount() == 1;
+        if (expressSegment.getSegmentsCovered() == null || !segmentIds.equals(expressSegment.getSegmentsCovered())) {
+            LOG.warn("Inventory mutation failed: express segment {} does not match requested segment chain {} on trip {}",
+                    expressSegmentId, segmentIds, trip.getId());
+            return null;
+        }
+        return expressSegment;
     }
 
-    private void decrementSeat(String tripId, String segmentId, int count) {
-        Query query = new Query(Criteria.where("_id").is(tripId)
-                .and("segments").elemMatch(
-                Criteria.where("segmentId").is(segmentId)
-                        .and("bookedSeats").gte(count)));
-        Update update = new Update().inc("segments.$.bookedSeats", -count);
-        UpdateResult result = mongoTemplate.updateFirst(query, update, "trips");
-        if (result.getModifiedCount() != 1) {
-            LOG.error("Seat decrement failed for trip={} segment={} count={} — bookedSeats may be insufficient and inventory reconciliation may be required", tripId, segmentId, count);
+    private int resolveBusTotalSeats(TripType trip) {
+        if (trip.getBus() == null || trip.getBus().getBusId() == null || trip.getBus().getBusId().isBlank()) {
+            LOG.error("Inventory mutation failed: trip {} has no bus reference", trip.getId());
+            return -1;
+        }
+        try {
+            BusType bus = busService.getById(trip.getBus().getBusId());
+            return bus.getTotalSeats();
+        } catch (RuntimeException ex) {
+            LOG.error("Inventory mutation failed: unable to load bus {} for trip {}",
+                    trip.getBus().getBusId(), trip.getId(), ex);
+            return -1;
         }
     }
 
-    private void rollback(String tripId, List<String> segmentIds, int count) {
-        for (String segId : segmentIds) {
-            decrementSeat(tripId, segId, count);
+    private List<String> normalizeSegmentIds(List<String> segmentIds) {
+        if (segmentIds == null) {
+            return List.of();
         }
+        return segmentIds.stream()
+                .filter(Objects::nonNull)
+                .distinct()
+                .toList();
+    }
+
+    private boolean isExpressReservation(String expressSegmentId) {
+        return expressSegmentId != null && !expressSegmentId.isBlank();
+    }
+
+    private void validateCount(int count) {
+        if (count <= 0) {
+            throw new IllegalArgumentException("count must be greater than 0");
+        }
+    }
+
+    private record ReservationKey(String expressSegmentId, List<String> segmentIds) {
+
     }
 }

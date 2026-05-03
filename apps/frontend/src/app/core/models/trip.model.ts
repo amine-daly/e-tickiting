@@ -52,6 +52,13 @@ export interface MarketplaceCapacity {
   availableSeats: number;
 }
 
+export interface MarketplaceProjection {
+  route: MarketplaceRoute;
+  schedule: MarketplaceSchedule;
+  pricing: MarketplacePricing;
+  capacity: MarketplaceCapacity;
+}
+
 import { AmenityEnum } from './amenity.enum';
 
 export interface BusSummary {
@@ -93,21 +100,22 @@ export interface SegmentType {
   toPlace?: PlaceSummary;
   departureTime: string;
   arrivalTime: string;
-  maxSeats: number;
-  bookedSeats: number;
+  maxBooking: number;
+  bookedCount: number;
   basePrice: number;
   distanceKm: number;
   durationMinutes: number;
 }
 
-export interface ExpressFareType {
-  expressId: string;
+export interface ExpressSegmentType {
+  expressSegmentId: string;
   fromPlaceId: string;
   fromPlace?: PlaceSummary;
   toPlaceId: string;
   toPlace?: PlaceSummary;
   segmentsCovered: string[];
   price: number;
+  bookedCount: number;
   validFrom: string | null;
   validUntil: string | null;
   active: boolean;
@@ -148,7 +156,8 @@ export interface TripType {
   pickupPoints: PickupPointType[];
   dropoffPoints: DropoffPointType[];
   segments: SegmentType[];
-  expressFares: ExpressFareType[];
+  expressSegments: ExpressSegmentType[];
+  marketplace?: MarketplaceProjection | null;
   createdAt?: string;
   updatedAt?: string;
   version?: number;

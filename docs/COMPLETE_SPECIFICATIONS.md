@@ -1,6 +1,6 @@
 # E-Ticketing Platform - Complete Specifications
 
-Last updated: April 2026
+Last updated: May 2026
 Status: Aligned with the current Spring Boot + MongoDB + Angular implementation
 
 ## 1. Architecture Snapshot
@@ -20,7 +20,7 @@ The current implementation is no longer based on PostgreSQL/JPA. The source of t
 - Tickets are immutable financial snapshots.
 - Group bookings are modeled as orders containing multiple tickets.
 - Seat holds use a fixed backend constant of 600 seconds.
-- Trip inventory is segment-based and reconciled against active tickets on read.
+- Trip inventory is segment-based (`maxBooking` / `bookedCount`), with express tickets tracked on `expressSegments.bookedCount` and reconciled on read.
 - Trip `seatHoldMinutes` no longer exists in the model.
 
 ## 2. Domain Model
@@ -29,73 +29,75 @@ The current implementation is no longer based on PostgreSQL/JPA. The source of t
 
 Shared ownership envelope used across the current backend models.
 
-| Field | Meaning |
-| --- | --- |
-| `company` | Mandatory ownership boundary |
-| `pos` | Optional operational attribution, used mainly on tickets and orders |
+| Field     | Meaning                                                             |
+| --------- | ------------------------------------------------------------------- |
+| `company` | Mandatory ownership boundary                                        |
+| `pos`     | Optional operational attribution, used mainly on tickets and orders |
 
 ### 2.2 `TripType`
 
 MongoDB document stored in `trips`.
 
-| Field | Meaning |
-| --- | --- |
-| `target.company` | Owning company |
-| `departureDate` | UTC departure instant |
-| `timezone` | IANA timezone used for display |
-| `status` | `SCHEDULED`, `ACTIVE`, `COMPLETED`, `CANCELLED` |
-| `bus.busId` | Reference to the assigned bus |
-| `currency` | Currency reference |
-| `stopSchedule` | Ordered stop definitions |
-| `pickupPoints` | Pickup sub-resources |
-| `dropoffPoints` | Dropoff sub-resources |
-| `segments` | Frozen inventory rows between commercial stops |
-| `expressFares` | Pricing overlays over segment chains |
+| Field             | Meaning                                             |
+| ----------------- | --------------------------------------------------- |
+| `target.company`  | Owning company                                      |
+| `departureDate`   | UTC departure instant                               |
+| `timezone`        | IANA timezone used for display                      |
+| `status`          | `SCHEDULED`, `ACTIVE`, `COMPLETED`, `CANCELLED`     |
+| `bus.busId`       | Reference to the assigned bus                       |
+| `currency`        | Currency reference                                  |
+| `stopSchedule`    | Ordered stop definitions                            |
+| `pickupPoints`    | Pickup sub-resources                                |
+| `dropoffPoints`   | Dropoff sub-resources                               |
+| `segments`        | Frozen inventory rows between commercial stops      |
+| `expressSegments` | Multi-segment inventory records over segment chains |
 
 Trip documents do not store a seat-hold duration. Booking expiry is controlled centrally in `BookingService`.
+
+Segments carry `maxBooking` (local cap) and `bookedCount` (local tickets only). Express segments carry `bookedCount` for multi-segment tickets; there is no express-segment `maxBooking`.
 
 ### 2.3 `TicketType`
 
 MongoDB document stored in `tickets`.
 
-| Field | Meaning |
-| --- | --- |
-| `tripId` | Trip reference |
-| `orderId` | Optional order reference for group bookings |
-| `target.company` | Owning company |
-| `target.pos` | Optional original POS attribution |
-| `segmentIds` | Covered segment IDs |
-| `expressId` | Optional express fare reference |
-| `pickupPointId` | Boarding point snapshot |
-| `dropoffPointId` | Dropoff point snapshot |
-| `passengerId` | Registered passenger reference when present |
-| `guestFirstName` / `guestLastName` | Guest passenger fallback names |
-| `seatNo` | Optional seat assignment |
-| `appliedPrice` | Immutable price snapshot |
-| `currency` | Immutable currency snapshot |
-| `lang` | Ticket language snapshot |
-| `status` | `PENDING`, `CONFIRMED`, `EXPIRED`, `CANCELLED` |
-| `idempotencyKey` | Unique replay key |
-| `expiresAt` | Expiry timestamp for pending holds |
-| `createdAt`, `confirmedAt`, `cancelledAt` | Lifecycle timestamps |
+| Field                                     | Meaning                                        |
+| ----------------------------------------- | ---------------------------------------------- |
+| `tripId`                                  | Trip reference                                 |
+| `orderId`                                 | Optional order reference for group bookings    |
+| `target.company`                          | Owning company                                 |
+| `target.pos`                              | Optional original POS attribution              |
+| `segmentIds`                              | Covered segment IDs                            |
+| `expressSegmentId`                        | Optional express segment reference             |
+| `pickupPointId`                           | Boarding point snapshot                        |
+| `dropoffPointId`                          | Dropoff point snapshot                         |
+| `passengerId`                             | Registered passenger reference when present    |
+| `guestFirstName` / `guestLastName`        | Guest passenger fallback names                 |
+| `seatNo`                                  | Optional seat assignment                       |
+| `appliedPrice`                            | Immutable price snapshot                       |
+| `currency`                                | Immutable currency snapshot                    |
+| `lang`                                    | Ticket language snapshot                       |
+| `status`                                  | `PENDING`, `CONFIRMED`, `EXPIRED`, `CANCELLED` |
+| `idempotencyKey`                          | Unique replay key                              |
+| `expiresAt`                               | Expiry timestamp for pending holds             |
+| `createdAt`, `confirmedAt`, `cancelledAt` | Lifecycle timestamps                           |
 
 ### 2.4 `OrderType`
 
 MongoDB document stored in `orders`.
 
-| Field | Meaning |
-| --- | --- |
-| `tripId` | Trip reference shared by all child tickets |
-| `target.company` | Owning company |
-| `target.pos` | Optional POS attribution |
-| `contactCustomerId` | Customer chosen as the order contact |
-| `ticketIds` | Child ticket references |
-| `passengers` | Embedded passenger manifest with seat numbers and ticket IDs |
-| `totalPrice` | Order snapshot total |
-| `currency` | Currency snapshot |
-| `status` | `PENDING`, `CONFIRMED`, `EXPIRED`, `CANCELLED` |
-| `idempotencyKey` | Unique replay key for the whole order |
-| `expiresAt` | Expiry timestamp shared with the child tickets |
+| Field               | Meaning                                                      |
+| ------------------- | ------------------------------------------------------------ |
+| `tripId`            | Trip reference shared by all child tickets                   |
+| `target.company`    | Owning company                                               |
+| `target.pos`        | Optional POS attribution                                     |
+| `contactCustomerId` | Customer chosen as the order contact                         |
+| `ticketIds`         | Child ticket references                                      |
+| `passengers`        | Embedded passenger manifest with seat numbers and ticket IDs |
+| `totalPrice`        | Order snapshot total                                         |
+| `currency`          | Currency snapshot                                            |
+| `status`            | `PENDING`, `CONFIRMED`, `EXPIRED`, `CANCELLED`               |
+| `idempotencyKey`    | Unique replay key for the whole order                        |
+| `expiresAt`         | Expiry timestamp shared with the child tickets               |
 
 ## 3. Booking And Inventory Model
 
@@ -103,8 +105,8 @@ MongoDB document stored in `orders`.
 
 1. Resolve the trip and company scope.
 2. Validate pickup and dropoff points.
-3. Resolve the segment chain or matching express fare.
-4. Reserve inventory atomically across all segments.
+3. Resolve the segment chain or matching express segment.
+4. Reserve inventory atomically across all segments (local uses `segments.bookedCount` + `maxBooking`, express uses `expressSegments.bookedCount` + physical capacity).
 5. Create a `PENDING` ticket with `expiresAt = now + 600s`.
 6. Confirm the ticket after payment.
 7. Expiry or cancellation releases the held seats.
@@ -121,8 +123,13 @@ MongoDB document stored in `orders`.
 
 ### Inventory rules
 
-- Segment inventory is the only inventory source of truth.
-- The current trip response layer reconciles `segments.bookedSeats` from active tickets before mapping the trip to an API response.
+- Segment inventory is the only inventory source of truth for local tickets (`maxBooking` / `bookedCount`).
+- Express tickets are tracked on `expressSegments.bookedCount` and only consume physical capacity.
+- Single-segment tickets remain local and do not carry `expressSegmentId`.
+- Multi-segment tickets require an active express segment whose `segmentsCovered` exactly matches the resolved chain.
+- Physical occupancy per segment is `segment.bookedCount + sum(expressSegment.bookedCount for express segments covering the segment)`.
+- The current trip response layer reconciles `segments.bookedCount` (local) and `expressSegments.bookedCount` (express) from active tickets before mapping the trip to an API response.
+- Expired express segments are persisted inactive once `validUntil` has passed, both during reconciliation and by a scheduled cleanup worker.
 - Pending and confirmed tickets count toward inventory.
 - Expired and cancelled tickets do not.
 
@@ -134,7 +141,7 @@ Trip creation is handled by `TripService` and is currently enforced in this orde
 2. The bus is loaded and checked against company ownership.
 3. The bus is checked against existing scheduled/active trips.
 4. `SegmentGenerator` builds the frozen segment chain.
-5. `ExpressFareValidator` validates segment-chain fares.
+5. `ExpressSegmentValidator` validates express segment chains.
 6. `PickupDropoffValidator` verifies mandatory pickup/dropoff coverage.
 7. The trip is persisted as `SCHEDULED`.
 
@@ -149,28 +156,29 @@ Trip creation is handled by `TripService` and is currently enforced in this orde
 
 ### Current edit rules
 
-| Status | Allowed | Blocked |
-| --- | --- | --- |
-| `SCHEDULED` | Most fields, pickup/dropoff updates, stop schedule updates, bus changes | Segment array structure is always frozen |
-| `ACTIVE` | Pickup/dropoff updates, bus change with capacity check, stop additions, segment price and max-seat edits, existing express fare updates/deactivation | `departureDate`, `currency`, stop removal, stop-time changes when bookings exist, new express fare creation |
-| `COMPLETED` / `CANCELLED` | Status transitions only | All non-status changes |
+| Status                    | Allowed                                                                                                                                                    | Blocked                                                                                                        |
+| ------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------- |
+| `SCHEDULED`               | Most fields, pickup/dropoff updates, stop schedule updates, bus changes                                                                                    | Segment array structure is always frozen                                                                       |
+| `ACTIVE`                  | Pickup/dropoff updates, bus change with capacity check, stop additions, segment price and max-booking edits, existing express segment updates/deactivation | `departureDate`, `currency`, stop removal, stop-time changes when bookings exist, new express segment creation |
+| `COMPLETED` / `CANCELLED` | Status transitions only                                                                                                                                    | All non-status changes                                                                                         |
 
 ### Edit guardrails
 
 - Segment arrays are frozen after creation.
 - Individual segment fields can still be adjusted through dedicated service methods.
-- A bus change on an active trip must satisfy the current booked-seat ceiling.
-- Stop time changes are blocked if any touching segment has bookings.
-- Removing a stop is blocked if it would break an express fare chain.
+- A bus change on an active trip must satisfy the current maximum physical occupancy.
+- Stop time changes are blocked if any touching segment has physical occupancy.
+- Removing a stop is blocked if it would break an express segment chain.
 
-## 6. Express Fare Rules
+## 6. Express Segment Rules
 
-- Express fares are pricing overlays only.
-- They do not carry inventory.
+- Express segments are multi-segment inventory records with their own `bookedCount`.
+- They do not have a `maxBooking` cap, but they track express tickets via `bookedCount`.
+- They must cover at least two trip segments.
 - They reference ordered segment chains.
-- `TripService.addExpressFare` is blocked on `ACTIVE` trips.
-- `TripService.updateExpressFare` and `deleteExpressFare` are blocked on `COMPLETED` and `CANCELLED` trips.
-- On `ACTIVE` trips, deleting an express fare deactivates it instead of removing the record.
+- `TripService.addExpressSegment` is blocked on `ACTIVE` trips.
+- `TripService.updateExpressSegment` and `deleteExpressSegment` are blocked on `COMPLETED` and `CANCELLED` trips.
+- On `ACTIVE` trips, deleting an express segment deactivates it instead of removing the record.
 
 ## 7. Ticket And Order Delivery
 
@@ -192,13 +200,15 @@ Trip creation is handled by `TripService` and is currently enforced in this orde
 
 - `POST /api/trips`
 - `GET /api/trips`
+- `GET /api/trips/search` returns the standard `TripResponse`; when both `originPlaceId` and `destinationPlaceId` are supplied it also includes a nested `marketplace` view (`route`, `schedule`, `pricing`, `capacity`) computed for that exact route.
+- Multi-segment search rows without an active exact-match `expressSegment` are filtered out of that route-scoped search payload.
 - `GET /api/trips/{tripId}`
 - `PUT /api/trips/{tripId}`
 - `DELETE /api/trips/{tripId}`
 - `PATCH /api/trips/{tripId}/status`
-- `POST /api/trips/{tripId}/express-fares`
-- `PUT /api/trips/{tripId}/express-fares/{expressId}`
-- `DELETE /api/trips/{tripId}/express-fares/{expressId}`
+- `POST /api/trips/{tripId}/express-segments`
+- `PUT /api/trips/{tripId}/express-segments/{expressSegmentId}`
+- `DELETE /api/trips/{tripId}/express-segments/{expressSegmentId}`
 - `POST /api/trips/{tripId}/pickup-points`
 - `PUT /api/trips/{tripId}/pickup-points/{pointId}`
 - `POST /api/trips/{tripId}/dropoff-points`
@@ -251,6 +261,7 @@ Trip creation is handled by `TripService` and is currently enforced in this orde
 - `TripEditRules` enforces status-aware updates.
 - `TripStatusMachine` guards allowed transitions.
 - `TripInventoryReconciliationService` repairs segment counters from live tickets.
+- `ExpressSegmentExpiryWorker` deactivates stale express segments between reads.
 - `BookingService` owns single and group booking flows.
 - `SeatReservationService` owns atomic seat counting.
 - `OrderExpiryWorker` expires pending orders and standalone tickets.

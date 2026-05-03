@@ -11,7 +11,7 @@ export interface StopInput {
 
 export interface SegmentCreateInput {
   basePrice: number;
-  maxSeats: number;
+  maxBooking: number;
   distanceKm: number;
   durationMinutesOverride?: number;
 }
@@ -32,7 +32,7 @@ export interface DropoffPointPayload {
   location?: GeoLocation;
 }
 
-export interface ExpressFareCreateInput {
+export interface ExpressSegmentCreateInput {
   segmentIndices: number[];
   price: number;
   validFrom?: string | null;
@@ -40,7 +40,7 @@ export interface ExpressFareCreateInput {
   active?: boolean;
 }
 
-export interface ExpressFarePayload {
+export interface ExpressSegmentPayload {
   fromPlaceId: string;
   toPlaceId: string;
   segmentIds: string[];
@@ -50,7 +50,7 @@ export interface ExpressFarePayload {
   active?: boolean;
 }
 
-export interface ExpressFareUpdatePayload {
+export interface ExpressSegmentUpdatePayload {
   price?: number;
   validFrom?: string | null;
   validUntil?: string | null;
@@ -66,7 +66,7 @@ export interface TripCreatePayload {
   segmentInputs: SegmentCreateInput[];
   pickupPoints: PickupPointPayload[];
   dropoffPoints: DropoffPointPayload[];
-  expressFares?: ExpressFareCreateInput[];
+  expressSegments?: ExpressSegmentCreateInput[];
 }
 
 export interface TripUpdatePayload {

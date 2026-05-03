@@ -237,7 +237,7 @@
                         role="progressbar"
                         [ngClass]="row.seatLoad.barClass"
                         [style.width.%]="row.seatLoad.percentage"
-                        [attr.aria-valuenow]="row.seatLoad.bookedSeats"
+                        [attr.aria-valuenow]="row.seatLoad.occupiedSeats"
                         [attr.aria-valuemin]="0"
                         [attr.aria-valuemax]="row.seatLoad.totalSeats || 0"
                       ></div>

@@ -52,14 +52,14 @@ public class SegmentType {
     private Instant arrivalTime;
 
     /**
-     * Admin-defined ceiling, must be <= bus.totalSeats.
+     * Admin-defined local-ticket ceiling, must be <= bus.totalSeats.
      */
-    private int maxSeats;
+    private int maxBooking;
 
     /**
-     * Starts at 0, incremented via atomic CAS.
+     * Starts at 0, incremented via atomic CAS for local tickets only.
      */
-    private int bookedSeats;
+    private int bookedCount;
 
     /**
      * In trip.currency.

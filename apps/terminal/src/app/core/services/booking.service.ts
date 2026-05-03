@@ -24,7 +24,7 @@ export interface BookingResponse {
   companyId: string;
   posId?: string;
   segmentIds: string[];
-  expressId?: string;
+  expressSegmentId?: string;
   pickupPointId: string;
   dropoffPointId: string;
   passengerId?: string;

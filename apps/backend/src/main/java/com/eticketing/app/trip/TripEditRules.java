@@ -43,20 +43,20 @@ public final class TripEditRules {
         }
     }
 
-    // ── SCHEDULED: mostly free, check express fare stop guard ───────────
+    // ── SCHEDULED: mostly free, check express segment stop guard ────────
     private static void validateScheduled(TripType existing, TripUpdateRequest req) {
         if (req.getStopSchedule() != null) {
-            // Check if any removed stops break express fares
+            // Check if any removed stops break express segments
             Set<String> newPlaceIds = req.getStopSchedule().stream()
                     .map(TripUpdateRequest.StopInput::getPlaceId)
                     .collect(Collectors.toSet());
 
             for (StopType existingStop : existing.getStopSchedule()) {
                 if (!newPlaceIds.contains(existingStop.getPlaceId())) {
-                    ExpressFareStopGuard.assertRemovalAllowed(
+                    ExpressSegmentStopGuard.assertRemovalAllowed(
                             existingStop.getPlaceId(),
                             existing.getSegments(),
-                            existing.getExpressFares());
+                            existing.getExpressSegments());
                 }
             }
         }
@@ -64,6 +64,8 @@ public final class TripEditRules {
 
     // ── ACTIVE: restricted edits ────────────────────────────────────────
     private static void validateActive(TripType existing, TripUpdateRequest req, Integer newBusTotalSeats) {
+        var physicalBookedBySegmentId = buildPhysicalBookedBySegmentId(existing);
+
         // departureDate & currency: BLOCKED
         if (req.getDepartureDate() != null) {
             throw new BadRequestException("BLOCKED: departureDate cannot be changed on ACTIVE trip");
@@ -90,28 +92,30 @@ public final class TripEditRules {
             }
 
             // Check stop time changes when segment has bookings
-            validateStopTimeChanges(existing, req.getStopSchedule());
+            validateStopTimeChanges(existing, req.getStopSchedule(), physicalBookedBySegmentId);
         }
 
         // Bus reassignment: capacity check
         if (req.getBus() != null && newBusTotalSeats != null) {
-            int maxBooked = existing.getSegments().stream()
-                    .mapToInt(SegmentType::getBookedSeats)
+            int maxBooked = physicalBookedBySegmentId.values().stream()
+                    .mapToInt(Integer::intValue)
                     .max()
                     .orElse(0);
             if (newBusTotalSeats < maxBooked) {
                 throw new BadRequestException(
                         "BUS_REASSIGNMENT_BLOCKED_INSUFFICIENT_CAPACITY: new bus totalSeats ("
-                        + newBusTotalSeats + ") < max bookedSeats (" + maxBooked + ")");
+                        + newBusTotalSeats + ") < max physical bookedCount (" + maxBooked + ")");
             }
         }
     }
 
     /**
      * Stop time changes are blocked when any segment touching that stop has
-     * bookedSeats > 0.
+     * physical occupancy > 0.
      */
-    private static void validateStopTimeChanges(TripType existing, List<TripUpdateRequest.StopInput> newStops) {
+    private static void validateStopTimeChanges(TripType existing,
+            List<TripUpdateRequest.StopInput> newStops,
+            java.util.Map<String, Integer> physicalBookedBySegmentId) {
         // Build map: placeId → existing stop
         var existingByPlace = existing.getStopSchedule().stream()
                 .collect(Collectors.toMap(StopType::getPlaceId, s -> s));
@@ -130,7 +134,7 @@ public final class TripEditRules {
                 boolean hasBookings = existing.getSegments().stream()
                         .filter(seg -> seg.getFromPlaceId().equals(ns.getPlaceId())
                         || seg.getToPlaceId().equals(ns.getPlaceId()))
-                        .anyMatch(seg -> seg.getBookedSeats() > 0);
+                        .anyMatch(seg -> physicalBookedBySegmentId.getOrDefault(seg.getSegmentId(), 0) > 0);
 
                 if (hasBookings) {
                     throw new BadRequestException(
@@ -140,6 +144,30 @@ public final class TripEditRules {
                 }
             }
         }
+    }
+
+    private static java.util.Map<String, Integer> buildPhysicalBookedBySegmentId(TripType trip) {
+        java.util.Map<String, Integer> physicalBookedBySegmentId = new java.util.HashMap<>();
+        for (SegmentType segment : trip.getSegments()) {
+            physicalBookedBySegmentId.put(segment.getSegmentId(), segment.getBookedCount());
+        }
+
+        if (trip.getExpressSegments() == null) {
+            return physicalBookedBySegmentId;
+        }
+
+        for (ExpressSegmentType expressSegment : trip.getExpressSegments()) {
+            if (expressSegment.getSegmentsCovered() == null || expressSegment.getBookedCount() <= 0) {
+                continue;
+            }
+            for (String segmentId : expressSegment.getSegmentsCovered()) {
+                if (physicalBookedBySegmentId.containsKey(segmentId)) {
+                    physicalBookedBySegmentId.merge(segmentId, expressSegment.getBookedCount(), Integer::sum);
+                }
+            }
+        }
+
+        return physicalBookedBySegmentId;
     }
 
     private static boolean hasNonStatusChanges(TripUpdateRequest req) {

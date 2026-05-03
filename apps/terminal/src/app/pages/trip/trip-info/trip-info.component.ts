@@ -14,10 +14,10 @@ import { NgbTooltipModule } from '@ng-bootstrap/ng-bootstrap';
 
 import {
   TripType,
-  TripStatusEnum,
   StopType,
   SegmentType,
-  ExpressFareType,
+  TripStatusEnum,
+  ExpressSegmentType,
   PickupPointType,
   DropoffPointType,
 } from '../../../core/models/trip.model';
@@ -25,12 +25,14 @@ import { TripService } from '../trip.service';
 import { AlertService } from '../../../core/services/alert.service';
 import { ToolbarComponent } from 'src/app/_metronic/layout/components/toolbar/toolbar.component';
 import { PageInfoService } from 'src/app/_metronic/layout/core/page-info.service';
+import { DurationPipe } from 'src/app/shared/pipes/duration.pipe';
 
 @Component({
   standalone: true,
   imports: [
     CommonModule,
     RouterLink,
+    DurationPipe,
     TranslateModule,
     NgbTooltipModule,
     ToolbarComponent,
@@ -93,8 +95,8 @@ export class TripInfoComponent implements OnInit, OnDestroy {
     return [...this.trip.segments].sort((a, b) => a.sequence - b.sequence);
   }
 
-  get activeFares(): ExpressFareType[] {
-    return this.trip?.expressFares ?? [];
+  get activeExpressSegments(): ExpressSegmentType[] {
+    return this.trip?.expressSegments ?? [];
   }
 
   get pickupsByPlace(): Record<string, PickupPointType[]> {

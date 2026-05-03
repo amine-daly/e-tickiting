@@ -122,9 +122,12 @@
             class="text-danger small mt-1"
           >
             {{
-              "TRIPS.CREATE.ERRORS.BUS_CAPACITY_BELOW_BOOKED"
+              "TRIPS.CREATE.ERRORS.BUS_CAPACITY_BELOW_OCCUPANCY"
                 | translate
-                  : { booked: maxBookedSeats, total: selectedBusTotalSeats }
+                  : {
+                      booked: maxPhysicalOccupancy,
+                      total: selectedBusTotalSeats,
+                    }
             }}
           </div>
         </div>
@@ -492,8 +495,8 @@
                   {{ "TRIPS.SEGMENTS.TO" | translate }}
                 </th>
                 <th>{{ "TRIPS.SEGMENTS.BASE_PRICE" | translate }}</th>
-                <th>{{ "TRIPS.SEGMENTS.MAX_SEATS" | translate }}</th>
-                <th>{{ "TRIPS.SEGMENTS.BOOKED_SEATS" | translate }}</th>
+                <th>{{ "TRIPS.SEGMENTS.MAX_BOOKING" | translate }}</th>
+                <th>{{ "TRIPS.SEGMENTS.BOOKED_COUNT" | translate }}</th>
                 <th>{{ "TRIPS.SEGMENTS.DISTANCE_KM" | translate }}</th>
                 <th>{{ "TRIPS.SEGMENTS.DURATION_MIN" | translate }}</th>
               </tr>
@@ -509,19 +512,19 @@
                   {{ seg.get("basePrice")?.value | number: "1.2-2" }}
                   {{ selectedCurrency?.code }}
                 </td>
-                <td>{{ seg.get("maxSeats")?.value }}</td>
+                <td>{{ seg.get("maxBooking")?.value }}</td>
                 <td>
                   <span
                     [class.text-danger]="
-                      seg.get('bookedSeats')?.value >=
-                      seg.get('maxSeats')?.value
+                      seg.get('bookedCount')?.value >=
+                      seg.get('maxBooking')?.value
                     "
                     [class.fw-bold]="
-                      seg.get('bookedSeats')?.value >=
-                      seg.get('maxSeats')?.value
+                      seg.get('bookedCount')?.value >=
+                      seg.get('maxBooking')?.value
                     "
                   >
-                    {{ seg.get("bookedSeats")?.value || 0 }}
+                    {{ seg.get("bookedCount")?.value || 0 }}
                   </span>
                 </td>
                 <td>{{ seg.get("distanceKm")?.value | number: "1.1-1" }} km</td>
@@ -567,23 +570,23 @@
                 </div>
                 <div class="col-md-3 mb-3">
                   <label class="form-label required">
-                    {{ "TRIPS.SEGMENTS.MAX_SEATS" | translate }}
+                    {{ "TRIPS.SEGMENTS.MAX_BOOKING" | translate }}
                   </label>
                   <input
                     type="number"
                     class="form-control form-control-solid form-control-sm"
-                    formControlName="maxSeats"
+                    formControlName="maxBooking"
                     min="1"
                   />
                   <div
                     *ngIf="
                       selectedBusTotalSeats != null &&
-                      seg.get('maxSeats')?.value > selectedBusTotalSeats
+                      seg.get('maxBooking')?.value > selectedBusTotalSeats
                     "
                     class="text-danger small mt-1"
                   >
                     {{
-                      "TRIPS.CREATE.ERRORS.MAX_SEATS_EXCEEDS_BUS"
+                      "TRIPS.CREATE.ERRORS.MAX_BOOKING_EXCEEDS_BUS"
                         | translate: { max: selectedBusTotalSeats }
                     }}
                   </div>
@@ -882,37 +885,37 @@
       </div>
 
       <!-- ══════════════════════════════════════════
-           STEP 4 — Express Fares
-           ══════════════════════════════════════════ -->
+         STEP 4 — Express Segments
+         ══════════════════════════════════════════ -->
       <div *ngIf="currentStep === 4">
         <div class="d-flex align-items-center justify-content-between mb-4">
           <h5 class="fw-bold mb-0">
-            {{ "TRIPS.EXPRESS_FARES.TITLE" | translate }}
+            {{ "TRIPS.EXPRESS_SEGMENTS.TITLE" | translate }}
           </h5>
           <button
-            *ngIf="canAddExpressFare"
+            *ngIf="canAddExpressSegment"
             type="button"
             class="btn btn-sm btn-light-primary"
-            (click)="addExpressFare()"
+            (click)="addExpressSegment()"
           >
             <i class="ki-duotone ki-plus fs-4 me-1">
               <span class="path1"></span><span class="path2"></span>
             </i>
-            {{ "TRIPS.CREATE.EXPRESS.ADD" | translate }}
+            {{ "TRIPS.CREATE.EXPRESS_SEGMENTS.ADD" | translate }}
           </button>
         </div>
 
         <p class="text-muted small mb-5">
-          {{ expressFareHintKey | translate }}
+          {{ expressSegmentHintKey | translate }}
         </p>
 
-        <div *ngIf="expressFares.length === 0" class="text-muted small mb-4">
-          {{ "TRIPS.CREATE.EXPRESS.EMPTY" | translate }}
+        <div *ngIf="expressSegments.length === 0" class="text-muted small mb-4">
+          {{ "TRIPS.CREATE.EXPRESS_SEGMENTS.EMPTY" | translate }}
         </div>
 
         <!-- ── READ ONLY: completed/cancelled trips ── -->
         <div
-          *ngIf="showReadonlyExpressFareTable && expressFares.length > 0"
+          *ngIf="showReadonlyExpressSegmentTable && expressSegments.length > 0"
           class="table-responsive"
         >
           <table
@@ -922,21 +925,27 @@
               <tr class="fw-bolder text-muted fs-7">
                 <th>#</th>
                 <th>
-                  {{ "TRIPS.EXPRESS_FARES.SEGMENTS_COVERED" | translate }}
+                  {{ "TRIPS.EXPRESS_SEGMENTS.SEGMENTS_COVERED" | translate }}
                 </th>
-                <th>{{ "TRIPS.EXPRESS_FARES.PRICE" | translate }}</th>
-                <th>{{ "TRIPS.EXPRESS_FARES.VALID_FROM" | translate }}</th>
-                <th>{{ "TRIPS.EXPRESS_FARES.VALID_UNTIL" | translate }}</th>
-                <th>{{ "TRIPS.EXPRESS_FARES.ACTIVE" | translate }}</th>
+                <th>{{ "TRIPS.EXPRESS_SEGMENTS.PRICE" | translate }}</th>
+                <th>{{ "TRIPS.EXPRESS_SEGMENTS.BOOKED_COUNT" | translate }}</th>
+                <th>{{ "TRIPS.EXPRESS_SEGMENTS.VALID_FROM" | translate }}</th>
+                <th>{{ "TRIPS.EXPRESS_SEGMENTS.VALID_UNTIL" | translate }}</th>
+                <th>{{ "TRIPS.EXPRESS_SEGMENTS.ACTIVE" | translate }}</th>
               </tr>
             </thead>
             <tbody>
-              <tr *ngFor="let fare of expressFares.controls; let i = index">
+              <tr
+                *ngFor="
+                  let expressSegment of expressSegments.controls;
+                  let i = index
+                "
+              >
                 <td class="text-muted">{{ i + 1 }}</td>
                 <td>
                   <ng-container
                     *ngFor="
-                      let idx of fare.get('segmentIndices')?.value;
+                      let idx of expressSegment.get('segmentIndices')?.value;
                       let last = last
                     "
                   >
@@ -950,31 +959,38 @@
                   </ng-container>
                 </td>
                 <td class="fw-semibold">
-                  {{ fare.get("price")?.value | number: "1.2-2" }}
+                  {{ expressSegment.get("price")?.value | number: "1.2-2" }}
                   {{ selectedCurrency?.code }}
                 </td>
+                <td>{{ expressSegment.get("bookedCount")?.value || 0 }}</td>
                 <td>
                   {{
-                    fare.get("validFrom")?.value
-                      ? (fare.get("validFrom")?.value | date: "medium")
+                    expressSegment.get("validFrom")?.value
+                      ? (expressSegment.get("validFrom")?.value
+                        | date: "medium")
                       : "-"
                   }}
                 </td>
                 <td>
                   {{
-                    fare.get("validUntil")?.value
-                      ? (fare.get("validUntil")?.value | date: "medium")
+                    expressSegment.get("validUntil")?.value
+                      ? (expressSegment.get("validUntil")?.value
+                        | date: "medium")
                       : "-"
                   }}
                 </td>
                 <td>
                   <span
                     class="badge"
-                    [class.badge-light-success]="fare.get('active')?.value"
-                    [class.badge-light-danger]="!fare.get('active')?.value"
+                    [class.badge-light-success]="
+                      expressSegment.get('active')?.value
+                    "
+                    [class.badge-light-danger]="
+                      !expressSegment.get('active')?.value
+                    "
                   >
                     {{
-                      (fare.get("active")?.value
+                      (expressSegment.get("active")?.value
                         ? "COMMON.LABEL.YES"
                         : "COMMON.LABEL.NO"
                       ) | translate
@@ -986,10 +1002,16 @@
           </table>
         </div>
 
-        <!-- ── CREATE / EDIT MODE: editable express fare cards ── -->
-        <div *ngIf="!showReadonlyExpressFareTable" formArrayName="expressFares">
+        <!-- ── CREATE / EDIT MODE: editable express segment cards ── -->
+        <div
+          *ngIf="!showReadonlyExpressSegmentTable"
+          formArrayName="expressSegments"
+        >
           <div
-            *ngFor="let fare of expressFares.controls; let i = index"
+            *ngFor="
+              let expressSegment of expressSegments.controls;
+              let i = index
+            "
             [formGroupName]="i"
             class="card card-bordered mb-4"
           >
@@ -998,13 +1020,13 @@
                 class="d-flex justify-content-between align-items-start mb-3"
               >
                 <span class="badge badge-light-danger fw-bold">
-                  {{ "TRIPS.EXPRESS_FARES.TITLE" | translate }} {{ i + 1 }}
+                  {{ "TRIPS.EXPRESS_SEGMENTS.TITLE" | translate }} {{ i + 1 }}
                 </span>
                 <button
-                  *ngIf="canAddExpressFare"
+                  *ngIf="canAddExpressSegment"
                   type="button"
                   class="btn btn-icon btn-sm btn-light-danger"
-                  (click)="removeExpressFare(i)"
+                  (click)="removeExpressSegment(i)"
                 >
                   <i class="ki-duotone ki-trash fs-5">
                     <span class="path1"></span><span class="path2"></span>
@@ -1017,7 +1039,7 @@
               <div class="row">
                 <div class="col-md-6 mb-3">
                   <label class="form-label required">
-                    {{ "TRIPS.EXPRESS_FARES.SEGMENTS_COVERED" | translate }}
+                    {{ "TRIPS.EXPRESS_SEGMENTS.SEGMENTS_COVERED" | translate }}
                   </label>
                   <ng-select
                     formControlName="segmentIndices"
@@ -1027,7 +1049,8 @@
                     [multiple]="true"
                     [closeOnSelect]="false"
                     [placeholder]="
-                      'TRIPS.CREATE.EXPRESS.SEGMENTS_PLACEHOLDER' | translate
+                      'TRIPS.CREATE.EXPRESS_SEGMENTS.SEGMENTS_PLACEHOLDER'
+                        | translate
                     "
                   >
                     <ng-template ng-label-tmp let-item="item" let-clear="clear">
@@ -1046,7 +1069,7 @@
                 </div>
                 <div class="col-md-6 mb-3">
                   <label class="form-label required">
-                    {{ "TRIPS.EXPRESS_FARES.PRICE" | translate }}
+                    {{ "TRIPS.EXPRESS_SEGMENTS.PRICE" | translate }}
                   </label>
                   <input
                     type="number"
@@ -1055,7 +1078,8 @@
                     min="0"
                     step="0.01"
                     [placeholder]="
-                      'TRIPS.CREATE.EXPRESS.PRICE_PLACEHOLDER' | translate
+                      'TRIPS.CREATE.EXPRESS_SEGMENTS.PRICE_PLACEHOLDER'
+                        | translate
                     "
                   />
                 </div>
@@ -1064,7 +1088,7 @@
               <div class="row">
                 <div class="col-md-4 mb-3">
                   <label class="form-label">
-                    {{ "TRIPS.EXPRESS_FARES.VALID_FROM" | translate }}
+                    {{ "TRIPS.EXPRESS_SEGMENTS.VALID_FROM" | translate }}
                   </label>
                   <input
                     type="text"
@@ -1082,7 +1106,7 @@
                 </div>
                 <div class="col-md-4 mb-3">
                   <label class="form-label">
-                    {{ "TRIPS.EXPRESS_FARES.VALID_UNTIL" | translate }}
+                    {{ "TRIPS.EXPRESS_SEGMENTS.VALID_UNTIL" | translate }}
                   </label>
                   <input
                     type="text"
@@ -1110,7 +1134,7 @@
                       class="form-check-label"
                       [for]="'express_active_' + i"
                     >
-                      {{ "TRIPS.EXPRESS_FARES.ACTIVE" | translate }}
+                      {{ "TRIPS.EXPRESS_SEGMENTS.ACTIVE" | translate }}
                     </label>
                   </div>
                 </div>
@@ -1222,7 +1246,7 @@
                       {{ "TRIPS.SEGMENTS.TO" | translate }}
                     </th>
                     <th>{{ "TRIPS.SEGMENTS.BASE_PRICE" | translate }}</th>
-                    <th>{{ "TRIPS.SEGMENTS.MAX_SEATS" | translate }}</th>
+                    <th>{{ "TRIPS.SEGMENTS.MAX_BOOKING" | translate }}</th>
                     <th>{{ "TRIPS.SEGMENTS.DISTANCE_KM" | translate }}</th>
                   </tr>
                 </thead>
@@ -1236,7 +1260,7 @@
                       {{ seg.get("basePrice")?.value }}
                       {{ selectedCurrency?.code }}
                     </td>
-                    <td>{{ seg.get("maxSeats")?.value }}</td>
+                    <td>{{ seg.get("maxBooking")?.value }}</td>
                     <td>{{ seg.get("distanceKm")?.value }} km</td>
                   </tr>
                 </tbody>
@@ -1292,13 +1316,13 @@
           </div>
         </div>
 
-        <!-- Express fares summary -->
-        <div class="card card-bordered mb-4" *ngIf="expressFares.length > 0">
+        <!-- Express segments summary -->
+        <div class="card card-bordered mb-4" *ngIf="expressSegments.length > 0">
           <div class="card-body py-4">
             <h6 class="fw-bold text-gray-700 mb-3">
-              {{ "TRIPS.EXPRESS_FARES.TITLE" | translate }}
+              {{ "TRIPS.EXPRESS_SEGMENTS.TITLE" | translate }}
               <span class="badge badge-light-danger ms-2">{{
-                expressFares.length
+                expressSegments.length
               }}</span>
             </h6>
             <div class="table-responsive">
@@ -1308,18 +1332,24 @@
                 <thead>
                   <tr class="fw-semibold text-muted small">
                     <th>
-                      {{ "TRIPS.EXPRESS_FARES.SEGMENTS_COVERED" | translate }}
+                      {{
+                        "TRIPS.EXPRESS_SEGMENTS.SEGMENTS_COVERED" | translate
+                      }}
                     </th>
-                    <th>{{ "TRIPS.EXPRESS_FARES.PRICE" | translate }}</th>
-                    <th>{{ "TRIPS.EXPRESS_FARES.ACTIVE" | translate }}</th>
+                    <th>{{ "TRIPS.EXPRESS_SEGMENTS.PRICE" | translate }}</th>
+                    <th>
+                      {{ "TRIPS.EXPRESS_SEGMENTS.BOOKED_COUNT" | translate }}
+                    </th>
+                    <th>{{ "TRIPS.EXPRESS_SEGMENTS.ACTIVE" | translate }}</th>
                   </tr>
                 </thead>
                 <tbody>
-                  <tr *ngFor="let fare of expressFares.controls">
+                  <tr *ngFor="let expressSegment of expressSegments.controls">
                     <td>
                       <ng-container
                         *ngFor="
-                          let idx of fare.get('segmentIndices')?.value;
+                          let idx of expressSegment.get('segmentIndices')
+                            ?.value;
                           let last = last
                         "
                       >
@@ -1333,17 +1363,22 @@
                       </ng-container>
                     </td>
                     <td class="fw-semibold">
-                      {{ fare.get("price")?.value }}
+                      {{ expressSegment.get("price")?.value }}
                       {{ selectedCurrency?.code }}
                     </td>
+                    <td>{{ expressSegment.get("bookedCount")?.value || 0 }}</td>
                     <td>
                       <span
                         class="badge"
-                        [class.badge-light-success]="fare.get('active')?.value"
-                        [class.badge-light-danger]="!fare.get('active')?.value"
+                        [class.badge-light-success]="
+                          expressSegment.get('active')?.value
+                        "
+                        [class.badge-light-danger]="
+                          !expressSegment.get('active')?.value
+                        "
                       >
                         {{
-                          (fare.get("active")?.value
+                          (expressSegment.get("active")?.value
                             ? "COMMON.LABEL.YES"
                             : "COMMON.LABEL.NO"
                           ) | translate

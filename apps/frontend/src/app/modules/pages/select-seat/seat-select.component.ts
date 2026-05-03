@@ -3,6 +3,7 @@ import { ActivatedRoute, Router } from '@angular/router';
 import { CommonModule } from '@angular/common';
 import { Subject, takeUntil, take } from 'rxjs';
 
+import { computeRouteAvailableSeats } from '../../../core/helpers/trip-inventory.helper';
 import { TripService } from '../bus/trip.service';
 import {
   BookingService,
@@ -135,20 +136,21 @@ export class SeatSelectComponent implements OnInit, OnDestroy {
   private computeDetails(): void {
     if (!this.trip) return;
     const chain = this.getSegmentChain();
+    const now = new Date();
 
-    const express = (this.trip.expressFares || []).find(
-      (f) =>
-        f.fromPlaceId === this.originPlaceId &&
-        f.toPlaceId === this.destPlaceId &&
-        f.active,
+    const expressSegment = (this.trip.expressSegments || []).find(
+      (candidate) =>
+        candidate.fromPlaceId === this.originPlaceId &&
+        candidate.toPlaceId === this.destPlaceId &&
+        candidate.active &&
+        (!candidate.validFrom || now >= new Date(candidate.validFrom)) &&
+        (!candidate.validUntil || now <= new Date(candidate.validUntil)),
     );
-    this.displayPrice = express
-      ? express.price
+    this.displayPrice = expressSegment
+      ? expressSegment.price
       : chain.reduce((s, seg) => s + (seg.basePrice || 0), 0);
     this.duration = chain.reduce((s, seg) => s + (seg.durationMinutes || 0), 0);
-    this.availableSeats = chain.length
-      ? Math.min(...chain.map((s) => (s.maxSeats || 0) - (s.bookedSeats || 0)))
-      : 0;
+    this.availableSeats = computeRouteAvailableSeats(this.trip, chain);
   }
 
   private getSegmentChain(): SegmentType[] {

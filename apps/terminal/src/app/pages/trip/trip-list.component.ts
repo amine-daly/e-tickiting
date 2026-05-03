@@ -21,6 +21,7 @@ import {
   NgSelectComponent,
 } from '@ng-select/ng-select';
 
+import { computeTripMaxPhysicalOccupancy } from '../../core/helpers/trip-inventory.helper';
 import { TripType, TripStatusEnum } from '../../core/models/trip.model';
 import {
   TripFilterInput,
@@ -34,7 +35,7 @@ import { ToolbarComponent } from 'src/app/_metronic/layout/components/toolbar/to
 import { PageInfoService } from 'src/app/_metronic/layout/core/page-info.service';
 
 interface TripSeatLoad {
-  bookedSeats: number;
+  occupiedSeats: number;
   totalSeats: number;
   percentage: number;
   label: string;
@@ -213,36 +214,33 @@ export class TripListComponent implements OnInit, OnDestroy {
 
   private buildSeatLoad(trip: TripType): TripSeatLoad {
     const segments = trip?.segments ?? [];
-    const bookedSeats = segments.reduce(
-      (peak, segment) => Math.max(peak, segment.bookedSeats ?? 0),
-      0,
-    );
+    const occupiedSeats = computeTripMaxPhysicalOccupancy(trip);
     const fallbackCapacity = segments.reduce(
-      (max, segment) => Math.max(max, segment.maxSeats ?? 0),
+      (max, segment) => Math.max(max, segment.maxBooking ?? 0),
       0,
     );
     const totalSeats = trip?.bus?.totalSeats || fallbackCapacity;
     const percentage =
       totalSeats > 0
-        ? Math.min(100, Math.round((bookedSeats / totalSeats) * 100))
+        ? Math.min(100, Math.round((occupiedSeats / totalSeats) * 100))
         : 0;
 
     return {
-      bookedSeats,
+      occupiedSeats,
       totalSeats,
       percentage,
-      label: totalSeats > 0 ? `${bookedSeats} / ${totalSeats}` : '-',
-      barClass: this.getSeatLoadBarClass(bookedSeats, totalSeats, percentage),
+      label: totalSeats > 0 ? `${occupiedSeats} / ${totalSeats}` : '-',
+      barClass: this.getSeatLoadBarClass(occupiedSeats, totalSeats, percentage),
     };
   }
 
   private getSeatLoadBarClass(
-    bookedSeats: number,
+    occupiedSeats: number,
     totalSeats: number,
     percentage: number,
   ): string {
     if (totalSeats <= 0) return 'bg-secondary';
-    if (bookedSeats >= totalSeats) return 'bg-danger';
+    if (occupiedSeats >= totalSeats) return 'bg-danger';
     if (percentage >= 80) return 'bg-warning';
     if (percentage >= 50) return 'bg-primary';
     return 'bg-success';

@@ -3,7 +3,7 @@
   "version": 1,
   "newProjectRoot": "projects",
   "projects": {
-    "demo1": {
+    "terminal": {
       "projectType": "application",
       "schematics": {
         "@schematics/angular:component": {
@@ -20,7 +20,7 @@
         "build": {
           "builder": "@angular-devkit/build-angular:browser",
           "options": {
-            "outputPath": "dist/demo1",
+            "outputPath": "dist/terminal",
             "allowedCommonJsDependencies": [
               "object-path",
               "apexcharts",
@@ -82,14 +82,14 @@
         "serve": {
           "builder": "@angular-devkit/build-angular:dev-server",
           "options": {
-            "buildTarget": "demo1:build:development"
+            "buildTarget": "terminal:build:development"
           },
           "configurations": {
             "production": {
-              "buildTarget": "demo1:build:production"
+              "buildTarget": "terminal:build:production"
             },
             "development": {
-              "buildTarget": "demo1:build:development"
+              "buildTarget": "terminal:build:development"
             }
           },
           "defaultConfiguration": "development"
@@ -97,7 +97,7 @@
         "extract-i18n": {
           "builder": "@angular-devkit/build-angular:extract-i18n",
           "options": {
-            "buildTarget": "demo1:build"
+            "buildTarget": "terminal:build"
           }
         },
         "test": {

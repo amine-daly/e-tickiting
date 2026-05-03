@@ -13,9 +13,10 @@ import {
   PermissionInput,
   PermissionType,
 } from 'src/app/core/models/permission-type';
+import { environment } from 'src/environments/environment';
 
-const API_PERMISSIONS_URL = '/api/permissions';
-const API_PERMISSION_DEFINITIONS_URL = '/api/permission-definitions';
+const API_PERMISSIONS_URL = `${environment.apiBase}/permissions`;
+const API_PERMISSION_DEFINITIONS_URL = `${environment.apiBase}/permission-definitions`;
 
 type Paginated<T> = {
   objects: T[];

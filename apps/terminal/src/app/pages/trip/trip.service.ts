@@ -3,7 +3,12 @@ import { HttpClient, HttpParams } from '@angular/common/http';
 import { BehaviorSubject, Observable, of, throwError } from 'rxjs';
 import { catchError, finalize, map, tap } from 'rxjs/operators';
 
-import { TripType, TripStatusEnum } from '../../core/models/trip.model';
+import { environment } from 'src/environments/environment';
+import {
+  TripType,
+  TripStatusEnum,
+  TripRouteAvailabilityType,
+} from '../../core/models/trip.model';
 import {
   TripFilterInput,
   TripSortBy,
@@ -11,8 +16,8 @@ import {
 } from 'src/app/core/models/trip-filter-input.model';
 import {
   DropoffPointPayload,
-  ExpressFarePayload,
-  ExpressFareUpdatePayload,
+  ExpressSegmentPayload,
+  ExpressSegmentUpdatePayload,
   PickupPointPayload,
   TripCreatePayload,
   TripUpdatePayload,
@@ -28,7 +33,7 @@ export class TripService {
   private trips = new BehaviorSubject<TripType[]>([]);
   private trip = new BehaviorSubject<TripType>(null);
   private pagination = new BehaviorSubject<IPagination>(null);
-  private baseUrl = '/api/trips';
+  private baseUrl = `${environment.apiBase}/trips`;
 
   get trips$(): Observable<TripType[]> {
     return this.trips.asObservable();
@@ -108,6 +113,21 @@ export class TripService {
       .pipe(tap((trip) => this.trip.next(trip)));
   }
 
+  getRouteAvailability(
+    tripId: string,
+    originPlaceId: string,
+    destinationPlaceId: string,
+  ): Observable<TripRouteAvailabilityType> {
+    const params = new HttpParams()
+      .set('originPlaceId', originPlaceId)
+      .set('destinationPlaceId', destinationPlaceId);
+
+    return this.http.get<TripRouteAvailabilityType>(
+      `${this.baseUrl}/${tripId}/route-availability`,
+      { params },
+    );
+  }
+
   // ─── CREATE ──────────────────────────────────────────────
   create(payload: TripCreatePayload): Observable<TripType> {
     return this.http.post<TripType>(this.baseUrl, payload).pipe(
@@ -174,45 +194,53 @@ export class TripService {
       .pipe(tap((updated) => this.trip.next(updated)));
   }
 
-  updateSegmentMaxSeats(
+  updateSegmentMaxBooking(
     tripId: string,
     segmentId: string,
-    maxSeats: number,
+    maxBooking: number,
   ): Observable<TripType> {
     return this.http
       .patch<TripType>(
-        `${this.baseUrl}/${tripId}/segments/${segmentId}/max-seats`,
-        { maxSeats },
+        `${this.baseUrl}/${tripId}/segments/${segmentId}/max-booking`,
+        { maxBooking },
       )
       .pipe(tap((updated) => this.trip.next(updated)));
   }
 
-  // ─── EXPRESS FARE SUB-RESOURCE ──────────────────────────
-  addExpressFare(
+  // ─── EXPRESS SEGMENT SUB-RESOURCE ───────────────────────
+  addExpressSegment(
     tripId: string,
-    fare: ExpressFarePayload,
+    expressSegment: ExpressSegmentPayload,
   ): Observable<TripType> {
     return this.http
-      .post<TripType>(`${this.baseUrl}/${tripId}/express-fares`, fare)
+      .post<TripType>(
+        `${this.baseUrl}/${tripId}/express-segments`,
+        expressSegment,
+      )
       .pipe(tap((updated) => this.trip.next(updated)));
   }
 
-  updateExpressFare(
+  updateExpressSegment(
     tripId: string,
-    expressId: string,
-    changes: ExpressFareUpdatePayload,
+    expressSegmentId: string,
+    changes: ExpressSegmentUpdatePayload,
   ): Observable<TripType> {
     return this.http
       .put<TripType>(
-        `${this.baseUrl}/${tripId}/express-fares/${expressId}`,
+        `${this.baseUrl}/${tripId}/express-segments/${expressSegmentId}`,
         changes,
       )
       .pipe(tap((updated) => this.trip.next(updated)));
   }
 
-  deleteExpressFare(tripId: string, expressId: string): Observable<TripType> {
+  deleteExpressSegment(
+    tripId: string,
+    expressSegmentId: string,
+  ): Observable<TripType> {
     return this.http
-      .delete<TripType>(`${this.baseUrl}/${tripId}/express-fares/${expressId}`)
+      .delete<TripType>(
+        `${this.baseUrl}/${tripId}/express-segments/${expressSegmentId}`,
+      )
       .pipe(tap((updated) => this.trip.next(updated)));
   }
 

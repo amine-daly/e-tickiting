@@ -41,6 +41,7 @@ import {
   TripType,
   PickupPointType,
   DropoffPointType,
+  TripRouteAvailabilityType,
 } from '../../../core/models/trip.model';
 import {
   LayoutTemplate,
@@ -107,6 +108,7 @@ export class SellTicketComponent implements OnInit, OnDestroy {
   selectedDropoffId: string | null = null;
   displayPrice = 0;
   currency = '';
+  routeAvailability: TripRouteAvailabilityType | null = null;
   booking = false;
   booked = false;
   bookingResult: BookingResponse | null = null;
@@ -161,9 +163,7 @@ export class SellTicketComponent implements OnInit, OnDestroy {
     this.activeDropoffs = (trip.dropoffPoints || []).filter((p) => p.active);
     this.selectedPickupId = this.activePickups[0]?.pointId || null;
     this.selectedDropoffId = this.activeDropoffs[0]?.pointId || null;
-    this.computePrice();
-
-    this.trimPassengersToCapacity();
+    this.refreshRouteAvailability(true);
   }
 
   // ─── Step 2: Passengers ───
@@ -214,17 +214,16 @@ export class SellTicketComponent implements OnInit, OnDestroy {
     return this.passengers.length > 1;
   }
 
+  get routeBlockedByExpressSegmentRule(): boolean {
+    return (
+      !!this.routeAvailability?.requiresExpressSegment &&
+      !this.routeAvailability?.sellable
+    );
+  }
+
   /** Number of available seats for the selected route segment chain. */
   get availableSeats(): number {
-    if (!this.selectedTrip?.segments?.length) return 0;
-    const fromPlaceId = this.getSelectedPickupPlaceId();
-    const toPlaceId = this.getSelectedDropoffPlaceId();
-    if (!fromPlaceId || !toPlaceId) return 0;
-    const chain = this.resolveDisplaySegments(fromPlaceId, toPlaceId);
-    if (!chain.length) return 0;
-    return Math.min(
-      ...chain.map((s) => (s.maxSeats || 0) - (s.bookedSeats || 0)),
-    );
+    return this.routeAvailability?.availableSeats || 0;
   }
 
   get isAvailableSeats(): boolean {
@@ -318,6 +317,13 @@ export class SellTicketComponent implements OnInit, OnDestroy {
   goToStep3(): void {
     if (!this.canProceedStep2) return;
     if (!this.selectedTrip) return;
+
+    if (!this.routeAvailability?.sellable) {
+      this.alert.error(
+        this.t('TICKETS.SELL.ROUTE_REQUIRES_ACTIVE_EXPRESS_SEGMENT'),
+      );
+      return;
+    }
 
     // Reset seat assignments for all passengers
     this.passengers.forEach((p) => (p.seatNo = undefined));
@@ -573,13 +579,11 @@ export class SellTicketComponent implements OnInit, OnDestroy {
 
   // ─── Step 1: Pickup/Dropoff change ───
   onPickupChange(): void {
-    this.computePrice();
-    this.trimPassengersToCapacity();
+    this.refreshRouteAvailability(true);
   }
 
   onDropoffChange(): void {
-    this.computePrice();
-    this.trimPassengersToCapacity();
+    this.refreshRouteAvailability(true);
   }
 
   private trimPassengersToCapacity(): void {
@@ -610,43 +614,45 @@ export class SellTicketComponent implements OnInit, OnDestroy {
     return dp?.placeId || null;
   }
 
-  private computePrice(): void {
-    if (!this.selectedTrip) return;
-    this.currency = this.selectedTrip.currency?.code || '';
+  private refreshRouteAvailability(trimPassengers = false): void {
+    this.routeAvailability = null;
+    this.displayPrice = 0;
+    this.currency = this.selectedTrip?.currency?.code || '';
+
+    if (!this.selectedTrip) {
+      this.cdr.markForCheck();
+      return;
+    }
 
     const fromPlaceId = this.getSelectedPickupPlaceId();
     const toPlaceId = this.getSelectedDropoffPlaceId();
-    if (!fromPlaceId || !toPlaceId) return;
-
-    const now = new Date();
-    const express = (this.selectedTrip.expressFares || []).find(
-      (f) =>
-        f.fromPlaceId === fromPlaceId &&
-        f.toPlaceId === toPlaceId &&
-        f.active &&
-        (!f.validFrom || now >= new Date(f.validFrom)) &&
-        (!f.validUntil || now <= new Date(f.validUntil)),
-    );
-    if (express) {
-      this.displayPrice = express.price;
-    } else {
-      const chain = this.resolveDisplaySegments(fromPlaceId, toPlaceId);
-      this.displayPrice = chain.reduce((s, seg) => s + (seg.basePrice || 0), 0);
+    if (!fromPlaceId || !toPlaceId) {
+      this.cdr.markForCheck();
+      return;
     }
-    this.cdr.markForCheck();
-  }
 
-  private resolveDisplaySegments(fromPlaceId: string, toPlaceId: string) {
-    const segments = this.selectedTrip?.segments || [];
-    const sorted = [...segments].sort((a, b) => a.sequence - b.sequence);
-    const startIdx = sorted.findIndex((s) => s.fromPlaceId === fromPlaceId);
-    if (startIdx === -1) return sorted;
-    const chain: typeof sorted = [];
-    for (let i = startIdx; i < sorted.length; i++) {
-      chain.push(sorted[i]);
-      if (sorted[i].toPlaceId === toPlaceId) return chain;
-    }
-    return sorted;
+    const sub = this.tripService
+      .getRouteAvailability(this.selectedTrip.id, fromPlaceId, toPlaceId)
+      .subscribe({
+        next: (routeAvailability) => {
+          this.routeAvailability = routeAvailability;
+          this.displayPrice = routeAvailability?.displayPrice || 0;
+          this.currency = routeAvailability?.currencyCode || this.currency;
+          if (trimPassengers) {
+            this.trimPassengersToCapacity();
+          }
+          this.cdr.markForCheck();
+        },
+        error: () => {
+          this.routeAvailability = null;
+          this.displayPrice = 0;
+          if (trimPassengers) {
+            this.trimPassengersToCapacity();
+          }
+          this.cdr.markForCheck();
+        },
+      });
+    this.subscriptions.add(sub);
   }
 
   /** Start the countdown timer synced to expiresAt from server. */
@@ -930,6 +936,7 @@ export class SellTicketComponent implements OnInit, OnDestroy {
       this.selectedPickupId = null;
       this.selectedDropoffId = null;
       this.displayPrice = 0;
+      this.routeAvailability = null;
       return;
     }
 
@@ -958,7 +965,7 @@ export class SellTicketComponent implements OnInit, OnDestroy {
       this.selectedDropoffId = this.activeDropoffs[0]?.pointId || null;
     }
 
-    this.computePrice();
+    this.refreshRouteAvailability();
   }
 
   // ─── ROUTE PREVIEW ─────────────────────────────────────

@@ -198,16 +198,17 @@
       "TITLE": "Segments",
       "FROM": "From",
       "TO": "To",
-      "MAX_SEATS": "Capacity",
-      "BOOKED_SEATS": "Booked",
+      "MAX_BOOKING": "Max booking",
+      "BOOKED_COUNT": "Booked count",
       "BASE_PRICE": "Base price",
       "DISTANCE_KM": "Distance (km)",
       "DURATION_MIN": "Duration (min)"
     },
-    "EXPRESS_FARES": {
-      "TITLE": "Express fares",
+    "EXPRESS_SEGMENTS": {
+      "TITLE": "Express segments",
       "SEGMENTS_COVERED": "Segments",
       "PRICE": "Price",
+      "BOOKED_COUNT": "Booked count",
       "VALID_FROM": "Valid from",
       "VALID_UNTIL": "Valid until",
       "ACTIVE": "Active",
@@ -250,10 +251,10 @@
       "BUS_ALREADY_ASSIGNED": "This bus is already assigned to a scheduled or active trip.",
       "MISSING_PICKUP": "A boarding stop is missing its pickup point.",
       "MISSING_DROPOFF": "A dropping stop is missing its drop-off point.",
-      "MAX_SEATS_ERROR": "A segment's max seats exceeds the bus capacity.",
+      "MAX_BOOKING_ERROR": "A segment's max booking exceeds the bus capacity.",
       "INVALID_TIMELINE": "The stop timeline is invalid. Please review stop times.",
       "INVALID_STOP_SEQUENCE": "The stop sequence is invalid.",
-      "INVALID_EXPRESS_CHAIN": "The express fare segment chain is invalid.",
+      "INVALID_EXPRESS_SEGMENT_CHAIN": "The express segment chain is invalid.",
       "DELETE_SUCCESS": "Trip deleted successfully.",
       "DELETE_ERROR": "Unable to delete the trip.",
       "DELETE_CONFIRM_TITLE": "Delete trip?",
@@ -324,7 +325,7 @@
         "STOP_SCHEDULE": "Stops",
         "SEGMENTS": "Segments",
         "PICKUP_DROPOFF": "Pickup / Drop-off",
-        "EXPRESS_FARES": "Express fares",
+        "EXPRESS_SEGMENTS": "Express segments",
         "REVIEW": "Review"
       },
       "BASIC": {
@@ -388,12 +389,12 @@
         "ERROR_PERMISSION": "Location access was denied by the browser.",
         "ERROR_UNAVAILABLE": "Unable to retrieve your current location."
       },
-      "EXPRESS": {
-        "ADD": "Add express fare",
+      "EXPRESS_SEGMENTS": {
+        "ADD": "Add express segment",
         "SEGMENTS_PLACEHOLDER": "Select segments",
         "PRICE_PLACEHOLDER": "Price",
-        "HINT": "Express fares are optional. They allow passengers to book multi-segment journeys at a special price.",
-        "EMPTY": "No express fares added. This step is optional."
+        "HINT": "Express segments are optional. They let passengers book multi-segment journeys with dedicated segment pricing.",
+        "EMPTY": "No express segments added. This step is optional."
       },
       "REVIEW": {
         "TITLE": "Review your trip before submitting"
@@ -411,8 +412,8 @@
         "DROPOFF_BEFORE_PICKUP": "Dropoff point {{dropoff}}: scheduled arrival must be after the earliest pickup departure.",
         "DEPARTURE_DATE_MISMATCH": "Origin departure time must match or be after the global departure date.",
         "MIN_COMMERCIAL_STOPS": "At least 2 commercial stops (boarding or dropping) are required.",
-        "MAX_SEATS_EXCEEDS_BUS": "Max seats exceeds bus capacity ({{max}}).",
-        "BUS_CAPACITY_BELOW_BOOKED": "Selected bus capacity ({{total}}) is lower than already booked seats ({{booked}}).",
+        "MAX_BOOKING_EXCEEDS_BUS": "Max booking exceeds bus capacity ({{max}}).",
+        "BUS_CAPACITY_BELOW_OCCUPANCY": "Selected bus capacity ({{total}}) is lower than current occupied seats ({{booked}}).",
         "COVERAGE_TITLE": "Missing Pickup/Dropoff Points",
         "MISSING_PICKUP_FOR_STOP": "City {{place}} (boarding stop) requires at least one pickup point.",
         "MISSING_DROPOFF_FOR_STOP": "City {{place}} (dropping stop) requires at least one drop-off point."
@@ -421,10 +422,10 @@
     "EDIT_MODE": {
       "SUBMIT": "Save changes",
       "SEGMENTS_FROZEN": "Segments are frozen after creation and cannot be modified.",
-      "EXPRESS_FARES_FROZEN": "Express fares cannot be modified from this form. Use the dedicated express fares management instead.",
-      "EXPRESS_FARES_SCHEDULED": "Express fares can be added, removed, or edited while the trip is scheduled.",
-      "EXPRESS_FARES_ACTIVE": "Active trips allow express fare price, validity, and active state changes only. Segment coverage cannot be changed.",
-      "EXPRESS_FARES_READONLY": "This trip is completed or cancelled. Express fares are read-only.",
+      "EXPRESS_SEGMENTS_FROZEN": "Express segments cannot be modified from this form. Use the dedicated express segment management instead.",
+      "EXPRESS_SEGMENTS_SCHEDULED": "Express segments can be added, removed, or edited while the trip is scheduled.",
+      "EXPRESS_SEGMENTS_ACTIVE": "Active trips allow express segment price, validity, and active state changes only. Segment coverage cannot be changed.",
+      "EXPRESS_SEGMENTS_READONLY": "This trip is completed or cancelled. Express segments are read-only.",
       "ACTIVE_WARNING": "This trip is active. Departure date and currency cannot be changed.",
       "READONLY_WARNING": "This trip is completed or cancelled. All fields are read-only."
     }
@@ -506,6 +507,7 @@
       "FIRST_NAME": "First Name",
       "LAST_NAME": "Last Name",
       "AVAILABLE_SEATS": "Available seats",
+      "ROUTE_REQUIRES_ACTIVE_EXPRESS_SEGMENT": "This multi-segment route is unavailable because no active express segment matches it.",
       "PASSENGER_LABEL": "Passenger",
       "SELECT_TRIP": "Select a Trip",
       "NO_TRIPS": "No active trips found.",

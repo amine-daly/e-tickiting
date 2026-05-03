@@ -8,39 +8,39 @@ import java.util.Set;
 import java.util.stream.Collectors;
 
 /**
- * Guards against stop removal that would break an express fare chain. Per
+ * Guards against stop removal that would break an express segment chain. Per
  * TRIP_SPEC: removing a stop that breaks a chain is hard-blocked with
- * {@code STOP_REMOVAL_BLOCKED_EXPRESS_DEPENDENCY}.
+ * {@code STOP_REMOVAL_BLOCKED_EXPRESS_SEGMENT_DEPENDENCY}.
  */
-public final class ExpressFareStopGuard {
+public final class ExpressSegmentStopGuard {
 
-    private ExpressFareStopGuard() {
+    private ExpressSegmentStopGuard() {
     }
 
     /**
-     * Checks whether removing a stop would break any express fare chain.
+     * Checks whether removing a stop would break any express segment chain.
      *
      * @param placeIdToRemove the placeId of the stop being removed
      * @param segments current trip segments
-     * @param expressFares current express fares
+     * @param expressSegments current express segments
      * @throws BadRequestException if removal breaks any chain
      */
     public static void assertRemovalAllowed(
             String placeIdToRemove,
             List<SegmentType> segments,
-            List<ExpressFareType> expressFares) {
+            List<ExpressSegmentType> expressSegments) {
 
-        if (expressFares == null || expressFares.isEmpty()) {
-            return; // no fares → no dependency
+        if (expressSegments == null || expressSegments.isEmpty()) {
+            return; // no express segments -> no dependency
         }
 
         // Build segmentId → SegmentType lookup
         Map<String, SegmentType> segMap = segments.stream()
                 .collect(Collectors.toMap(SegmentType::getSegmentId, s -> s));
 
-        for (ExpressFareType fare : expressFares) {
-            // Collect all placeIds referenced by this fare's segment chain
-            Set<String> chainPlaceIds = fare.getSegmentsCovered().stream()
+        for (ExpressSegmentType expressSegment : expressSegments) {
+            // Collect all placeIds referenced by this express segment's chain
+            Set<String> chainPlaceIds = expressSegment.getSegmentsCovered().stream()
                     .map(segMap::get)
                     .filter(s -> s != null)
                     .flatMap(s -> java.util.stream.Stream.of(s.getFromPlaceId(), s.getToPlaceId()))
@@ -48,9 +48,9 @@ public final class ExpressFareStopGuard {
 
             if (chainPlaceIds.contains(placeIdToRemove)) {
                 throw new BadRequestException(
-                        "STOP_REMOVAL_BLOCKED_EXPRESS_DEPENDENCY: stop placeId '"
-                        + placeIdToRemove + "' is referenced by express fare '"
-                        + fare.getExpressId() + "'");
+                        "STOP_REMOVAL_BLOCKED_EXPRESS_SEGMENT_DEPENDENCY: stop placeId '"
+                        + placeIdToRemove + "' is referenced by express segment '"
+                        + expressSegment.getExpressSegmentId() + "'");
             }
         }
     }

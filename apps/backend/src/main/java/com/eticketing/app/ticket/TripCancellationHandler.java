@@ -40,8 +40,12 @@ public class TripCancellationHandler {
         List<TicketType> pendingTickets = ticketRepository.findByTripIdAndStatus(tripId, TicketStatusEnum.PENDING);
         for (TicketType ticket : pendingTickets) {
             ticket.setStatus(TicketStatusEnum.EXPIRED);
-            ticketRepository.save(ticket);
-            seatReservationService.releaseSeats(tripId, ticket.getSegmentIds());
+        }
+        if (!pendingTickets.isEmpty()) {
+            ticketRepository.saveAll(pendingTickets);
+            seatReservationService.releaseReservations(tripId, pendingTickets);
+        }
+        for (TicketType ticket : pendingTickets) {
             LOG.info("Trip cancellation: expired PENDING ticket {}", ticket.getId());
         }
 

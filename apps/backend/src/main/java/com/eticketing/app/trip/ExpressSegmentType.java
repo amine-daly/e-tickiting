@@ -10,9 +10,10 @@ import java.time.Instant;
 import java.util.List;
 
 /**
- * Express fare — a pricing overlay over a continuous chain of segments. Zero
- * inventory (no maxSeats / bookedSeats). No currency field — inherited from
- * trip.currency.
+ * Express segment — a route-level contract over a continuous chain of segments.
+ * Inventory is tracked only via {@code bookedCount}; there is no
+ * express-segment-specific {@code maxBooking}. No currency field — inherited
+ * from trip.currency.
  * <p>
  * {@code totalDistanceKm} and {@code totalDurationMinutes} are computed at read
  * time from covered segments — NOT stored in the DB.
@@ -21,12 +22,12 @@ import java.util.List;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class ExpressFareType {
+public class ExpressSegmentType {
 
     /**
      * System-generated UUID.
      */
-    private String expressId;
+    private String expressSegmentId;
 
     /**
      * Must match fromPlaceId of the first covered segment.
@@ -47,6 +48,12 @@ public class ExpressFareType {
      * Price in trip.currency.
      */
     private BigDecimal price;
+
+    /**
+     * Starts at 0, incremented atomically for bookings using this express
+     * segment.
+     */
+    private int bookedCount;
 
     /**
      * Null = active immediately.

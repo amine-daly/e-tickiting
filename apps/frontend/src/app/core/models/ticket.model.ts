@@ -24,7 +24,7 @@ export interface Ticket {
   companyId?: string | null;
   posId?: string | null;
   segmentIds: string[];
-  expressId?: string | null;
+  expressSegmentId?: string | null;
   pickupPointId?: string | null;
   dropoffPointId?: string | null;
   passengerId: string;

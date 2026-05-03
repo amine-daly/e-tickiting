@@ -198,16 +198,17 @@
       "TITLE": "Segments",
       "FROM": "De",
       "TO": "À",
-      "MAX_SEATS": "Capacité",
-      "BOOKED_SEATS": "Réservés",
+      "MAX_BOOKING": "Plafond de réservation",
+      "BOOKED_COUNT": "Réservations",
       "BASE_PRICE": "Prix de base",
       "DISTANCE_KM": "Distance (km)",
       "DURATION_MIN": "Durée (min)"
     },
-    "EXPRESS_FARES": {
-      "TITLE": "Tarifs express",
+    "EXPRESS_SEGMENTS": {
+      "TITLE": "Segments express",
       "SEGMENTS_COVERED": "Segments",
       "PRICE": "Prix",
+      "BOOKED_COUNT": "Réservations",
       "VALID_FROM": "Valide à partir du",
       "VALID_UNTIL": "Valide jusqu'au",
       "ACTIVE": "Actif",
@@ -250,10 +251,10 @@
       "BUS_ALREADY_ASSIGNED": "Ce bus est déjà affecté à un voyage programmé ou actif.",
       "MISSING_PICKUP": "Un arrêt d'embarquement n'a pas de point de ramassage.",
       "MISSING_DROPOFF": "Un arrêt de débarquement n'a pas de point de dépose.",
-      "MAX_SEATS_ERROR": "La capacité max d'un segment dépasse celle du bus.",
+      "MAX_BOOKING_ERROR": "Le plafond de réservation d'un segment dépasse la capacité du bus.",
       "INVALID_TIMELINE": "La chronologie des arrêts est invalide. Vérifiez les horaires.",
       "INVALID_STOP_SEQUENCE": "La séquence des arrêts est invalide.",
-      "INVALID_EXPRESS_CHAIN": "La chaîne de segments du tarif express est invalide.",
+      "INVALID_EXPRESS_SEGMENT_CHAIN": "La chaîne de segments express est invalide.",
       "DELETE_SUCCESS": "Voyage supprimé avec succès.",
       "DELETE_ERROR": "Impossible de supprimer le voyage.",
       "DELETE_CONFIRM_TITLE": "Supprimer le voyage ?",
@@ -324,7 +325,7 @@
         "STOP_SCHEDULE": "Arrêts",
         "SEGMENTS": "Segments",
         "PICKUP_DROPOFF": "Ramassage / Dépose",
-        "EXPRESS_FARES": "Tarifs express",
+        "EXPRESS_SEGMENTS": "Segments express",
         "REVIEW": "Vérification"
       },
       "BASIC": {
@@ -388,12 +389,12 @@
         "ERROR_PERMISSION": "L'accès à votre position a été refusé par le navigateur.",
         "ERROR_UNAVAILABLE": "Impossible de récupérer votre position actuelle."
       },
-      "EXPRESS": {
-        "ADD": "Ajouter un tarif express",
+      "EXPRESS_SEGMENTS": {
+        "ADD": "Ajouter un segment express",
         "SEGMENTS_PLACEHOLDER": "Sélectionnez des segments",
         "PRICE_PLACEHOLDER": "Prix",
-        "HINT": "Les tarifs express sont optionnels. Ils permettent aux passagers de réserver des trajets multi-segments à un prix spécial.",
-        "EMPTY": "Aucun tarif express ajouté. Cette étape est optionnelle."
+        "HINT": "Les segments express sont optionnels. Ils permettent aux passagers de réserver des trajets multi-segments avec une tarification dédiée.",
+        "EMPTY": "Aucun segment express ajouté. Cette étape est optionnelle."
       },
       "REVIEW": {
         "TITLE": "Vérifiez votre voyage avant de soumettre"
@@ -411,8 +412,8 @@
         "DROPOFF_BEFORE_PICKUP": "Point de dépose {{dropoff}} : l'heure d'arrivée doit être après le premier départ de ramassage.",
         "DEPARTURE_DATE_MISMATCH": "L'heure de départ de l'origine doit correspondre ou être après la date de départ globale.",
         "MIN_COMMERCIAL_STOPS": "Au moins 2 arrêts commerciaux (embarquement ou débarquement) sont nécessaires.",
-        "MAX_SEATS_EXCEEDS_BUS": "La capacité max dépasse celle du bus ({{max}}).",
-        "BUS_CAPACITY_BELOW_BOOKED": "La capacité du bus sélectionné ({{total}}) est inférieure aux places déjà réservées ({{booked}}).",
+        "MAX_BOOKING_EXCEEDS_BUS": "Le plafond de réservation dépasse la capacité du bus ({{max}}).",
+        "BUS_CAPACITY_BELOW_OCCUPANCY": "La capacité du bus sélectionné ({{total}}) est inférieure à l'occupation actuelle ({{booked}}).",
         "COVERAGE_TITLE": "Points de ramassage/dépose manquants",
         "MISSING_PICKUP_FOR_STOP": "La ville {{place}} (arrêt d'embarquement) nécessite au moins un point de ramassage.",
         "MISSING_DROPOFF_FOR_STOP": "La ville {{place}} (arrêt de débarquement) nécessite au moins un point de dépose."
@@ -421,10 +422,10 @@
     "EDIT_MODE": {
       "SUBMIT": "Enregistrer les modifications",
       "SEGMENTS_FROZEN": "Les segments sont figés après la création et ne peuvent pas être modifiés.",
-      "EXPRESS_FARES_FROZEN": "Les tarifs express ne peuvent pas être modifiés depuis ce formulaire. Utilisez la gestion dédiée des tarifs express.",
-      "EXPRESS_FARES_SCHEDULED": "Les tarifs express peuvent être ajoutés, supprimés ou modifiés tant que le voyage est planifié.",
-      "EXPRESS_FARES_ACTIVE": "Pour un voyage actif, seuls le prix, la période de validité et l'état actif du tarif express peuvent être modifiés. La couverture des segments reste figée.",
-      "EXPRESS_FARES_READONLY": "Ce voyage est terminé ou annulé. Les tarifs express sont en lecture seule.",
+      "EXPRESS_SEGMENTS_FROZEN": "Les segments express ne peuvent pas être modifiés depuis ce formulaire. Utilisez la gestion dédiée des segments express.",
+      "EXPRESS_SEGMENTS_SCHEDULED": "Les segments express peuvent être ajoutés, supprimés ou modifiés tant que le voyage est planifié.",
+      "EXPRESS_SEGMENTS_ACTIVE": "Pour un voyage actif, seuls le prix, la période de validité et l'état actif du segment express peuvent être modifiés. La couverture des segments reste figée.",
+      "EXPRESS_SEGMENTS_READONLY": "Ce voyage est terminé ou annulé. Les segments express sont en lecture seule.",
       "ACTIVE_WARNING": "Ce voyage est actif. La date de départ et la devise ne peuvent pas être modifiées.",
       "READONLY_WARNING": "Ce voyage est terminé ou annulé. Tous les champs sont en lecture seule."
     }
@@ -506,6 +507,7 @@
       "FIRST_NAME": "Prénom",
       "LAST_NAME": "Nom de famille",
       "AVAILABLE_SEATS": "Places disponibles",
+      "ROUTE_REQUIRES_ACTIVE_EXPRESS_SEGMENT": "Ce trajet multi-segments est indisponible car aucun segment express actif ne le couvre exactement.",
       "PASSENGER_LABEL": "Passager",
       "SELECT_TRIP": "Sélectionner un voyage",
       "NO_TRIPS": "Aucun voyage actif trouvé.",

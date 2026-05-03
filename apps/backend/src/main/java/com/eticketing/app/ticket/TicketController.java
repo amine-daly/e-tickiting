@@ -262,7 +262,7 @@ public class TicketController {
         payload.put("companyId", ticket.getTarget() != null ? ticket.getTarget().getCompany() : null);
         payload.put("posId", ticket.getTarget() != null ? ticket.getTarget().getPos() : null);
         payload.put("segmentIds", ticket.getSegmentIds());
-        payload.put("expressId", ticket.getExpressId());
+        payload.put("expressSegmentId", ticket.getExpressSegmentId());
         payload.put("pickupPointId", ticket.getPickupPointId());
         payload.put("dropoffPointId", ticket.getDropoffPointId());
         payload.put("passengerId", ticket.getPassengerId());

@@ -5,6 +5,7 @@ import { catchError, finalize, map, tap } from 'rxjs/operators';
 
 import { Ticket, TicketStatus } from '../../core/models/ticket.model';
 import { PaginateResponse } from '../../core/models/paginate-model';
+import { environment } from 'src/environments/environment';
 
 export interface TicketEmailResponse {
   status: string;
@@ -13,8 +14,8 @@ export interface TicketEmailResponse {
 
 @Injectable({ providedIn: 'root' })
 export class TicketService {
-  private readonly ticketsUrl = '/api/tickets';
-  private readonly bookingsUrl = '/api/bookings';
+  private readonly ticketsUrl = `${environment.apiBase}/tickets`;
+  private readonly bookingsUrl = `${environment.apiBase}/bookings`;
   private loading = new BehaviorSubject<boolean>(false);
   private tickets = new BehaviorSubject<Ticket[]>([]);
   private pagination = new BehaviorSubject<{ count: number; isLast: boolean }>({

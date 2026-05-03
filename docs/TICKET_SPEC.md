@@ -1,6 +1,6 @@
 # Ticket And Order Business Specification
 
-Last updated: April 2026
+Last updated: May 2026
 Status: Aligned with the current ticket, order, and booking implementation
 
 ## 1. Purpose
@@ -23,43 +23,43 @@ The live model is order-aware. A single booking may produce one ticket or an ord
 
 ## 3. Ticket Document Shape
 
-| Field | Meaning |
-| --- | --- |
-| `tripId` | Trip reference |
-| `orderId` | Optional group order reference |
-| `target.company` | Owning company |
-| `target.pos` | Optional original POS attribution |
-| `segmentIds` | Ordered covered segments |
-| `expressId` | Optional express fare reference |
-| `pickupPointId` | Boarding point snapshot |
-| `dropoffPointId` | Dropoff point snapshot |
-| `passengerId` | Registered passenger reference when present |
-| `guestFirstName` / `guestLastName` | Guest passenger fallback names |
-| `seatNo` | Optional seat assignment |
-| `appliedPrice` | Immutable price snapshot |
-| `currency` | Immutable currency snapshot |
-| `lang` | Ticket language snapshot |
-| `status` | `PENDING`, `CONFIRMED`, `EXPIRED`, `CANCELLED` |
-| `idempotencyKey` | Unique replay key |
-| `expiresAt` | Pending hold expiry |
-| `createdAt`, `confirmedAt`, `cancelledAt` | Lifecycle timestamps |
+| Field                                     | Meaning                                        |
+| ----------------------------------------- | ---------------------------------------------- |
+| `tripId`                                  | Trip reference                                 |
+| `orderId`                                 | Optional group order reference                 |
+| `target.company`                          | Owning company                                 |
+| `target.pos`                              | Optional original POS attribution              |
+| `segmentIds`                              | Ordered covered segments                       |
+| `expressSegmentId`                        | Optional express segment reference             |
+| `pickupPointId`                           | Boarding point snapshot                        |
+| `dropoffPointId`                          | Dropoff point snapshot                         |
+| `passengerId`                             | Registered passenger reference when present    |
+| `guestFirstName` / `guestLastName`        | Guest passenger fallback names                 |
+| `seatNo`                                  | Optional seat assignment                       |
+| `appliedPrice`                            | Immutable price snapshot                       |
+| `currency`                                | Immutable currency snapshot                    |
+| `lang`                                    | Ticket language snapshot                       |
+| `status`                                  | `PENDING`, `CONFIRMED`, `EXPIRED`, `CANCELLED` |
+| `idempotencyKey`                          | Unique replay key                              |
+| `expiresAt`                               | Pending hold expiry                            |
+| `createdAt`, `confirmedAt`, `cancelledAt` | Lifecycle timestamps                           |
 
 ## 4. Order Document Shape
 
-| Field | Meaning |
-| --- | --- |
-| `tripId` | Shared trip reference |
-| `target.company` | Owning company |
-| `target.pos` | Optional POS attribution |
-| `contactCustomerId` | Order contact customer |
-| `ticketIds` | Child tickets |
-| `passengers` | Passenger manifest with names, seats, and ticket IDs |
-| `totalPrice` | Group total snapshot |
-| `currency` | Currency snapshot |
-| `status` | `PENDING`, `CONFIRMED`, `EXPIRED`, `CANCELLED` |
-| `idempotencyKey` | Unique replay key for the order |
-| `expiresAt` | Hold expiry shared by the child tickets |
-| `createdAt`, `confirmedAt`, `cancelledAt` | Lifecycle timestamps |
+| Field                                     | Meaning                                              |
+| ----------------------------------------- | ---------------------------------------------------- |
+| `tripId`                                  | Shared trip reference                                |
+| `target.company`                          | Owning company                                       |
+| `target.pos`                              | Optional POS attribution                             |
+| `contactCustomerId`                       | Order contact customer                               |
+| `ticketIds`                               | Child tickets                                        |
+| `passengers`                              | Passenger manifest with names, seats, and ticket IDs |
+| `totalPrice`                              | Group total snapshot                                 |
+| `currency`                                | Currency snapshot                                    |
+| `status`                                  | `PENDING`, `CONFIRMED`, `EXPIRED`, `CANCELLED`       |
+| `idempotencyKey`                          | Unique replay key for the order                      |
+| `expiresAt`                               | Hold expiry shared by the child tickets              |
+| `createdAt`, `confirmedAt`, `cancelledAt` | Lifecycle timestamps                                 |
 
 ## 5. Booking Flows
 
@@ -70,10 +70,11 @@ The live model is order-aware. A single booking may produce one ticket or an ord
 Current behavior:
 
 1. Validate the route and trip state.
-2. Reserve inventory on the trip segments.
-3. Create a `PENDING` ticket.
-4. Persist the hold expiry using the fixed 600-second duration.
-5. Confirm, cancel, or expire the ticket through dedicated endpoints and workers.
+2. Resolve the trip segment chain and enforce the inventory owner rule: single-segment routes stay local, while multi-segment routes require an active matching express segment.
+3. Reserve inventory on the trip segments (local uses `segments.bookedCount` + `maxBooking`; express uses `expressSegments.bookedCount` + physical capacity).
+4. Create a `PENDING` ticket.
+5. Persist the hold expiry using the fixed 600-second duration.
+6. Confirm, cancel, or expire the ticket through dedicated endpoints and workers.
 
 ### 5.2 Group booking
 
@@ -120,8 +121,11 @@ Current behavior:
 
 ### Inventory ownership
 
-- Segment inventory lives on the trip segments.
-- `SeatReservationService` performs atomic segment-count updates.
+- Segment inventory lives on the trip segments via `maxBooking` and `bookedCount` (local tickets only).
+- Express tickets are tracked on `expressSegments.bookedCount`; physical occupancy is local + express.
+- Single-segment tickets must not carry `expressSegmentId`.
+- Multi-segment tickets must carry an `expressSegmentId` that exactly matches the reserved segment chain.
+- `SeatReservationService` performs atomic updates for local or express reservations.
 - Group reservations reserve or release the full passenger count across the full segment chain.
 
 ### Expiry workers
@@ -205,4 +209,3 @@ The order document is the current source for the master confirmation email sent 
 - Seat-hold values on the trip document
 - Any assumption that a booking always maps to one ticket
 - Any UI that hides the order-level manifest once group bookings exist
-

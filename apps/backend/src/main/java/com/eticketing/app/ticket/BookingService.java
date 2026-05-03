@@ -28,8 +28,9 @@ import java.util.Set;
 /**
  * Booking orchestrator — TRIP_SPEC section 10.
  * <p>
- * 7-step flow: resolve segments → check express fare → calculate price → atomic
- * CAS reserve → create PENDING ticket → rollback on failure → return ticket.
+ * 7-step flow: resolve segments → check express segment → calculate price →
+ * atomic CAS reserve → create PENDING ticket → rollback on failure → return
+ * ticket.
  */
 @Service
 @RequiredArgsConstructor
@@ -101,26 +102,17 @@ public class BookingService {
             throw new BadRequestException("NO_SEGMENT_CHAIN: no continuous segment path from " + fromPlaceId + " to " + toPlaceId);
         }
 
-        // ── 3. Check express fare match ─────────────────────────────────
-        BigDecimal appliedPrice;
-        String expressId = null;
-
-        Optional<ExpressFareType> matchingFare = findMatchingExpressFare(trip.getExpressFares(), segmentIds);
-        if (matchingFare.isPresent()) {
-            ExpressFareType fare = matchingFare.get();
-            appliedPrice = fare.getPrice();
-            expressId = fare.getExpressId();
-        } else {
-            // Sum base prices of individual segments
-            appliedPrice = calculateSegmentSum(trip.getSegments(), segmentIds);
-        }
+        // ── 3. Resolve inventory owner + price ──────────────────────────
+        PricingSelection pricingSelection = selectPricingSelection(trip, segmentIds);
+        BigDecimal appliedPrice = pricingSelection.appliedPrice();
+        String expressSegmentId = pricingSelection.expressSegmentId();
 
         // ── 4. Validate pickup/dropoff ──────────────────────────────────
         validatePickupPoint(trip, pickupPointId, fromPlaceId);
         validateDropoffPoint(trip, dropoffPointId, toPlaceId);
 
         // ── 5. Atomic CAS reserve ───────────────────────────────────────
-        boolean reserved = seatReservationService.reserveSeats(tripId, segmentIds);
+        boolean reserved = seatReservationService.reserveSeats(tripId, segmentIds, expressSegmentId);
         if (!reserved) {
             throw new ConflictException("SEGMENT_CAPACITY_EXCEEDED: no seats available on one or more segments");
         }
@@ -136,7 +128,7 @@ public class BookingService {
                     .tripId(tripId)
                     .target(new TargetInput(resolvedCompanyId, posId))
                     .segmentIds(new ArrayList<>(segmentIds))
-                    .expressId(expressId)
+                    .expressSegmentId(expressSegmentId)
                     .pickupPointId(pickupPointId)
                     .dropoffPointId(dropoffPointId)
                     .passengerId(passengerId)
@@ -153,7 +145,7 @@ public class BookingService {
         } catch (Exception e) {
             // ── 7. Rollback CAS on DB error ─────────────────────────────
             LOG.error("Ticket creation failed, rolling back seat reservation for trip={}", tripId, e);
-            seatReservationService.releaseSeats(tripId, segmentIds);
+            seatReservationService.releaseSeats(tripId, segmentIds, expressSegmentId);
             throw e;
         }
     }
@@ -321,7 +313,7 @@ public class BookingService {
             ticket.setStatus(TicketStatusEnum.EXPIRED);
             ticket.setExpiresAt(Instant.now());
             TicketType saved = ticketRepository.save(ticket);
-            seatReservationService.releaseSeats(ticket.getTripId(), ticket.getSegmentIds());
+            seatReservationService.releaseSeats(ticket.getTripId(), ticket.getSegmentIds(), ticket.getExpressSegmentId());
             LOG.info("Pending ticket {} cancelled via expiry path - released {} segments on trip {}",
                     ticketId, ticket.getSegmentIds().size(), ticket.getTripId());
             return saved;
@@ -388,19 +380,36 @@ public class BookingService {
     }
 
     /**
-     * Finds an active express fare that exactly covers the given segment chain.
+     * Finds an active express segment that exactly covers the given segment
+     * chain.
      */
-    Optional<ExpressFareType> findMatchingExpressFare(List<ExpressFareType> expressFares, List<String> segmentIds) {
-        if (expressFares == null) {
+    Optional<ExpressSegmentType> findMatchingExpressSegment(List<ExpressSegmentType> expressSegments, List<String> segmentIds) {
+        if (expressSegments == null) {
             return Optional.empty();
         }
         Instant now = Instant.now();
-        return expressFares.stream()
-                .filter(ExpressFareType::isActive)
-                .filter(f -> f.getValidFrom() == null || !now.isBefore(f.getValidFrom()))
-                .filter(f -> f.getValidUntil() == null || !now.isAfter(f.getValidUntil()))
-                .filter(f -> f.getSegmentsCovered().equals(segmentIds))
+        return expressSegments.stream()
+                .filter(ExpressSegmentType::isActive)
+                .filter(segment -> segment.getValidFrom() == null || !now.isBefore(segment.getValidFrom()))
+                .filter(segment -> segment.getValidUntil() == null || !now.isAfter(segment.getValidUntil()))
+                .filter(segment -> segment.getSegmentsCovered() != null)
+                .filter(segment -> segment.getSegmentsCovered().equals(segmentIds))
                 .findFirst();
+    }
+
+    private PricingSelection selectPricingSelection(TripType trip, List<String> segmentIds) {
+        if (isMultiSegmentRoute(segmentIds)) {
+            ExpressSegmentType expressSegment = findMatchingExpressSegment(trip.getExpressSegments(), segmentIds)
+                    .orElseThrow(() -> new BadRequestException(
+                    "EXPRESS_SEGMENT_REQUIRED_FOR_MULTI_SEGMENT_ROUTE: route requires an active express segment"));
+            return new PricingSelection(expressSegment.getPrice(), expressSegment.getExpressSegmentId());
+        }
+
+        return new PricingSelection(calculateSegmentSum(trip.getSegments(), segmentIds), null);
+    }
+
+    private boolean isMultiSegmentRoute(List<String> segmentIds) {
+        return segmentIds != null && segmentIds.size() > 1;
     }
 
     /**
@@ -411,6 +420,10 @@ public class BookingService {
                 .filter(s -> segmentIds.contains(s.getSegmentId()))
                 .map(SegmentType::getBasePrice)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
+    }
+
+    private record PricingSelection(BigDecimal appliedPrice, String expressSegmentId) {
+
     }
 
     // ════════════════════════════════════════════════════════════════════
@@ -479,16 +492,10 @@ public class BookingService {
             throw new BadRequestException("NO_SEGMENT_CHAIN: no continuous segment path from " + req.getFromPlaceId() + " to " + req.getToPlaceId());
         }
 
-        // ── 3. Price (same for every passenger on this trip/route) ──────
-        BigDecimal unitPrice;
-        String expressId = null;
-        Optional<ExpressFareType> matchingFare = findMatchingExpressFare(trip.getExpressFares(), segmentIds);
-        if (matchingFare.isPresent()) {
-            unitPrice = matchingFare.get().getPrice();
-            expressId = matchingFare.get().getExpressId();
-        } else {
-            unitPrice = calculateSegmentSum(trip.getSegments(), segmentIds);
-        }
+        // ── 3. Resolve inventory owner + price ──────────────────────────
+        PricingSelection pricingSelection = selectPricingSelection(trip, segmentIds);
+        BigDecimal unitPrice = pricingSelection.appliedPrice();
+        String expressSegmentId = pricingSelection.expressSegmentId();
 
         // ── 4. Validate pickup/dropoff ──────────────────────────────────
         validatePickupPoint(trip, req.getPickupPointId(), req.getFromPlaceId());
@@ -497,7 +504,7 @@ public class BookingService {
         int passengerCount = req.getPassengers().size();
 
         // ── 5. Atomic CAS reserve for the entire group ──────────────────
-        boolean reserved = seatReservationService.reserveSeats(req.getTripId(), segmentIds, passengerCount);
+        boolean reserved = seatReservationService.reserveSeats(req.getTripId(), segmentIds, expressSegmentId, passengerCount);
         if (!reserved) {
             throw new ConflictException("SEGMENT_CAPACITY_EXCEEDED: not enough seats for " + passengerCount + " passengers");
         }
@@ -509,7 +516,7 @@ public class BookingService {
             String ticketCurrency = resolveTicketCurrency(trip);
             String ticketLanguage = TicketLanguage.fromCode(req.getLang()).getCode();
             BigDecimal totalPrice = unitPrice.multiply(BigDecimal.valueOf(passengerCount));
-            String finalExpressId = expressId;
+            String finalExpressSegmentId = expressSegmentId;
 
             // Create tickets
             List<TicketType> tickets = new ArrayList<>();
@@ -525,7 +532,7 @@ public class BookingService {
                         .tripId(req.getTripId())
                         .target(new TargetInput(resolvedCompanyId, posId))
                         .segmentIds(new ArrayList<>(segmentIds))
-                        .expressId(finalExpressId)
+                        .expressSegmentId(finalExpressSegmentId)
                         .pickupPointId(req.getPickupPointId())
                         .dropoffPointId(req.getDropoffPointId())
                         .passengerId(isGuest ? null : pe.getPassengerId())
@@ -580,7 +587,7 @@ public class BookingService {
             return savedOrder;
         } catch (Exception e) {
             LOG.error("Group booking failed, rolling back {} seats on trip={}", passengerCount, req.getTripId(), e);
-            seatReservationService.releaseSeats(req.getTripId(), segmentIds, passengerCount);
+            seatReservationService.releaseSeats(req.getTripId(), segmentIds, expressSegmentId, passengerCount);
             throw e;
         }
     }
@@ -638,22 +645,18 @@ public class BookingService {
         if (order.getStatus() == OrderStatusEnum.PENDING) {
             // Expire path — release seats for all tickets
             Instant now = Instant.now();
-            int seatCount = 0;
-            List<String> segmentIds = List.of();
+            List<TicketType> expiredTickets = new ArrayList<>();
             for (TicketType ticket : tickets) {
                 if (ticket.getStatus() == TicketStatusEnum.PENDING) {
                     ticket.setStatus(TicketStatusEnum.EXPIRED);
                     ticket.setExpiresAt(now);
-                    seatCount++;
-                    if (segmentIds.isEmpty()) {
-                        segmentIds = ticket.getSegmentIds();
-                    }
+                    expiredTickets.add(ticket);
                 }
             }
             ticketRepository.saveAll(tickets);
 
-            if (seatCount > 0 && !segmentIds.isEmpty()) {
-                seatReservationService.releaseSeats(order.getTripId(), segmentIds, seatCount);
+            if (!expiredTickets.isEmpty()) {
+                seatReservationService.releaseReservations(order.getTripId(), expiredTickets);
             }
 
             order.setStatus(OrderStatusEnum.EXPIRED);
@@ -693,9 +696,9 @@ public class BookingService {
      * Cancels a single ticket within an order while keeping the remaining
      * active members linked to the order.
      * <p>
-     * PENDING order members expire immediately and release one seat.
-     * CONFIRMED order members are cancelled, release one seat immediately, and
-     * still create a refund request for financial follow-up.
+     * PENDING order members expire immediately and release one seat. CONFIRMED
+     * order members are cancelled, release one seat immediately, and still
+     * create a refund request for financial follow-up.
      */
     public OrderType cancelOrderTicket(String orderId, String ticketId, RefundRepository refundRepository) {
         OrderType order = orderRepository.findById(orderId)
@@ -717,12 +720,12 @@ public class BookingService {
             ticket.setStatus(TicketStatusEnum.EXPIRED);
             ticket.setExpiresAt(now);
             ticketRepository.save(ticket);
-            seatReservationService.releaseSeats(ticket.getTripId(), ticket.getSegmentIds());
+            seatReservationService.releaseSeats(ticket.getTripId(), ticket.getSegmentIds(), ticket.getExpressSegmentId());
         } else if (ticket.getStatus() == TicketStatusEnum.CONFIRMED) {
             ticket.setStatus(TicketStatusEnum.CANCELLED);
             ticket.setCancelledAt(now);
             ticketRepository.save(ticket);
-            seatReservationService.releaseSeats(ticket.getTripId(), ticket.getSegmentIds());
+            seatReservationService.releaseSeats(ticket.getTripId(), ticket.getSegmentIds(), ticket.getExpressSegmentId());
 
             RefundType refund = RefundType.builder()
                     .ticketId(ticketId)
@@ -737,7 +740,7 @@ public class BookingService {
         } else {
             throw new ConflictException(
                     "INVALID_ORDER_TICKET_TRANSITION: only PENDING or CONFIRMED order tickets can be cancelled, current="
-                            + ticket.getStatus());
+                    + ticket.getStatus());
         }
 
         return reconcileOrderAfterMemberCancellation(order, tickets, now);

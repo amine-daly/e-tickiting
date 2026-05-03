@@ -63,6 +63,18 @@ public class TripController {
         return ResponseEntity.ok(enricher.enrich(trip));
     }
 
+    @Operation(summary = "Get backend-calculated route availability for a trip")
+    @GetMapping("/{id}/route-availability")
+    public ResponseEntity<TripRouteAvailabilityResponse> getRouteAvailability(
+            @PathVariable String id,
+            @RequestParam String originPlaceId,
+            @RequestParam String destinationPlaceId,
+            @AuthenticationPrincipal User principal) {
+        String companyId = resolveCompanyId(principal);
+        TripType trip = tripService.getById(id, companyId);
+        return ResponseEntity.ok(enricher.routeAvailability(trip, originPlaceId, destinationPlaceId));
+    }
+
     @Operation(summary = "List trips for the authenticated user's company")
     @GetMapping
     public ResponseEntity<PaginateResponseType<TripResponse>> listTrips(
@@ -128,7 +140,7 @@ public class TripController {
                 destinationPlaceId,
                 page,
                 limit);
-        var content = enricher.enrich(result.getContent());
+        var content = enricher.enrich(result.getContent(), originPlaceId, destinationPlaceId);
         return ResponseEntity.ok(new PaginateResponseType<>(
                 content, result.getTotalElements(), result.isLast()));
     }
@@ -192,56 +204,56 @@ public class TripController {
         return ResponseEntity.ok(enricher.enrich(trip));
     }
 
-    @Operation(summary = "Update segment max seats")
-    @PatchMapping("/{id}/segments/{segmentId}/max-seats")
-    public ResponseEntity<TripResponse> updateSegmentMaxSeats(
+    @Operation(summary = "Update segment max booking")
+    @PatchMapping("/{id}/segments/{segmentId}/max-booking")
+    public ResponseEntity<TripResponse> updateSegmentMaxBooking(
             @PathVariable String id,
             @PathVariable String segmentId,
             @RequestBody Map<String, Integer> body,
             @AuthenticationPrincipal User principal) {
         String companyId = resolveCompanyId(principal);
-        Integer maxSeats = body.get("maxSeats");
-        if (maxSeats == null) {
-            throw new BadRequestException("maxSeats is required");
+        Integer maxBooking = body.get("maxBooking");
+        if (maxBooking == null) {
+            throw new BadRequestException("maxBooking is required");
         }
-        TripType trip = tripService.updateSegmentMaxSeats(id, segmentId, maxSeats, companyId);
+        TripType trip = tripService.updateSegmentMaxBooking(id, segmentId, maxBooking, companyId);
         return ResponseEntity.ok(enricher.enrich(trip));
     }
 
     // ════════════════════════════════════════════════════════════════════
-    // EXPRESS FARE SUB-RESOURCE
+    // EXPRESS SEGMENT SUB-RESOURCE
     // ════════════════════════════════════════════════════════════════════
-    @Operation(summary = "Add an express fare to a trip")
-    @PostMapping("/{id}/express-fares")
-    public ResponseEntity<TripResponse> addExpressFare(
+    @Operation(summary = "Add an express segment to a trip")
+    @PostMapping("/{id}/express-segments")
+    public ResponseEntity<TripResponse> addExpressSegment(
             @PathVariable String id,
-            @Valid @RequestBody ExpressFareRequest req,
+            @Valid @RequestBody ExpressSegmentRequest req,
             @AuthenticationPrincipal User principal) {
         String companyId = resolveCompanyId(principal);
-        TripType trip = tripService.addExpressFare(id, req, companyId);
+        TripType trip = tripService.addExpressSegment(id, req, companyId);
         return ResponseEntity.status(HttpStatus.CREATED).body(enricher.enrich(trip));
     }
 
-    @Operation(summary = "Update an express fare")
-    @PutMapping("/{id}/express-fares/{expressId}")
-    public ResponseEntity<TripResponse> updateExpressFare(
+    @Operation(summary = "Update an express segment")
+    @PutMapping("/{id}/express-segments/{expressSegmentId}")
+    public ResponseEntity<TripResponse> updateExpressSegment(
             @PathVariable String id,
-            @PathVariable String expressId,
-            @Valid @RequestBody ExpressFareUpdateRequest req,
+            @PathVariable String expressSegmentId,
+            @Valid @RequestBody ExpressSegmentUpdateRequest req,
             @AuthenticationPrincipal User principal) {
         String companyId = resolveCompanyId(principal);
-        TripType trip = tripService.updateExpressFare(id, expressId, req, companyId);
+        TripType trip = tripService.updateExpressSegment(id, expressSegmentId, req, companyId);
         return ResponseEntity.ok(enricher.enrich(trip));
     }
 
-    @Operation(summary = "Delete/deactivate an express fare")
-    @DeleteMapping("/{id}/express-fares/{expressId}")
-    public ResponseEntity<TripResponse> deleteExpressFare(
+    @Operation(summary = "Delete/deactivate an express segment")
+    @DeleteMapping("/{id}/express-segments/{expressSegmentId}")
+    public ResponseEntity<TripResponse> deleteExpressSegment(
             @PathVariable String id,
-            @PathVariable String expressId,
+            @PathVariable String expressSegmentId,
             @AuthenticationPrincipal User principal) {
         String companyId = resolveCompanyId(principal);
-        TripType trip = tripService.deleteExpressFare(id, expressId, companyId);
+        TripType trip = tripService.deleteExpressSegment(id, expressSegmentId, companyId);
         return ResponseEntity.ok(enricher.enrich(trip));
     }
 

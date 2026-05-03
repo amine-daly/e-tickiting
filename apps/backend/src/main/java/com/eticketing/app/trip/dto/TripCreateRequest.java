@@ -18,7 +18,7 @@ import java.util.List;
  * {@code segmentInputs} are ordered: index 0 maps to the segment between
  * commercial stop 0 and 1, etc.
  * <p>
- * {@code expressFares[].segmentIndices} reference 0-based indices into the
+ * {@code expressSegments[].segmentIndices} reference 0-based indices into the
  * generated segments array (resolved to IDs after generation).
  */
 @Data
@@ -60,9 +60,9 @@ public class TripCreateRequest {
     @Valid
     private List<SegmentInput> segmentInputs;
 
-    // ── Layer 9 — Express Fares (optional) ──────────────────────────────
+    // ── Layer 9 — Express Segments (optional) ───────────────────────────
     @Valid
-    private List<ExpressFareInput> expressFares;
+    private List<ExpressSegmentInput> expressSegments;
 
     // ── Nested input types ──────────────────────────────────────────────
     @Data
@@ -128,7 +128,7 @@ public class TripCreateRequest {
         private BigDecimal basePrice;
         @NotNull
         @Positive
-        private Integer maxSeats;
+        private Integer maxBooking;
         @NotNull
         @Positive
         private Double distanceKm;
@@ -136,7 +136,7 @@ public class TripCreateRequest {
     }
 
     @Data
-    public static class ExpressFareInput {
+    public static class ExpressSegmentInput {
 
         @NotEmpty
         private List<Integer> segmentIndices;

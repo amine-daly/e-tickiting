@@ -156,6 +156,14 @@
               {{ "TICKETS.SELL.AVAILABLE_SEATS" | translate }}:
               {{ availableSeats }}
             </span>
+            <div
+              *ngIf="routeBlockedByExpressSegmentRule"
+              class="text-danger small mt-2"
+            >
+              {{
+                "TICKETS.SELL.ROUTE_REQUIRES_ACTIVE_EXPRESS_SEGMENT" | translate
+              }}
+            </div>
           </div>
         </div>
 

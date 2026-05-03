@@ -56,8 +56,8 @@ public class TripService {
     // ════════════════════════════════════════════════════════════════════
     /**
      * Full creation pipeline per TRIP_SPEC: 1. Validate stops → 2. Validate bus
-     * → 3. Bus lock check → 4. Generate segments → 5. Validate express fares →
-     * 6. Validate pickup/dropoff → 7. Persist.
+     * → 3. Bus lock check → 4. Generate segments → 5. Validate express segments
+     * → 6. Validate pickup/dropoff → 7. Persist.
      */
     public TripType create(TripCreateRequest req, String companyId) {
         // ── 1. Build and validate stops ─────────────────────────────────
@@ -94,52 +94,53 @@ public class TripService {
         List<SegmentGenerator.SegmentInput> segInputs = req.getSegmentInputs().stream()
                 .map(si -> new SegmentGenerator.SegmentInput(
                 si.getBasePrice(),
-                si.getMaxSeats(),
+                si.getMaxBooking(),
                 si.getDistanceKm(),
                 si.getDurationMinutesOverride()))
                 .toList();
         List<SegmentType> segments = SegmentGenerator.generate(stops, segInputs, bus.getTotalSeats());
 
-        // Validate maxSeats <= bus.totalSeats
+        // Validate maxBooking <= bus.totalSeats
         for (SegmentType seg : segments) {
-            if (seg.getMaxSeats() > bus.getTotalSeats()) {
+            if (seg.getMaxBooking() > bus.getTotalSeats()) {
                 throw new BadRequestException(
-                        "MAX_SEATS_EXCEEDS_BUS: segment " + seg.getSequence()
-                        + " maxSeats (" + seg.getMaxSeats()
+                        "MAX_BOOKING_EXCEEDS_BUS: segment " + seg.getSequence()
+                        + " maxBooking (" + seg.getMaxBooking()
                         + ") exceeds bus totalSeats (" + bus.getTotalSeats() + ")");
             }
         }
 
-        // ── 5. Build and validate express fares ─────────────────────────
-        List<ExpressFareType> expressFares = new ArrayList<>();
-        if (req.getExpressFares() != null) {
-            for (TripCreateRequest.ExpressFareInput efi : req.getExpressFares()) {
-                List<String> segmentIds = efi.getSegmentIndices().stream()
+        // ── 5. Build and validate express segments ──────────────────────
+        List<ExpressSegmentType> expressSegments = new ArrayList<>();
+        if (req.getExpressSegments() != null) {
+            for (TripCreateRequest.ExpressSegmentInput esi : req.getExpressSegments()) {
+                List<String> segmentIds = esi.getSegmentIndices().stream()
                         .map(idx -> {
                             if (idx < 0 || idx >= segments.size()) {
                                 throw new BadRequestException(
-                                        "INVALID_EXPRESS_FARE_CHAIN: segmentIndex " + idx + " out of range");
+                                        "INVALID_EXPRESS_SEGMENT_CHAIN: segmentIndex " + idx + " out of range");
                             }
                             return segments.get(idx).getSegmentId();
                         })
                         .toList();
 
-                String fromPlaceId = segments.get(efi.getSegmentIndices().get(0)).getFromPlaceId();
-                String toPlaceId = segments.get(efi.getSegmentIndices().get(efi.getSegmentIndices().size() - 1)).getToPlaceId();
+                String fromPlaceId = segments.get(esi.getSegmentIndices().get(0)).getFromPlaceId();
+                String toPlaceId = segments.get(esi.getSegmentIndices().get(esi.getSegmentIndices().size() - 1)).getToPlaceId();
 
-                ExpressFareType fare = ExpressFareType.builder()
-                        .expressId(UUID.randomUUID().toString())
+                ExpressSegmentType expressSegment = ExpressSegmentType.builder()
+                        .expressSegmentId(UUID.randomUUID().toString())
                         .fromPlaceId(fromPlaceId)
                         .toPlaceId(toPlaceId)
                         .segmentsCovered(segmentIds)
-                        .price(efi.getPrice())
-                        .validFrom(efi.getValidFrom())
-                        .validUntil(efi.getValidUntil())
-                        .active(efi.getActive() != null ? efi.getActive() : true)
+                        .price(esi.getPrice())
+                        .bookedCount(0)
+                        .validFrom(esi.getValidFrom())
+                        .validUntil(esi.getValidUntil())
+                        .active(esi.getActive() != null ? esi.getActive() : true)
                         .build();
 
-                ExpressFareValidator.validate(fare, segments);
-                expressFares.add(fare);
+                ExpressSegmentValidator.validate(expressSegment, segments);
+                expressSegments.add(expressSegment);
             }
         }
 
@@ -190,7 +191,7 @@ public class TripService {
                 .pickupPoints(pickupPoints)
                 .dropoffPoints(dropoffPoints)
                 .segments(segments)
-                .expressFares(expressFares)
+                .expressSegments(expressSegments)
                 .build();
 
         return tripRepository.save(trip);
@@ -500,7 +501,7 @@ public class TripService {
     }
 
     // ════════════════════════════════════════════════════════════════════
-    // SEGMENT FIELD UPDATES (price, maxSeats)
+    // SEGMENT FIELD UPDATES (price, maxBooking)
     // ════════════════════════════════════════════════════════════════════
     /**
      * Updates a single segment's basePrice (always allowed — tickets are
@@ -515,77 +516,84 @@ public class TripService {
     }
 
     /**
-     * Updates a single segment's maxSeats. Blocked if new value < current
-     * bookedSeats.
+     * Updates a single segment's maxBooking. Blocked if new value < current
+     * bookedCount.
      */
-    public TripType updateSegmentMaxSeats(String tripId, String segmentId,
-            int newMaxSeats, String companyId) {
+    public TripType updateSegmentMaxBooking(String tripId, String segmentId,
+            int newMaxBooking, String companyId) {
         TripType trip = getById(tripId, companyId);
         SegmentType seg = findSegment(trip, segmentId);
-        if (newMaxSeats < seg.getBookedSeats()) {
+        BusType bus = busService.getById(trip.getBus().getBusId());
+        if (newMaxBooking > bus.getTotalSeats()) {
             throw new BadRequestException(
-                    "MAX_SEATS_BELOW_BOOKED: newMaxSeats (" + newMaxSeats
-                    + ") < current bookedSeats (" + seg.getBookedSeats() + ")");
+                    "MAX_BOOKING_EXCEEDS_BUS: newMaxBooking (" + newMaxBooking
+                    + ") exceeds bus totalSeats (" + bus.getTotalSeats() + ")");
         }
-        seg.setMaxSeats(newMaxSeats);
+        if (newMaxBooking < seg.getBookedCount()) {
+            throw new BadRequestException(
+                    "MAX_BOOKING_BELOW_BOOKED_COUNT: newMaxBooking (" + newMaxBooking
+                    + ") < current bookedCount (" + seg.getBookedCount() + ")");
+        }
+        seg.setMaxBooking(newMaxBooking);
         return tripRepository.save(trip);
     }
 
     // ════════════════════════════════════════════════════════════════════
-    // EXPRESS FARE SUB-RESOURCE
+    // EXPRESS SEGMENT SUB-RESOURCE
     // ════════════════════════════════════════════════════════════════════
-    public TripType addExpressFare(String tripId, ExpressFareRequest req, String companyId) {
+    public TripType addExpressSegment(String tripId, ExpressSegmentRequest req, String companyId) {
         TripType trip = getById(tripId, companyId);
-        assertExpressFareMutationAllowed(trip, true);
+        assertExpressSegmentMutationAllowed(trip, true);
 
-        ExpressFareType fare = ExpressFareType.builder()
-                .expressId(UUID.randomUUID().toString())
+        ExpressSegmentType expressSegment = ExpressSegmentType.builder()
+                .expressSegmentId(UUID.randomUUID().toString())
                 .fromPlaceId(req.getFromPlaceId())
                 .toPlaceId(req.getToPlaceId())
                 .segmentsCovered(req.getSegmentIds())
                 .price(req.getPrice())
+                .bookedCount(0)
                 .validFrom(req.getValidFrom())
                 .validUntil(req.getValidUntil())
                 .active(req.getActive() != null ? req.getActive() : true)
                 .build();
 
-        ExpressFareValidator.validate(fare, trip.getSegments());
-        trip.getExpressFares().add(fare);
+        ExpressSegmentValidator.validate(expressSegment, trip.getSegments());
+        trip.getExpressSegments().add(expressSegment);
         return tripRepository.save(trip);
     }
 
-    public TripType updateExpressFare(String tripId, String expressId,
-            ExpressFareUpdateRequest req, String companyId) {
+    public TripType updateExpressSegment(String tripId, String expressSegmentId,
+            ExpressSegmentUpdateRequest req, String companyId) {
         TripType trip = getById(tripId, companyId);
-        assertExpressFareMutationAllowed(trip, false);
-        ExpressFareType fare = findExpressFare(trip, expressId);
+        assertExpressSegmentMutationAllowed(trip, false);
+        ExpressSegmentType expressSegment = findExpressSegment(trip, expressSegmentId);
 
         if (req.getPrice() != null) {
-            fare.setPrice(req.getPrice());
+            expressSegment.setPrice(req.getPrice());
         }
         if (req.getValidFrom() != null) {
-            fare.setValidFrom(req.getValidFrom());
+            expressSegment.setValidFrom(req.getValidFrom());
         }
         if (req.getValidUntil() != null) {
-            fare.setValidUntil(req.getValidUntil());
+            expressSegment.setValidUntil(req.getValidUntil());
         }
         if (req.getActive() != null) {
-            fare.setActive(req.getActive());
+            expressSegment.setActive(req.getActive());
         }
 
         return tripRepository.save(trip);
     }
 
-    public TripType deleteExpressFare(String tripId, String expressId, String companyId) {
+    public TripType deleteExpressSegment(String tripId, String expressSegmentId, String companyId) {
         TripType trip = getById(tripId, companyId);
-        assertExpressFareMutationAllowed(trip, false);
+        assertExpressSegmentMutationAllowed(trip, false);
 
         if (trip.getStatus() == TripStatusEnum.ACTIVE) {
             // Deactivate instead of delete when ACTIVE
-            ExpressFareType fare = findExpressFare(trip, expressId);
-            fare.setActive(false);
+            ExpressSegmentType expressSegment = findExpressSegment(trip, expressSegmentId);
+            expressSegment.setActive(false);
         } else {
-            trip.getExpressFares().removeIf(f -> f.getExpressId().equals(expressId));
+            trip.getExpressSegments().removeIf(segment -> segment.getExpressSegmentId().equals(expressSegmentId));
         }
         return tripRepository.save(trip);
     }
@@ -705,22 +713,22 @@ public class TripService {
                 .orElseThrow(() -> new NotFoundException("Segment not found: " + segmentId));
     }
 
-    private ExpressFareType findExpressFare(TripType trip, String expressId) {
-        return trip.getExpressFares().stream()
-                .filter(f -> f.getExpressId().equals(expressId))
+    private ExpressSegmentType findExpressSegment(TripType trip, String expressSegmentId) {
+        return trip.getExpressSegments().stream()
+                .filter(segment -> segment.getExpressSegmentId().equals(expressSegmentId))
                 .findFirst()
-                .orElseThrow(() -> new NotFoundException("Express fare not found: " + expressId));
+                .orElseThrow(() -> new NotFoundException("Express segment not found: " + expressSegmentId));
     }
 
-    private void assertExpressFareMutationAllowed(TripType trip, boolean adding) {
+    private void assertExpressSegmentMutationAllowed(TripType trip, boolean adding) {
         if (trip.getStatus() == TripStatusEnum.COMPLETED
                 || trip.getStatus() == TripStatusEnum.CANCELLED) {
             throw new BadRequestException(
-                    "BLOCKED: express fares cannot be modified on " + trip.getStatus() + " trip");
+                    "BLOCKED: express segments cannot be modified on " + trip.getStatus() + " trip");
         }
 
         if (adding && trip.getStatus() == TripStatusEnum.ACTIVE) {
-            throw new BadRequestException("BLOCKED: cannot add express fares to ACTIVE trip");
+            throw new BadRequestException("BLOCKED: cannot add express segments to ACTIVE trip");
         }
     }
 

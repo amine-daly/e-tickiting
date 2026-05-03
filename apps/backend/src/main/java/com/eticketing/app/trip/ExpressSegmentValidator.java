@@ -7,21 +7,25 @@ import java.util.Map;
 import java.util.stream.Collectors;
 
 /**
- * Validates express fare chain continuity per TRIP_SPEC section 7.
+ * Validates express segment chain continuity per TRIP_SPEC section 7.
  */
-public final class ExpressFareValidator {
+public final class ExpressSegmentValidator {
 
-    private ExpressFareValidator() {
+    private ExpressSegmentValidator() {
     }
 
     /**
-     * Validates that an express fare's {@code segmentsCovered} forms a
+     * Validates that an express segment's {@code segmentsCovered} forms a
      * continuous chain within the given segments, and that
      * fromPlaceId/toPlaceId match the chain boundaries.
      */
-    public static void validate(ExpressFareType fare, List<SegmentType> tripSegments) {
-        if (fare.getSegmentsCovered() == null || fare.getSegmentsCovered().isEmpty()) {
-            throw new BadRequestException("INVALID_EXPRESS_FARE_CHAIN: segmentsCovered must not be empty");
+    public static void validate(ExpressSegmentType expressSegment, List<SegmentType> tripSegments) {
+        if (expressSegment.getSegmentsCovered() == null || expressSegment.getSegmentsCovered().isEmpty()) {
+            throw new BadRequestException("INVALID_EXPRESS_SEGMENT_CHAIN: segmentsCovered must not be empty");
+        }
+        if (expressSegment.getSegmentsCovered().size() < 2) {
+            throw new BadRequestException(
+                    "INVALID_EXPRESS_SEGMENT_CHAIN: express segments must cover at least two segments");
         }
 
         // Build a lookup by segmentId
@@ -29,12 +33,12 @@ public final class ExpressFareValidator {
                 .collect(Collectors.toMap(SegmentType::getSegmentId, s -> s));
 
         // Resolve ordered segments
-        List<SegmentType> chain = fare.getSegmentsCovered().stream()
+        List<SegmentType> chain = expressSegment.getSegmentsCovered().stream()
                 .map(id -> {
                     SegmentType s = segMap.get(id);
                     if (s == null) {
                         throw new BadRequestException(
-                                "INVALID_EXPRESS_FARE_CHAIN: segmentId '" + id + "' not found on trip");
+                                "INVALID_EXPRESS_SEGMENT_CHAIN: segmentId '" + id + "' not found on trip");
                     }
                     return s;
                 })
@@ -46,7 +50,7 @@ public final class ExpressFareValidator {
             SegmentType next = chain.get(i + 1);
             if (!current.getToPlaceId().equals(next.getFromPlaceId())) {
                 throw new BadRequestException(
-                        "INVALID_EXPRESS_FARE_CHAIN: break between segment "
+                        "INVALID_EXPRESS_SEGMENT_CHAIN: break between segment "
                         + current.getSegmentId() + " (to=" + current.getToPlaceId()
                         + ") and " + next.getSegmentId() + " (from=" + next.getFromPlaceId() + ")");
             }
@@ -56,37 +60,37 @@ public final class ExpressFareValidator {
         SegmentType first = chain.get(0);
         SegmentType last = chain.get(chain.size() - 1);
 
-        if (!first.getFromPlaceId().equals(fare.getFromPlaceId())) {
+        if (!first.getFromPlaceId().equals(expressSegment.getFromPlaceId())) {
             throw new BadRequestException(
-                    "INVALID_EXPRESS_FARE_CHAIN: fromPlaceId '" + fare.getFromPlaceId()
+                    "INVALID_EXPRESS_SEGMENT_CHAIN: fromPlaceId '" + expressSegment.getFromPlaceId()
                     + "' does not match first segment fromPlaceId '" + first.getFromPlaceId() + "'");
         }
-        if (!last.getToPlaceId().equals(fare.getToPlaceId())) {
+        if (!last.getToPlaceId().equals(expressSegment.getToPlaceId())) {
             throw new BadRequestException(
-                    "INVALID_EXPRESS_FARE_CHAIN: toPlaceId '" + fare.getToPlaceId()
+                    "INVALID_EXPRESS_SEGMENT_CHAIN: toPlaceId '" + expressSegment.getToPlaceId()
                     + "' does not match last segment toPlaceId '" + last.getToPlaceId() + "'");
         }
     }
 
     /**
-     * Validates all express fares on a trip.
+     * Validates all express segments on a trip.
      */
-    public static void validateAll(List<ExpressFareType> fares, List<SegmentType> segments) {
-        if (fares == null) {
+    public static void validateAll(List<ExpressSegmentType> expressSegments, List<SegmentType> segments) {
+        if (expressSegments == null) {
             return;
         }
-        for (ExpressFareType fare : fares) {
-            validate(fare, segments);
+        for (ExpressSegmentType expressSegment : expressSegments) {
+            validate(expressSegment, segments);
         }
     }
 
     /**
      * Computes totalDistanceKm from covered segments (read-time enrichment).
      */
-    public static double computeTotalDistanceKm(ExpressFareType fare, List<SegmentType> segments) {
+    public static double computeTotalDistanceKm(ExpressSegmentType expressSegment, List<SegmentType> segments) {
         Map<String, SegmentType> segMap = segments.stream()
                 .collect(Collectors.toMap(SegmentType::getSegmentId, s -> s));
-        return fare.getSegmentsCovered().stream()
+        return expressSegment.getSegmentsCovered().stream()
                 .mapToDouble(id -> {
                     SegmentType s = segMap.get(id);
                     return s != null ? s.getDistanceKm() : 0;
@@ -98,10 +102,10 @@ public final class ExpressFareValidator {
      * Computes totalDurationMinutes from covered segments (read-time
      * enrichment).
      */
-    public static int computeTotalDurationMinutes(ExpressFareType fare, List<SegmentType> segments) {
+    public static int computeTotalDurationMinutes(ExpressSegmentType expressSegment, List<SegmentType> segments) {
         Map<String, SegmentType> segMap = segments.stream()
                 .collect(Collectors.toMap(SegmentType::getSegmentId, s -> s));
-        return fare.getSegmentsCovered().stream()
+        return expressSegment.getSegmentsCovered().stream()
                 .mapToInt(id -> {
                     SegmentType s = segMap.get(id);
                     return s != null ? s.getDurationMinutes() : 0;
