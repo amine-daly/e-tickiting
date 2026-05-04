@@ -20,7 +20,9 @@ The current implementation is no longer based on PostgreSQL/JPA. The source of t
 - Tickets are immutable financial snapshots.
 - Group bookings are modeled as orders containing multiple tickets.
 - Seat holds use a fixed backend constant of 600 seconds.
-- Trip inventory is segment-based (`maxBooking` / `bookedCount`), with express tickets tracked on `expressSegments.bookedCount` and reconciled on read.
+- Trip inventory is segment-based (`maxBooking` / `bookedCount`).
+- Route availability is computed per requested segment chain: local routes are capped by the minimum of local remaining capacity (`maxBooking - bookedCount`) and physical remaining capacity (`bus.totalSeats - bookedCount - expressBookedCount` on each covered segment), while exact-match express routes use physical remaining capacity only.
+- Express tickets are tracked on `expressSegments.bookedCount` and reconciled on read.
 - Trip `seatHoldMinutes` no longer exists in the model.
 
 ## 2. Domain Model
@@ -106,7 +108,7 @@ MongoDB document stored in `orders`.
 1. Resolve the trip and company scope.
 2. Validate pickup and dropoff points.
 3. Resolve the segment chain or matching express segment.
-4. Reserve inventory atomically across all segments (local uses `segments.bookedCount` + `maxBooking`, express uses `expressSegments.bookedCount` + physical capacity).
+4. Reserve inventory atomically across the route chain (local uses the minimum of local remaining and physical remaining on each covered segment; express uses physical remaining only).
 5. Create a `PENDING` ticket with `expiresAt = now + 600s`.
 6. Confirm the ticket after payment.
 7. Expiry or cancellation releases the held seats.
@@ -128,6 +130,7 @@ MongoDB document stored in `orders`.
 - Single-segment tickets remain local and do not carry `expressSegmentId`.
 - Multi-segment tickets require an active express segment whose `segmentsCovered` exactly matches the resolved chain.
 - Physical occupancy per segment is `segment.bookedCount + sum(expressSegment.bookedCount for express segments covering the segment)`.
+- Route availability uses the same segment-chain math: the final `availableSeats` is the minimum remaining across the covered segments, with local routes honoring both `maxBooking` and physical occupancy.
 - The current trip response layer reconciles `segments.bookedCount` (local) and `expressSegments.bookedCount` (express) from active tickets before mapping the trip to an API response.
 - Expired express segments are persisted inactive once `validUntil` has passed, both during reconciliation and by a scheduled cleanup worker.
 - Pending and confirmed tickets count toward inventory.
@@ -203,6 +206,7 @@ Trip creation is handled by `TripService` and is currently enforced in this orde
 - `GET /api/trips/search` returns the standard `TripResponse`; when both `originPlaceId` and `destinationPlaceId` are supplied it also includes a nested `marketplace` view (`route`, `schedule`, `pricing`, `capacity`) computed for that exact route.
 - Multi-segment search rows without an active exact-match `expressSegment` are filtered out of that route-scoped search payload.
 - `GET /api/trips/{tripId}`
+- `GET /api/trips/{tripId}/route-availability` returns backend-calculated sellability and `availableSeats` for the requested route chain.
 - `PUT /api/trips/{tripId}`
 - `DELETE /api/trips/{tripId}`
 - `PATCH /api/trips/{tripId}/status`

@@ -39,7 +39,7 @@ import { PaginationComponent } from 'src/app/shared/components/pagination/pagina
   templateUrl: './list.component.html',
   styleUrls: ['./list.component.scss'],
 })
-export class CustomersListComponent implements OnInit, OnDestroy {
+export class CustomersListComponent implements OnDestroy {
   private initialValues: any;
   private formChangesSub?: Subscription;
   private subscriptions = new Subscription();
@@ -62,10 +62,6 @@ export class CustomersListComponent implements OnInit, OnDestroy {
     private fb: FormBuilder,
   ) {
     this.userForm = this.buildForm();
-  }
-
-  ngOnInit(): void {
-    this.loadPage(1);
   }
 
   ngOnDestroy(): void {

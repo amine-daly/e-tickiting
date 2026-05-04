@@ -71,7 +71,7 @@ Current behavior:
 
 1. Validate the route and trip state.
 2. Resolve the trip segment chain and enforce the inventory owner rule: single-segment routes stay local, while multi-segment routes require an active matching express segment.
-3. Reserve inventory on the trip segments (local uses `segments.bookedCount` + `maxBooking`; express uses `expressSegments.bookedCount` + physical capacity).
+3. Availability is counted per segment chain, with local routes capped by the minimum of local remaining and physical remaining, and express routes using physical remaining only.
 4. Create a `PENDING` ticket.
 5. Persist the hold expiry using the fixed 600-second duration.
 6. Confirm, cancel, or expire the ticket through dedicated endpoints and workers.
@@ -123,6 +123,7 @@ Current behavior:
 
 - Segment inventory lives on the trip segments via `maxBooking` and `bookedCount` (local tickets only).
 - Express tickets are tracked on `expressSegments.bookedCount`; physical occupancy is local + express.
+- Route availability uses the same segment-chain minimum as the backend route-availability endpoint: local routes honor `maxBooking - bookedCount` and physical occupancy on each segment, while express routes honor physical remaining only.
 - Single-segment tickets must not carry `expressSegmentId`.
 - Multi-segment tickets must carry an `expressSegmentId` that exactly matches the reserved segment chain.
 - `SeatReservationService` performs atomic updates for local or express reservations.

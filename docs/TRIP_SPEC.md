@@ -19,7 +19,7 @@ The implementation is document-based and MongoDB-backed. It does not use Postgre
 - Express tickets are tracked on `expressSegments.bookedCount` and only affect physical capacity.
 - `seatHoldMinutes` is not a field on the trip document.
 - Pending booking expiry is controlled centrally by the booking layer with a fixed 600-second hold.
-- Trip responses are reconciled against active tickets before they are returned to the client.
+- Trip responses and route-availability calculations are reconciled against active tickets before they are returned to the client.
 
 ## 3. Trip Document Shape
 
@@ -88,6 +88,7 @@ Segments are the inventory layer.
 - `bookedCount` counts seats reserved by local tickets only.
 - `expressSegments.bookedCount` counts seats reserved by express tickets only.
 - Physical occupancy for a segment is `segment.bookedCount + sum(expressSegment.bookedCount for express segments covering the segment)`.
+- Route availability is the minimum remaining across the requested segment chain. Local routes are capped by the minimum of `maxBooking - bookedCount` and physical remaining on each segment; exact-match express routes use physical remaining only.
 - Pending and confirmed tickets count toward inventory.
 - Expired and cancelled tickets do not.
 - Reconciliation is used to repair drift if local or express counters diverge from live ticket state.
@@ -175,6 +176,8 @@ Current flow:
 5. Enrich the trip with related bus, currency, and place data.
 
 When `GET /api/trips/search` is called with both `originPlaceId` and `destinationPlaceId`, the response layer also computes a query-scoped `marketplace` view per trip. That nested view carries `route`, `schedule`, `pricing`, and `capacity` for the requested route.
+
+The dedicated `GET /api/trips/{tripId}/route-availability` endpoint uses the same route-chain math and exposes the same `availableSeats` result: local routes honor `maxBooking` and physical occupancy per segment, while exact-match express routes use physical remaining only.
 
 Multi-segment search rows only receive that `marketplace` view when an active `expressSegment` exactly matches the resolved segment chain. Trips that satisfy the stop filter but do not have a valid exact-match `expressSegment` are omitted from the final search payload for that route.
 

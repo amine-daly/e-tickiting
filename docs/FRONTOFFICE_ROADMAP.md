@@ -208,6 +208,7 @@ Keep the same visual language everywhere:
 **State:**
 
 - Available seats
+- Route availability is computed from the requested segment chain and uses the minimum remaining across the covered segments.
 - Selected seats
 - Seat hold status
 

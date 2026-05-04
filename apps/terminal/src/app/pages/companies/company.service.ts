@@ -27,6 +27,10 @@ export class CompanyService {
     return this.company.asObservable();
   }
 
+  clearCompany(): void {
+    this.company.next(null);
+  }
+
   get loading$(): Observable<boolean> {
     return this.loading.asObservable();
   }

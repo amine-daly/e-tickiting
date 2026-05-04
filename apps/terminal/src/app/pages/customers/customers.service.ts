@@ -115,36 +115,17 @@ export class CustomersService {
     });
   }
 
-  getCustomersPage(
-    page = this.pageIndex,
-    limit = this.pageLimit,
-  ): Observable<CustomerListResponse> {
-    const params = new HttpParams()
-      .set('page', page.toString())
-      .set('limit', limit.toString());
-
-    return this.http
-      .get<any>(API_USERS_URL, { params })
-      .pipe(map((data: any) => this.toCustomerListResponse(data)));
-  }
-
   getCustomersByCompany(
     companyId?: string,
     page = 0,
     limit = this.pageLimit,
   ): Observable<CustomerListResponse> {
-    if (!companyId) {
-      return this.getCustomersPage(page, limit);
-    }
-
     const params = new HttpParams()
       .set('companyId', companyId)
       .set('page', page.toString())
       .set('limit', limit.toString());
 
-    return this.http
-      .get<any>(`${API_USERS_URL}/by-company`, { params })
-      .pipe(map((data: any) => this.toCustomerListResponse(data)));
+    return this.http.get<any>(`${API_USERS_URL}/by-company`, { params });
   }
 
   searchCustomers(
@@ -162,9 +143,7 @@ export class CustomersService {
       params = params.set('companyId', companyId);
     }
 
-    return this.http
-      .get<any>(`${API_USERS_URL}/search`, { params })
-      .pipe(map((data: any) => this.toCustomerListResponse(data)));
+    return this.http.get<any>(`${API_USERS_URL}/search`, { params });
   }
 
   getUserById(id: string): Observable<UserType> {
@@ -188,30 +167,16 @@ export class CustomersService {
   getCustomers(): Observable<UserType[]> {
     this.loading.next(true);
     const companyId = this.getCurrentCompanyId();
-    const request$ = companyId
-      ? this.getCustomersByCompany(companyId, this.pageIndex, this.pageLimit)
-      : this.getCustomersPage(this.pageIndex, this.pageLimit);
-
-    return request$.pipe(
-      map((response) =>
-        this.syncCustomerPage(response, this.pageIndex, this.pageLimit),
-      ),
+    return this.getCustomersByCompany(
+      companyId,
+      this.pageIndex,
+      this.pageLimit,
+    ).pipe(
+      map((response) => {
+        return this.syncCustomerPage(response, this.pageIndex, this.pageLimit);
+      }),
       finalize(() => this.loading.next(false)),
     );
-  }
-
-  private toCustomerListResponse(data: any): CustomerListResponse {
-    const objects = Array.isArray(data?.objects)
-      ? data.objects.filter(
-          (user: UserType) => user?.role === RoleEnum.CUSTOMER,
-        )
-      : [];
-
-    return {
-      objects,
-      count: data?.count ?? objects.length,
-      isLast: data?.isLast ?? true,
-    };
   }
 
   createCustomer(data: CustomerCreatePayload): Observable<UserType> {

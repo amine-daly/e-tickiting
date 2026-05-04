@@ -105,6 +105,7 @@ export class AuthService {
         map((accounts) => {
           this.accounts.next(accounts);
           const company = accounts?.[0]?.target?.company;
+          console.log('🚀 ~ AuthService ~ login ~ company:', company);
           this.company.next(company || null);
           if (company?.id) {
             localStorage.setItem('companyId', company.id);
