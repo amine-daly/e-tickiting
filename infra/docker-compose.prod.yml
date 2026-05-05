@@ -4,29 +4,12 @@ services:
     image: mongo:7
     container_name: eticketing-mongo
     restart: unless-stopped
-    ports:
-      - "27017:27017"
     environment:
       MONGO_INITDB_ROOT_USERNAME: ${MONGO_INITDB_ROOT_USERNAME}
       MONGO_INITDB_ROOT_PASSWORD: ${MONGO_INITDB_ROOT_PASSWORD}
       MONGO_INITDB_DATABASE: ${MONGO_DB_NAME:-eticketing}
     volumes:
       - mongo_data:/data/db
-
-  mongo-express:
-    image: mongo-express:1
-    container_name: eticketing-mongo-express
-    restart: unless-stopped
-    profiles:
-      - admin
-    ports:
-      - "8081:8081"
-    environment:
-      ME_CONFIG_MONGODB_ADMINUSERNAME: ${MONGO_INITDB_ROOT_USERNAME}
-      ME_CONFIG_MONGODB_ADMINPASSWORD: ${MONGO_INITDB_ROOT_PASSWORD}
-      ME_CONFIG_MONGODB_SERVER: mongo
-    depends_on:
-      - mongo
 
   backend:
     build:
@@ -38,8 +21,8 @@ services:
       SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE:-prod}
       MONGODB_URI: mongodb://${MONGO_INITDB_ROOT_USERNAME}:${MONGO_INITDB_ROOT_PASSWORD}@mongo:27017/${MONGO_DB_NAME:-eticketing}?authSource=admin
       JWT_SECRET: ${JWT_SECRET}
-    ports:
-      - "8080:8080"
+    expose:
+      - "8080"
     depends_on:
       - mongo
 
@@ -50,7 +33,7 @@ services:
     container_name: eticketing-frontend
     restart: unless-stopped
     ports:
-      - "4200:80"
+      - "80:80"
     depends_on:
       - backend
 

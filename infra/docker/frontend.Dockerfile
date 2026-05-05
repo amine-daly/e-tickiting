@@ -1,13 +1,25 @@
-# Frontend SSR Dockerfile (placeholder - will be finalized after app is generated)
-FROM node:20 AS build
-WORKDIR /app
-COPY apps/frontend/package*.json ./
-RUN npm ci || true
-COPY apps/frontend .
-RUN npm run build || true
+FROM node:20-bookworm-slim AS build
+WORKDIR /workspace
 
-FROM node:20
-WORKDIR /app
-COPY --from=build /app/dist ./dist
-EXPOSE 4200
-CMD ["node", "dist/server/main.js"]
+COPY package.json package-lock.json ./
+COPY apps/frontend/package.json ./apps/frontend/package.json
+
+RUN npm ci
+
+COPY apps/frontend ./apps/frontend
+WORKDIR /workspace/apps/frontend
+
+RUN npm run build && \
+    mkdir -p /tmp/frontend-dist && \
+    if [ -d dist/frontend/browser ]; then \
+      cp -R dist/frontend/browser/. /tmp/frontend-dist/; \
+    else \
+      cp -R dist/frontend/. /tmp/frontend-dist/; \
+    fi
+
+FROM nginx:1.27-alpine
+
+COPY infra/docker/frontend.nginx.conf /etc/nginx/conf.d/default.conf
+COPY --from=build /tmp/frontend-dist/ /usr/share/nginx/html/
+
+EXPOSE 80

@@ -40,6 +40,22 @@ docker compose -f infra/docker-compose.yml up -d mongo
 
 Configuration: see `apps/backend/src/main/resources/application.properties`.
 
+## AWS EC2 auto-deploy
+
+Pushing to `main` now triggers GitHub Actions to sync the repository to EC2 and run Docker Compose there, so the site updates automatically after each merge.
+
+Required GitHub secrets:
+
+- `EC2_HOST`: public DNS name or IP of the EC2 instance
+- `EC2_USER`: SSH user, for example `ubuntu`
+- `EC2_SSH_KEY`: private key allowed to SSH into the instance
+- `EC2_APP_DIR`: deployment path on the server, for example `/opt/e-ticketing`
+- `EC2_PORT`: optional SSH port, defaults to `22`
+
+The instance needs Docker and the Docker Compose plugin. Create a `.env` file on the server from [.env.example](.env.example) before the first deploy.
+
+See [docs/aws-ec2-deployment.md](docs/aws-ec2-deployment.md) for the full setup.
+
 ### Email configuration
 
 The backend can send emails through SMTP, Resend, or automatically fall back from SMTP to Resend.
