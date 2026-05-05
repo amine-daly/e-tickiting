@@ -195,7 +195,7 @@
     <ng-container *ngIf="users$ | async as users">
       <!-- Users table -->
       <div
-        *ngIf="users?.length && !(loading$ | async)"
+        *ngIf="users?.length && (loading$ | async) === false"
         style="overflow-x: auto; width: 100%"
       >
         <table
@@ -336,7 +336,7 @@
         </table>
       </div>
       <div
-        *ngIf="!users?.length && !(loading$ | async)"
+        *ngIf="!users?.length && (loading$ | async) === false"
         class="d-flex flex-column align-items-center justify-content-center py-10"
       >
         <i class="ki-duotone ki-user fs-xl-2hx mb-6"

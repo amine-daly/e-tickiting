@@ -41,7 +41,7 @@
       </div>
 
       <ng-container *ngIf="displayRows$ | async as rows">
-        <ng-container *ngIf="!(loading$ | async) && rows.length">
+        <ng-container *ngIf="(loading$ | async) === false && rows.length">
           <div class="table-responsive">
             <table
               class="table table-row-dashed table-row-gray-300 align-middle gs-0 gy-4"
@@ -458,7 +458,7 @@
         </ng-container>
 
         <div
-          *ngIf="!(loading$ | async) && !rows.length"
+          *ngIf="(loading$ | async) === false && !rows.length"
           class="alert alert-info mb-0"
         >
           {{ "TICKETS.EMPTY" | translate }}
@@ -662,7 +662,9 @@
                       type="button"
                       class="btn btn-icon btn-active-light-danger w-30px h-30px"
                       [disabled]="statusUpdating[passenger.id]"
-                      [ngbTooltip]="'TICKETS.ACTIONS.CANCEL_PASSENGER' | translate"
+                      [ngbTooltip]="
+                        'TICKETS.ACTIONS.CANCEL_PASSENGER' | translate
+                      "
                       (click)="cancelOrderPassenger(ticket.orderId!, passenger)"
                     >
                       <span
@@ -675,7 +677,9 @@
                         ><span class="path1"></span><span class="path2"></span
                       ></i>
                     </button>
-                    <span *ngIf="!canCancelPassenger(passenger)" class="text-muted"
+                    <span
+                      *ngIf="!canCancelPassenger(passenger)"
+                      class="text-muted"
                       >—</span
                     >
                   </td>

@@ -122,7 +122,7 @@
 </div>
 
 <!-- Empty state -->
-<ng-container *ngIf="!(loading$ | async)">
+<ng-container *ngIf="(loading$ | async) === false">
   <div *ngIf="!(trips$ | async)?.length" class="card">
     <div
       class="card-body d-flex flex-column align-items-center justify-content-center py-15"

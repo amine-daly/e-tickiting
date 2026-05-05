@@ -155,7 +155,7 @@
 
     <!--begin::Empty state-->
     <div
-      *ngIf="!companies?.length && !(loading$ | async)"
+      *ngIf="!companies?.length && (loading$ | async) === false"
       class="d-flex flex-column align-items-center justify-content-center py-10"
     >
       <i class="ki-duotone ki-shop fs-2hx mb-6 text-muted">

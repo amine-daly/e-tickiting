@@ -17,14 +17,14 @@
   </div>
 
   <div
-    *ngIf="!(loading$ | async) && !(permissions$ | async)?.length"
+    *ngIf="(loading$ | async) === false && !(permissions$ | async)?.length"
     class="alert alert-info"
   >
     {{ "PERMISSIONS.EMPTY" | translate }}
   </div>
 
   <div
-    *ngIf="!(loading$ | async) && (permissions$ | async)?.length"
+    *ngIf="(loading$ | async) === false && (permissions$ | async)?.length"
     class="row"
   >
     <div
