@@ -51,8 +51,14 @@ Required GitHub secrets:
 - `EC2_SSH_KEY`: private key allowed to SSH into the instance
 - `EC2_APP_DIR`: deployment path on the server, for example `/opt/e-ticketing`
 - `EC2_PORT`: optional SSH port, defaults to `22`
+- `MONGO_INITDB_ROOT_USERNAME`: Mongo root user for the production stack
+- `MONGO_INITDB_ROOT_PASSWORD`: Mongo root password for the production stack
+- `JWT_SECRET`: JWT signing secret for the backend
+- `MONGO_DB_NAME`: optional database name, defaults to `eticketing`
+- `SPRING_PROFILES_ACTIVE`: optional Spring profile, defaults to `prod`
+- `FRONTEND_HOST_PORT`: optional host port for the frontend, defaults to `80`
 
-The instance needs Docker and the Docker Compose plugin. Create a `.env` file on the server from [.env.example](.env.example) before the first deploy.
+The instance needs Docker and the Docker Compose plugin. The deploy workflow now writes the production `.env` file to the EC2 instance from GitHub Secrets before starting Docker Compose.
 
 See [docs/aws-ec2-deployment.md](docs/aws-ec2-deployment.md) for the full setup.
 

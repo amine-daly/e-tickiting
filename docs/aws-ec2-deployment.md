@@ -19,13 +19,20 @@ Add these secrets in the repository settings:
 - `EC2_SSH_KEY`: private SSH key for that user
 - `EC2_APP_DIR`: directory where the repo will be synced, for example `/opt/e-ticketing`
 - `EC2_PORT`: optional SSH port, default is `22`
+- `MONGO_INITDB_ROOT_USERNAME`: Mongo root user used by the production stack
+- `MONGO_INITDB_ROOT_PASSWORD`: Mongo root password used by the production stack
+- `JWT_SECRET`: secret used by the backend to sign JWTs
+- `MONGO_DB_NAME`: optional Mongo database name, defaults to `eticketing`
+- `SPRING_PROFILES_ACTIVE`: optional Spring profile, defaults to `prod`
+- `FRONTEND_HOST_PORT`: optional host port for the frontend, defaults to `80`
 
 ## EC2 setup
 
 1. Install Docker and the Docker Compose plugin on the instance.
 2. Create the deploy directory from the value in `EC2_APP_DIR`.
-3. Create a `.env` file in that directory based on [.env.example](../.env.example).
-4. Open inbound port `80` in the security group. Keep `22` open for SSH. Leave `8080` closed unless you explicitly want direct backend access.
+3. Open inbound port `80` in the security group, or whichever port you plan to use for `FRONTEND_HOST_PORT`. Keep `22` open for SSH. Leave `8080` closed unless you explicitly want direct backend access.
+
+The GitHub Actions deploy job now generates the production `.env` file on the EC2 instance from repository secrets before running Docker Compose, so you do not need to create it by hand once the secrets are configured.
 
 Example `.env` values:
 
@@ -43,8 +50,9 @@ On each push to `main`, GitHub Actions:
 
 1. Runs the build checks.
 2. Syncs the repository contents to the EC2 directory over SSH.
-3. Runs `scripts/deploy-ec2.sh` on the instance.
-4. Rebuilds and restarts the Docker Compose stack.
+3. Writes the production `.env` file to the EC2 directory from GitHub Secrets.
+4. Runs `scripts/deploy-ec2.sh` on the instance.
+5. Rebuilds and restarts the Docker Compose stack.
 
 The deploy script defaults to `infra/docker-compose.prod.yml`. If you ever need to point it at another compose file, set `COMPOSE_FILE` on the server before running it.
 

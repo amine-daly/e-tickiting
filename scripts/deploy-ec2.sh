@@ -9,17 +9,12 @@ if ! command -v docker >/dev/null 2>&1; then
   exit 1
 fi
 
-# Ensure .env exists
+# Ensure .env exists. The GitHub Actions workflow uploads it from repository secrets.
 if [ ! -f .env ]; then
-  if [ -f .env.example ]; then
-    echo ".env not found — copying .env.example to .env and aborting so you can edit secrets." >&2
-    cp .env.example .env
-    echo "Edit .env on the server and set secure values (MONGO_INITDB_ROOT_PASSWORD, JWT_SECRET, etc.), then re-run the deploy." >&2
-    exit 1
-  else
-    echo ".env not found and no .env.example available. Please create a .env in the app directory before deploying." >&2
-    exit 1
-  fi
+  echo ".env not found. The deploy workflow should upload it from GitHub Secrets before this script runs." >&2
+  echo "Required secrets: MONGO_INITDB_ROOT_USERNAME, MONGO_INITDB_ROOT_PASSWORD, JWT_SECRET." >&2
+  echo "Optional secrets: MONGO_DB_NAME, SPRING_PROFILES_ACTIVE, FRONTEND_HOST_PORT." >&2
+  exit 1
 fi
 
 # Load .env into environment for checks
@@ -41,10 +36,7 @@ if [ ${#missing[@]} -gt 0 ]; then
 fi
 
 # Determine host port for frontend from environment (defaults to 80)
-FRONTEND_HOST_PORT="${FRONTEND_HOST_PORT:-${FRONTEND_HOST_PORT:-80}}"
-if grep -q '^FRONTEND_HOST_PORT=' .env 2>/dev/null; then
-  FRONTEND_HOST_PORT=$(grep '^FRONTEND_HOST_PORT=' .env | cut -d'=' -f2-)
-fi
+FRONTEND_HOST_PORT="${FRONTEND_HOST_PORT:-80}"
 
 # Check if port is already in use on the host
 check_port_in_use() {
