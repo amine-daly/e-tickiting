@@ -26,6 +26,7 @@ jobs:
         with:
           distribution: "temurin"
           java-version: "21"
+          cache: maven
 
       - name: Cache npm
         uses: actions/cache@v4
@@ -45,8 +46,7 @@ jobs:
 
       - name: Backend build
         working-directory: apps/backend
-        run: |
-          if [ -f mvnw ]; then ./mvnw -q -DskipTests package; fi
+        run: mvn -q -DskipTests package
 
   deploy:
     runs-on: ubuntu-latest
