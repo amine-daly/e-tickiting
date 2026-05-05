@@ -1,14 +1,14 @@
 # AWS EC2 auto-deploy
 
-This repository uses the `CI` GitHub Actions workflow to build the backend and frontend on every push, and to deploy automatically to EC2 when the push is on `main`.
+This repository uses the `CI` GitHub Actions workflow to build the backend and backoffice on every push, and to deploy automatically to EC2 when the push is on `sandbox`.
 
 ## What gets deployed
 
 - Spring Boot backend
-- Angular frontend served through Nginx
+- Angular backoffice served through Nginx
 - MongoDB for the application data
 
-The production stack uses `infra/docker-compose.prod.yml`, which exposes the frontend on port `80` and keeps MongoDB private inside the Docker network.
+The production stack uses `infra/docker-compose.prod.yml`, which exposes the backoffice on port `80` and keeps MongoDB private inside the Docker network.
 
 ## GitHub secrets
 
@@ -24,7 +24,7 @@ Add these secrets in the repository settings:
 - `JWT_SECRET`: secret used by the backend to sign JWTs
 - `MONGO_DB_NAME`: optional Mongo database name, defaults to `eticketing`
 - `SPRING_PROFILES_ACTIVE`: optional Spring profile, defaults to `prod`
-- `FRONTEND_HOST_PORT`: optional host port for the frontend, defaults to `80`
+- `FRONTEND_HOST_PORT`: optional host port for the backoffice, defaults to `80`
 
 ## EC2 setup
 
@@ -46,7 +46,7 @@ SPRING_PROFILES_ACTIVE=prod
 
 ## How deployment works
 
-On each push to `main`, GitHub Actions:
+On each push to `sandbox`, GitHub Actions:
 
 1. Runs the build checks.
 2. Syncs the repository contents to the EC2 directory over SSH.
@@ -58,4 +58,4 @@ The deploy script defaults to `infra/docker-compose.prod.yml`. If you ever need 
 
 ## First deploy check
 
-After the first deploy, verify the site at `http://<ec2-host>/` and confirm the backend responds through the `/api` path.
+After the first deploy, verify the backoffice at `http://<ec2-host>/` and confirm the backend responds through the `/api` path.

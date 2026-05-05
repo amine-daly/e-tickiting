@@ -42,7 +42,7 @@ Configuration: see `apps/backend/src/main/resources/application.properties`.
 
 ## AWS EC2 auto-deploy
 
-Pushing to `main` now triggers GitHub Actions to sync the repository to EC2 and run Docker Compose there, so the site updates automatically after each merge.
+Pushing to `sandbox` now triggers GitHub Actions to sync the repository to EC2 and run Docker Compose there, so the backoffice updates automatically after each merge.
 
 Required GitHub secrets:
 
@@ -56,7 +56,7 @@ Required GitHub secrets:
 - `JWT_SECRET`: JWT signing secret for the backend
 - `MONGO_DB_NAME`: optional database name, defaults to `eticketing`
 - `SPRING_PROFILES_ACTIVE`: optional Spring profile, defaults to `prod`
-- `FRONTEND_HOST_PORT`: optional host port for the frontend, defaults to `80`
+- `FRONTEND_HOST_PORT`: optional host port for the backoffice, defaults to `80`
 
 The instance needs Docker and the Docker Compose plugin. The deploy workflow now writes the production `.env` file to the EC2 instance from GitHub Secrets before starting Docker Compose.
 
@@ -199,7 +199,8 @@ Import `postman_collection.json` from the repo root. Set variables:
 
 ## Repo structure
 
-- apps/frontend: Angular app (SSR-ready)
+- apps/frontend: Angular frontoffice app (SSR-ready)
+- apps/terminal: Angular backoffice app
 - apps/backend: Spring Boot service
 - contracts: OpenAPI spec and generators
 - infra: Dockerfiles, compose, k8s
