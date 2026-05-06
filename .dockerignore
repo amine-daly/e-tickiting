@@ -1,0 +1,27 @@
+# Dependency caches and build outputs
+
+node_modules
+**/node_modules
+dist
+**/dist
+target
+**/target
+.angular
+**/.angular
+.cache \*_/.cache
+coverage
+reports
+_.log
+
+# Editor and VCS metadata
+
+.git
+.github
+.idea
+.vscode
+.DS_Store
+
+# Large source trees not used by the Docker deployment images
+
+apps/e-ticketing
+apps/frontend

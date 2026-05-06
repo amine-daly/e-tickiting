@@ -1,6 +1,9 @@
 FROM node:20-bookworm-slim AS build
 WORKDIR /workspace
 
+ARG NODE_OPTIONS=--max-old-space-size=2048
+ENV NODE_OPTIONS=${NODE_OPTIONS}
+
 COPY apps/terminal/package.json ./apps/terminal/package.json
 COPY apps/terminal/package-lock.json ./apps/terminal/package-lock.json
 
