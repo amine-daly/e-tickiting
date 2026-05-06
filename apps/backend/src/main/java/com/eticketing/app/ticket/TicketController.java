@@ -394,6 +394,18 @@ public class TicketController {
         if (principal == null) {
             return false;
         }
+
+        Optional<UserType> currentUser = userRepository.findById(principal.getUsername());
+        if (currentUser.isPresent()) {
+            RoleEnum role = currentUser.get().getRole();
+            if (role != null) {
+                return role == RoleEnum.ADMIN
+                        || role == RoleEnum.MANAGER
+                        || role == RoleEnum.COMPANY_ADMIN
+                        || role == RoleEnum.POS_AGENT;
+            }
+        }
+
         return principal.getAuthorities().stream()
                 .map(GrantedAuthority::getAuthority)
                 .anyMatch(auth
