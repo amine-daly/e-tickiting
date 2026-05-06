@@ -168,11 +168,11 @@ Role management is not a POS agent responsibility.
 
 ### Responsibility Split
 
-| Role             | Business Responsibility                                                                              |
-| ---------------- | ---------------------------------------------------------------------------------------------------- |
-| `PLATFORM_ADMIN` | platform governance, platform-wide settings, global visibility                                       |
-| `COMPANY_ADMIN`  | company setup, POS setup, team management, role assignment, permission governance inside the company |
-| `POS_AGENT`      | day-to-day sales and payment execution within one assigned POS                                       |
+| Role            | Business Responsibility                                                                              |
+| --------------- | ---------------------------------------------------------------------------------------------------- |
+| visibility      |
+| `COMPANY_ADMIN` | company setup, POS setup, team management, role assignment, permission governance inside the company |
+| `POS_AGENT`     | day-to-day sales and payment execution within one assigned POS                                       |
 
 ### Final Rule
 
@@ -525,21 +525,21 @@ That is not required for MVP.
 
 ---
 
-## 15. Boundaries Between POS_AGENT, COMPANY_ADMIN, and PLATFORM_ADMIN
+## 15. Boundaries Between POS_AGENT, COMPANY_ADMIN
 
 The platform must keep these roles clearly separated.
 
-| Capability                       | PLATFORM_ADMIN                    | COMPANY_ADMIN              | POS_AGENT                 |
-| -------------------------------- | --------------------------------- | -------------------------- | ------------------------- |
-| Manage platform settings         | yes                               | no                         | no                        |
-| Manage company profile           | yes                               | yes                        | no                        |
-| Create and manage POS            | yes                               | yes                        | no                        |
-| Create and assign staff roles    | yes                               | yes                        | no                        |
-| Sell tickets                     | no direct operational requirement | optional if business wants | yes                       |
-| Mark tickets as paid             | no direct operational requirement | optional if business wants | yes                       |
-| Reprint or resend ticket         | optional                          | yes                        | yes                       |
-| View admin analytics             | yes                               | yes within company         | no                        |
-| View operational POS ticket work | yes                               | yes within company         | yes within assigned scope |
+| Capability                       | COMPANY_ADMIN              | POS_AGENT                 |
+| -------------------------------- | -------------------------- | ------------------------- |
+| Manage platform settings         | no                         | no                        |
+| Manage company profile           | yes                        | no                        |
+| Create and manage POS            | yes                        | no                        |
+| Create and assign staff roles    | yes                        | no                        |
+| Sell tickets                     | optional if business wants | yes                       |
+| Mark tickets as paid             | optional if business wants | yes                       |
+| Reprint or resend ticket         | yes                        | yes                       |
+| View admin analytics             | yes within company         | no                        |
+| View operational POS ticket work | yes within company         | yes within assigned scope |
 
 ### Final Governance Rule
 

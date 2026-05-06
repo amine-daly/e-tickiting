@@ -5,7 +5,6 @@ public enum RoleEnum {
     MANAGER,
     DRIVER,
     CUSTOMER,
-    PLATFORM_ADMIN,
     COMPANY_ADMIN,
     POS_AGENT
 }

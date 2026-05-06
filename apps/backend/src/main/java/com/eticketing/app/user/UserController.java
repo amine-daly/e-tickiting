@@ -238,7 +238,7 @@ public class UserController {
             throw new UnauthorizedException("Authentication subject not found");
         }
         boolean isAdmin = authUserOpt.get().getRole().name().equals("ADMIN")
-                || authUserOpt.get().getRole().name().equals("PLATFORM_ADMIN");
+                || authUserOpt.get().getRole().name().equals("COMPANY_ADMIN");
         boolean isSelf = authUserOpt.get().getId() != null && authUserOpt.get().getId().equals(id);
         if (!isAdmin && !isSelf) {
             throw new ForbiddenException("Not allowed to update this user");

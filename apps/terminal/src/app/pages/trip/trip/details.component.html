@@ -580,7 +580,7 @@
                   />
                   <div
                     *ngIf="
-                      selectedBusTotalSeats != null &&
+                      selectedBusTotalSeats !== null &&
                       seg.get('maxBooking')?.value > selectedBusTotalSeats
                     "
                     class="text-danger small mt-1"

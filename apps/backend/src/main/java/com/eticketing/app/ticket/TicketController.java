@@ -396,6 +396,11 @@ public class TicketController {
         }
         return principal.getAuthorities().stream()
                 .map(GrantedAuthority::getAuthority)
-                .anyMatch(auth -> auth.equals("ROLE_" + RoleEnum.ADMIN.name()) || auth.equals("ROLE_" + RoleEnum.MANAGER.name()));
+                .anyMatch(auth
+                        -> auth.equals("ROLE_" + RoleEnum.ADMIN.name())
+                || auth.equals("ROLE_" + RoleEnum.MANAGER.name())
+                || auth.equals("ROLE_" + RoleEnum.COMPANY_ADMIN.name())
+                || auth.equals("ROLE_" + RoleEnum.POS_AGENT.name())
+                );
     }
 }
