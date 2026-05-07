@@ -108,7 +108,9 @@ export class BusDetailsComponent implements OnInit, OnDestroy {
     this.busService.bus$.pipe(takeUntil(this.destroy$)).subscribe((bus) => {
       this.bus = bus;
       this.seatEntryMode = this.bus?.layoutTemplate ? 'VISUAL' : 'MANUAL';
-      this.manualTotalSeatsDraft = this.normalizeTotalSeats(this.bus?.totalSeats);
+      this.manualTotalSeatsDraft = this.normalizeTotalSeats(
+        this.bus?.totalSeats,
+      );
       this.pendingLayoutDeletion = false;
 
       this.busForm = this.fb.group({
@@ -134,11 +136,9 @@ export class BusDetailsComponent implements OnInit, OnDestroy {
       this.initialValues = this.busForm.getRawValue();
       this.syncButtonState();
 
-      this.busForm.valueChanges
-        .pipe(takeUntil(this.destroy$))
-        .subscribe(() => {
-          this.syncButtonState();
-        });
+      this.busForm.valueChanges.pipe(takeUntil(this.destroy$)).subscribe(() => {
+        this.syncButtonState();
+      });
 
       this.busForm
         .get('totalSeats')
