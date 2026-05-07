@@ -38,7 +38,7 @@ strip_quotes() {
 
 # Validate required secrets are set (non-empty)
 missing=()
-for v in MONGO_INITDB_ROOT_USERNAME MONGO_INITDB_ROOT_PASSWORD JWT_SECRET; do
+for v in MONGO_INITDB_ROOT_USERNAME MONGO_INITDB_ROOT_PASSWORD JWT_SECRET MONGODB_URI; do
   value="$(get_env_value "$v" || true)"
   value="$(strip_quotes "$value")"
   if [ -z "$value" ]; then
