@@ -14,6 +14,7 @@ import {
   NgSelectComponent,
 } from '@ng-select/ng-select';
 import { TranslateModule, TranslateService } from '@ngx-translate/core';
+import { v4 as uuid } from 'uuid';
 import {
   Subject,
   Subscription,
@@ -344,7 +345,7 @@ export class SellTicketComponent implements OnInit, OnDestroy {
         pickupPointId: this.selectedPickupId || '',
         dropoffPointId: this.selectedDropoffId || '',
         contactCustomerId: this.contactCustomer!.id,
-        idempotencyKey: crypto.randomUUID(),
+        idempotencyKey: uuid(),
         passengers: this.passengers.map((p) => ({
           passengerId: p.customer?.id || undefined,
           firstName: p.isGuest ? p.firstName : p.customer?.firstName,
@@ -375,8 +376,9 @@ export class SellTicketComponent implements OnInit, OnDestroy {
         pickupPointId: this.selectedPickupId || '',
         dropoffPointId: this.selectedDropoffId || '',
         passengerId: p.customer!.id,
-        idempotencyKey: crypto.randomUUID(),
+        idempotencyKey: uuid(),
       };
+      console.log('🚀 ~ SellTicketComponent ~ goToStep3 ~ request:', request);
 
       const sub = this.bookingService.createBooking(request).subscribe({
         next: (res) => {

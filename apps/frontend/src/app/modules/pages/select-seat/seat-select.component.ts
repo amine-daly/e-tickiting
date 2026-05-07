@@ -2,6 +2,7 @@ import { Component, OnInit, OnDestroy } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { CommonModule } from '@angular/common';
 import { Subject, takeUntil, take } from 'rxjs';
+import { v4 as uuid } from 'uuid';
 
 import { computeRouteAvailableSeats } from '../../../core/helpers/trip-inventory.helper';
 import { TripService } from '../bus/trip.service';
@@ -82,7 +83,7 @@ export class SeatSelectComponent implements OnInit, OnDestroy {
         pickupPointId: this.pickupPointId,
         dropoffPointId: this.dropoffPointId,
         passengerId: user.id,
-        idempotencyKey: crypto.randomUUID(),
+        idempotencyKey: uuid(),
       };
 
       this.bookingService
