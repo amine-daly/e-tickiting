@@ -16,10 +16,11 @@ services:
       dockerfile: infra/docker/backend.Dockerfile
     container_name: eticketing-backend
     restart: unless-stopped
+    env_file:
+      - ../.env
     environment:
       SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE:-prod}
       MONGODB_URI: mongodb://${MONGO_INITDB_ROOT_USERNAME}:${MONGO_INITDB_ROOT_PASSWORD}@mongo:27017/${MONGO_DB_NAME:-eticketing}?authSource=admin
-      JWT_SECRET: ${JWT_SECRET}
     expose:
       - "8080"
     depends_on:

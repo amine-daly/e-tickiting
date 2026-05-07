@@ -17,15 +17,31 @@ if [ ! -f .env ]; then
   exit 1
 fi
 
-# Load .env into environment for checks
-set -a
-. ./.env
-set +a
+# Parse .env without sourcing to avoid shell expansion of special characters
+env_file=".env"
+
+get_env_value() {
+  local key="$1"
+  local line
+  line="$(grep -m1 -E "^${key}=" "$env_file" || true)"
+  if [ -z "$line" ]; then
+    return 1
+  fi
+  printf '%s' "${line#*=}"
+}
+
+strip_quotes() {
+  local value="$1"
+  value="$(printf '%s' "$value" | sed -e "s/^'//" -e "s/'$//" -e 's/^"//' -e 's/"$//')"
+  printf '%s' "$value"
+}
 
 # Validate required secrets are set (non-empty)
 missing=()
 for v in MONGO_INITDB_ROOT_USERNAME MONGO_INITDB_ROOT_PASSWORD JWT_SECRET; do
-  if [ -z "${!v:-}" ]; then
+  value="$(get_env_value "$v" || true)"
+  value="$(strip_quotes "$value")"
+  if [ -z "$value" ]; then
     missing+=("$v")
   fi
 done
@@ -35,11 +51,12 @@ if [ ${#missing[@]} -gt 0 ]; then
   exit 1
 fi
 
-# Determine host port for frontend from environment (defaults to 80)
+# Determine host port for frontend from .env (defaults to 80)
+FRONTEND_HOST_PORT="$(strip_quotes "$(get_env_value FRONTEND_HOST_PORT || true)")"
 FRONTEND_HOST_PORT="${FRONTEND_HOST_PORT:-80}"
 
 # Stop the existing stack first so redeploys do not fail on their own published port.
-docker compose -f "$compose_file" down --remove-orphans >/dev/null 2>&1 || true
+docker compose --env-file "$env_file" -f "$compose_file" down --remove-orphans >/dev/null 2>&1 || true
 
 # Check if port is already in use on the host
 check_port_in_use() {
@@ -105,4 +122,4 @@ if check_port_in_use "$FRONTEND_HOST_PORT"; then
 fi
 
 echo "All checks passed — starting Docker Compose (file: $compose_file)" >&2
-docker compose -f "$compose_file" up -d --build --remove-orphans
+docker compose --env-file "$env_file" -f "$compose_file" up -d --build --remove-orphans

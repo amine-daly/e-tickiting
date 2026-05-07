@@ -124,18 +124,29 @@ jobs:
           ssh_opts=(-p "${EC2_PORT:-22}" -o ServerAliveInterval=30 -o ServerAliveCountMax=20 -o TCPKeepAlive=yes -o ConnectTimeout=30)
           env_file="$RUNNER_TEMP/eticketing.env"
           umask 077
-          escape() {
-            # Escape single quotes for safe single-quoted shell assignment
-            sed "s/'/'\"'\"'/g" <<< "$1"
+          ENV_OUT="$env_file" python - <<'PY'
+          import os
+          from pathlib import Path
+
+          env_path = Path(os.environ["ENV_OUT"])
+          values = {
+              "MONGO_INITDB_ROOT_USERNAME": os.environ.get("MONGO_INITDB_ROOT_USERNAME", ""),
+              "MONGO_INITDB_ROOT_PASSWORD": os.environ.get("MONGO_INITDB_ROOT_PASSWORD", ""),
+              "MONGO_DB_NAME": os.environ.get("MONGO_DB_NAME") or "eticketing",
+              "JWT_SECRET": os.environ.get("JWT_SECRET", ""),
+              "SPRING_PROFILES_ACTIVE": os.environ.get("SPRING_PROFILES_ACTIVE") or "prod",
+              "FRONTEND_HOST_PORT": os.environ.get("FRONTEND_HOST_PORT") or "80",
           }
-          {
-            echo "MONGO_INITDB_ROOT_USERNAME='$(escape "$MONGO_INITDB_ROOT_USERNAME")'"
-            echo "MONGO_INITDB_ROOT_PASSWORD='$(escape "$MONGO_INITDB_ROOT_PASSWORD")'"
-            echo "MONGO_DB_NAME='$(escape "${MONGO_DB_NAME:-eticketing}")'"
-            echo "JWT_SECRET='$(escape "$JWT_SECRET")'"
-            echo "SPRING_PROFILES_ACTIVE='$(escape "${SPRING_PROFILES_ACTIVE:-prod}")'"
-            echo "FRONTEND_HOST_PORT='$(escape "${FRONTEND_HOST_PORT:-80}")'"
-          } > "$env_file"
+
+          for key, value in values.items():
+              if "\n" in value or "\r" in value:
+                  raise SystemExit(f"{key} contains a newline; .env values must be single-line.")
+
+          env_path.write_text(
+              "\n".join(f"{key}={value}" for key, value in values.items()) + "\n",
+              encoding="utf-8",
+          )
+          PY
           scp "${scp_opts[@]}" "$env_file" "$EC2_USER@$EC2_HOST:$EC2_APP_DIR/.env"
           ssh "${ssh_opts[@]}" "$EC2_USER@$EC2_HOST" "chmod 600 '$EC2_APP_DIR/.env'"
 
