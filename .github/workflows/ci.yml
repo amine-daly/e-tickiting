@@ -3,6 +3,13 @@ name: CI
 on:
   push:
     branches: [sandbox]
+    paths:
+      - "apps/frontend/**" # Only triggers if frontend changes
+      - "apps/terminal/**" # Only triggers if backoffice changes
+      - "apps/backend/**" # Only triggers if backend changes
+      - "libs/**" # Shared helpers used by the backoffice build
+      - "infra/**" # Docker and deploy assets
+      - ".github/**" # Workflow changes themselves
   pull_request:
     branches: [sandbox]
 

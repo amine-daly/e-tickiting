@@ -6,6 +6,7 @@ ENV NODE_OPTIONS=${NODE_OPTIONS}
 
 COPY apps/terminal/package.json ./apps/terminal/package.json
 COPY apps/terminal/package-lock.json ./apps/terminal/package-lock.json
+COPY libs ./libs
 
 WORKDIR /workspace/apps/terminal
 
