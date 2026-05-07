@@ -139,23 +139,23 @@ jobs:
               "FRONTEND_HOST_PORT": os.environ.get("FRONTEND_HOST_PORT") or "80",
           }
 
-            user = values["MONGO_INITDB_ROOT_USERNAME"]
-            password = values["MONGO_INITDB_ROOT_PASSWORD"]
-            db_name = values["MONGO_DB_NAME"]
-            values["MONGODB_URI"] = (
+          user = values["MONGO_INITDB_ROOT_USERNAME"]
+          password = values["MONGO_INITDB_ROOT_PASSWORD"]
+          db_name = values["MONGO_DB_NAME"]
+          values["MONGODB_URI"] = (
               "mongodb://"
               f"{quote(user, safe='')}:{quote(password, safe='')}"
               f"@mongo:27017/{quote(db_name, safe='')}?authSource=admin"
-            )
+          )
 
           for key, value in values.items():
               if "\n" in value or "\r" in value:
                   raise SystemExit(f"{key} contains a newline; .env values must be single-line.")
 
-            env_path.write_text(
+          env_path.write_text(
               "\n".join(f"{key}={value}" for key, value in values.items()) + "\n",
               encoding="utf-8",
-            )
+          )
           PY
           scp "${scp_opts[@]}" "$env_file" "$EC2_USER@$EC2_HOST:$EC2_APP_DIR/.env"
           ssh "${ssh_opts[@]}" "$EC2_USER@$EC2_HOST" "chmod 600 '$EC2_APP_DIR/.env'"
