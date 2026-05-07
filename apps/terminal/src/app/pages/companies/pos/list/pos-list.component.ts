@@ -48,15 +48,22 @@ export class PosListComponent implements OnInit, OnDestroy {
 
     this.posService.posList$
       .pipe(takeUntil(this.destroy$))
-      .subscribe((list) => (this.posList = list));
+      .subscribe((list) => {
+        this.posList = list;
+        this.cdr.markForCheck();
+      });
 
     this.posService.pagination$
       .pipe(takeUntil(this.destroy$))
-      .subscribe((p) => (this.pagination = p));
+      .subscribe((p) => {
+        this.pagination = p;
+        this.cdr.markForCheck();
+      });
 
-    this.posService.loading$
-      .pipe(takeUntil(this.destroy$))
-      .subscribe((l) => (this.loading = l));
+    this.posService.loading$.pipe(takeUntil(this.destroy$)).subscribe((l) => {
+      this.loading = l;
+      this.cdr.markForCheck();
+    });
 
     this.loadPage(1);
   }

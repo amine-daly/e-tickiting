@@ -11,12 +11,30 @@
   <div class="modal-body">
     <!--begin::Avatar-->
     <div class="d-flex flex-center mb-8">
-      <div class="symbol symbol-100px symbol-circle">
-        <img src="assets/media/avatars/blank.png" alt="avatar" />
-        <span
-          class="badge badge-light-info position-absolute bottom-0 end-0 fs-7"
+      <div class="position-relative">
+        <div
+          (click)="uploadPicture()"
+          class="symbol symbol-100px symbol-circle cursor-pointer"
         >
-        </span>
+          <img [src]="getPictureUrl() || defaultAvatar" alt="avatar" />
+        </div>
+        <button
+          *ngIf="getPictureUrl()"
+          type="button"
+          class="btn btn-icon btn-light-danger btn-sm position-absolute top-0 end-0 m-1 w-25px h-25px"
+          (click)="$event.stopPropagation(); removePicture()"
+        >
+          <i class="ki-duotone ki-cross fs-4">
+            <span class="path1"></span>
+            <span class="path2"></span>
+          </i>
+        </button>
+        <div
+          *ngIf="isUploadingPicture"
+          class="position-absolute top-50 start-50 translate-middle"
+        >
+          <span class="spinner-border spinner-border-sm text-primary"></span>
+        </div>
       </div>
     </div>
     <!--end::Avatar-->
@@ -106,6 +124,22 @@
     </ng-container>
     <!--end::Phone-->
 
+    <!--begin::Role-->
+    <div class="mb-6">
+      <label class="form-label required">
+        {{ "COMMON.LABEL.ROLE" | translate }}
+      </label>
+      <select class="form-select form-select-solid" formControlName="role">
+        <option *ngFor="let role of roles" [value]="role">
+          {{ "CUSTOMERS.ROLES." + role | translate }}
+        </option>
+      </select>
+      <div *ngIf="isInvalid('role')" class="text-danger small mt-1">
+        {{ "COMMON.VALIDATION.REQUIRED" | translate }}
+      </div>
+    </div>
+    <!--end::Role-->
+
     <!--begin::Permission-->
     <div class="mb-6">
       <label class="form-label required">{{
@@ -177,7 +211,12 @@
     <button
       type="submit"
       class="btn btn-primary"
-      [disabled]="memberForm.invalid || isSubmitting || isButtonDisabled"
+      [disabled]="
+        memberForm.invalid ||
+        isSubmitting ||
+        isButtonDisabled ||
+        isUploadingPicture
+      "
     >
       <span
         *ngIf="isSubmitting"

@@ -438,6 +438,10 @@ public class AccountsController {
 
     }
 
+    public record PictureReq(String baseUrl, String path) {
+
+    }
+
     public record RegisterAccountForTargetReq(
             String firstName,
             String lastName,
@@ -446,7 +450,8 @@ public class AccountsController {
             String password,
             String role,
             String companyId,
-            String permissionId
+            String permissionId,
+            PictureReq picture
             ) {
 
     }
@@ -527,6 +532,12 @@ public class AccountsController {
                 throw new ResponseStatusException(HttpStatus.CONFLICT, "User already has an account with this company");
             }
 
+            if (req.picture() != null) {
+                existingUser.setPicture(new PictureType(req.picture().baseUrl(), req.picture().path()));
+                existingUser.setUpdatedAt(Instant.now());
+                existingUser = userRepo.save(existingUser);
+            }
+
             Instant now = Instant.now();
             AccountType account = new AccountType();
             account.setUserId(existingUser.getId());
@@ -548,6 +559,9 @@ public class AccountsController {
         user.setApp(AppEnum.TERMINAL);
         user.setTarget(new UserType.TargetType(req.companyId(), null));
         user.setPhone(new PhoneType(req.phone().countryCode(), req.phone().number()));
+        if (req.picture() != null) {
+            user.setPicture(new PictureType(req.picture().baseUrl(), req.picture().path()));
+        }
         Instant now = Instant.now();
         user.setCreatedAt(now);
         user.setUpdatedAt(now);

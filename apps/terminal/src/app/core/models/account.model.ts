@@ -13,6 +13,7 @@ export interface RegisterAccountForTargetPayload {
   role?: string;
   companyId: string;
   permissionId?: string;
+  picture?: PictureType;
 }
 
 export interface PictureType {

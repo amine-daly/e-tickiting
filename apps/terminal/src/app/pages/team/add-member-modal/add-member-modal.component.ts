@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy } from '@angular/core';
+import { Component, OnDestroy, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import {
   FormBuilder,
@@ -8,21 +8,20 @@ import {
 } from '@angular/forms';
 import { NgbActiveModal } from '@ng-bootstrap/ng-bootstrap';
 import { TranslateModule, TranslateService } from '@ngx-translate/core';
-import { Subject } from 'rxjs';
-import { takeUntil } from 'rxjs/operators';
-import { isEqual } from 'lodash';
-import {
-  NgSelectComponent,
-  NgLabelTemplateDirective,
-  NgOptionTemplateDirective,
-} from '@ng-select/ng-select';
+import { isEqual, values } from 'lodash';
+import { from, Subject } from 'rxjs';
+import { finalize, takeUntil } from 'rxjs/operators';
+import { NgSelectComponent } from '@ng-select/ng-select';
 
+import { AmazonS3Helper } from '../../../../../../../libs/helpers/amazon-s3-helper';
 import { TeamService } from '../team.service';
 import { PermissionsService } from '../../permissions/permissions.service';
 import { AlertService } from 'src/app/core/services/alert.service';
 import { RoleEnum } from 'src/app/core/models/user-type';
 import { PermissionType } from 'src/app/core/models/permission-type';
+import { RegisterAccountForTargetPayload } from 'src/app/core/models/account.model';
 import { FormHelper } from 'src/app/core/helpers/form-helper';
+import { resolveUserErrorMessage } from 'src/app/core/helpers/user-error-message.helper';
 
 @Component({
   selector: 'app-add-member-modal',
@@ -35,12 +34,16 @@ import { FormHelper } from 'src/app/core/helpers/form-helper';
   ],
   templateUrl: './add-member-modal.component.html',
   styleUrls: ['./add-member-modal.component.scss'],
+  providers: [AmazonS3Helper],
 })
 export class AddMemberModalComponent implements OnInit, OnDestroy {
   memberForm: FormGroup;
   permissions: PermissionType[] = [];
+  roles = values(RoleEnum);
+  defaultAvatar = 'assets/media/avatars/blank.png';
   isSubmitting = false;
   isButtonDisabled = true;
+  isUploadingPicture = false;
   private destroy$ = new Subject<void>();
   private initialValues: any;
 
@@ -51,6 +54,7 @@ export class AddMemberModalComponent implements OnInit, OnDestroy {
     private permissionsService: PermissionsService,
     private alert: AlertService,
     private translate: TranslateService,
+    private amazonS3Helper: AmazonS3Helper,
   ) {
     this.memberForm = this.buildForm();
   }
@@ -58,7 +62,7 @@ export class AddMemberModalComponent implements OnInit, OnDestroy {
   ngOnInit(): void {
     this.loadPermissions();
     // track initial state and enable save only when changes occur
-    this.initialValues = this.memberForm.value;
+    this.initialValues = this.memberForm.getRawValue();
     this.memberForm.valueChanges
       .pipe(takeUntil(this.destroy$))
       .subscribe((values) => {
@@ -76,6 +80,11 @@ export class AddMemberModalComponent implements OnInit, OnDestroy {
           countryCode: ['', [Validators.required]],
           number: ['', [Validators.required]],
         }),
+        picture: this.fb.group({
+          baseUrl: [''],
+          path: [''],
+        }),
+        role: [Validators.required],
         permissionId: [undefined, Validators.required],
         password: ['', [Validators.required]],
         confirmPassword: ['', [Validators.required]],
@@ -96,11 +105,106 @@ export class AddMemberModalComponent implements OnInit, OnDestroy {
   }
 
   private loadPermissions(): void {
-    this.permissionsService.getPermissions().subscribe({
-      next: (permissions) => {
-        this.permissions = permissions;
-      },
-    });
+    this.permissionsService
+      .getPermissions()
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (permissions) => {
+          this.permissions = permissions;
+        },
+      });
+  }
+
+  getPictureUrl(): string | null {
+    const picture = this.memberForm?.get('picture')?.value;
+    const baseUrl = (picture?.baseUrl || '').replace(/\/+$/, '');
+    const path = (picture?.path || '').replace(/^\/+/, '');
+
+    if (!baseUrl || !path) {
+      return null;
+    }
+
+    return `${baseUrl}/${path}`;
+  }
+
+  uploadPicture(): void {
+    if (this.isUploadingPicture) {
+      return;
+    }
+
+    const fileInput = document.createElement('input');
+    fileInput.type = 'file';
+    fileInput.accept = 'image/*';
+
+    fileInput.onchange = () => {
+      const file = fileInput.files?.[0];
+      if (!file) {
+        return;
+      }
+
+      this.isUploadingPicture = true;
+
+      const previousPath = this.memberForm.get('picture.path')?.value;
+      const storageKey =
+        localStorage.getItem('companyId') || localStorage.getItem('posId');
+      const { objectKey, request$ } = this.amazonS3Helper.uploadS3Aws(
+        file,
+        storageKey,
+      );
+
+      from(request$)
+        .pipe(
+          finalize(() => {
+            this.isUploadingPicture = false;
+          }),
+          takeUntil(this.destroy$),
+        )
+        .subscribe({
+          next: (uploadRes: any) => {
+            const nextPath = uploadRes?.path || objectKey;
+            this.memberForm.get('picture')?.patchValue({
+              baseUrl: uploadRes?.baseUrl || '',
+              path: nextPath,
+            });
+
+            if (previousPath && previousPath !== nextPath) {
+              this.amazonS3Helper.deleteFileFromAws(previousPath);
+            }
+
+            this.memberForm.markAsDirty();
+          },
+          error: (err) => {
+            const safeMessage = resolveUserErrorMessage(
+              err,
+              [
+                {
+                  pattern:
+                    /maximum upload size exceeded|payload too large|file.*too.*large/i,
+                  message: 'Le fichier est trop volumineux.',
+                },
+                {
+                  pattern: /access denied|forbidden|unauthorized/i,
+                  message: 'Action non autorisee.',
+                },
+              ],
+              'Une erreur est survenue.',
+            );
+            this.alert.error('Échec', safeMessage);
+          },
+        });
+    };
+
+    fileInput.click();
+  }
+
+  removePicture(): void {
+    const oldPath = this.memberForm.get('picture.path')?.value;
+    if (oldPath) {
+      this.amazonS3Helper.deleteFileFromAws(oldPath);
+    }
+
+    this.memberForm.get('picture')?.patchValue({ baseUrl: '', path: '' });
+    this.memberForm.markAsDirty();
   }
 
   isInvalid(controlName: string): boolean {
@@ -135,17 +239,19 @@ export class AddMemberModalComponent implements OnInit, OnDestroy {
 
     this.isSubmitting = true;
     const companyId = localStorage.getItem('companyId') || '';
+    const picture = this.memberForm.get('picture')?.value;
 
     // Single API call to create user and account
-    const payload = {
+    const payload: RegisterAccountForTargetPayload = {
       firstName: current.firstName,
       lastName: current.lastName,
       email: current.email,
       phone: current.phone,
       password: current.password,
-      role: RoleEnum.MANAGER,
+      role: current.role || RoleEnum.MANAGER,
       companyId,
       permissionId: current.permissionId || undefined,
+      ...(picture?.baseUrl && picture?.path ? { picture } : {}),
     };
 
     this.teamService
