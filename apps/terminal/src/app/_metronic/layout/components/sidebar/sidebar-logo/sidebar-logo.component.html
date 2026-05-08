@@ -1,26 +1,29 @@
 <!--begin::Logo image-->
 <a routerLink="/dashboard">
-  <a class="d-flex align-items-center gap-3">
-    <img alt="Logo" src="./assets/media/logos/e-ticketing.png" class="rounded-3 h-40px app-sidebar-logo-default" />
-    <span *ngIf="!isSidebarClosed" class="fw-bolder fs-1">E-ticketing</span>
-  </a>
-
-  <img alt="Logo" src="./assets/media/logos/e-ticketing.png" class="rounded-3 h-40px app-sidebar-logo-minimize" />
+  <img
+    alt="Logo"
+    src="./assets/media/logos/safra_dark.png"
+    class="rounded-3 h-40px app-sidebar-logo-default"
+  />
+  <img
+    alt="Logo"
+    src="./assets/media/logos/safra_base.png"
+    class="rounded-3 h-25px app-sidebar-logo-minimize"
+  />
 </a>
-
-<!-- <a class="d-flex align-items-center gap-3" routerLink="/dashboard">
-  <img alt="Logo" src="./assets/media/logos/e-ticketing.png" class="rounded-3 h-40px app-sidebar-logo-default" />
-  <span class="text-light fw-bolder fs-1">E-ticketing</span>
-</a> -->
-<!--end::Logo image-->
-
 
 <ng-container *ngIf="toggleEnabled">
   <!--begin::Sidebar toggle-->
-  <div (click)="isSidebarClosed = !isSidebarClosed" id="kt_app_sidebar_toggle"
+  <div
+    (click)="isSidebarClosed = !isSidebarClosed"
+    id="kt_app_sidebar_toggle"
     class="app-sidebar-toggle btn btn-icon btn-shadow btn-sm btn-color-muted btn-active-color-primary body-bg h-30px w-30px position-absolute top-50 start-100 translate-middle rotate"
-    [ngClass]="toggleButtonClass" data-kt-toggle="true" [attr.data-kt-toggle-state]="toggleState"
-    data-kt-toggle-target="body" [attr.data-kt-toggle-name]="toggleAttr">
+    [ngClass]="toggleButtonClass"
+    data-kt-toggle="true"
+    [attr.data-kt-toggle-state]="toggleState"
+    data-kt-toggle-target="body"
+    [attr.data-kt-toggle-name]="toggleAttr"
+  >
     <app-keenicon name="double-left" class="fs-2 rotate-180"></app-keenicon>
   </div>
   <!--end::Sidebar toggle-->
