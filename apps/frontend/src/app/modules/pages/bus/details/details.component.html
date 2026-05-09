@@ -5,42 +5,21 @@
       <!-- Bus Photos -->
       <div class="mb-3">
         <h6 class="fw-bold mb-2">Bus Photos</h6>
-        <div class="bus-photos d-flex gap-2 overflow-auto pb-2">
+        <div
+          *ngIf="busPictureUrls.length; else noBusPhotos"
+          class="bus-photos d-flex gap-2 overflow-auto pb-2"
+        >
           <img
-            src="img/p1.png"
+            *ngFor="let pictureUrl of busPictureUrls; let i = index"
+            [src]="pictureUrl"
             class="bus-photo-thumb rounded-3"
-            alt="Bus Interior"
-          />
-          <img
-            src="img/p2.png"
-            class="bus-photo-thumb rounded-3"
-            alt="Bus Seat"
-          />
-          <img src="img/p3.png" class="bus-photo-thumb rounded-3" alt="Coach" />
-          <img
-            src="img/p4.png"
-            class="bus-photo-thumb rounded-3"
-            alt="Luxury Bus"
+            [alt]="trip.bus?.name || 'Bus photo ' + (i + 1)"
           />
         </div>
+        <ng-template #noBusPhotos>
+          <div class="text-muted small">No bus photos available.</div>
+        </ng-template>
       </div>
-      <!-- <img src="img/3.png" alt="Bus" class="img-fluid w-100 rounded-3" />
-      <div class="overlay"></div>
-      <div
-        class="header-controls position-absolute top-0 w-100 p-3 d-flex justify-content-between"
-      >
-        <a
-          [routerLink]="['/bus-listing']"
-          [queryParams]="{
-            originPlaceId: originPlaceId,
-            destinationPlaceId: destPlaceId,
-            date: travelDate,
-          }"
-          class="btn btn-light btn-circle shadow-sm"
-        >
-          <i class="bi bi-arrow-left"></i>
-        </a>
-      </div> -->
     </div>
 
     <!-- Bus Details -->
@@ -48,7 +27,12 @@
       <div class="d-flex justify-content-between align-items-start mb-3">
         <div>
           <h5 class="fw-bold mb-1">{{ originCity }} → {{ destCity }}</h5>
-          <div class="text-muted">{{ trip.departureDate }}</div>
+          <div class="text-muted">
+            {{ trip.departureDate | date: "MMM d, y HH:mm a" }}
+          </div>
+          <div class="text-muted small" *ngIf="trip.bus?.name">
+            {{ trip.bus?.name }}
+          </div>
         </div>
         <div class="text-muted small">{{ trip.status }}</div>
       </div>
@@ -62,20 +46,17 @@
             <div class="arrival-stop"></div>
           </div>
           <div class="journey-info flex-grow-1">
-            <div
-              class="mb-3"
-              *ngFor="
-                let stop of trip.stopSchedule;
-                let first = first;
-                let last = last
-              "
-            >
-              <ng-container *ngIf="first || last">
-                <div class="fw-bold">{{ getPlaceName(stop.placeId) }}</div>
-                <div class="text-muted small">
-                  {{ first ? stop.departureTime : stop.arrivalTime }}
-                </div>
-              </ng-container>
+            <div class="mb-3">
+              <div class="fw-bold">{{ originCity }}</div>
+              <div class="text-muted small">
+                {{ journeyDepartureTime | date: "hh:mm a" }}
+              </div>
+            </div>
+            <div>
+              <div class="fw-bold">{{ destCity }}</div>
+              <div class="text-muted small">
+                {{ journeyArrivalTime | date: "hh:mm a" }}
+              </div>
             </div>
           </div>
           <div class="journey-duration text-center">
@@ -85,16 +66,35 @@
         </div>
       </div>
 
+      <!-- Amenities -->
+      <div class="mb-3">
+        <h6 class="fw-bold mb-2">Amenities</h6>
+        <div class="d-flex flex-wrap gap-2">
+          <ng-container *ngIf="trip?.bus?.amenities?.length; else noAmenities">
+            <div class="amenity-item" *ngFor="let a of trip.bus.amenities">
+              <i
+                class="bi"
+                [ngClass]="amenityMap[a]?.icon || 'bi-question-circle'"
+              ></i>
+              <span>{{ formatAmenity(a) }}</span>
+            </div>
+          </ng-container>
+          <ng-template #noAmenities>
+            <div class="text-muted small">No amenities listed.</div>
+          </ng-template>
+        </div>
+      </div>
+
       <!-- Stop Schedule -->
-      <div class="mb-3" *ngIf="trip.stopSchedule?.length > 2">
+      <div class="mb-3" *ngIf="routeStops.length > 2">
         <h6 class="fw-bold mb-2">All Stops</h6>
         <div class="list-group list-group-flush">
           <div
             class="list-group-item px-0 d-flex justify-content-between"
-            *ngFor="let stop of trip.stopSchedule; let i = index"
+            *ngFor="let stop of routeStops; let i = index"
           >
             <div>
-              <span class="fw-medium">{{ getPlaceName(stop.placeId) }}</span>
+              <span class="fw-medium">{{ stop.city }}</span>
               <span
                 class="badge bg-info-subtle text-info ms-2"
                 *ngIf="stop.boardingAllowed"
@@ -107,9 +107,11 @@
               >
             </div>
             <div class="text-muted small">
-              <span *ngIf="stop.arrivalTime">Arr {{ stop.arrivalTime }}</span>
+              <span *ngIf="stop.arrivalTime">
+                Arr {{ stop.arrivalTime | date: "hh:mm a" }}
+              </span>
               <span *ngIf="stop.departureTime" class="ms-2"
-                >Dep {{ stop.departureTime }}</span
+                >Dep {{ stop.departureTime | date: "hh:mm a" }}</span
               >
             </div>
           </div>
@@ -142,10 +144,14 @@
                 class="form-check-label fw-medium mb-0 d-block"
                 >{{ p.address }}</label
               >
-              <div class="text-muted small">{{ getPlaceName(p.placeId) }}</div>
+              <div class="text-muted small">
+                {{ p.place?.city || p.placeId }}
+              </div>
             </div>
             <div class="text-end">
-              <div class="text-muted small">{{ p.scheduledDepartureTime }}</div>
+              <div class="text-muted small">
+                {{ p.scheduledDepartureTime | date: "hh:mm a" }}
+              </div>
             </div>
           </div>
         </div>
@@ -177,10 +183,14 @@
                 class="form-check-label fw-medium mb-0 d-block"
                 >{{ d.address }}</label
               >
-              <div class="text-muted small">{{ getPlaceName(d.placeId) }}</div>
+              <div class="text-muted small">
+                {{ d.place?.city || d.placeId }}
+              </div>
             </div>
             <div class="text-end">
-              <div class="text-muted small">{{ d.scheduledArrivalTime }}</div>
+              <div class="text-muted small">
+                {{ d.scheduledArrivalTime | date: "hh:mm a" }}
+              </div>
             </div>
           </div>
         </div>

@@ -65,11 +65,36 @@ export interface TripRouteAvailabilityType {
 
 import { AmenityEnum } from './amenity.enum';
 
+export interface BusMedia {
+  pictures: Picture[];
+}
+
+export interface BusLayoutElement {
+  type: string | null;
+  seatNo: string | null;
+  gridX: number;
+  gridY: number;
+}
+
+export interface BusLayoutTemplate {
+  gridColumns: number;
+  gridRows: number;
+  hasDecks: boolean;
+  lowerDeck: BusLayoutElement[];
+  upperDeck: BusLayoutElement[];
+}
+
 export interface BusSummary {
+  id?: string;
   busId: string;
   name: string | null;
+  target?: TargetType | null;
   totalSeats: number;
   amenities?: AmenityEnum[];
+  media?: BusMedia | null;
+  layoutTemplate?: BusLayoutTemplate | null;
+  createdAt?: string | null;
+  updatedAt?: string | null;
 }
 
 export interface CurrencySummary {
@@ -130,7 +155,7 @@ export interface PickupPointType {
   address: string;
   scheduledDepartureTime: string;
   active: boolean;
-  location?: GeoLocation;
+  location?: GeoLocation | null;
 }
 
 export interface DropoffPointType {
@@ -140,7 +165,7 @@ export interface DropoffPointType {
   address: string;
   scheduledArrivalTime: string;
   active: boolean;
-  location?: GeoLocation;
+  location?: GeoLocation | null;
 }
 
 export interface TripType {

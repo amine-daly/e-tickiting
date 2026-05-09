@@ -6,6 +6,7 @@ import { environment } from '../../../environments/environment';
 import { PaginateResponse } from '../../../core/models/paginate-response.model';
 import {
   TripDestinationForm,
+  TripRouteSelection,
   TripSearchParams,
   TripStatusEnum,
   TripRouteAvailabilityType,
@@ -44,8 +45,26 @@ export class TripService {
 
   constructor(private http: HttpClient) {}
 
-  getTripById(id: string): Observable<TripType> {
-    return this.http.get<TripType>(`${this.baseUrl}/${id}`).pipe(
+  getTripById(
+    id: string,
+    routeSelection?: TripRouteSelection,
+  ): Observable<TripType> {
+    let params = new HttpParams();
+
+    if (routeSelection?.originPlaceId) {
+      params = params.set('originPlaceId', routeSelection.originPlaceId);
+    }
+    if (routeSelection?.destinationPlaceId) {
+      params = params.set(
+        'destinationPlaceId',
+        routeSelection.destinationPlaceId,
+      );
+    }
+    if (routeSelection?.date) {
+      params = params.set('date', routeSelection.date);
+    }
+
+    return this.http.get<TripType>(`${this.baseUrl}/${id}`, { params }).pipe(
       map((data: TripType) => {
         this.trip.next(data);
         return data;

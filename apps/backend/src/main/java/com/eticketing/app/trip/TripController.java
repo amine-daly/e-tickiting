@@ -57,6 +57,8 @@ public class TripController {
     @GetMapping("/{id}")
     public ResponseEntity<TripResponse> getTripById(
             @PathVariable String id,
+            @RequestParam(required = false) String originPlaceId,
+            @RequestParam(required = false) String destinationPlaceId,
             @AuthenticationPrincipal User principal) {
         // Allow anonymous access: if no authenticated principal and no X-Company-Id
         // header is provided, treat as public read (companyId = null).
@@ -70,7 +72,7 @@ public class TripController {
             companyId = null;
         }
         TripType trip = tripService.getById(id, companyId);
-        return ResponseEntity.ok(enricher.enrich(trip));
+        return ResponseEntity.ok(enricher.enrich(trip, originPlaceId, destinationPlaceId));
     }
 
     @Operation(summary = "Get backend-calculated route availability for a trip")

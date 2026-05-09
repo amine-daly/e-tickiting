@@ -1,6 +1,7 @@
-// This file can be replaced during build by using the `fileReplacements` array.
-// `ng build` replaces `environment.ts` with `environment.prod.ts`.
-// The list of file replacements can be found in `angular.json`.
+export const LOGO_BASE =
+  'https://eticketing-app.s3.eu-north-1.amazonaws.com/logos/logo_base.png';
+export const LOGO_DARK =
+  'https://eticketing-app.s3.eu-north-1.amazonaws.com/logos/logo_dark.png';
 
 export const environment = {
   production: false,

@@ -32,7 +32,42 @@ public class TripResponseEnricher {
     private final TripInventoryReconciliationService tripInventoryReconciliationService;
 
     public TripResponse enrich(TripType trip) {
-        return enrich(List.of(trip), null, null).get(0);
+        return enrich(trip, null, null);
+    }
+
+    public TripResponse enrich(TripType trip, String originPlaceId, String destinationPlaceId) {
+        if (trip == null) {
+            return null;
+        }
+
+        TripType reconciledTrip = tripInventoryReconciliationService.reconcile(List.of(trip)).get(0);
+        Set<String> placeIds = new HashSet<>();
+        collectPlaceIds(reconciledTrip, placeIds);
+
+        Map<String, PlaceType> placeMap = placeIds.isEmpty()
+                ? Map.of()
+                : placeRepository.findAllById(placeIds).stream()
+                        .collect(Collectors.toMap(PlaceType::getId, Function.identity()));
+
+        Map<String, BusType> busMap = loadBusMap(reconciledTrip);
+        Map<String, CompanyType> companyMap = loadCompanyMap(reconciledTrip);
+        Map<String, CurrencyType> currencyMap = loadCurrencyMap(reconciledTrip);
+
+        BusType busEntity = reconciledTrip.getBus() != null ? busMap.get(reconciledTrip.getBus().getBusId()) : null;
+        CurrencyType currencyEntity = reconciledTrip.getCurrency() != null
+                ? currencyMap.get(reconciledTrip.getCurrency().getCurrencyId())
+                : null;
+        TripResponse.MarketplaceView marketplace = hasText(originPlaceId) && hasText(destinationPlaceId)
+                ? TripMarketplaceProjectionFactory.build(
+                        reconciledTrip,
+                        originPlaceId,
+                        destinationPlaceId,
+                        busEntity,
+                        currencyEntity != null ? currencyEntity.getCode() : "DT",
+                        placeMap)
+                : null;
+
+        return TripResponse.from(reconciledTrip, placeMap, busMap, currencyMap, companyMap, marketplace);
     }
 
     public List<TripResponse> enrich(List<TripType> trips) {
@@ -161,6 +196,38 @@ public class TripResponseEnricher {
         if (value != null && !value.isBlank()) {
             set.add(value);
         }
+    }
+
+    private Map<String, BusType> loadBusMap(TripType trip) {
+        if (trip.getBus() == null || trip.getBus().getBusId() == null || trip.getBus().getBusId().isBlank()) {
+            return Map.of();
+        }
+
+        return busRepository.findById(trip.getBus().getBusId())
+                .map(bus -> Map.of(bus.getId(), bus))
+                .orElseGet(Map::of);
+    }
+
+    private Map<String, CompanyType> loadCompanyMap(TripType trip) {
+        String companyId = trip.getTarget() != null ? trip.getTarget().getCompany() : null;
+        if (!hasText(companyId)) {
+            return Map.of();
+        }
+
+        return companyRepository.findById(companyId)
+                .map(company -> Map.of(company.getId(), company))
+                .orElseGet(Map::of);
+    }
+
+    private Map<String, CurrencyType> loadCurrencyMap(TripType trip) {
+        String currencyId = trip.getCurrency() != null ? trip.getCurrency().getCurrencyId() : null;
+        if (!hasText(currencyId)) {
+            return Map.of();
+        }
+
+        return currencyRepository.findById(currencyId)
+                .map(currency -> Map.of(currency.getId(), currency))
+                .orElseGet(Map::of);
     }
 
     private boolean hasText(String value) {

@@ -3,11 +3,15 @@ package com.eticketing.app.trip.dto;
 import com.eticketing.app.trip.TripPlaceRef;
 
 import com.eticketing.app.bus.BusType;
+import com.eticketing.app.common.MediaMapper;
+import com.eticketing.app.common.MediaType;
 import com.eticketing.app.common.TargetInput;
 import com.eticketing.app.company.CompanyType;
 import com.eticketing.app.currency.CurrencyType;
 import com.eticketing.app.place.PlaceType;
 import com.eticketing.app.trip.*;
+import com.eticketing.app.bus.LayoutElement;
+import com.eticketing.app.bus.LayoutTemplate;
 import lombok.Builder;
 import lombok.Data;
 
@@ -49,10 +53,16 @@ public class TripResponse {
     @Builder
     public static class BusSummary {
 
+        private String id;
         private String busId;
         private String name;
+        private TargetInput target;
         private int totalSeats;
         private java.util.List<com.eticketing.app.bus.AmenityEnum> amenities;
+        private MediaSummary media;
+        private LayoutTemplateSummary layoutTemplate;
+        private Instant createdAt;
+        private Instant updatedAt;
     }
 
     @Data
@@ -61,6 +71,34 @@ public class TripResponse {
 
         private String baseUrl;
         private String path;
+    }
+
+    @Data
+    @Builder
+    public static class MediaSummary {
+
+        private List<PictureSummary> pictures;
+    }
+
+    @Data
+    @Builder
+    public static class LayoutElementSummary {
+
+        private String type;
+        private String seatNo;
+        private int gridX;
+        private int gridY;
+    }
+
+    @Data
+    @Builder
+    public static class LayoutTemplateSummary {
+
+        private int gridColumns;
+        private int gridRows;
+        private boolean hasDecks;
+        private List<LayoutElementSummary> lowerDeck;
+        private List<LayoutElementSummary> upperDeck;
     }
 
     @Data
@@ -258,10 +296,16 @@ public class TripResponse {
             return null;
         }
         return BusSummary.builder()
+                .id(bus != null ? bus.getId() : ref.getBusId())
                 .busId(ref.getBusId())
                 .name(bus != null ? bus.getName() : null)
+                .target(bus != null ? bus.getTarget() : null)
                 .totalSeats(bus != null ? bus.getTotalSeats() : 0)
                 .amenities(bus != null ? bus.getAmenities() : java.util.List.of())
+                .media(toMediaSummary(bus != null ? bus.getMedia() : null))
+                .layoutTemplate(toLayoutTemplateSummary(bus != null ? bus.getLayoutTemplate() : null))
+                .createdAt(bus != null ? bus.getCreatedAt() : null)
+                .updatedAt(bus != null ? bus.getUpdatedAt() : null)
                 .build();
     }
 
@@ -298,6 +342,51 @@ public class TripResponse {
         return PictureSummary.builder()
                 .baseUrl(picture.getBaseUrl())
                 .path(picture.getPath())
+                .build();
+    }
+
+    private static MediaSummary toMediaSummary(MediaType media) {
+        return MediaSummary.builder()
+                .pictures(MediaMapper.picturesOrEmpty(media).stream()
+                        .map(TripResponse::toPictureSummary)
+                        .toList())
+                .build();
+    }
+
+    private static LayoutTemplateSummary toLayoutTemplateSummary(LayoutTemplate layoutTemplate) {
+        if (layoutTemplate == null) {
+            return null;
+        }
+
+        return LayoutTemplateSummary.builder()
+                .gridColumns(layoutTemplate.getGridColumns())
+                .gridRows(layoutTemplate.getGridRows())
+                .hasDecks(layoutTemplate.isHasDecks())
+                .lowerDeck(toLayoutElementSummaries(layoutTemplate.getLowerDeck()))
+                .upperDeck(toLayoutElementSummaries(layoutTemplate.getUpperDeck()))
+                .build();
+    }
+
+    private static List<LayoutElementSummary> toLayoutElementSummaries(List<LayoutElement> elements) {
+        if (elements == null) {
+            return List.of();
+        }
+
+        return elements.stream()
+                .map(TripResponse::toLayoutElementSummary)
+                .toList();
+    }
+
+    private static LayoutElementSummary toLayoutElementSummary(LayoutElement element) {
+        if (element == null) {
+            return null;
+        }
+
+        return LayoutElementSummary.builder()
+                .type(element.getType() != null ? element.getType().name() : null)
+                .seatNo(element.getSeatNo())
+                .gridX(element.getGridX())
+                .gridY(element.getGridY())
                 .build();
     }
 
