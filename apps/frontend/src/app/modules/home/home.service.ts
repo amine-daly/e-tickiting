@@ -1,8 +1,8 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { BehaviorSubject, map, Observable } from 'rxjs';
-import { environment } from '../../environments/environment.prod';
 import { PlaceType } from '../../core/models/place-type';
+import { environment } from '../../environments/environment';
 
 @Injectable({ providedIn: 'root' })
 export class PlacesService {
@@ -24,7 +24,7 @@ export class PlacesService {
       map((data: any) => {
         this.places.next(data.objects);
         return data.objects;
-      })
+      }),
     );
   }
 }

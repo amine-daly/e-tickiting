@@ -69,13 +69,8 @@ public final class TripMarketplaceProjectionFactory {
                                         .mapToInt(segment -> Math.max(segment.getDurationMinutes(), 0))
                                         .sum())
                         .build())
-                .pricing(TripResponse.MarketplacePricing.builder()
-                        .displayPrice(routeAvailability.getDisplayPrice())
-                        .currencyCode(routeAvailability.getCurrencyCode())
-                        .build())
-                .capacity(TripResponse.MarketplaceCapacity.builder()
-                        .availableSeats(routeAvailability.getAvailableSeats())
-                        .build())
+                .price(routeAvailability.getDisplayPrice())
+                .availableSeats(routeAvailability.getAvailableSeats())
                 .build();
     }
 
@@ -89,6 +84,10 @@ public final class TripMarketplaceProjectionFactory {
                 || originPlaceId == null || originPlaceId.isBlank()
                 || destinationPlaceId == null || destinationPlaceId.isBlank()) {
             return null;
+        }
+
+        if (trip.getStatus() != TripStatusEnum.ACTIVE) {
+            return unavailableRoute(trip.getId(), originPlaceId, destinationPlaceId, currencyCode, false, List.of());
         }
 
         ResolvedRoute resolvedRoute = resolveRoute(trip, originPlaceId, destinationPlaceId);

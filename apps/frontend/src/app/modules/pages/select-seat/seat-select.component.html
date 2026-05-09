@@ -114,7 +114,11 @@
       <button
         *ngIf="!booked"
         class="btn btn-app py-2 fw-bold"
-        [disabled]="booking || availableSeats <= 0"
+        [disabled]="
+          booking ||
+          availableSeats <= 0 ||
+          routeAvailability?.sellable === false
+        "
         (click)="confirmBooking()"
       >
         <span

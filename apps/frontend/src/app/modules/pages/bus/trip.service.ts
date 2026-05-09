@@ -8,6 +8,7 @@ import {
   TripDestinationForm,
   TripSearchParams,
   TripStatusEnum,
+  TripRouteAvailabilityType,
   TripType,
 } from '../../../core/models/trip.model';
 
@@ -52,6 +53,21 @@ export class TripService {
     );
   }
 
+  getRouteAvailability(
+    tripId: string,
+    originPlaceId: string,
+    destinationPlaceId: string,
+  ): Observable<TripRouteAvailabilityType> {
+    const params = new HttpParams()
+      .set('originPlaceId', originPlaceId)
+      .set('destinationPlaceId', destinationPlaceId);
+
+    return this.http.get<TripRouteAvailabilityType>(
+      `${this.baseUrl}/${tripId}/route-availability`,
+      { params },
+    );
+  }
+
   getTrips(): Observable<TripType[]> {
     return this.http
       .get<PaginateResponse<TripType> | TripType[]>(`${this.baseUrl}/search`, {
@@ -61,8 +77,8 @@ export class TripService {
         ),
       })
       .pipe(
-        map((response) => {
-          const trips = this.extractTrips(response);
+        map((response: any) => {
+          const trips = response.objects || [];
           this.allTrips.next(trips);
           return trips;
         }),
@@ -75,10 +91,9 @@ export class TripService {
         params: this.buildHttpParams(params, this.defaultSearchLimit),
       })
       .pipe(
-        map((response) => {
-          const trips = this.extractTrips(response);
-          this.filtredTrips.next(trips);
-          return trips;
+        map((response: any) => {
+          this.filtredTrips.next(response.objects || []);
+          return response.objects || [];
         }),
       );
   }
@@ -107,12 +122,6 @@ export class TripService {
     }
 
     return httpParams;
-  }
-
-  private extractTrips(
-    response: PaginateResponse<TripType> | TripType[],
-  ): TripType[] {
-    return Array.isArray(response) ? response : response?.objects || [];
   }
 
   private getStoredCompanyId(): string | null {

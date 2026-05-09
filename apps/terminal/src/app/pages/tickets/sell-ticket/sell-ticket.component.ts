@@ -378,8 +378,6 @@ export class SellTicketComponent implements OnInit, OnDestroy {
         passengerId: p.customer!.id,
         idempotencyKey: uuid(),
       };
-      console.log('🚀 ~ SellTicketComponent ~ goToStep3 ~ request:', request);
-
       const sub = this.bookingService.createBooking(request).subscribe({
         next: (res) => {
           this.booking = false;

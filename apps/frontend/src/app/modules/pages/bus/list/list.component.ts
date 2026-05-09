@@ -1,14 +1,18 @@
 import { Component } from '@angular/core';
-import { combineLatest, map } from 'rxjs';
+import { map } from 'rxjs';
 import { CommonModule } from '@angular/common';
-import { RouterLink, ActivatedRoute } from '@angular/router';
+import { RouterLink } from '@angular/router';
 
 import { TripService } from '../trip.service';
 import { AmenityEnum } from '../../../../core/models/amenity.enum';
 import { DurationPipe } from '../../../../shared/pipes/duration.pipe';
-import { TripRouteSelection } from '../../../../core/models/trip.model';
-import { TripMarketplaceService } from '../../../../core/services/trip-marketplace.service';
+import {
+  MarketplaceProjection,
+  TripType,
+} from '../../../../core/models/trip.model';
 import { SearchCardComponent } from '../../../../shared/components/search-card/search-card.component';
+
+type TripWithMarketplace = TripType & { marketplace: MarketplaceProjection };
 
 @Component({
   selector: 'app-bus-list',
@@ -18,29 +22,13 @@ import { SearchCardComponent } from '../../../../shared/components/search-card/s
   styleUrls: ['./list.component.scss'],
 })
 export class BusListComponent {
-  trips$ = combineLatest([
-    this.tripService.filtredTrips$,
-    this.route.queryParams.pipe(
-      map((q) => ({
-        originPlaceId: q['originPlaceId'] || null,
-        destinationPlaceId: q['destinationPlaceId'] || null,
-        date: q['date'] || null,
-      })),
-    ),
-  ]).pipe(
-    map(([trips, query]) =>
-      this.tripMarketplaceService.mapSearchResults(
-        trips,
-        query as TripRouteSelection,
-      ),
+  trips$ = this.tripService.filtredTrips$.pipe(
+    map((trips) =>
+      trips.filter((trip): trip is TripWithMarketplace => !!trip.marketplace),
     ),
   );
 
-  constructor(
-    private route: ActivatedRoute,
-    private tripService: TripService,
-    private tripMarketplaceService: TripMarketplaceService,
-  ) {}
+  constructor(private tripService: TripService) {}
 
   // Public mapping used by the template to render amenity icons and labels
   amenityMap: Record<AmenityEnum, { icon: string; label: string }> = {

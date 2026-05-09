@@ -4,14 +4,19 @@ import { CommonModule } from '@angular/common';
 import { Subject, takeUntil, take } from 'rxjs';
 import { v4 as uuid } from 'uuid';
 
-import { computeRouteAvailableSeats } from '../../../core/helpers/trip-inventory.helper';
 import { TripService } from '../bus/trip.service';
 import {
   BookingService,
   BookingRequest,
 } from '../../../core/services/booking.service';
 import { AuthService } from '../../../core/services/auth.service';
-import { TripType, SegmentType } from '../../../core/models/trip.model';
+import {
+  getSegmentFromPlaceId,
+  getSegmentToPlaceId,
+  SegmentType,
+  TripRouteAvailabilityType,
+  TripType,
+} from '../../../core/models/trip.model';
 
 @Component({
   selector: 'app-seat-select',
@@ -31,6 +36,7 @@ export class SeatSelectComponent implements OnInit, OnDestroy {
 
   displayPrice = 0;
   availableSeats = 0;
+  routeAvailability: TripRouteAvailabilityType | null = null;
   duration = 0;
   originCity = '';
   destCity = '';
@@ -60,14 +66,19 @@ export class SeatSelectComponent implements OnInit, OnDestroy {
         .pipe(takeUntil(this.destroy$))
         .subscribe((trip) => {
           this.trip = trip;
-          this.computeDetails();
           this.resolveLabels();
+          this.loadRoutePreview();
         });
     }
   }
 
   confirmBooking(): void {
-    if (!this.trip || this.booking) return;
+    if (
+      !this.trip ||
+      this.booking ||
+      this.routeAvailability?.sellable === false
+    )
+      return;
 
     this.authService.currentUser$.pipe(take(1)).subscribe((user) => {
       if (!user) {
@@ -134,24 +145,35 @@ export class SeatSelectComponent implements OnInit, OnDestroy {
     this.destCity = this.getPlaceName(this.destPlaceId);
   }
 
-  private computeDetails(): void {
+  private loadRoutePreview(): void {
     if (!this.trip) return;
     const chain = this.getSegmentChain();
-    const now = new Date();
-
-    const expressSegment = (this.trip.expressSegments || []).find(
-      (candidate) =>
-        candidate.fromPlaceId === this.originPlaceId &&
-        candidate.toPlaceId === this.destPlaceId &&
-        candidate.active &&
-        (!candidate.validFrom || now >= new Date(candidate.validFrom)) &&
-        (!candidate.validUntil || now <= new Date(candidate.validUntil)),
-    );
-    this.displayPrice = expressSegment
-      ? expressSegment.price
-      : chain.reduce((s, seg) => s + (seg.basePrice || 0), 0);
     this.duration = chain.reduce((s, seg) => s + (seg.durationMinutes || 0), 0);
-    this.availableSeats = computeRouteAvailableSeats(this.trip, chain);
+
+    if (!this.originPlaceId || !this.destPlaceId) {
+      this.routeAvailability = null;
+      this.displayPrice = 0;
+      this.availableSeats = 0;
+      return;
+    }
+
+    this.tripService
+      .getRouteAvailability(this.trip.id, this.originPlaceId, this.destPlaceId)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (availability) => {
+          this.routeAvailability = availability;
+          this.displayPrice = availability.displayPrice || 0;
+          this.availableSeats = availability.sellable
+            ? availability.availableSeats || 0
+            : 0;
+        },
+        error: () => {
+          this.routeAvailability = null;
+          this.displayPrice = 0;
+          this.availableSeats = 0;
+        },
+      });
   }
 
   private getSegmentChain(): SegmentType[] {
@@ -160,9 +182,11 @@ export class SeatSelectComponent implements OnInit, OnDestroy {
       (a, b) => a.sequence - b.sequence,
     );
     const startIdx = sorted.findIndex(
-      (s) => s.fromPlaceId === this.originPlaceId,
+      (s) => getSegmentFromPlaceId(s) === this.originPlaceId,
     );
-    const endIdx = sorted.findIndex((s) => s.toPlaceId === this.destPlaceId);
+    const endIdx = sorted.findIndex(
+      (s) => getSegmentToPlaceId(s) === this.destPlaceId,
+    );
     if (startIdx < 0 || endIdx < 0 || startIdx > endIdx) return sorted;
     return sorted.slice(startIdx, endIdx + 1);
   }

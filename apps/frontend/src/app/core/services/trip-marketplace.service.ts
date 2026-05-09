@@ -4,10 +4,12 @@ import { computeRouteAvailableSeats } from '../helpers/trip-inventory.helper';
 import { Picture } from '../models/shared.model';
 import {
   MarketplaceCompany,
-  MarketplaceCapacity,
   ExpressSegmentType,
+  getExpressSegmentFromPlaceId,
+  getExpressSegmentToPlaceId,
+  getSegmentFromPlaceId,
+  getSegmentToPlaceId,
   MarketplaceProjection,
-  MarketplacePricing,
   MarketplaceRoute,
   MarketplaceSchedule,
   MarketplaceTrip,
@@ -25,15 +27,6 @@ type ResolvedRoute = {
 
 @Injectable({ providedIn: 'root' })
 export class TripMarketplaceService {
-  mapSearchResults(
-    trips: TripType[] | null | undefined,
-    selection: TripRouteSelection,
-  ): MarketplaceTrip[] {
-    return (trips || [])
-      .map((trip) => this.mapTrip(trip, selection))
-      .filter((trip): trip is MarketplaceTrip => trip !== null);
-  }
-
   expandRoutes(trips: TripType[] | null | undefined): MarketplaceTrip[] {
     const routes = new Map<string, MarketplaceTrip>();
 
@@ -45,10 +38,7 @@ export class TripMarketplaceService {
         }
 
         const existingTrip = routes.get(mappedTrip.key);
-        if (
-          !existingTrip ||
-          mappedTrip.pricing.displayPrice < existingTrip.pricing.displayPrice
-        ) {
+        if (!existingTrip || mappedTrip.price < existingTrip.price) {
           routes.set(mappedTrip.key, mappedTrip);
         }
       }
@@ -109,21 +99,16 @@ export class TripMarketplaceService {
         expressSegment?.totalDurationMinutes ??
         chain.reduce((sum, segment) => sum + (segment.durationMinutes || 0), 0),
     };
-    const pricing: MarketplacePricing = {
-      displayPrice:
-        expressSegment?.price ??
-        chain.reduce((sum, segment) => sum + (segment.basePrice || 0), 0),
-      currencyCode: trip.currency?.code || 'DT',
-    };
-    const capacity: MarketplaceCapacity = {
-      availableSeats: computeRouteAvailableSeats(trip, chain),
-    };
+    const price =
+      expressSegment?.price ??
+      chain.reduce((sum, segment) => sum + (segment.basePrice || 0), 0);
+    const availableSeats = computeRouteAvailableSeats(trip, chain);
 
     return this.buildMarketplaceTrip(trip, {
       route,
       schedule,
-      pricing,
-      capacity,
+      price,
+      availableSeats,
     });
   }
 
@@ -152,8 +137,8 @@ export class TripMarketplaceService {
       }
 
       selections.push({
-        originPlaceId: expressSegment.fromPlaceId,
-        destinationPlaceId: expressSegment.toPlaceId,
+        originPlaceId: getExpressSegmentFromPlaceId(expressSegment),
+        destinationPlaceId: getExpressSegmentToPlaceId(expressSegment),
       });
     }
 
@@ -230,7 +215,7 @@ export class TripMarketplaceService {
     }
 
     const startIndex = segments.findIndex(
-      (segment) => segment.fromPlaceId === originPlaceId,
+      (segment) => getSegmentFromPlaceId(segment) === originPlaceId,
     );
     if (startIndex < 0) {
       return [];
@@ -240,12 +225,12 @@ export class TripMarketplaceService {
     let currentPlaceId = originPlaceId;
 
     for (const segment of segments.slice(startIndex)) {
-      if (segment.fromPlaceId !== currentPlaceId) {
+      if (getSegmentFromPlaceId(segment) !== currentPlaceId) {
         break;
       }
 
       chain.push(segment);
-      currentPlaceId = segment.toPlaceId;
+      currentPlaceId = getSegmentToPlaceId(segment) || '';
 
       if (currentPlaceId === destinationPlaceId) {
         return chain;
@@ -275,15 +260,15 @@ export class TripMarketplaceService {
       return undefined;
     }
 
-    const originPlaceId = chain[0]?.fromPlaceId;
-    const destinationPlaceId = chain[chain.length - 1]?.toPlaceId;
+    const originPlaceId = getSegmentFromPlaceId(chain[0]);
+    const destinationPlaceId = getSegmentToPlaceId(chain[chain.length - 1]);
     const segmentIds = chain.map((segment) => segment.segmentId);
 
     return (trip.expressSegments || []).find(
       (expressSegment) =>
         this.isExpressSegmentCurrentlyValid(expressSegment) &&
-        expressSegment.fromPlaceId === originPlaceId &&
-        expressSegment.toPlaceId === destinationPlaceId &&
+        getExpressSegmentFromPlaceId(expressSegment) === originPlaceId &&
+        getExpressSegmentToPlaceId(expressSegment) === destinationPlaceId &&
         this.segmentsCoveredMatchesChain(expressSegment, segmentIds),
     );
   }
@@ -342,8 +327,9 @@ export class TripMarketplaceService {
       bus: trip.bus,
       route: marketplace.route,
       schedule: marketplace.schedule,
-      pricing: marketplace.pricing,
-      capacity: marketplace.capacity,
+      price: marketplace.price,
+      availableSeats: marketplace.availableSeats,
+      currencyCode: trip.currency?.code || 'DT',
     };
   }
 

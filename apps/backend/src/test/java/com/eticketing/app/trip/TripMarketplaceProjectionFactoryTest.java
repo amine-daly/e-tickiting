@@ -21,6 +21,7 @@ class TripMarketplaceProjectionFactoryTest {
     void buildReturnsSingleSegmentProjection() {
         TripType trip = TripType.builder()
                 .departureDate(Instant.parse("2026-05-10T08:00:00Z"))
+                .status(TripStatusEnum.ACTIVE)
                 .bus(TripBusRef.builder().busId("bus-1").build())
                 .currency(TripCurrency.builder().currencyId("currency-1").build())
                 .stopSchedule(List.of(
@@ -38,9 +39,8 @@ class TripMarketplaceProjectionFactoryTest {
                 placeMap());
 
         assertNotNull(projection);
-        assertEquals(BigDecimal.valueOf(12), projection.getPricing().getDisplayPrice());
-        assertEquals("DT", projection.getPricing().getCurrencyCode());
-        assertEquals(34, projection.getCapacity().getAvailableSeats());
+        assertEquals(BigDecimal.valueOf(12), projection.getPrice());
+        assertEquals(34, projection.getAvailableSeats());
         assertEquals("Tunis", projection.getRoute().getOrigin().getCity());
         assertEquals("2026-05-10", projection.getSchedule().getTravelDate());
     }
@@ -50,6 +50,7 @@ class TripMarketplaceProjectionFactoryTest {
         TripType trip = TripType.builder()
                 .id("trip-1")
                 .departureDate(Instant.parse("2026-05-10T08:00:00Z"))
+                .status(TripStatusEnum.ACTIVE)
                 .bus(TripBusRef.builder().busId("bus-1").build())
                 .currency(TripCurrency.builder().currencyId("currency-1").build())
                 .stopSchedule(List.of(
@@ -74,6 +75,7 @@ class TripMarketplaceProjectionFactoryTest {
     void buildRejectsMultiSegmentRouteWithoutExactActiveExpressSegment() {
         TripType trip = TripType.builder()
                 .departureDate(Instant.parse("2026-05-10T08:00:00Z"))
+                .status(TripStatusEnum.ACTIVE)
                 .bus(TripBusRef.builder().busId("bus-1").build())
                 .currency(TripCurrency.builder().currencyId("currency-1").build())
                 .stopSchedule(List.of(
@@ -108,6 +110,7 @@ class TripMarketplaceProjectionFactoryTest {
     void buildReturnsExactExpressSegmentProjectionForMultiSegmentRoute() {
         TripType trip = TripType.builder()
                 .departureDate(Instant.parse("2026-05-10T08:00:00Z"))
+                .status(TripStatusEnum.ACTIVE)
                 .bus(TripBusRef.builder().busId("bus-1").build())
                 .currency(TripCurrency.builder().currencyId("currency-1").build())
                 .stopSchedule(List.of(
@@ -136,10 +139,36 @@ class TripMarketplaceProjectionFactoryTest {
                 placeMap());
 
         assertNotNull(projection);
-        assertEquals(BigDecimal.valueOf(25), projection.getPricing().getDisplayPrice());
+        assertEquals(BigDecimal.valueOf(25), projection.getPrice());
         assertEquals(95, projection.getSchedule().getDurationMinutes());
-        assertEquals(28, projection.getCapacity().getAvailableSeats());
+        assertEquals(28, projection.getAvailableSeats());
         assertEquals("Sfax", projection.getRoute().getDestination().getCity());
+    }
+
+    @Test
+    void buildRouteAvailabilityRejectsNonActiveTrips() {
+        TripType trip = TripType.builder()
+                .id("trip-2")
+                .departureDate(Instant.parse("2026-05-10T08:00:00Z"))
+                .status(TripStatusEnum.COMPLETED)
+                .bus(TripBusRef.builder().busId("bus-1").build())
+                .currency(TripCurrency.builder().currencyId("currency-1").build())
+                .stopSchedule(List.of(
+                        stop("A", 1, null, Instant.parse("2026-05-10T08:00:00Z"), true, false),
+                        stop("B", 2, Instant.parse("2026-05-10T09:10:00Z"), null, false, true)))
+                .segments(List.of(segment("seg-1", 1, "A", "B", 70, 12, 6)))
+                .build();
+
+        TripRouteAvailabilityResponse availability = TripMarketplaceProjectionFactory.buildRouteAvailability(
+                trip,
+                "A",
+                "B",
+                BusType.builder().id("bus-1").totalSeats(40).build(),
+                "DT");
+
+        assertNotNull(availability);
+        assertEquals(false, availability.isSellable());
+        assertEquals(0, availability.getAvailableSeats());
     }
 
     private Map<String, PlaceType> placeMap() {

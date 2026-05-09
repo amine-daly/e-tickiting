@@ -5,6 +5,10 @@ import { Subject, takeUntil } from 'rxjs';
 
 import { TripService } from '../trip.service';
 import {
+  getExpressSegmentFromPlaceId,
+  getExpressSegmentToPlaceId,
+  getSegmentFromPlaceId,
+  getSegmentToPlaceId,
   TripType,
   PickupPointType,
   DropoffPointType,
@@ -99,8 +103,8 @@ export class BusDetailsComponent implements OnInit, OnDestroy {
     // Check express segment first
     const expressSegment = (this.trip.expressSegments || []).find(
       (candidate) =>
-        candidate.fromPlaceId === this.originPlaceId &&
-        candidate.toPlaceId === this.destPlaceId &&
+        getExpressSegmentFromPlaceId(candidate) === this.originPlaceId &&
+        getExpressSegmentToPlaceId(candidate) === this.destPlaceId &&
         candidate.active,
     );
     this.displayPrice = expressSegment
@@ -116,9 +120,11 @@ export class BusDetailsComponent implements OnInit, OnDestroy {
     );
     if (!this.originPlaceId || !this.destPlaceId) return sorted;
     const startIdx = sorted.findIndex(
-      (s) => s.fromPlaceId === this.originPlaceId,
+      (s) => getSegmentFromPlaceId(s) === this.originPlaceId,
     );
-    const endIdx = sorted.findIndex((s) => s.toPlaceId === this.destPlaceId);
+    const endIdx = sorted.findIndex(
+      (s) => getSegmentToPlaceId(s) === this.destPlaceId,
+    );
     if (startIdx < 0 || endIdx < 0 || startIdx > endIdx) return sorted;
     return sorted.slice(startIdx, endIdx + 1);
   }

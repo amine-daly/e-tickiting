@@ -107,9 +107,7 @@ public class TripResponse {
 
         private String segmentId;
         private int sequence;
-        private String fromPlaceId;
         private PlaceSummary fromPlace;
-        private String toPlaceId;
         private PlaceSummary toPlace;
         private Instant departureTime;
         private Instant arrivalTime;
@@ -151,9 +149,7 @@ public class TripResponse {
     public static class EnrichedExpressSegment {
 
         private String expressSegmentId;
-        private String fromPlaceId;
         private PlaceSummary fromPlace;
-        private String toPlaceId;
         private PlaceSummary toPlace;
         private List<String> segmentsCovered;
         private BigDecimal price;
@@ -194,27 +190,12 @@ public class TripResponse {
 
     @Data
     @Builder
-    public static class MarketplacePricing {
-
-        private BigDecimal displayPrice;
-        private String currencyCode;
-    }
-
-    @Data
-    @Builder
-    public static class MarketplaceCapacity {
-
-        private int availableSeats;
-    }
-
-    @Data
-    @Builder
     public static class MarketplaceView {
 
         private MarketplaceRoute route;
         private MarketplaceSchedule schedule;
-        private MarketplacePricing pricing;
-        private MarketplaceCapacity capacity;
+        private BigDecimal price;
+        private int availableSeats;
     }
 
     // ── Factory methods ─────────────────────────────────────────────────
@@ -351,9 +332,7 @@ public class TripResponse {
         return segs.stream().map(s -> SegmentView.builder()
                 .segmentId(s.getSegmentId())
                 .sequence(s.getSequence())
-                .fromPlaceId(s.getFromPlaceId())
                 .fromPlace(toPlaceSummary(s.getFromPlaceId(), placeMap))
-                .toPlaceId(s.getToPlaceId())
                 .toPlace(toPlaceSummary(s.getToPlaceId(), placeMap))
                 .departureTime(s.getDepartureTime())
                 .arrivalTime(s.getArrivalTime())
@@ -402,9 +381,7 @@ public class TripResponse {
         }
         return expressSegments.stream().map(expressSegment -> EnrichedExpressSegment.builder()
                 .expressSegmentId(expressSegment.getExpressSegmentId())
-                .fromPlaceId(expressSegment.getFromPlaceId())
                 .fromPlace(toPlaceSummary(expressSegment.getFromPlaceId(), placeMap))
-                .toPlaceId(expressSegment.getToPlaceId())
                 .toPlace(toPlaceSummary(expressSegment.getToPlaceId(), placeMap))
                 .segmentsCovered(expressSegment.getSegmentsCovered())
                 .price(expressSegment.getPrice())

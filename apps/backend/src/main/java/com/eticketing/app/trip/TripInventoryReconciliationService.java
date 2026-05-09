@@ -22,9 +22,37 @@ import java.util.stream.Collectors;
 public class TripInventoryReconciliationService {
 
     private static final Logger LOG = LoggerFactory.getLogger(TripInventoryReconciliationService.class);
+    private static final List<TripStatusEnum> RECONCILABLE_STATUSES = List.of(
+            TripStatusEnum.SCHEDULED,
+            TripStatusEnum.ACTIVE);
 
     private final TripTypeRepository tripRepository;
     private final TicketRepository ticketRepository;
+
+    public int reconcileLifecycleStatuses(String companyId) {
+        List<TripType> trips = hasText(companyId)
+                ? tripRepository.findByTargetCompanyAndStatusIn(companyId, RECONCILABLE_STATUSES)
+                : tripRepository.findByStatusIn(RECONCILABLE_STATUSES);
+
+        if (trips.isEmpty()) {
+            return 0;
+        }
+
+        Instant now = Instant.now();
+        List<TripType> dirtyTrips = new ArrayList<>();
+        for (TripType trip : trips) {
+            if (reconcileLifecycleStatus(trip, now)) {
+                dirtyTrips.add(trip);
+            }
+        }
+
+        if (!dirtyTrips.isEmpty()) {
+            tripRepository.saveAll(dirtyTrips);
+            LOG.info("TRIP_LIFECYCLE_RECONCILED: corrected {} stale trip statuses", dirtyTrips.size());
+        }
+
+        return dirtyTrips.size();
+    }
 
     public int deactivateExpiredExpressSegments() {
         Instant now = Instant.now();
@@ -78,6 +106,7 @@ public class TripInventoryReconciliationService {
         Instant now = Instant.now();
         for (TripType trip : trips) {
             boolean changed = deactivateExpiredExpressSegments(trip, now) > 0;
+            changed = reconcileLifecycleStatus(trip, now) || changed;
             if (trip.getSegments() == null || trip.getSegments().isEmpty()) {
                 if (changed) {
                     dirtyTrips.add(trip);
@@ -170,5 +199,77 @@ public class TripInventoryReconciliationService {
                 && expressSegment.isActive()
                 && expressSegment.getValidUntil() != null
                 && !expressSegment.getValidUntil().isAfter(now);
+    }
+
+    private boolean reconcileLifecycleStatus(TripType trip, Instant now) {
+        if (trip == null || trip.getStatus() == null) {
+            return false;
+        }
+
+        TripStatusEnum targetStatus = resolveLifecycleStatus(trip, now);
+        if (targetStatus == null || targetStatus == trip.getStatus()) {
+            return false;
+        }
+
+        trip.setStatus(targetStatus);
+        return true;
+    }
+
+    private TripStatusEnum resolveLifecycleStatus(TripType trip, Instant now) {
+        if (trip.getStatus() == TripStatusEnum.CANCELLED || trip.getStatus() == TripStatusEnum.COMPLETED) {
+            return trip.getStatus();
+        }
+
+        Instant completionInstant = resolveCompletionInstant(trip);
+        if (completionInstant != null && !completionInstant.isAfter(now)) {
+            return TripStatusEnum.COMPLETED;
+        }
+
+        Instant departureInstant = trip.getDepartureDate();
+        if (trip.getStatus() == TripStatusEnum.SCHEDULED
+                && departureInstant != null
+                && !departureInstant.isAfter(now)) {
+            return TripStatusEnum.ACTIVE;
+        }
+
+        return trip.getStatus();
+    }
+
+    private Instant resolveCompletionInstant(TripType trip) {
+        Instant latest = trip.getDepartureDate();
+
+        for (StopType stop : trip.getStopSchedule() == null ? List.<StopType>of() : trip.getStopSchedule()) {
+            latest = maxInstant(latest, stop.getArrivalTime());
+            latest = maxInstant(latest, stop.getDepartureTime());
+        }
+
+        for (SegmentType segment : trip.getSegments() == null ? List.<SegmentType>of() : trip.getSegments()) {
+            latest = maxInstant(latest, segment.getDepartureTime());
+            latest = maxInstant(latest, segment.getArrivalTime());
+        }
+
+        for (PickupPointType pickupPoint : trip.getPickupPoints() == null ? List.<PickupPointType>of() : trip.getPickupPoints()) {
+            latest = maxInstant(latest, pickupPoint.getScheduledDepartureTime());
+        }
+
+        for (DropoffPointType dropoffPoint : trip.getDropoffPoints() == null ? List.<DropoffPointType>of() : trip.getDropoffPoints()) {
+            latest = maxInstant(latest, dropoffPoint.getScheduledArrivalTime());
+        }
+
+        return latest;
+    }
+
+    private Instant maxInstant(Instant left, Instant right) {
+        if (left == null) {
+            return right;
+        }
+        if (right == null) {
+            return left;
+        }
+        return left.isAfter(right) ? left : right;
+    }
+
+    private boolean hasText(String value) {
+        return value != null && !value.isBlank();
     }
 }

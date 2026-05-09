@@ -43,20 +43,24 @@ export interface MarketplaceSchedule {
   durationMinutes: number;
 }
 
-export interface MarketplacePricing {
-  displayPrice: number;
-  currencyCode: string;
-}
-
-export interface MarketplaceCapacity {
-  availableSeats: number;
-}
-
 export interface MarketplaceProjection {
   route: MarketplaceRoute;
   schedule: MarketplaceSchedule;
-  pricing: MarketplacePricing;
-  capacity: MarketplaceCapacity;
+  price: number;
+  availableSeats: number;
+}
+
+export interface TripRouteAvailabilityType {
+  tripId: string;
+  originPlaceId: string;
+  destinationPlaceId: string;
+  sellable: boolean;
+  requiresExpressSegment: boolean;
+  availableSeats: number;
+  displayPrice: number;
+  currencyCode: string;
+  expressSegmentId?: string | null;
+  segmentIds?: string[];
 }
 
 import { AmenityEnum } from './amenity.enum';
@@ -94,9 +98,9 @@ export interface StopType {
 export interface SegmentType {
   segmentId: string;
   sequence: number;
-  fromPlaceId: string;
+  fromPlaceId?: string | null;
   fromPlace?: PlaceSummary;
-  toPlaceId: string;
+  toPlaceId?: string | null;
   toPlace?: PlaceSummary;
   departureTime: string;
   arrivalTime: string;
@@ -109,9 +113,9 @@ export interface SegmentType {
 
 export interface ExpressSegmentType {
   expressSegmentId: string;
-  fromPlaceId: string;
+  fromPlaceId?: string | null;
   fromPlace?: PlaceSummary;
-  toPlaceId: string;
+  toPlaceId?: string | null;
   toPlace?: PlaceSummary;
   segmentsCovered: string[];
   price: number;
@@ -190,7 +194,39 @@ export interface MarketplaceTrip {
   bus: BusSummary;
   route: MarketplaceRoute;
   schedule: MarketplaceSchedule;
-  pricing: MarketplacePricing;
-  capacity: MarketplaceCapacity;
+  price: number;
+  availableSeats: number;
+  currencyCode: string;
   amenities?: AmenityEnum[];
+}
+
+export function getSegmentFromPlaceId(
+  segment: Pick<SegmentType, 'fromPlace' | 'fromPlaceId'> | null | undefined,
+): string | null {
+  return segment?.fromPlace?.id || segment?.fromPlaceId || null;
+}
+
+export function getSegmentToPlaceId(
+  segment: Pick<SegmentType, 'toPlace' | 'toPlaceId'> | null | undefined,
+): string | null {
+  console.log('🚀 ~ getSegmentToPlaceId ~ segment:', segment);
+  return segment?.toPlace?.id || segment?.toPlaceId || null;
+}
+
+export function getExpressSegmentFromPlaceId(
+  expressSegment:
+    | Pick<ExpressSegmentType, 'fromPlace' | 'fromPlaceId'>
+    | null
+    | undefined,
+): string | null {
+  return expressSegment?.fromPlace?.id || expressSegment?.fromPlaceId || null;
+}
+
+export function getExpressSegmentToPlaceId(
+  expressSegment:
+    | Pick<ExpressSegmentType, 'toPlace' | 'toPlaceId'>
+    | null
+    | undefined,
+): string | null {
+  return expressSegment?.toPlace?.id || expressSegment?.toPlaceId || null;
 }

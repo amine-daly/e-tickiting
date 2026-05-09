@@ -58,7 +58,17 @@ public class TripController {
     public ResponseEntity<TripResponse> getTripById(
             @PathVariable String id,
             @AuthenticationPrincipal User principal) {
-        String companyId = resolveCompanyId(principal);
+        // Allow anonymous access: if no authenticated principal and no X-Company-Id
+        // header is provided, treat as public read (companyId = null).
+        String headerCompanyId = httpServletRequest.getHeader("X-Company-Id");
+        String companyId;
+        if (headerCompanyId != null && !headerCompanyId.isBlank()) {
+            companyId = headerCompanyId.trim();
+        } else if (principal != null) {
+            companyId = resolveCompanyId(principal);
+        } else {
+            companyId = null;
+        }
         TripType trip = tripService.getById(id, companyId);
         return ResponseEntity.ok(enricher.enrich(trip));
     }

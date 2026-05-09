@@ -50,6 +50,7 @@ public class TripService {
     private final PlaceRepository placeRepository;
     private final MongoTemplate mongoTemplate;
     private final TripCancellationHandler tripCancellationHandler;
+    private final TripInventoryReconciliationService tripInventoryReconciliationService;
 
     // ════════════════════════════════════════════════════════════════════
     // CREATE
@@ -214,6 +215,8 @@ public class TripService {
             String order,
             int page,
             int limit) {
+        tripInventoryReconciliationService.reconcileLifecycleStatuses(companyId);
+
         Sort sort = buildSort(sortBy, order);
         Pageable pageable = PageRequest.of(
                 Math.max(page, 0),
@@ -230,6 +233,8 @@ public class TripService {
             String sortBy, String order,
             LocalDate date, String originPlaceId, String destinationPlaceId,
             int page, int limit) {
+        tripInventoryReconciliationService.reconcileLifecycleStatuses(companyId);
+
         Sort sort = buildSort(sortBy, order);
         Pageable pageable = PageRequest.of(
                 Math.max(page, 0),
@@ -695,6 +700,10 @@ public class TripService {
     // HELPERS
     // ════════════════════════════════════════════════════════════════════
     private void assertCompanyScope(TripType trip, String companyId) {
+        // If companyId is null, allow public (anonymous) access and skip scope check.
+        if (companyId == null) {
+            return;
+        }
         if (trip.getTarget() == null
                 || !companyId.equals(trip.getTarget().getCompany())) {
             throw new ForbiddenException("Trip does not belong to company " + companyId);

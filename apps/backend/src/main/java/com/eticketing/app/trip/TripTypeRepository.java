@@ -23,6 +23,10 @@ public interface TripTypeRepository extends MongoRepository<TripType, String> {
     Page<TripType> findByTargetCompanyAndStatus(
             String companyId, TripStatusEnum status, Pageable pageable);
 
+    List<TripType> findByTargetCompanyAndStatusIn(String companyId, List<TripStatusEnum> statuses);
+
+    List<TripType> findByStatusIn(List<TripStatusEnum> statuses);
+
     /**
      * Bus lock check — finds trips with a given busId in specified statuses.
      */

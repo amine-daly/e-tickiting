@@ -1,10 +1,15 @@
-import { Component, Input, OnDestroy, OnInit } from '@angular/core';
+import { Subscription } from 'rxjs';
 import { CommonModule } from '@angular/common';
 import { RouterModule } from '@angular/router';
-import { Subscription } from 'rxjs';
+import { Component, Input, OnDestroy, OnInit } from '@angular/core';
+
 import { LayoutType } from '../../../core/configs/config';
 import { LayoutService } from '../../../core/layout.service';
-import { KeeniconComponent } from 'src/app/_metronic/shared/keenicon/keenicon.component';
+import {
+  LOGO_BASE,
+  LOGO_DARK,
+} from '../../../../../../environments/environment';
+import { KeeniconComponent } from '../../../../shared/keenicon/keenicon.component';
 
 @Component({
   selector: 'app-sidebar-logo',
@@ -22,6 +27,8 @@ export class SidebarLogoComponent implements OnInit, OnDestroy {
   currentLayoutType: LayoutType | null;
 
   toggleAttr: string;
+  logodark = LOGO_DARK;
+  logobase = LOGO_BASE;
   isSidebarClosed: boolean = false;
 
   constructor(private layout: LayoutService) {}

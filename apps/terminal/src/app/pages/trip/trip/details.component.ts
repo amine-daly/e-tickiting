@@ -430,18 +430,20 @@ export class TripDetailsComponent implements OnInit, OnDestroy {
     (trip.segments || [])
       .sort((a, b) => a.sequence - b.sequence)
       .forEach((seg, i) => {
+        const fromPlaceId = seg.fromPlace?.id || seg.fromPlaceId || '';
+        const toPlaceId = seg.toPlace?.id || seg.toPlaceId || '';
         this.segmentDisplays.push({
           index: i,
-          fromPlaceId: seg.fromPlaceId,
+          fromPlaceId,
           fromPlaceName:
             seg.fromPlace?.city ||
-            this.resolvePlaceById(seg.fromPlaceId)?.city ||
-            seg.fromPlaceId,
-          toPlaceId: seg.toPlaceId,
+            this.resolvePlaceById(fromPlaceId)?.city ||
+            fromPlaceId,
+          toPlaceId,
           toPlaceName:
             seg.toPlace?.city ||
-            this.resolvePlaceById(seg.toPlaceId)?.city ||
-            seg.toPlaceId,
+            this.resolvePlaceById(toPlaceId)?.city ||
+            toPlaceId,
         });
         this.segments.push(
           this.fb.group({
@@ -840,10 +842,12 @@ export class TripDetailsComponent implements OnInit, OnDestroy {
         this.tripPlacesMap.set(stop.placeId, stop.place.city);
     });
     trip.segments?.forEach((seg) => {
-      if (seg.fromPlace?.city)
-        this.tripPlacesMap.set(seg.fromPlaceId, seg.fromPlace.city);
-      if (seg.toPlace?.city)
-        this.tripPlacesMap.set(seg.toPlaceId, seg.toPlace.city);
+      const fromPlaceId = seg.fromPlace?.id || seg.fromPlaceId;
+      const toPlaceId = seg.toPlace?.id || seg.toPlaceId;
+      if (seg.fromPlace?.city && fromPlaceId)
+        this.tripPlacesMap.set(fromPlaceId, seg.fromPlace.city);
+      if (seg.toPlace?.city && toPlaceId)
+        this.tripPlacesMap.set(toPlaceId, seg.toPlace.city);
     });
     trip.pickupPoints?.forEach((pp) => {
       if (pp.place?.city) this.tripPlacesMap.set(pp.placeId, pp.place.city);
