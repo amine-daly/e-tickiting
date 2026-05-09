@@ -139,14 +139,14 @@ public class TripResponseEnricher {
         }
         if (trip.getSegments() != null) {
             trip.getSegments().forEach(s -> {
-                addIfPresent(placeIds, s.getFromPlaceId());
-                addIfPresent(placeIds, s.getToPlaceId());
+                addIfPresent(placeIds, TripPlaceRef.idOf(s.getFromPlace()));
+                addIfPresent(placeIds, TripPlaceRef.idOf(s.getToPlace()));
             });
         }
         if (trip.getExpressSegments() != null) {
             trip.getExpressSegments().forEach(segment -> {
-                addIfPresent(placeIds, segment.getFromPlaceId());
-                addIfPresent(placeIds, segment.getToPlaceId());
+                addIfPresent(placeIds, TripPlaceRef.idOf(segment.getFromPlace()));
+                addIfPresent(placeIds, TripPlaceRef.idOf(segment.getToPlace()));
             });
         }
         if (trip.getPickupPoints() != null) {

@@ -295,8 +295,8 @@ class NestedInventoryScenarioSuiteTest {
     private SegmentType segment(
             String segmentId,
             int sequence,
-            String fromPlaceId,
-            String toPlaceId,
+            String originPlaceId,
+            String destinationPlaceId,
             int basePrice,
             int durationMinutes,
             int bookedCount,
@@ -304,8 +304,8 @@ class NestedInventoryScenarioSuiteTest {
         return SegmentType.builder()
                 .segmentId(segmentId)
                 .sequence(sequence)
-                .fromPlaceId(fromPlaceId)
-                .toPlaceId(toPlaceId)
+                .fromPlace(TripPlaceRef.of(originPlaceId))
+                .toPlace(TripPlaceRef.of(destinationPlaceId))
                 .basePrice(BigDecimal.valueOf(basePrice))
                 .durationMinutes(durationMinutes)
                 .bookedCount(bookedCount)
@@ -315,16 +315,16 @@ class NestedInventoryScenarioSuiteTest {
 
     private ExpressSegmentType expressSegment(
             String expressSegmentId,
-            String fromPlaceId,
-            String toPlaceId,
+            String originPlaceId,
+            String destinationPlaceId,
             List<String> segmentsCovered,
             int price,
             int bookedCount,
             boolean active) {
         return ExpressSegmentType.builder()
                 .expressSegmentId(expressSegmentId)
-                .fromPlaceId(fromPlaceId)
-                .toPlaceId(toPlaceId)
+                .fromPlace(TripPlaceRef.of(originPlaceId))
+                .toPlace(TripPlaceRef.of(destinationPlaceId))
                 .segmentsCovered(segmentsCovered)
                 .price(BigDecimal.valueOf(price))
                 .bookedCount(bookedCount)

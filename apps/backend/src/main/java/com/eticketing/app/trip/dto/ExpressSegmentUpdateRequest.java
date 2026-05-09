@@ -8,7 +8,7 @@ import java.time.Instant;
 
 /**
  * DTO for updating mutable fields of an express segment. Cannot change:
- * segmentsCovered, fromPlaceId, toPlaceId.
+ * segmentsCovered, fromPlace, toPlace.
  */
 @Data
 public class ExpressSegmentUpdateRequest {

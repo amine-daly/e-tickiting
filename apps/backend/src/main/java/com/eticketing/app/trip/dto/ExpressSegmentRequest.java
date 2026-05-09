@@ -1,6 +1,5 @@
 package com.eticketing.app.trip.dto;
 
-import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.PositiveOrZero;
@@ -16,12 +15,6 @@ import java.util.List;
  */
 @Data
 public class ExpressSegmentRequest {
-
-    @NotBlank
-    private String fromPlaceId;
-
-    @NotBlank
-    private String toPlaceId;
 
     @NotEmpty
     private List<String> segmentIds;

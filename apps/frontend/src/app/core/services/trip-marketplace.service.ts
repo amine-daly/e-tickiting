@@ -5,10 +5,6 @@ import { Picture } from '../models/shared.model';
 import {
   MarketplaceCompany,
   ExpressSegmentType,
-  getExpressSegmentFromPlaceId,
-  getExpressSegmentToPlaceId,
-  getSegmentFromPlaceId,
-  getSegmentToPlaceId,
   MarketplaceProjection,
   MarketplaceRoute,
   MarketplaceSchedule,
@@ -137,8 +133,8 @@ export class TripMarketplaceService {
       }
 
       selections.push({
-        originPlaceId: getExpressSegmentFromPlaceId(expressSegment),
-        destinationPlaceId: getExpressSegmentToPlaceId(expressSegment),
+        originPlaceId: expressSegment.fromPlace?.id || null,
+        destinationPlaceId: expressSegment.toPlace?.id || null,
       });
     }
 
@@ -215,7 +211,7 @@ export class TripMarketplaceService {
     }
 
     const startIndex = segments.findIndex(
-      (segment) => getSegmentFromPlaceId(segment) === originPlaceId,
+      (segment) => segment.fromPlace?.id === originPlaceId,
     );
     if (startIndex < 0) {
       return [];
@@ -225,12 +221,12 @@ export class TripMarketplaceService {
     let currentPlaceId = originPlaceId;
 
     for (const segment of segments.slice(startIndex)) {
-      if (getSegmentFromPlaceId(segment) !== currentPlaceId) {
+      if (segment.fromPlace?.id !== currentPlaceId) {
         break;
       }
 
       chain.push(segment);
-      currentPlaceId = getSegmentToPlaceId(segment) || '';
+      currentPlaceId = segment.toPlace?.id || '';
 
       if (currentPlaceId === destinationPlaceId) {
         return chain;
@@ -260,15 +256,15 @@ export class TripMarketplaceService {
       return undefined;
     }
 
-    const originPlaceId = getSegmentFromPlaceId(chain[0]);
-    const destinationPlaceId = getSegmentToPlaceId(chain[chain.length - 1]);
+    const originPlaceId = chain[0].fromPlace?.id || null;
+    const destinationPlaceId = chain[chain.length - 1].toPlace?.id || null;
     const segmentIds = chain.map((segment) => segment.segmentId);
 
     return (trip.expressSegments || []).find(
       (expressSegment) =>
         this.isExpressSegmentCurrentlyValid(expressSegment) &&
-        getExpressSegmentFromPlaceId(expressSegment) === originPlaceId &&
-        getExpressSegmentToPlaceId(expressSegment) === destinationPlaceId &&
+        expressSegment.fromPlace?.id === originPlaceId &&
+        expressSegment.toPlace?.id === destinationPlaceId &&
         this.segmentsCoveredMatchesChain(expressSegment, segmentIds),
     );
   }

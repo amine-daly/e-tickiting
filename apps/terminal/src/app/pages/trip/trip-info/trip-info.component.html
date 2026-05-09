@@ -211,12 +211,10 @@
             <tr *ngFor="let seg of sortedSegments">
               <td class="text-muted">{{ seg.sequence }}</td>
               <td class="fw-semibold">
-                {{
-                  seg.fromPlace?.city || seg.fromPlace?.id || seg.fromPlaceId
-                }}
+                {{ seg.fromPlace?.city || seg.fromPlace?.id }}
               </td>
               <td class="fw-semibold">
-                {{ seg.toPlace?.city || seg.toPlace?.id || seg.toPlaceId }}
+                {{ seg.toPlace?.city || seg.toPlace?.id }}
               </td>
               <td class="text-center">{{ seg.maxBooking }}</td>
               <td class="text-center">
@@ -283,17 +281,11 @@
             <tr *ngFor="let expressSegment of activeExpressSegments">
               <td class="fw-semibold">
                 {{
-                  expressSegment.fromPlace?.city ||
-                    expressSegment.fromPlace?.id ||
-                    expressSegment.fromPlaceId
+                  expressSegment.fromPlace?.city || expressSegment.fromPlace?.id
                 }}
               </td>
               <td class="fw-semibold">
-                {{
-                  expressSegment.toPlace?.city ||
-                    expressSegment.toPlace?.id ||
-                    expressSegment.toPlaceId
-                }}
+                {{ expressSegment.toPlace?.city || expressSegment.toPlace?.id }}
               </td>
               <td>{{ expressSegment.segmentsCovered?.length || 0 }}</td>
               <td class="fw-bold">

@@ -11,8 +11,6 @@ import {
 } from '../../../core/services/booking.service';
 import { AuthService } from '../../../core/services/auth.service';
 import {
-  getSegmentFromPlaceId,
-  getSegmentToPlaceId,
   SegmentType,
   TripRouteAvailabilityType,
   TripType,
@@ -89,8 +87,8 @@ export class SeatSelectComponent implements OnInit, OnDestroy {
       this.booking = true;
       const request: BookingRequest = {
         tripId: this.trip!.id,
-        fromPlaceId: this.originPlaceId,
-        toPlaceId: this.destPlaceId,
+        originPlaceId: this.originPlaceId,
+        destinationPlaceId: this.destPlaceId,
         pickupPointId: this.pickupPointId,
         dropoffPointId: this.dropoffPointId,
         passengerId: user.id,
@@ -182,11 +180,9 @@ export class SeatSelectComponent implements OnInit, OnDestroy {
       (a, b) => a.sequence - b.sequence,
     );
     const startIdx = sorted.findIndex(
-      (s) => getSegmentFromPlaceId(s) === this.originPlaceId,
+      (s) => s.fromPlace?.id === this.originPlaceId,
     );
-    const endIdx = sorted.findIndex(
-      (s) => getSegmentToPlaceId(s) === this.destPlaceId,
-    );
+    const endIdx = sorted.findIndex((s) => s.toPlace?.id === this.destPlaceId);
     if (startIdx < 0 || endIdx < 0 || startIdx > endIdx) return sorted;
     return sorted.slice(startIdx, endIdx + 1);
   }

@@ -6,8 +6,8 @@ import { Ticket } from '../models/ticket.model';
 
 export interface BookingRequest {
   tripId: string;
-  fromPlaceId: string;
-  toPlaceId: string;
+  originPlaceId: string;
+  destinationPlaceId: string;
   pickupPointId: string;
   dropoffPointId: string;
   passengerId: string;

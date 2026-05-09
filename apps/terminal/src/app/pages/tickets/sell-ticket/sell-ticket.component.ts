@@ -330,8 +330,8 @@ export class SellTicketComponent implements OnInit, OnDestroy {
     this.passengers.forEach((p) => (p.seatNo = undefined));
     this.currentSeatAssignIndex = 0;
 
-    const fromPlaceId = this.getSelectedPickupPlaceId() || '';
-    const toPlaceId = this.getSelectedDropoffPlaceId() || '';
+    const originPlaceId = this.getSelectedPickupPlaceId() || '';
+    const destinationPlaceId = this.getSelectedDropoffPlaceId() || '';
 
     this.booking = true;
     this.cdr.markForCheck();
@@ -340,8 +340,8 @@ export class SellTicketComponent implements OnInit, OnDestroy {
     if (this.isGroupBooking) {
       const groupReq: GroupBookingRequest = {
         tripId: this.selectedTrip.id,
-        fromPlaceId,
-        toPlaceId,
+        originPlaceId,
+        destinationPlaceId,
         pickupPointId: this.selectedPickupId || '',
         dropoffPointId: this.selectedDropoffId || '',
         contactCustomerId: this.contactCustomer!.id,
@@ -371,8 +371,8 @@ export class SellTicketComponent implements OnInit, OnDestroy {
       const p = this.passengers[0];
       const request: BookingRequest = {
         tripId: this.selectedTrip.id,
-        fromPlaceId,
-        toPlaceId,
+        originPlaceId,
+        destinationPlaceId,
         pickupPointId: this.selectedPickupId || '',
         dropoffPointId: this.selectedDropoffId || '',
         passengerId: p.customer!.id,
@@ -624,15 +624,19 @@ export class SellTicketComponent implements OnInit, OnDestroy {
       return;
     }
 
-    const fromPlaceId = this.getSelectedPickupPlaceId();
-    const toPlaceId = this.getSelectedDropoffPlaceId();
-    if (!fromPlaceId || !toPlaceId) {
+    const originPlaceId = this.getSelectedPickupPlaceId();
+    const destinationPlaceId = this.getSelectedDropoffPlaceId();
+    if (!originPlaceId || !destinationPlaceId) {
       this.cdr.markForCheck();
       return;
     }
 
     const sub = this.tripService
-      .getRouteAvailability(this.selectedTrip.id, fromPlaceId, toPlaceId)
+      .getRouteAvailability(
+        this.selectedTrip.id,
+        originPlaceId,
+        destinationPlaceId,
+      )
       .subscribe({
         next: (routeAvailability) => {
           this.routeAvailability = routeAvailability;

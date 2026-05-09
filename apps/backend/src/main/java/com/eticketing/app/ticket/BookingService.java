@@ -57,8 +57,8 @@ public class BookingService {
      * Creates a new booking (PENDING ticket) per TRIP_SPEC section 10.
      *
      * @param tripId the trip to book
-     * @param fromPlaceId journey origin
-     * @param toPlaceId journey destination
+     * @param originPlaceId journey origin
+     * @param destinationPlaceId journey destination
      * @param pickupPointId where passenger boards
      * @param dropoffPointId where passenger alights
      * @param passengerId passenger identifier
@@ -68,7 +68,7 @@ public class BookingService {
      * @param posId POS from auth context (nullable)
      * @return the created ticket
      */
-    public TicketType createBooking(String tripId, String fromPlaceId, String toPlaceId,
+    public TicketType createBooking(String tripId, String originPlaceId, String destinationPlaceId,
             String pickupPointId, String dropoffPointId,
             String passengerId, String idempotencyKey, String lang, String seatNo,
             String companyId, String posId) {
@@ -97,9 +97,9 @@ public class BookingService {
         }
 
         // ── 2. Resolve segment chain ────────────────────────────────────
-        List<String> segmentIds = resolveSegmentChain(trip.getSegments(), fromPlaceId, toPlaceId);
+        List<String> segmentIds = resolveSegmentChain(trip.getSegments(), originPlaceId, destinationPlaceId);
         if (segmentIds.isEmpty()) {
-            throw new BadRequestException("NO_SEGMENT_CHAIN: no continuous segment path from " + fromPlaceId + " to " + toPlaceId);
+            throw new BadRequestException("NO_SEGMENT_CHAIN: no continuous segment path from " + originPlaceId + " to " + destinationPlaceId);
         }
 
         // ── 3. Resolve inventory owner + price ──────────────────────────
@@ -108,8 +108,8 @@ public class BookingService {
         String expressSegmentId = pricingSelection.expressSegmentId();
 
         // ── 4. Validate pickup/dropoff ──────────────────────────────────
-        validatePickupPoint(trip, pickupPointId, fromPlaceId);
-        validateDropoffPoint(trip, dropoffPointId, toPlaceId);
+        validatePickupPoint(trip, pickupPointId, originPlaceId);
+        validateDropoffPoint(trip, dropoffPointId, destinationPlaceId);
 
         // ── 5. Atomic CAS reserve ───────────────────────────────────────
         boolean reserved = seatReservationService.reserveSeats(tripId, segmentIds, expressSegmentId);
@@ -345,10 +345,11 @@ public class BookingService {
     // SEGMENT CHAIN RESOLUTION
     // ════════════════════════════════════════════════════════════════════
     /**
-     * Finds the continuous chain of segment IDs from {@code fromPlaceId} to
-     * {@code toPlaceId}. Segments must be in sequence order and consecutive.
+     * Finds the continuous chain of segment IDs from {@code originPlaceId} to
+     * {@code destinationPlaceId}. Segments must be in sequence order and
+     * consecutive.
      */
-    List<String> resolveSegmentChain(List<SegmentType> segments, String fromPlaceId, String toPlaceId) {
+    List<String> resolveSegmentChain(List<SegmentType> segments, String originPlaceId, String destinationPlaceId) {
         // Sort by sequence
         List<SegmentType> sorted = segments.stream()
                 .sorted(Comparator.comparingInt(SegmentType::getSequence))
@@ -357,7 +358,7 @@ public class BookingService {
         // Find the starting segment
         int startIdx = -1;
         for (int i = 0; i < sorted.size(); i++) {
-            if (sorted.get(i).getFromPlaceId().equals(fromPlaceId)) {
+            if (originPlaceId.equals(TripPlaceRef.idOf(sorted.get(i).getFromPlace()))) {
                 startIdx = i;
                 break;
             }
@@ -366,16 +367,16 @@ public class BookingService {
             return List.of();
         }
 
-        // Collect consecutive segments until toPlaceId
+        // Collect consecutive segments until destinationPlaceId
         List<String> chain = new ArrayList<>();
         for (int i = startIdx; i < sorted.size(); i++) {
             chain.add(sorted.get(i).getSegmentId());
-            if (sorted.get(i).getToPlaceId().equals(toPlaceId)) {
+            if (destinationPlaceId.equals(TripPlaceRef.idOf(sorted.get(i).getToPlace()))) {
                 return chain;
             }
         }
 
-        // toPlaceId not reached
+        // destinationPlaceId not reached
         return List.of();
     }
 
@@ -429,7 +430,7 @@ public class BookingService {
     // ════════════════════════════════════════════════════════════════════
     // PICKUP / DROPOFF VALIDATION
     // ════════════════════════════════════════════════════════════════════
-    private void validatePickupPoint(TripType trip, String pickupPointId, String fromPlaceId) {
+    private void validatePickupPoint(TripType trip, String pickupPointId, String originPlaceId) {
         PickupPointType pp = trip.getPickupPoints().stream()
                 .filter(p -> p.getPointId().equals(pickupPointId))
                 .findFirst()
@@ -438,12 +439,12 @@ public class BookingService {
         if (!pp.isActive()) {
             throw new BadRequestException("INACTIVE_PICKUP_POINT: pickup point is inactive: " + pickupPointId);
         }
-        if (!pp.getPlaceId().equals(fromPlaceId)) {
-            throw new BadRequestException("PICKUP_PLACE_MISMATCH: pickup point placeId does not match fromPlaceId");
+        if (!pp.getPlaceId().equals(originPlaceId)) {
+            throw new BadRequestException("PICKUP_PLACE_MISMATCH: pickup point placeId does not match originPlaceId");
         }
     }
 
-    private void validateDropoffPoint(TripType trip, String dropoffPointId, String toPlaceId) {
+    private void validateDropoffPoint(TripType trip, String dropoffPointId, String destinationPlaceId) {
         DropoffPointType dp = trip.getDropoffPoints().stream()
                 .filter(d -> d.getPointId().equals(dropoffPointId))
                 .findFirst()
@@ -452,8 +453,8 @@ public class BookingService {
         if (!dp.isActive()) {
             throw new BadRequestException("INACTIVE_DROPOFF_POINT: dropoff point is inactive: " + dropoffPointId);
         }
-        if (!dp.getPlaceId().equals(toPlaceId)) {
-            throw new BadRequestException("DROPOFF_PLACE_MISMATCH: dropoff point placeId does not match toPlaceId");
+        if (!dp.getPlaceId().equals(destinationPlaceId)) {
+            throw new BadRequestException("DROPOFF_PLACE_MISMATCH: dropoff point placeId does not match destinationPlaceId");
         }
     }
 
@@ -487,9 +488,14 @@ public class BookingService {
         }
 
         // ── 2. Resolve segment chain ────────────────────────────────────
-        List<String> segmentIds = resolveSegmentChain(trip.getSegments(), req.getFromPlaceId(), req.getToPlaceId());
+        List<String> segmentIds = resolveSegmentChain(
+                trip.getSegments(),
+                req.getOriginPlaceId(),
+                req.getDestinationPlaceId());
         if (segmentIds.isEmpty()) {
-            throw new BadRequestException("NO_SEGMENT_CHAIN: no continuous segment path from " + req.getFromPlaceId() + " to " + req.getToPlaceId());
+            throw new BadRequestException(
+                    "NO_SEGMENT_CHAIN: no continuous segment path from "
+                    + req.getOriginPlaceId() + " to " + req.getDestinationPlaceId());
         }
 
         // ── 3. Resolve inventory owner + price ──────────────────────────
@@ -498,8 +504,8 @@ public class BookingService {
         String expressSegmentId = pricingSelection.expressSegmentId();
 
         // ── 4. Validate pickup/dropoff ──────────────────────────────────
-        validatePickupPoint(trip, req.getPickupPointId(), req.getFromPlaceId());
-        validateDropoffPoint(trip, req.getDropoffPointId(), req.getToPlaceId());
+        validatePickupPoint(trip, req.getPickupPointId(), req.getOriginPlaceId());
+        validateDropoffPoint(trip, req.getDropoffPointId(), req.getDestinationPlaceId());
 
         int passengerCount = req.getPassengers().size();
 

@@ -125,13 +125,14 @@ public class TripService {
                         })
                         .toList();
 
-                String fromPlaceId = segments.get(esi.getSegmentIndices().get(0)).getFromPlaceId();
-                String toPlaceId = segments.get(esi.getSegmentIndices().get(esi.getSegmentIndices().size() - 1)).getToPlaceId();
+                String originPlaceId = TripPlaceRef.idOf(segments.get(esi.getSegmentIndices().get(0)).getFromPlace());
+                String destinationPlaceId = TripPlaceRef.idOf(
+                        segments.get(esi.getSegmentIndices().get(esi.getSegmentIndices().size() - 1)).getToPlace());
 
                 ExpressSegmentType expressSegment = ExpressSegmentType.builder()
                         .expressSegmentId(UUID.randomUUID().toString())
-                        .fromPlaceId(fromPlaceId)
-                        .toPlaceId(toPlaceId)
+                        .fromPlace(TripPlaceRef.of(originPlaceId))
+                        .toPlace(TripPlaceRef.of(destinationPlaceId))
                         .segmentsCovered(segmentIds)
                         .price(esi.getPrice())
                         .bookedCount(0)
@@ -550,10 +551,13 @@ public class TripService {
         TripType trip = getById(tripId, companyId);
         assertExpressSegmentMutationAllowed(trip, true);
 
+        SegmentType firstCoveredSegment = findSegment(trip, req.getSegmentIds().get(0));
+        SegmentType lastCoveredSegment = findSegment(trip, req.getSegmentIds().get(req.getSegmentIds().size() - 1));
+
         ExpressSegmentType expressSegment = ExpressSegmentType.builder()
                 .expressSegmentId(UUID.randomUUID().toString())
-                .fromPlaceId(req.getFromPlaceId())
-                .toPlaceId(req.getToPlaceId())
+                .fromPlace(TripPlaceRef.of(TripPlaceRef.idOf(firstCoveredSegment.getFromPlace())))
+                .toPlace(TripPlaceRef.of(TripPlaceRef.idOf(lastCoveredSegment.getToPlace())))
                 .segmentsCovered(req.getSegmentIds())
                 .price(req.getPrice())
                 .bookedCount(0)

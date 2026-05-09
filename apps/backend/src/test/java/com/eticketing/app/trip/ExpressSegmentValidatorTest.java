@@ -16,8 +16,8 @@ class ExpressSegmentValidatorTest {
     void validateRejectsSingleSegmentChain() {
         ExpressSegmentType expressSegment = ExpressSegmentType.builder()
                 .expressSegmentId("express-1")
-                .fromPlaceId("A")
-                .toPlaceId("B")
+                .fromPlace(TripPlaceRef.of("A"))
+                .toPlace(TripPlaceRef.of("B"))
                 .segmentsCovered(List.of("seg-1"))
                 .price(BigDecimal.TEN)
                 .active(true)
@@ -33,8 +33,8 @@ class ExpressSegmentValidatorTest {
     void validateAcceptsContinuousMultiSegmentChain() {
         ExpressSegmentType expressSegment = ExpressSegmentType.builder()
                 .expressSegmentId("express-2")
-                .fromPlaceId("A")
-                .toPlaceId("C")
+                .fromPlace(TripPlaceRef.of("A"))
+                .toPlace(TripPlaceRef.of("C"))
                 .segmentsCovered(List.of("seg-1", "seg-2"))
                 .price(BigDecimal.valueOf(22))
                 .active(true)
@@ -45,12 +45,12 @@ class ExpressSegmentValidatorTest {
                 segment("seg-2", 2, "B", "C"))));
     }
 
-    private SegmentType segment(String segmentId, int sequence, String fromPlaceId, String toPlaceId) {
+    private SegmentType segment(String segmentId, int sequence, String originPlaceId, String destinationPlaceId) {
         return SegmentType.builder()
                 .segmentId(segmentId)
                 .sequence(sequence)
-                .fromPlaceId(fromPlaceId)
-                .toPlaceId(toPlaceId)
+                .fromPlace(TripPlaceRef.of(originPlaceId))
+                .toPlace(TripPlaceRef.of(destinationPlaceId))
                 .basePrice(BigDecimal.TEN)
                 .build();
     }

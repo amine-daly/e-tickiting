@@ -8,8 +8,8 @@ import { RecentSearch } from '../models/recent-search.model';
 })
 export class RecentSearchesService {
   private readonly STORAGE_KEY = 'recent_searches';
-  private recentSearchesSubject = new BehaviorSubject<RecentSearch[]>([]);
-  public recentSearches$ = this.recentSearchesSubject.asObservable();
+  private recentSearches = new BehaviorSubject<RecentSearch[]>([]);
+  public recentSearches$ = this.recentSearches.asObservable();
 
   constructor(@Inject(PLATFORM_ID) private platformId: Object) {
     this.loadSearches();
@@ -21,7 +21,7 @@ export class RecentSearchesService {
       if (saved) {
         try {
           const parsed = JSON.parse(saved);
-          this.recentSearchesSubject.next(parsed);
+          this.recentSearches.next(parsed);
         } catch (e) {
           console.error('Failed to parse recent searches', e);
         }
@@ -31,7 +31,7 @@ export class RecentSearchesService {
 
   addSearch(search: Omit<RecentSearch, 'timestamp'>): void {
     if (isPlatformBrowser(this.platformId)) {
-      const current = this.recentSearchesSubject.value;
+      const current = this.recentSearches.value;
       const newSearch: RecentSearch = { ...search, timestamp: Date.now() };
 
       // Remove duplicates (same origin, dest, date)
@@ -41,13 +41,13 @@ export class RecentSearchesService {
             s.originId === search.originId &&
             s.destinationId === search.destinationId &&
             s.date === search.date
-          )
+          ),
       );
 
       // Add to top, limit to 5
       const updated = [newSearch, ...filtered].slice(0, 5);
 
-      this.recentSearchesSubject.next(updated);
+      this.recentSearches.next(updated);
       localStorage.setItem(this.STORAGE_KEY, JSON.stringify(updated));
     }
   }
@@ -55,7 +55,7 @@ export class RecentSearchesService {
   clearSearches(): void {
     if (isPlatformBrowser(this.platformId)) {
       localStorage.removeItem(this.STORAGE_KEY);
-      this.recentSearchesSubject.next([]);
+      this.recentSearches.next([]);
     }
   }
 }

@@ -28,6 +28,7 @@ import com.eticketing.app.place.PlaceType;
 import com.eticketing.app.trip.PickupPointType;
 import com.eticketing.app.trip.DropoffPointType;
 import com.eticketing.app.trip.SegmentType;
+import com.eticketing.app.trip.TripPlaceRef;
 import com.eticketing.app.trip.TripType;
 import com.eticketing.app.trip.TripTypeRepository;
 import com.eticketing.app.user.RoleEnum;
@@ -338,8 +339,8 @@ public class TicketController {
                         .sorted((a, b) -> a.getSequence() - b.getSequence())
                         .toList();
                 if (!ticketSegments.isEmpty()) {
-                    String originPlaceId = ticketSegments.get(0).getFromPlaceId();
-                    String destPlaceId = ticketSegments.get(ticketSegments.size() - 1).getToPlaceId();
+                    String originPlaceId = TripPlaceRef.idOf(ticketSegments.get(0).getFromPlace());
+                    String destPlaceId = TripPlaceRef.idOf(ticketSegments.get(ticketSegments.size() - 1).getToPlace());
                     PlaceType originPlace = originPlaceId != null ? placeRepository.findById(originPlaceId).orElse(null) : null;
                     PlaceType destPlace = destPlaceId != null ? placeRepository.findById(destPlaceId).orElse(null) : null;
                     payload.put("originPlaceId", originPlaceId);

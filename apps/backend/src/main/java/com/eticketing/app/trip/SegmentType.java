@@ -32,14 +32,14 @@ public class SegmentType {
     private int sequence;
 
     /**
-     * PlaceId of the departure commercial stop.
+     * Departure commercial stop reference.
      */
-    private String fromPlaceId;
+    private TripPlaceRef fromPlace;
 
     /**
-     * PlaceId of the arrival commercial stop.
+     * Arrival commercial stop reference.
      */
-    private String toPlaceId;
+    private TripPlaceRef toPlace;
 
     /**
      * UTC — derived from stopSchedule at creation.

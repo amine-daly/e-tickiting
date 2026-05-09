@@ -146,6 +146,46 @@ class TripMarketplaceProjectionFactoryTest {
     }
 
     @Test
+    void buildReturnsProjectionWhenSegmentPlaceRefsAreMissing() {
+        TripType trip = TripType.builder()
+                .departureDate(Instant.parse("2026-05-10T08:00:00Z"))
+                .status(TripStatusEnum.ACTIVE)
+                .bus(TripBusRef.builder().busId("bus-1").build())
+                .currency(TripCurrency.builder().currencyId("currency-1").build())
+                .stopSchedule(List.of(
+                        stop("A", 1, null, Instant.parse("2026-05-10T08:00:00Z"), true, false),
+                        stop("B", 2, Instant.parse("2026-05-10T08:40:00Z"), Instant.parse("2026-05-10T08:45:00Z"), true, true),
+                        stop("C", 3, Instant.parse("2026-05-10T09:35:00Z"), null, false, true)))
+                .segments(List.of(
+                        segment("seg-1", 1, null, null, 40, 10, 5),
+                        segment("seg-2", 2, null, null, 55, 15, 4)))
+                .expressSegments(List.of(expressSegment(
+                        "express-null",
+                        null,
+                        null,
+                        List.of("seg-1", "seg-2"),
+                        25,
+                        7,
+                        true)))
+                .build();
+
+        TripResponse.MarketplaceView projection = TripMarketplaceProjectionFactory.build(
+                trip,
+                "A",
+                "C",
+                BusType.builder().id("bus-1").totalSeats(40).build(),
+                "DT",
+                placeMap());
+
+        assertNotNull(projection);
+        assertEquals(BigDecimal.valueOf(25), projection.getPrice());
+        assertEquals(95, projection.getSchedule().getDurationMinutes());
+        assertEquals(28, projection.getAvailableSeats());
+        assertEquals("Tunis", projection.getRoute().getOrigin().getCity());
+        assertEquals("Sfax", projection.getRoute().getDestination().getCity());
+    }
+
+    @Test
     void buildRouteAvailabilityRejectsNonActiveTrips() {
         TripType trip = TripType.builder()
                 .id("trip-2")
@@ -205,19 +245,19 @@ class TripMarketplaceProjectionFactoryTest {
     private SegmentType segment(
             String segmentId,
             int sequence,
-            String fromPlaceId,
-            String toPlaceId,
+            String originPlaceId,
+            String destinationPlaceId,
             int durationMinutes,
             int basePrice,
             int bookedCount) {
-        return segment(segmentId, sequence, fromPlaceId, toPlaceId, durationMinutes, basePrice, bookedCount, 40);
+        return segment(segmentId, sequence, originPlaceId, destinationPlaceId, durationMinutes, basePrice, bookedCount, 40);
     }
 
     private SegmentType segment(
             String segmentId,
             int sequence,
-            String fromPlaceId,
-            String toPlaceId,
+            String originPlaceId,
+            String destinationPlaceId,
             int durationMinutes,
             int basePrice,
             int bookedCount,
@@ -225,8 +265,8 @@ class TripMarketplaceProjectionFactoryTest {
         return SegmentType.builder()
                 .segmentId(segmentId)
                 .sequence(sequence)
-                .fromPlaceId(fromPlaceId)
-                .toPlaceId(toPlaceId)
+                .fromPlace(TripPlaceRef.of(originPlaceId))
+                .toPlace(TripPlaceRef.of(destinationPlaceId))
                 .durationMinutes(durationMinutes)
                 .basePrice(BigDecimal.valueOf(basePrice))
                 .maxBooking(maxBooking)
@@ -236,16 +276,16 @@ class TripMarketplaceProjectionFactoryTest {
 
     private ExpressSegmentType expressSegment(
             String expressSegmentId,
-            String fromPlaceId,
-            String toPlaceId,
+            String originPlaceId,
+            String destinationPlaceId,
             List<String> segmentsCovered,
             int price,
             int bookedCount,
             boolean active) {
         return ExpressSegmentType.builder()
                 .expressSegmentId(expressSegmentId)
-                .fromPlaceId(fromPlaceId)
-                .toPlaceId(toPlaceId)
+                .fromPlace(TripPlaceRef.of(originPlaceId))
+                .toPlace(TripPlaceRef.of(destinationPlaceId))
                 .segmentsCovered(segmentsCovered)
                 .price(BigDecimal.valueOf(price))
                 .bookedCount(bookedCount)

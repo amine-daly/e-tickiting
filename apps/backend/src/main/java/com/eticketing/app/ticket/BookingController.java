@@ -57,8 +57,8 @@ public class BookingController {
 
         TicketType ticket = bookingService.createBooking(
                 req.getTripId(),
-                req.getFromPlaceId(),
-                req.getToPlaceId(),
+                req.getOriginPlaceId(),
+                req.getDestinationPlaceId(),
                 req.getPickupPointId(),
                 req.getDropoffPointId(),
                 req.getPassengerId(),

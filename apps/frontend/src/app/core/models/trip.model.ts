@@ -98,9 +98,7 @@ export interface StopType {
 export interface SegmentType {
   segmentId: string;
   sequence: number;
-  fromPlaceId?: string | null;
   fromPlace?: PlaceSummary;
-  toPlaceId?: string | null;
   toPlace?: PlaceSummary;
   departureTime: string;
   arrivalTime: string;
@@ -113,9 +111,7 @@ export interface SegmentType {
 
 export interface ExpressSegmentType {
   expressSegmentId: string;
-  fromPlaceId?: string | null;
   fromPlace?: PlaceSummary;
-  toPlaceId?: string | null;
   toPlace?: PlaceSummary;
   segmentsCovered: string[];
   price: number;
@@ -198,35 +194,4 @@ export interface MarketplaceTrip {
   availableSeats: number;
   currencyCode: string;
   amenities?: AmenityEnum[];
-}
-
-export function getSegmentFromPlaceId(
-  segment: Pick<SegmentType, 'fromPlace' | 'fromPlaceId'> | null | undefined,
-): string | null {
-  return segment?.fromPlace?.id || segment?.fromPlaceId || null;
-}
-
-export function getSegmentToPlaceId(
-  segment: Pick<SegmentType, 'toPlace' | 'toPlaceId'> | null | undefined,
-): string | null {
-  console.log('🚀 ~ getSegmentToPlaceId ~ segment:', segment);
-  return segment?.toPlace?.id || segment?.toPlaceId || null;
-}
-
-export function getExpressSegmentFromPlaceId(
-  expressSegment:
-    | Pick<ExpressSegmentType, 'fromPlace' | 'fromPlaceId'>
-    | null
-    | undefined,
-): string | null {
-  return expressSegment?.fromPlace?.id || expressSegment?.fromPlaceId || null;
-}
-
-export function getExpressSegmentToPlaceId(
-  expressSegment:
-    | Pick<ExpressSegmentType, 'toPlace' | 'toPlaceId'>
-    | null
-    | undefined,
-): string | null {
-  return expressSegment?.toPlace?.id || expressSegment?.toPlaceId || null;
 }

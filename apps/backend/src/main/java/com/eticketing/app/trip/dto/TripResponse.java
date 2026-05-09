@@ -1,5 +1,7 @@
 package com.eticketing.app.trip.dto;
 
+import com.eticketing.app.trip.TripPlaceRef;
+
 import com.eticketing.app.bus.BusType;
 import com.eticketing.app.common.TargetInput;
 import com.eticketing.app.company.CompanyType;
@@ -332,8 +334,8 @@ public class TripResponse {
         return segs.stream().map(s -> SegmentView.builder()
                 .segmentId(s.getSegmentId())
                 .sequence(s.getSequence())
-                .fromPlace(toPlaceSummary(s.getFromPlaceId(), placeMap))
-                .toPlace(toPlaceSummary(s.getToPlaceId(), placeMap))
+                .fromPlace(toPlaceSummary(TripPlaceRef.idOf(s.getFromPlace()), placeMap))
+                .toPlace(toPlaceSummary(TripPlaceRef.idOf(s.getToPlace()), placeMap))
                 .departureTime(s.getDepartureTime())
                 .arrivalTime(s.getArrivalTime())
                 .maxBooking(s.getMaxBooking())
@@ -381,8 +383,8 @@ public class TripResponse {
         }
         return expressSegments.stream().map(expressSegment -> EnrichedExpressSegment.builder()
                 .expressSegmentId(expressSegment.getExpressSegmentId())
-                .fromPlace(toPlaceSummary(expressSegment.getFromPlaceId(), placeMap))
-                .toPlace(toPlaceSummary(expressSegment.getToPlaceId(), placeMap))
+                .fromPlace(toPlaceSummary(TripPlaceRef.idOf(expressSegment.getFromPlace()), placeMap))
+                .toPlace(toPlaceSummary(TripPlaceRef.idOf(expressSegment.getToPlace()), placeMap))
                 .segmentsCovered(expressSegment.getSegmentsCovered())
                 .price(expressSegment.getPrice())
                 .bookedCount(expressSegment.getBookedCount())

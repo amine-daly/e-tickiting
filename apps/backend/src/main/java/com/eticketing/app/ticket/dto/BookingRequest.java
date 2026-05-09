@@ -10,10 +10,10 @@ public class BookingRequest {
     private String tripId;
 
     @NotBlank
-    private String fromPlaceId;
+    private String originPlaceId;
 
     @NotBlank
-    private String toPlaceId;
+    private String destinationPlaceId;
 
     @NotBlank
     private String pickupPointId;

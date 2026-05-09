@@ -132,8 +132,8 @@ public final class TripEditRules {
             if (timeChanged) {
                 // Check if any segment references this stop and has bookings
                 boolean hasBookings = existing.getSegments().stream()
-                        .filter(seg -> seg.getFromPlaceId().equals(ns.getPlaceId())
-                        || seg.getToPlaceId().equals(ns.getPlaceId()))
+                        .filter(seg -> java.util.Objects.equals(TripPlaceRef.idOf(seg.getFromPlace()), ns.getPlaceId())
+                        || java.util.Objects.equals(TripPlaceRef.idOf(seg.getToPlace()), ns.getPlaceId()))
                         .anyMatch(seg -> physicalBookedBySegmentId.getOrDefault(seg.getSegmentId(), 0) > 0);
 
                 if (hasBookings) {

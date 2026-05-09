@@ -5,8 +5,8 @@ import { environment } from 'src/environments/environment';
 
 export interface BookingRequest {
   tripId: string;
-  fromPlaceId: string;
-  toPlaceId: string;
+  originPlaceId: string;
+  destinationPlaceId: string;
   pickupPointId: string;
   dropoffPointId: string;
   passengerId: string;
@@ -53,8 +53,8 @@ export interface PassengerEntry {
 
 export interface GroupBookingRequest {
   tripId: string;
-  fromPlaceId: string;
-  toPlaceId: string;
+  originPlaceId: string;
+  destinationPlaceId: string;
   pickupPointId: string;
   dropoffPointId: string;
   contactCustomerId: string;

@@ -43,7 +43,9 @@ public final class ExpressSegmentStopGuard {
             Set<String> chainPlaceIds = expressSegment.getSegmentsCovered().stream()
                     .map(segMap::get)
                     .filter(s -> s != null)
-                    .flatMap(s -> java.util.stream.Stream.of(s.getFromPlaceId(), s.getToPlaceId()))
+                    .flatMap(s -> java.util.stream.Stream.of(
+                    TripPlaceRef.idOf(s.getFromPlace()),
+                    TripPlaceRef.idOf(s.getToPlace())))
                     .collect(Collectors.toSet());
 
             if (chainPlaceIds.contains(placeIdToRemove)) {

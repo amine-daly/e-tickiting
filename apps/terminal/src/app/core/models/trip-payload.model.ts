@@ -41,8 +41,6 @@ export interface ExpressSegmentCreateInput {
 }
 
 export interface ExpressSegmentPayload {
-  fromPlaceId: string;
-  toPlaceId: string;
   segmentIds: string[];
   price: number;
   validFrom?: string | null;

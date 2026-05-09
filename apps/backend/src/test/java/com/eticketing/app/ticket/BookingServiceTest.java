@@ -4,6 +4,7 @@ import com.eticketing.app.common.TargetInput;
 import com.eticketing.app.currency.CurrencyRepository;
 import com.eticketing.app.ticket.dto.GroupBookingRequest;
 import com.eticketing.app.trip.SegmentType;
+import com.eticketing.app.trip.TripPlaceRef;
 import com.eticketing.app.trip.TripStatusEnum;
 import com.eticketing.app.trip.TripType;
 import com.eticketing.app.trip.TripTypeRepository;
@@ -101,8 +102,8 @@ class BookingServiceTest {
 
         GroupBookingRequest request = new GroupBookingRequest();
         request.setTripId("trip-2");
-        request.setFromPlaceId("A");
-        request.setToPlaceId("C");
+        request.setOriginPlaceId("A");
+        request.setDestinationPlaceId("C");
         request.setPickupPointId("pickup-1");
         request.setDropoffPointId("dropoff-1");
         request.setContactCustomerId("customer-1");
@@ -261,12 +262,12 @@ class BookingServiceTest {
         assertFalse(refundCaptor.getValue().getSegmentsRefunded().isEmpty());
     }
 
-    private SegmentType segment(String segmentId, int sequence, String fromPlaceId, String toPlaceId, int basePrice) {
+    private SegmentType segment(String segmentId, int sequence, String originPlaceId, String destinationPlaceId, int basePrice) {
         return SegmentType.builder()
                 .segmentId(segmentId)
                 .sequence(sequence)
-                .fromPlaceId(fromPlaceId)
-                .toPlaceId(toPlaceId)
+                .fromPlace(TripPlaceRef.of(originPlaceId))
+                .toPlace(TripPlaceRef.of(destinationPlaceId))
                 .basePrice(BigDecimal.valueOf(basePrice))
                 .build();
     }

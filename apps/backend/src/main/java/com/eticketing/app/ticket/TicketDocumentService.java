@@ -21,6 +21,7 @@ import com.eticketing.app.pos.PointOfSaleType;
 import com.eticketing.app.pos.PointOfSaleRepository;
 import com.eticketing.app.trip.SegmentType;
 import com.eticketing.app.trip.StopType;
+import com.eticketing.app.trip.TripPlaceRef;
 import com.eticketing.app.trip.TripType;
 import com.eticketing.app.trip.TripTypeRepository;
 import com.eticketing.app.user.PhoneType;
@@ -486,7 +487,8 @@ public class TicketDocumentService {
         String firstSegId = ticket.getSegmentIds().get(0);
         return trip.getSegments().stream()
                 .filter(s -> s.getSegmentId().equals(firstSegId))
-                .map(SegmentType::getFromPlaceId)
+                .map(SegmentType::getFromPlace)
+                .map(TripPlaceRef::idOf)
                 .findFirst()
                 .orElse(null);
     }
@@ -499,7 +501,8 @@ public class TicketDocumentService {
         String lastSegId = ticket.getSegmentIds().get(ticket.getSegmentIds().size() - 1);
         return trip.getSegments().stream()
                 .filter(s -> s.getSegmentId().equals(lastSegId))
-                .map(SegmentType::getToPlaceId)
+                .map(SegmentType::getToPlace)
+                .map(TripPlaceRef::idOf)
                 .findFirst()
                 .orElse(null);
     }

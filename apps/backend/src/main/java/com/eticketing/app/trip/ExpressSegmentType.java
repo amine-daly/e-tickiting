@@ -30,14 +30,14 @@ public class ExpressSegmentType {
     private String expressSegmentId;
 
     /**
-     * Must match fromPlaceId of the first covered segment.
+     * Must match the first covered segment's departure place.
      */
-    private String fromPlaceId;
+    private TripPlaceRef fromPlace;
 
     /**
-     * Must match toPlaceId of the last covered segment.
+     * Must match the last covered segment's arrival place.
      */
-    private String toPlaceId;
+    private TripPlaceRef toPlace;
 
     /**
      * Ordered segment IDs forming a continuous chain.

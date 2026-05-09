@@ -9,7 +9,6 @@ import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
-import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
@@ -100,7 +99,7 @@ public final class TripMarketplaceProjectionFactory {
                 .toList();
         boolean requiresExpressSegment = resolvedRoute.chain().size() > 1;
         ExpressSegmentType expressSegment = requiresExpressSegment
-                ? findMatchingExpressSegment(trip, originPlaceId, destinationPlaceId, segmentIds)
+                ? findMatchingExpressSegment(trip, segmentIds)
                 : null;
         if (requiresExpressSegment && expressSegment == null) {
             return unavailableRoute(trip.getId(), originPlaceId, destinationPlaceId, currencyCode, true, segmentIds);
@@ -165,56 +164,57 @@ public final class TripMarketplaceProjectionFactory {
             return List.of();
         }
 
-        int startIndex = -1;
-        for (int index = 0; index < segments.size(); index++) {
-            if (Objects.equals(segments.get(index).getFromPlaceId(), originPlaceId)) {
-                startIndex = index;
-                break;
-            }
-        }
-        if (startIndex < 0) {
+        List<StopType> commercialStops = getCommercialStops(trip);
+        if (commercialStops.size() < 2) {
             return List.of();
         }
 
-        List<SegmentType> chain = new ArrayList<>();
-        String currentPlaceId = originPlaceId;
-
-        for (SegmentType segment : segments.subList(startIndex, segments.size())) {
-            if (!Objects.equals(segment.getFromPlaceId(), currentPlaceId)) {
-                break;
+        int originStopIndex = -1;
+        int destinationStopIndex = -1;
+        for (int index = 0; index < commercialStops.size(); index++) {
+            StopType stop = commercialStops.get(index);
+            if (originStopIndex < 0
+                    && Objects.equals(stop.getPlaceId(), originPlaceId)
+                    && stop.isBoardingAllowed()) {
+                originStopIndex = index;
             }
-
-            chain.add(segment);
-            currentPlaceId = segment.getToPlaceId();
-
-            if (Objects.equals(currentPlaceId, destinationPlaceId)) {
-                return List.copyOf(chain);
+            if (Objects.equals(stop.getPlaceId(), destinationPlaceId) && stop.isDroppingAllowed()) {
+                destinationStopIndex = index;
             }
         }
+        if (originStopIndex < 0 || destinationStopIndex < 0 || originStopIndex >= destinationStopIndex) {
+            return List.of();
+        }
 
-        return List.of();
+        if (segments.size() < destinationStopIndex) {
+            return List.of();
+        }
+
+        return List.copyOf(segments.subList(originStopIndex, destinationStopIndex));
+    }
+
+    private static List<StopType> getCommercialStops(TripType trip) {
+        return getSortedStops(trip).stream()
+                .filter(stop -> stop.isBoardingAllowed() || stop.isDroppingAllowed())
+                .toList();
+    }
+
+    private static ExpressSegmentType findMatchingExpressSegment(
+            TripType trip,
+            List<String> segmentIds) {
+        Instant now = Instant.now();
+        return (trip.getExpressSegments() == null ? List.<ExpressSegmentType>of() : trip.getExpressSegments()).stream()
+                .filter(expressSegment -> expressSegment.getSegmentsCovered() != null)
+                .filter(expressSegment -> segmentIds.equals(expressSegment.getSegmentsCovered()))
+                .filter(expressSegment -> isExpressSegmentCurrentlyValid(expressSegment, now))
+                .findFirst()
+                .orElse(null);
     }
 
     private static List<SegmentType> getSortedSegments(TripType trip) {
         return (trip.getSegments() == null ? List.<SegmentType>of() : trip.getSegments()).stream()
                 .sorted(Comparator.comparingInt(SegmentType::getSequence))
                 .toList();
-    }
-
-    private static ExpressSegmentType findMatchingExpressSegment(
-            TripType trip,
-            String originPlaceId,
-            String destinationPlaceId,
-            List<String> segmentIds) {
-        Instant now = Instant.now();
-        return (trip.getExpressSegments() == null ? List.<ExpressSegmentType>of() : trip.getExpressSegments()).stream()
-                .filter(expressSegment -> expressSegment.getSegmentsCovered() != null)
-                .filter(expressSegment -> Objects.equals(expressSegment.getFromPlaceId(), originPlaceId))
-                .filter(expressSegment -> Objects.equals(expressSegment.getToPlaceId(), destinationPlaceId))
-                .filter(expressSegment -> segmentIds.equals(expressSegment.getSegmentsCovered()))
-                .filter(expressSegment -> isExpressSegmentCurrentlyValid(expressSegment, now))
-                .findFirst()
-                .orElse(null);
     }
 
     private static ExpressSegmentType findExpressSegmentById(TripType trip, String expressSegmentId) {

@@ -16,8 +16,8 @@ public final class ExpressSegmentValidator {
 
     /**
      * Validates that an express segment's {@code segmentsCovered} forms a
-     * continuous chain within the given segments, and that
-     * fromPlaceId/toPlaceId match the chain boundaries.
+     * continuous chain within the given segments, and that the boundary places
+     * match the chain boundaries.
      */
     public static void validate(ExpressSegmentType expressSegment, List<SegmentType> tripSegments) {
         if (expressSegment.getSegmentsCovered() == null || expressSegment.getSegmentsCovered().isEmpty()) {
@@ -48,27 +48,33 @@ public final class ExpressSegmentValidator {
         for (int i = 0; i < chain.size() - 1; i++) {
             SegmentType current = chain.get(i);
             SegmentType next = chain.get(i + 1);
-            if (!current.getToPlaceId().equals(next.getFromPlaceId())) {
+            String currentDestinationPlaceId = TripPlaceRef.idOf(current.getToPlace());
+            String nextOriginPlaceId = TripPlaceRef.idOf(next.getFromPlace());
+            if (!currentDestinationPlaceId.equals(nextOriginPlaceId)) {
                 throw new BadRequestException(
                         "INVALID_EXPRESS_SEGMENT_CHAIN: break between segment "
-                        + current.getSegmentId() + " (to=" + current.getToPlaceId()
-                        + ") and " + next.getSegmentId() + " (from=" + next.getFromPlaceId() + ")");
+                        + current.getSegmentId() + " (to=" + currentDestinationPlaceId
+                        + ") and " + next.getSegmentId() + " (from=" + nextOriginPlaceId + ")");
             }
         }
 
         // Verify boundary places
         SegmentType first = chain.get(0);
         SegmentType last = chain.get(chain.size() - 1);
+        String firstOriginPlaceId = TripPlaceRef.idOf(first.getFromPlace());
+        String lastDestinationPlaceId = TripPlaceRef.idOf(last.getToPlace());
+        String expressOriginPlaceId = TripPlaceRef.idOf(expressSegment.getFromPlace());
+        String expressDestinationPlaceId = TripPlaceRef.idOf(expressSegment.getToPlace());
 
-        if (!first.getFromPlaceId().equals(expressSegment.getFromPlaceId())) {
+        if (!firstOriginPlaceId.equals(expressOriginPlaceId)) {
             throw new BadRequestException(
-                    "INVALID_EXPRESS_SEGMENT_CHAIN: fromPlaceId '" + expressSegment.getFromPlaceId()
-                    + "' does not match first segment fromPlaceId '" + first.getFromPlaceId() + "'");
+                    "INVALID_EXPRESS_SEGMENT_CHAIN: fromPlace.id '" + expressOriginPlaceId
+                    + "' does not match first segment fromPlace.id '" + firstOriginPlaceId + "'");
         }
-        if (!last.getToPlaceId().equals(expressSegment.getToPlaceId())) {
+        if (!lastDestinationPlaceId.equals(expressDestinationPlaceId)) {
             throw new BadRequestException(
-                    "INVALID_EXPRESS_SEGMENT_CHAIN: toPlaceId '" + expressSegment.getToPlaceId()
-                    + "' does not match last segment toPlaceId '" + last.getToPlaceId() + "'");
+                    "INVALID_EXPRESS_SEGMENT_CHAIN: toPlace.id '" + expressDestinationPlaceId
+                    + "' does not match last segment toPlace.id '" + lastDestinationPlaceId + "'");
         }
     }
 

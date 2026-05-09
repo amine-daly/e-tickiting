@@ -58,10 +58,10 @@ import { TripPointLocationPickerComponent } from './location/trip-point-location
 
 interface SegmentDisplay {
   index: number;
-  fromPlaceId: string;
-  fromPlaceName: string;
-  toPlaceId: string;
-  toPlaceName: string;
+  originPlaceId: string;
+  originPlaceName: string;
+  destinationPlaceId: string;
+  destinationPlaceName: string;
 }
 
 @Component({
@@ -430,20 +430,20 @@ export class TripDetailsComponent implements OnInit, OnDestroy {
     (trip.segments || [])
       .sort((a, b) => a.sequence - b.sequence)
       .forEach((seg, i) => {
-        const fromPlaceId = seg.fromPlace?.id || seg.fromPlaceId || '';
-        const toPlaceId = seg.toPlace?.id || seg.toPlaceId || '';
+        const originPlaceId = seg.fromPlace?.id || '';
+        const destinationPlaceId = seg.toPlace?.id || '';
         this.segmentDisplays.push({
           index: i,
-          fromPlaceId,
-          fromPlaceName:
+          originPlaceId,
+          originPlaceName:
             seg.fromPlace?.city ||
-            this.resolvePlaceById(fromPlaceId)?.city ||
-            fromPlaceId,
-          toPlaceId,
-          toPlaceName:
+            this.resolvePlaceById(originPlaceId)?.city ||
+            originPlaceId,
+          destinationPlaceId,
+          destinationPlaceName:
             seg.toPlace?.city ||
-            this.resolvePlaceById(toPlaceId)?.city ||
-            toPlaceId,
+            this.resolvePlaceById(destinationPlaceId)?.city ||
+            destinationPlaceId,
         });
         this.segments.push(
           this.fb.group({
@@ -842,12 +842,12 @@ export class TripDetailsComponent implements OnInit, OnDestroy {
         this.tripPlacesMap.set(stop.placeId, stop.place.city);
     });
     trip.segments?.forEach((seg) => {
-      const fromPlaceId = seg.fromPlace?.id || seg.fromPlaceId;
-      const toPlaceId = seg.toPlace?.id || seg.toPlaceId;
-      if (seg.fromPlace?.city && fromPlaceId)
-        this.tripPlacesMap.set(fromPlaceId, seg.fromPlace.city);
-      if (seg.toPlace?.city && toPlaceId)
-        this.tripPlacesMap.set(toPlaceId, seg.toPlace.city);
+      const originPlaceId = seg.fromPlace?.id;
+      const destinationPlaceId = seg.toPlace?.id;
+      if (seg.fromPlace?.city && originPlaceId)
+        this.tripPlacesMap.set(originPlaceId, seg.fromPlace.city);
+      if (seg.toPlace?.city && destinationPlaceId)
+        this.tripPlacesMap.set(destinationPlaceId, seg.toPlace.city);
     });
     trip.pickupPoints?.forEach((pp) => {
       if (pp.place?.city) this.tripPlacesMap.set(pp.placeId, pp.place.city);
@@ -1047,21 +1047,23 @@ export class TripDetailsComponent implements OnInit, OnDestroy {
     for (let i = 0; i < commercial.length - 1; i++) {
       const from = commercial[i];
       const to = commercial[i + 1];
-      const fromPlaceId = from.place?.id || '';
-      const toPlaceId = to.place?.id || '';
+      const originPlaceId = from.place?.id || '';
+      const destinationPlaceId = to.place?.id || '';
 
       // Try to preserve user-entered data by matching from→to
       const existingIdx = oldDisplays.findIndex(
-        (d) => d.fromPlaceId === fromPlaceId && d.toPlaceId === toPlaceId,
+        (d) =>
+          d.originPlaceId === originPlaceId &&
+          d.destinationPlaceId === destinationPlaceId,
       );
       const existing = existingIdx >= 0 ? oldSegments[existingIdx] : null;
 
       this.segmentDisplays.push({
         index: i,
-        fromPlaceId,
-        fromPlaceName: from.place?.city || fromPlaceId,
-        toPlaceId,
-        toPlaceName: to.place?.city || toPlaceId,
+        originPlaceId,
+        originPlaceName: from.place?.city || originPlaceId,
+        destinationPlaceId,
+        destinationPlaceName: to.place?.city || destinationPlaceId,
       });
 
       this.segments.push(
@@ -1089,7 +1091,7 @@ export class TripDetailsComponent implements OnInit, OnDestroy {
   private rebuildSegmentIndexOptions(): void {
     this.segmentIndexOptions = this.segmentDisplays.map((d) => ({
       value: d.index,
-      label: `${d.fromPlaceName} → ${d.toPlaceName}`,
+      label: `${d.originPlaceName} → ${d.destinationPlaceName}`,
     }));
   }
 
@@ -1173,7 +1175,9 @@ export class TripDetailsComponent implements OnInit, OnDestroy {
     }
 
     const segment = this.segmentDisplays[segmentIndex];
-    return segment ? `${segment.fromPlaceName} → ${segment.toPlaceName}` : '';
+    return segment
+      ? `${segment.originPlaceName} → ${segment.destinationPlaceName}`
+      : '';
   }
 
   private resolveSegmentOptionValue(
@@ -1464,13 +1468,8 @@ export class TripDetailsComponent implements OnInit, OnDestroy {
     const segmentIndices = this.normalizeSegmentIndices(
       expressSegment.segmentIndices,
     );
-    const firstSegment = this.segmentDisplays[segmentIndices[0]];
-    const lastSegment =
-      this.segmentDisplays[segmentIndices[segmentIndices.length - 1]];
 
     return {
-      fromPlaceId: firstSegment?.fromPlaceId || '',
-      toPlaceId: lastSegment?.toPlaceId || '',
       segmentIds: segmentIndices
         .map((index) => this.segments.at(index)?.get('segmentId')?.value)
         .filter((segmentId): segmentId is string => !!segmentId),
