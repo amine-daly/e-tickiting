@@ -192,7 +192,7 @@ jobs:
         run: |
           set -euo pipefail
           missing=()
-          for name in MONGO_INITDB_ROOT_USERNAME MONGO_INITDB_ROOT_PASSWORD JWT_SECRET AWS_ACCESS_KEY_ID AWS_SECRET_ACCESS_KEY AWS_REGION AWS_S3_BUCKET; do
+          for name in MONGO_INITDB_ROOT_USERNAME MONGO_INITDB_ROOT_PASSWORD JWT_SECRET; do
             if [ -z "${!name:-}" ]; then
               missing+=("$name")
             fi
@@ -200,6 +200,10 @@ jobs:
           if [ ${#missing[@]} -gt 0 ]; then
             echo "Missing required GitHub secrets: ${missing[*]}" >&2
             exit 1
+          fi
+
+          if [ -z "${AWS_ACCESS_KEY_ID:-}" ] || [ -z "${AWS_SECRET_ACCESS_KEY:-}" ] || [ -z "${AWS_REGION:-}" ] || [ -z "${AWS_S3_BUCKET:-}" ]; then
+            echo "AWS S3 secrets are optional in this deploy flow. Uploads require them or an EC2 IAM role." >&2
           fi
 
       - name: Upload production env to EC2
@@ -220,14 +224,21 @@ jobs:
               "MONGO_INITDB_ROOT_PASSWORD": os.environ.get("MONGO_INITDB_ROOT_PASSWORD", ""),
               "MONGO_DB_NAME": os.environ.get("MONGO_DB_NAME") or "eticketing",
               "JWT_SECRET": os.environ.get("JWT_SECRET", ""),
-                "AWS_ACCESS_KEY_ID": os.environ.get("AWS_ACCESS_KEY_ID", ""),
-                "AWS_SECRET_ACCESS_KEY": os.environ.get("AWS_SECRET_ACCESS_KEY", ""),
-                "AWS_SESSION_TOKEN": os.environ.get("AWS_SESSION_TOKEN", ""),
-                "AWS_REGION": os.environ.get("AWS_REGION") or "eu-north-1",
-                "AWS_S3_BUCKET": os.environ.get("AWS_S3_BUCKET") or "eticketing-app",
               "SPRING_PROFILES_ACTIVE": os.environ.get("SPRING_PROFILES_ACTIVE") or "prod",
               "FRONTEND_HOST_PORT": os.environ.get("FRONTEND_HOST_PORT") or "80",
           }
+
+            optional_values = {
+              "AWS_ACCESS_KEY_ID": os.environ.get("AWS_ACCESS_KEY_ID", ""),
+              "AWS_SECRET_ACCESS_KEY": os.environ.get("AWS_SECRET_ACCESS_KEY", ""),
+              "AWS_SESSION_TOKEN": os.environ.get("AWS_SESSION_TOKEN", ""),
+              "AWS_REGION": os.environ.get("AWS_REGION", ""),
+              "AWS_S3_BUCKET": os.environ.get("AWS_S3_BUCKET", ""),
+            }
+
+            for key, value in optional_values.items():
+              if value:
+                values[key] = value
 
           user = values["MONGO_INITDB_ROOT_USERNAME"]
           password = values["MONGO_INITDB_ROOT_PASSWORD"]

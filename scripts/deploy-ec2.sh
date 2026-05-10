@@ -38,7 +38,7 @@ strip_quotes() {
 
 # Validate required secrets are set (non-empty)
 missing=()
-for v in MONGO_INITDB_ROOT_USERNAME MONGO_INITDB_ROOT_PASSWORD JWT_SECRET MONGODB_URI AWS_ACCESS_KEY_ID AWS_SECRET_ACCESS_KEY AWS_REGION AWS_S3_BUCKET; do
+for v in MONGO_INITDB_ROOT_USERNAME MONGO_INITDB_ROOT_PASSWORD JWT_SECRET MONGODB_URI; do
   value="$(get_env_value "$v" || true)"
   value="$(strip_quotes "$value")"
   if [ -z "$value" ]; then
@@ -49,6 +49,10 @@ if [ ${#missing[@]} -gt 0 ]; then
   echo "Missing required variables in .env: ${missing[*]}" >&2
   echo "Edit .env and set those values before deploying. Aborting." >&2
   exit 1
+fi
+
+if [ -z "$(get_env_value AWS_ACCESS_KEY_ID || true)" ] || [ -z "$(get_env_value AWS_SECRET_ACCESS_KEY || true)" ] || [ -z "$(get_env_value AWS_REGION || true)" ] || [ -z "$(get_env_value AWS_S3_BUCKET || true)" ]; then
+  echo "AWS S3 env vars are optional. Uploads will require an EC2 IAM role or these credentials in .env." >&2
 fi
 
 # Determine host port for frontend from .env (defaults to 80)
