@@ -82,7 +82,17 @@ public class TripController {
             @RequestParam String originPlaceId,
             @RequestParam String destinationPlaceId,
             @AuthenticationPrincipal User principal) {
-        String companyId = resolveCompanyId(principal);
+        // Allow anonymous access: prefer X-Company-Id header, otherwise use authenticated principal if present.
+        String headerCompanyId = httpServletRequest.getHeader("X-Company-Id");
+        String companyId;
+        if (headerCompanyId != null && !headerCompanyId.isBlank()) {
+            companyId = headerCompanyId.trim();
+        } else if (principal != null) {
+            companyId = resolveCompanyId(principal);
+        } else {
+            companyId = null;
+        }
+
         TripType trip = tripService.getById(id, companyId);
         return ResponseEntity.ok(enricher.routeAvailability(trip, originPlaceId, destinationPlaceId));
     }

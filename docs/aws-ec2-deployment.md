@@ -59,3 +59,19 @@ The deploy script defaults to `infra/docker-compose.prod.yml`. If you ever need 
 ## First deploy check
 
 After the first deploy, verify the backoffice at `http://<ec2-host>/` and confirm the backend responds through the `/api` path.
+
+## Connect MongoDB Compass to EC2
+
+MongoDB is published only on the EC2 loopback interface, so connect to it from your laptop through an SSH tunnel:
+
+```bash
+ssh -N -L 27017:127.0.0.1:27017 ubuntu@<ec2-host>
+```
+
+Then use this connection string in MongoDB Compass:
+
+```text
+mongodb://<MONGO_INITDB_ROOT_USERNAME>:<MONGO_INITDB_ROOT_PASSWORD>@localhost:27017/?authSource=admin
+```
+
+Replace the username and password with the values from your GitHub Secrets or the EC2 `.env` file. Keep the SSH session open while Compass is connected.
