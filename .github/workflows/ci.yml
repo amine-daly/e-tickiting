@@ -149,6 +149,11 @@ jobs:
       MONGO_INITDB_ROOT_PASSWORD: ${{ secrets.MONGO_INITDB_ROOT_PASSWORD }}
       MONGO_DB_NAME: ${{ secrets.MONGO_DB_NAME }}
       JWT_SECRET: ${{ secrets.JWT_SECRET }}
+      AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+      AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+      AWS_SESSION_TOKEN: ${{ secrets.AWS_SESSION_TOKEN }}
+      AWS_REGION: ${{ secrets.AWS_REGION }}
+      AWS_S3_BUCKET: ${{ secrets.AWS_S3_BUCKET }}
       SPRING_PROFILES_ACTIVE: ${{ secrets.SPRING_PROFILES_ACTIVE }}
       FRONTEND_HOST_PORT: ${{ secrets.FRONTEND_HOST_PORT }}
     steps:
@@ -187,7 +192,7 @@ jobs:
         run: |
           set -euo pipefail
           missing=()
-          for name in MONGO_INITDB_ROOT_USERNAME MONGO_INITDB_ROOT_PASSWORD JWT_SECRET; do
+          for name in MONGO_INITDB_ROOT_USERNAME MONGO_INITDB_ROOT_PASSWORD JWT_SECRET AWS_ACCESS_KEY_ID AWS_SECRET_ACCESS_KEY AWS_REGION AWS_S3_BUCKET; do
             if [ -z "${!name:-}" ]; then
               missing+=("$name")
             fi
@@ -215,6 +220,11 @@ jobs:
               "MONGO_INITDB_ROOT_PASSWORD": os.environ.get("MONGO_INITDB_ROOT_PASSWORD", ""),
               "MONGO_DB_NAME": os.environ.get("MONGO_DB_NAME") or "eticketing",
               "JWT_SECRET": os.environ.get("JWT_SECRET", ""),
+                "AWS_ACCESS_KEY_ID": os.environ.get("AWS_ACCESS_KEY_ID", ""),
+                "AWS_SECRET_ACCESS_KEY": os.environ.get("AWS_SECRET_ACCESS_KEY", ""),
+                "AWS_SESSION_TOKEN": os.environ.get("AWS_SESSION_TOKEN", ""),
+                "AWS_REGION": os.environ.get("AWS_REGION") or "eu-north-1",
+                "AWS_S3_BUCKET": os.environ.get("AWS_S3_BUCKET") or "eticketing-app",
               "SPRING_PROFILES_ACTIVE": os.environ.get("SPRING_PROFILES_ACTIVE") or "prod",
               "FRONTEND_HOST_PORT": os.environ.get("FRONTEND_HOST_PORT") or "80",
           }

@@ -22,6 +22,11 @@ Add these secrets in the repository settings:
 - `MONGO_INITDB_ROOT_USERNAME`: Mongo root user used by the production stack
 - `MONGO_INITDB_ROOT_PASSWORD`: Mongo root password used by the production stack
 - `JWT_SECRET`: secret used by the backend to sign JWTs
+- `AWS_ACCESS_KEY_ID`: IAM access key with S3 permissions for uploads/downloads
+- `AWS_SECRET_ACCESS_KEY`: IAM secret key paired with the access key above
+- `AWS_SESSION_TOKEN`: optional, only if you are using temporary STS credentials
+- `AWS_REGION`: AWS region for the S3 bucket, for example `eu-north-1`
+- `AWS_S3_BUCKET`: S3 bucket used by the upload service
 - `MONGO_DB_NAME`: optional Mongo database name, defaults to `eticketing`
 - `SPRING_PROFILES_ACTIVE`: optional Spring profile, defaults to `prod`
 - `FRONTEND_HOST_PORT`: optional host port for the backoffice, defaults to `80`
@@ -33,6 +38,7 @@ Add these secrets in the repository settings:
 3. Open inbound port `80` in the security group, or whichever port you plan to use for `FRONTEND_HOST_PORT`. Keep `22` open for SSH. Leave `8080` closed unless you explicitly want direct backend access.
 
 The GitHub Actions deploy job now generates the production `.env` file on the EC2 instance from repository secrets before running Docker Compose, so you do not need to create it by hand once the secrets are configured.
+Those same secrets are passed into the backend container, which is what the AWS SDK uses when uploading or downloading files from S3.
 
 Example `.env` values:
 
@@ -41,6 +47,10 @@ MONGO_INITDB_ROOT_USERNAME=eticketing
 MONGO_INITDB_ROOT_PASSWORD=use-a-strong-password
 MONGO_DB_NAME=eticketing
 JWT_SECRET=use-a-long-random-secret
+AWS_ACCESS_KEY_ID=your-access-key-id
+AWS_SECRET_ACCESS_KEY=your-secret-access-key
+AWS_REGION=eu-north-1
+AWS_S3_BUCKET=eticketing-app
 SPRING_PROFILES_ACTIVE=prod
 ```
 

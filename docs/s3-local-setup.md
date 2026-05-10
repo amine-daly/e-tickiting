@@ -4,8 +4,8 @@ This project reads S3 config from environment variables.
 
 ## Required environment variables
 
-- `your-access-key-id`
-- `your-secret-access-key`
+- `AWS_ACCESS_KEY_ID`
+- `AWS_SECRET_ACCESS_KEY`
 - `AWS_REGION` (example: `eu-north-1`)
 - `AWS_S3_BUCKET` (example: `eticketing-tickets-dev`)
 
