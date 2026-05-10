@@ -38,7 +38,7 @@ Add these secrets in the repository settings:
 3. Open inbound port `80` in the security group, or whichever port you plan to use for `FRONTEND_HOST_PORT`. Keep `22` open for SSH. Leave `8080` closed unless you explicitly want direct backend access.
 
 The GitHub Actions deploy job now generates the production `.env` file on the EC2 instance from repository secrets before running Docker Compose, so you do not need to create it by hand once the secrets are configured.
-If you provide AWS S3 secrets, they are passed into the backend container, which is what the AWS SDK uses when uploading or downloading files from S3. If you prefer, you can omit them and use an EC2 IAM role instead. When no AWS credentials are available, uploads fall back to local storage under `/app/uploads`.
+If you provide AWS S3 secrets, they are passed into the backend container, which is what the AWS SDK uses when uploading or downloading files from S3. If you prefer, you can omit them and use an EC2 IAM role instead. Local storage is only used when `STORAGE_MODE=local` is set.
 
 Example `.env` values:
 

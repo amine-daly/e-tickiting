@@ -14,6 +14,9 @@ $env:AWS_SECRET_ACCESS_KEY="your-secret-access-key"
 $env:AWS_REGION="eu-north-1"
 $env:AWS_S3_BUCKET="eticketing-tickets-dev"
 
+# Optional: force local storage instead of S3
+# $env:STORAGE_MODE="local"
+
 ## Run backend
 
 From workspace root:
