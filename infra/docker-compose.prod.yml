@@ -23,6 +23,8 @@ services:
     environment:
       SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE:-prod}
       MONGODB_URI: ${MONGODB_URI}
+    volumes:
+      - uploads_data:/app/uploads
     expose:
       - "8080"
     depends_on:
@@ -41,3 +43,4 @@ services:
 
 volumes:
   mongo_data:
+  uploads_data:

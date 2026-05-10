@@ -10,6 +10,7 @@ import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -32,7 +33,7 @@ public class S3Controller {
             @RequestPart("file") MultipartFile file,
             @RequestParam(name = "key", required = false) String key) {
         String objectKey = storageService.upload(file, key);
-        String baseUrl = "https://" + storageService.getBucketName() + ".s3." + storageService.getRegion() + ".amazonaws.com";
+        String baseUrl = storageService.getBaseUrl();
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(Map.of(
                         "message", "Uploaded",
@@ -58,6 +59,11 @@ public class S3Controller {
                 .header(HttpHeaders.CONTENT_DISPOSITION, ContentDisposition.attachment().filename(fileName).build().toString())
                 .header("ETag", object.eTag() != null ? object.eTag() : "")
                 .body(object.content());
+    }
+
+    @GetMapping("/raw/{key:.+}")
+    public ResponseEntity<byte[]> downloadRaw(@PathVariable("key") String key) {
+        return download(key);
     }
 
     @DeleteMapping

@@ -10,6 +10,8 @@ RUN mvn -q -DskipTests package
 FROM eclipse-temurin:21-jre
 WORKDIR /app
 
+RUN mkdir -p /app/uploads
+
 COPY --from=build /workspace/apps/backend/target/*.jar app.jar
 
 EXPOSE 8080
