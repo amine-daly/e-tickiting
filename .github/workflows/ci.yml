@@ -228,17 +228,17 @@ jobs:
               "FRONTEND_HOST_PORT": os.environ.get("FRONTEND_HOST_PORT") or "80",
           }
 
-            optional_values = {
+          optional_values = {
               "AWS_ACCESS_KEY_ID": os.environ.get("AWS_ACCESS_KEY_ID", ""),
               "AWS_SECRET_ACCESS_KEY": os.environ.get("AWS_SECRET_ACCESS_KEY", ""),
               "AWS_SESSION_TOKEN": os.environ.get("AWS_SESSION_TOKEN", ""),
               "AWS_REGION": os.environ.get("AWS_REGION", ""),
               "AWS_S3_BUCKET": os.environ.get("AWS_S3_BUCKET", ""),
-            }
+          }
 
-            for key, value in optional_values.items():
+          for key, value in optional_values.items():
               if value:
-                values[key] = value
+                  values[key] = value
 
           user = values["MONGO_INITDB_ROOT_USERNAME"]
           password = values["MONGO_INITDB_ROOT_PASSWORD"]
