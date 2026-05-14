@@ -72,7 +72,7 @@ public final class TicketTemplateDefaults {
                             <tr>
                                 <td class="section" style="padding-top:24px;">
                                     <p style="margin:0 0 16px 0;">{{greetingText}} <strong>{{passengerName}}</strong>,</p>
-                                    <p style="margin:0;">{{introText}}</p>
+                                    <div style="margin:0;">{{introText}}</div>
                                 </td>
                             </tr>
 

@@ -3,40 +3,17 @@ import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { environment } from '../../environments/environment';
 import { Ticket } from '../models/ticket.model';
-
-export interface BookingRequest {
-  tripId: string;
-  originPlaceId: string;
-  destinationPlaceId: string;
-  pickupPointId: string;
-  dropoffPointId: string;
-  passengerId: string;
-  idempotencyKey: string;
-}
-
-export interface BookingResponse {
-  id: string;
-  tripId: string;
-  companyId: string;
-  posId?: string;
-  segmentIds: string[];
-  expressSegmentId?: string;
-  pickupPointId: string;
-  dropoffPointId: string;
-  passengerId: string;
-  appliedPrice: number;
-  currency: string;
-  status: string;
-  idempotencyKey: string;
-  expiresAt: string;
-  createdAt: string;
-  confirmedAt?: string;
-  cancelledAt?: string;
-}
+import {
+  BookingRequest,
+  BookingResponse,
+  FrontofficeCreateHoldRequest,
+  FrontofficeHoldResponse,
+} from '../models/booking.model';
 
 @Injectable({ providedIn: 'root' })
 export class BookingService {
   private baseUrl = `${environment.apiBase}/bookings`;
+  private frontofficeUrl = `${environment.apiBase}/frontoffice/bookings`;
 
   constructor(private http: HttpClient) {}
 
@@ -55,6 +32,54 @@ export class BookingService {
     return this.http.post<BookingResponse>(
       `${this.baseUrl}/${ticketId}/cancel`,
       {},
+    );
+  }
+
+  createFrontofficeHold(
+    request: FrontofficeCreateHoldRequest,
+  ): Observable<FrontofficeHoldResponse> {
+    return this.http.post<FrontofficeHoldResponse>(
+      `${this.frontofficeUrl}/holds`,
+      request,
+    );
+  }
+
+  getFrontofficeHold(holdToken: string): Observable<FrontofficeHoldResponse> {
+    return this.http.get<FrontofficeHoldResponse>(
+      `${this.frontofficeUrl}/holds/${holdToken}`,
+    );
+  }
+
+  confirmFrontofficeHold(
+    holdToken: string,
+  ): Observable<FrontofficeHoldResponse> {
+    return this.http.post<FrontofficeHoldResponse>(
+      `${this.frontofficeUrl}/holds/${holdToken}/confirm`,
+      {},
+    );
+  }
+
+  cancelFrontofficeHold(
+    holdToken: string,
+  ): Observable<FrontofficeHoldResponse> {
+    return this.http.post<FrontofficeHoldResponse>(
+      `${this.frontofficeUrl}/holds/${holdToken}/cancel`,
+      {},
+    );
+  }
+
+  getRouteOccupiedSeats(
+    tripId: string,
+    originPlaceId: string,
+    destinationPlaceId: string,
+  ): Observable<string[]> {
+    const params = new URLSearchParams({
+      tripId,
+      originPlaceId,
+      destinationPlaceId,
+    });
+    return this.http.get<string[]>(
+      `${this.frontofficeUrl}/occupied-seats?${params.toString()}`,
     );
   }
 

@@ -1,0 +1,43 @@
+<div
+  [attr.dir]="isRtl ? 'rtl' : 'ltr'"
+  [class.rtl]="isRtl"
+  [class.has-nav]="nav && !autoScroll && (canScrollLeft || canScrollRight)"
+  [class.is-marquee]="autoScroll"
+  class="scroll-carousel-wrapper"
+>
+  <button
+    *ngIf="nav && !autoScroll && canScrollLeft"
+    type="button"
+    class="scroll-carousel-arrow scroll-carousel-arrow--left"
+    [attr.aria-label]="isRtl ? 'Scroll right' : 'Scroll left'"
+    (click)="scrollByStep(-1)"
+  >
+    <i
+      class="bi"
+      [ngClass]="isRtl ? 'bi-chevron-right' : 'bi-chevron-left'"
+    ></i>
+  </button>
+
+  <div
+    #track
+    [attr.dir]="autoScroll ? 'ltr' : isRtl ? 'rtl' : 'ltr'"
+    [style.gap.px]="gap"
+    [class.is-marquee]="autoScroll"
+    class="scroll-carousel-track"
+  >
+    <ng-content></ng-content>
+  </div>
+
+  <button
+    *ngIf="nav && !autoScroll && canScrollRight"
+    type="button"
+    class="scroll-carousel-arrow scroll-carousel-arrow--right"
+    [attr.aria-label]="isRtl ? 'Scroll left' : 'Scroll right'"
+    (click)="scrollByStep(1)"
+  >
+    <i
+      class="bi"
+      [ngClass]="isRtl ? 'bi-chevron-left' : 'bi-chevron-right'"
+    ></i>
+  </button>
+</div>

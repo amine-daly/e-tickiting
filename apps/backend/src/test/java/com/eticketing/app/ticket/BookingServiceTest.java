@@ -4,6 +4,7 @@ import com.eticketing.app.common.TargetInput;
 import com.eticketing.app.currency.CurrencyRepository;
 import com.eticketing.app.ticket.dto.GroupBookingRequest;
 import com.eticketing.app.trip.SegmentType;
+import com.eticketing.app.trip.StopType;
 import com.eticketing.app.trip.TripPlaceRef;
 import com.eticketing.app.trip.TripStatusEnum;
 import com.eticketing.app.trip.TripType;
@@ -65,6 +66,10 @@ class BookingServiceTest {
                 .id("trip-1")
                 .status(TripStatusEnum.ACTIVE)
                 .target(new TargetInput("company-1", null))
+                .stopSchedule(List.of(
+                        stop("A", 1, true, false),
+                        stop("B", 2, true, true),
+                        stop("C", 3, false, true)))
                 .segments(List.of(
                         segment("seg-1", 1, "A", "B", 12),
                         segment("seg-2", 2, "B", "C", 18)))
@@ -95,6 +100,10 @@ class BookingServiceTest {
                 .id("trip-2")
                 .status(TripStatusEnum.ACTIVE)
                 .target(new TargetInput("company-1", null))
+                .stopSchedule(List.of(
+                        stop("A", 1, true, false),
+                        stop("B", 2, true, true),
+                        stop("C", 3, false, true)))
                 .segments(List.of(
                         segment("seg-10", 1, "A", "B", 10),
                         segment("seg-11", 2, "B", "C", 15)))
@@ -120,6 +129,24 @@ class BookingServiceTest {
 
         assertTrue(error.getMessage().contains("EXPRESS_SEGMENT_REQUIRED_FOR_MULTI_SEGMENT_ROUTE"));
         verify(seatReservationService, never()).reserveSeats(any(), any(), any(), anyInt());
+    }
+
+    @Test
+    void resolveSegmentChainUsesStopScheduleWhenSegmentPlaceRefsAreMissing() {
+        TripType trip = TripType.builder()
+                .id("trip-3")
+                .stopSchedule(List.of(
+                        stop("A", 1, true, false),
+                        stop("B", 2, true, true),
+                        stop("C", 3, false, true)))
+                .segments(List.of(
+                        segmentWithMissingPlaceRefs("seg-1", 1, 10),
+                        segmentWithMissingPlaceRefs("seg-2", 2, 15)))
+                .build();
+
+        assertEquals(
+                List.of("seg-1", "seg-2"),
+                bookingService.resolveSegmentChain(trip, "A", "C"));
     }
 
     @Test
@@ -271,4 +298,21 @@ class BookingServiceTest {
                 .basePrice(BigDecimal.valueOf(basePrice))
                 .build();
     }
+
+        private SegmentType segmentWithMissingPlaceRefs(String segmentId, int sequence, int basePrice) {
+                return SegmentType.builder()
+                                .segmentId(segmentId)
+                                .sequence(sequence)
+                                .basePrice(BigDecimal.valueOf(basePrice))
+                                .build();
+        }
+
+        private StopType stop(String placeId, int sequence, boolean boardingAllowed, boolean droppingAllowed) {
+                return StopType.builder()
+                                .placeId(placeId)
+                                .sequence(sequence)
+                                .boardingAllowed(boardingAllowed)
+                                .droppingAllowed(droppingAllowed)
+                                .build();
+        }
 }

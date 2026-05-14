@@ -1,19 +1,22 @@
 <div *ngIf="trip">
   <div class="p-3">
     <!-- Bus Image with Back and Share Button -->
-    <div *ngIf="busPictureUrls.length" class="bus-header position-relative">
-      <!-- Bus Photos -->
-      <div class="mb-3">
-        <h6 class="fw-bold mb-2">Bus Photos</h6>
-        <div class="bus-photos d-flex gap-2 overflow-auto pb-2">
+
+    <!-- Bus Photos -->
+    <div *ngIf="busPictureUrls.length" class="mb-3">
+      <h6 class="fw-bold mb-2">Bus Photos</h6>
+      <app-scroll-carousel [nav]="true" #profileCarousel class="w-full min-w-0">
+        <div
+          *ngFor="let pictureUrl of busPictureUrls; let i = index"
+          class="scroll-item p-0"
+        >
           <img
-            *ngFor="let pictureUrl of busPictureUrls; let i = index"
             [src]="pictureUrl"
-            class="bus-photo-thumb rounded-3"
+            class="bus-photo-thumb rounded-3 w-100 object-fit-contain"
             [alt]="trip.bus?.name || 'Bus photo ' + (i + 1)"
           />
         </div>
-      </div>
+      </app-scroll-carousel>
     </div>
 
     <!-- Bus Details -->

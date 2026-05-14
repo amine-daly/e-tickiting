@@ -35,6 +35,7 @@ public class SecurityConfig {
                 .requestMatchers(HttpMethod.PUT, "/api/trip/*/seats", "/api/trips/*/seats").permitAll()
                 .requestMatchers(HttpMethod.POST, "/api/trip/*/seats/generate", "/api/trips/*/seats/generate").permitAll()
                 .requestMatchers("/api/files", "/api/files/**").permitAll()
+                .requestMatchers("/api/frontoffice/**").permitAll()
                 .requestMatchers("/api/trip/**", "/api/trips/**").permitAll()
                 .requestMatchers("/api/buses", "/api/buses/**").permitAll()
                 .requestMatchers("/api/companies", "/api/companies/**").permitAll()

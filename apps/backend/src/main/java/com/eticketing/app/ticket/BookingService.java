@@ -97,7 +97,7 @@ public class BookingService {
         }
 
         // ── 2. Resolve segment chain ────────────────────────────────────
-        List<String> segmentIds = resolveSegmentChain(trip.getSegments(), originPlaceId, destinationPlaceId);
+        List<String> segmentIds = resolveSegmentChain(trip, originPlaceId, destinationPlaceId);
         if (segmentIds.isEmpty()) {
             throw new BadRequestException("NO_SEGMENT_CHAIN: no continuous segment path from " + originPlaceId + " to " + destinationPlaceId);
         }
@@ -349,34 +349,86 @@ public class BookingService {
      * {@code destinationPlaceId}. Segments must be in sequence order and
      * consecutive.
      */
-    List<String> resolveSegmentChain(List<SegmentType> segments, String originPlaceId, String destinationPlaceId) {
-        // Sort by sequence
-        List<SegmentType> sorted = segments.stream()
+    List<String> resolveSegmentChain(TripType trip, String originPlaceId, String destinationPlaceId) {
+        List<SegmentType> sortedSegments = (trip.getSegments() == null ? List.<SegmentType>of() : trip.getSegments()).stream()
                 .sorted(Comparator.comparingInt(SegmentType::getSequence))
                 .toList();
-
-        // Find the starting segment
-        int startIdx = -1;
-        for (int i = 0; i < sorted.size(); i++) {
-            if (originPlaceId.equals(TripPlaceRef.idOf(sorted.get(i).getFromPlace()))) {
-                startIdx = i;
-                break;
-            }
-        }
-        if (startIdx == -1) {
+        if (sortedSegments.isEmpty()) {
             return List.of();
         }
 
-        // Collect consecutive segments until destinationPlaceId
+        List<String> chainFromStops = resolveSegmentChainFromStops(trip, sortedSegments, originPlaceId, destinationPlaceId);
+        if (!chainFromStops.isEmpty()) {
+            return chainFromStops;
+        }
+
+        return resolveSegmentChainFromSegmentRefs(sortedSegments, originPlaceId, destinationPlaceId);
+    }
+
+    private List<String> resolveSegmentChainFromStops(
+            TripType trip,
+            List<SegmentType> sortedSegments,
+            String originPlaceId,
+            String destinationPlaceId) {
+        List<StopType> commercialStops = (trip.getStopSchedule() == null ? List.<StopType>of() : trip.getStopSchedule()).stream()
+                .sorted(Comparator.comparingInt(StopType::getSequence))
+                .filter(stop -> stop.isBoardingAllowed() || stop.isDroppingAllowed())
+                .toList();
+        if (commercialStops.size() < 2) {
+            return List.of();
+        }
+
+        int originStopIndex = -1;
+        int destinationStopIndex = -1;
+        for (int index = 0; index < commercialStops.size(); index++) {
+            StopType stop = commercialStops.get(index);
+            if (originStopIndex < 0
+                    && originPlaceId.equals(stop.getPlaceId())
+                    && stop.isBoardingAllowed()) {
+                originStopIndex = index;
+            }
+            if (destinationPlaceId.equals(stop.getPlaceId()) && stop.isDroppingAllowed()) {
+                destinationStopIndex = index;
+            }
+        }
+
+        if (originStopIndex < 0 || destinationStopIndex < 0 || originStopIndex >= destinationStopIndex) {
+            return List.of();
+        }
+
+        if (sortedSegments.size() < destinationStopIndex) {
+            return List.of();
+        }
+
+        return sortedSegments.subList(originStopIndex, destinationStopIndex).stream()
+                .map(SegmentType::getSegmentId)
+                .toList();
+    }
+
+    private List<String> resolveSegmentChainFromSegmentRefs(
+            List<SegmentType> sortedSegments,
+            String originPlaceId,
+            String destinationPlaceId) {
+        int startIdx = -1;
+        for (int index = 0; index < sortedSegments.size(); index++) {
+            if (originPlaceId.equals(TripPlaceRef.idOf(sortedSegments.get(index).getFromPlace()))) {
+                startIdx = index;
+                break;
+            }
+        }
+        if (startIdx < 0) {
+            return List.of();
+        }
+
         List<String> chain = new ArrayList<>();
-        for (int i = startIdx; i < sorted.size(); i++) {
-            chain.add(sorted.get(i).getSegmentId());
-            if (destinationPlaceId.equals(TripPlaceRef.idOf(sorted.get(i).getToPlace()))) {
+        for (int index = startIdx; index < sortedSegments.size(); index++) {
+            SegmentType segment = sortedSegments.get(index);
+            chain.add(segment.getSegmentId());
+            if (destinationPlaceId.equals(TripPlaceRef.idOf(segment.getToPlace()))) {
                 return chain;
             }
         }
 
-        // destinationPlaceId not reached
         return List.of();
     }
 
@@ -489,7 +541,7 @@ public class BookingService {
 
         // ── 2. Resolve segment chain ────────────────────────────────────
         List<String> segmentIds = resolveSegmentChain(
-                trip.getSegments(),
+            trip,
                 req.getOriginPlaceId(),
                 req.getDestinationPlaceId());
         if (segmentIds.isEmpty()) {

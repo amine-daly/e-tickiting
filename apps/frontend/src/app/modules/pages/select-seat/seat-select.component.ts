@@ -1,18 +1,18 @@
-import { Component, OnInit, OnDestroy } from '@angular/core';
+import { Component, OnDestroy, OnInit } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { CommonModule } from '@angular/common';
-import { Subject, takeUntil, take } from 'rxjs';
-import { v4 as uuid } from 'uuid';
+import { Subject, takeUntil } from 'rxjs';
 
 import { TripService } from '../bus/trip.service';
+import { BookingService } from '../../../core/services/booking.service';
+import { FrontofficeBookingDraftService } from '../../../core/services/frontoffice-booking-draft.service';
+import { FrontofficeBookingDraft } from '../../../core/models/booking.model';
 import {
-  BookingService,
-  BookingRequest,
-} from '../../../core/services/booking.service';
-import { AuthService } from '../../../core/services/auth.service';
-import {
+  BusLayoutElement,
+  BusLayoutTemplate,
   SegmentType,
   TripRouteAvailabilityType,
+  TripRouteSelection,
   TripType,
 } from '../../../core/models/trip.model';
 
@@ -25,6 +25,13 @@ import {
 })
 export class SeatSelectComponent implements OnInit, OnDestroy {
   private destroy$ = new Subject<void>();
+  readonly LayoutElementType = {
+    SEAT: 'SEAT',
+    DRIVER: 'DRIVER',
+    DOOR: 'DOOR',
+    STAIRS: 'STAIRS',
+    TOILET: 'TOILET',
+  } as const;
 
   trip: TripType | null = null;
   originPlaceId = '';
@@ -38,16 +45,18 @@ export class SeatSelectComponent implements OnInit, OnDestroy {
   duration = 0;
   originCity = '';
   destCity = '';
-  booking = false;
-  booked = false;
-  ticketId: string | null = null;
+  passengerCount = 1;
+  occupiedSeats: string[] = [];
+  selectedSeatNos: string[] = [];
+  activeDeck: 'lower' | 'upper' = 'lower';
+  loadingOccupiedSeats = false;
 
   constructor(
     private route: ActivatedRoute,
     private router: Router,
     private tripService: TripService,
     private bookingService: BookingService,
-    private authService: AuthService,
+    private draftService: FrontofficeBookingDraftService,
   ) {}
 
   ngOnInit(): void {
@@ -59,8 +68,13 @@ export class SeatSelectComponent implements OnInit, OnDestroy {
     this.dropoffPointId = qp.get('dropoffPointId') || '';
 
     if (tripId) {
+      const routeSelection: TripRouteSelection = {
+        originPlaceId: this.originPlaceId,
+        destinationPlaceId: this.destPlaceId,
+      };
+
       this.tripService
-        .getTripById(tripId)
+        .getTripById(tripId, routeSelection)
         .pipe(takeUntil(this.destroy$))
         .subscribe((trip) => {
           this.trip = trip;
@@ -70,53 +84,25 @@ export class SeatSelectComponent implements OnInit, OnDestroy {
     }
   }
 
-  confirmBooking(): void {
-    if (
-      !this.trip ||
-      this.booking ||
-      this.routeAvailability?.sellable === false
-    )
+  continueToVerification(): void {
+    if (!this.trip || !this.canContinue) {
       return;
-
-    this.authService.currentUser$.pipe(take(1)).subscribe((user) => {
-      if (!user) {
-        this.router.navigate(['/auth/login']);
-        return;
-      }
-
-      this.booking = true;
-      const request: BookingRequest = {
-        tripId: this.trip!.id,
-        originPlaceId: this.originPlaceId,
-        destinationPlaceId: this.destPlaceId,
-        pickupPointId: this.pickupPointId,
-        dropoffPointId: this.dropoffPointId,
-        passengerId: user.id,
-        idempotencyKey: uuid(),
-      };
-
-      this.bookingService
-        .createBooking(request)
-        .pipe(takeUntil(this.destroy$))
-        .subscribe({
-          next: (res) => {
-            this.booking = false;
-            this.booked = true;
-            this.ticketId = res.id;
-          },
-          error: () => {
-            this.booking = false;
-          },
-        });
-    });
-  }
-
-  goToVerification(): void {
-    if (this.ticketId) {
-      this.router.navigate(['/verification'], {
-        queryParams: { ticketId: this.ticketId },
-      });
     }
+
+    const draft: FrontofficeBookingDraft = {
+      tripId: this.trip.id,
+      originPlaceId: this.originPlaceId,
+      destinationPlaceId: this.destPlaceId,
+      pickupPointId: this.pickupPointId,
+      dropoffPointId: this.dropoffPointId,
+      displayPrice: this.displayPrice,
+      currencyCode: this.trip.currency?.code || this.routeAvailability?.currencyCode || '',
+      passengerCount: this.passengerCount,
+      selectedSeatNos: [...this.selectedSeatNos],
+    };
+
+    this.draftService.saveDraft(draft);
+    this.router.navigate(['/verification']);
   }
 
   getPlaceName(placeId: string): string {
@@ -146,7 +132,9 @@ export class SeatSelectComponent implements OnInit, OnDestroy {
   private loadRoutePreview(): void {
     if (!this.trip) return;
     const chain = this.getSegmentChain();
-    this.duration = chain.reduce((s, seg) => s + (seg.durationMinutes || 0), 0);
+    this.duration =
+      this.trip.marketplace?.schedule?.durationMinutes ||
+      chain.reduce((s, seg) => s + (seg.durationMinutes || 0), 0);
 
     if (!this.originPlaceId || !this.destPlaceId) {
       this.routeAvailability = null;
@@ -165,11 +153,142 @@ export class SeatSelectComponent implements OnInit, OnDestroy {
           this.availableSeats = availability.sellable
             ? availability.availableSeats || 0
             : 0;
+          this.setPassengerCount(this.passengerCount);
+          this.loadOccupiedSeats();
         },
         error: () => {
           this.routeAvailability = null;
           this.displayPrice = 0;
           this.availableSeats = 0;
+          this.occupiedSeats = [];
+          this.selectedSeatNos = [];
+        },
+      });
+  }
+
+  setPassengerCount(count: number): void {
+    const maxSeats = this.availableSeats > 0 ? this.availableSeats : 1;
+    this.passengerCount = Math.min(Math.max(count, 1), maxSeats);
+    if (this.selectedSeatNos.length > this.passengerCount) {
+      this.selectedSeatNos = this.selectedSeatNos.slice(0, this.passengerCount);
+    }
+  }
+
+  selectSeat(seatNo: string | null | undefined): void {
+    if (!seatNo || this.isSeatOccupied(seatNo)) {
+      return;
+    }
+
+    if (this.isSeatSelected(seatNo)) {
+      this.selectedSeatNos = this.selectedSeatNos.filter(
+        (currentSeatNo) => currentSeatNo !== seatNo,
+      );
+      return;
+    }
+
+    if (this.selectedSeatNos.length >= this.passengerCount) {
+      return;
+    }
+
+    this.selectedSeatNos = [...this.selectedSeatNos, seatNo];
+  }
+
+  removeSeat(seatNo: string): void {
+    this.selectedSeatNos = this.selectedSeatNos.filter(
+      (currentSeatNo) => currentSeatNo !== seatNo,
+    );
+  }
+
+  isSeatOccupied(seatNo: string | null | undefined): boolean {
+    return !!seatNo && this.occupiedSeats.includes(seatNo);
+  }
+
+  isSeatSelected(seatNo: string | null | undefined): boolean {
+    return !!seatNo && this.selectedSeatNos.includes(seatNo);
+  }
+
+  get canContinue(): boolean {
+    if (!this.trip || this.availableSeats <= 0 || this.routeAvailability?.sellable === false) {
+      return false;
+    }
+
+    if (!this.hasVisualLayout) {
+      return true;
+    }
+
+    return this.selectedSeatNos.length === this.passengerCount;
+  }
+
+  get hasVisualLayout(): boolean {
+    return !!this.layoutTemplate &&
+      ((this.layoutTemplate.lowerDeck?.length || 0) > 0 ||
+        (this.layoutTemplate.upperDeck?.length || 0) > 0);
+  }
+
+  get layoutTemplate(): BusLayoutTemplate | null {
+    return this.trip?.bus?.layoutTemplate || null;
+  }
+
+  get lowerDeckElements(): BusLayoutElement[] {
+    return this.layoutTemplate?.lowerDeck || [];
+  }
+
+  get upperDeckElements(): BusLayoutElement[] {
+    return this.layoutTemplate?.upperDeck || [];
+  }
+
+  get currentDeckElements(): BusLayoutElement[] {
+    if (this.activeDeck === 'upper') {
+      return this.upperDeckElements;
+    }
+    return this.lowerDeckElements;
+  }
+
+  get passengerLabel(): string {
+    return `${this.passengerCount} passenger${this.passengerCount > 1 ? 's' : ''}`;
+  }
+
+  get selectedSeats(): string[] {
+    return [...this.selectedSeatNos];
+  }
+
+  getSeatDeckLabel(seatNo: string): string {
+    if (this.upperDeckElements.some((element) => element.seatNo === seatNo)) {
+      return 'Upper deck';
+    }
+    return 'Lower deck';
+  }
+
+  setActiveDeck(deck: 'lower' | 'upper'): void {
+    this.activeDeck = deck;
+  }
+
+  trackByDeckElement(index: number, element: BusLayoutElement): string {
+    return element.seatNo || `${element.type || 'EMPTY'}-${element.gridX}-${element.gridY}-${index}`;
+  }
+
+  private loadOccupiedSeats(): void {
+    if (!this.trip || !this.originPlaceId || !this.destPlaceId || !this.hasVisualLayout) {
+      this.occupiedSeats = [];
+      this.selectedSeatNos = [];
+      return;
+    }
+
+    this.loadingOccupiedSeats = true;
+    this.bookingService
+      .getRouteOccupiedSeats(this.trip.id, this.originPlaceId, this.destPlaceId)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (occupiedSeats) => {
+          this.loadingOccupiedSeats = false;
+          this.occupiedSeats = occupiedSeats || [];
+          this.selectedSeatNos = this.selectedSeatNos.filter(
+            (seatNo) => !this.occupiedSeats.includes(seatNo),
+          );
+        },
+        error: () => {
+          this.loadingOccupiedSeats = false;
+          this.occupiedSeats = [];
         },
       });
   }

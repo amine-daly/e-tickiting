@@ -1,4 +1,46 @@
 /* Responsive bottom bar for desktop */
+.hold-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 1rem 1.1rem;
+  border-radius: 1rem;
+  background: linear-gradient(135deg, #ecfeff 0%, #f8fafc 100%);
+  border: 1px solid rgba(8, 145, 178, 0.14);
+}
+
+.hold-banner__label {
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.hold-banner__timer {
+  min-width: 88px;
+  text-align: center;
+  border-radius: 999px;
+  padding: 0.45rem 0.8rem;
+  background: #0f766e;
+  color: #fff;
+  font-weight: 700;
+}
+
+.guest-passenger-card,
+.payment-placeholder {
+  background: #fff;
+  border: 1px solid rgba(15, 23, 42, 0.08);
+}
+
+.payment-placeholder {
+  padding: 1rem 1.1rem;
+  border-radius: 1rem;
+}
+
+.payment-placeholder__title {
+  font-weight: 700;
+  margin-bottom: 0.35rem;
+}
+
 .bottom-fixed-bar {
   position: fixed;
   left: 0;

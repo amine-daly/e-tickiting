@@ -187,9 +187,9 @@ Current behavior:
 `TicketDocumentService` currently supports two document modes:
 
 - Single-ticket document
-- Order-level master document with a passenger manifest table
+- Order-level master document with a passenger manifest table and embedded passenger-specific ticket sections
 
-The order document is the current source for the master confirmation email sent to the contact customer.
+The order document is the current source for the master confirmation email sent to the contact customer. For group bookings, that single email now bundles the child tickets with one passenger-specific reference and QR section per ticket.
 
 ## 11. Service Anchors
 

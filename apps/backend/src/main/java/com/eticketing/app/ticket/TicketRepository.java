@@ -29,6 +29,8 @@ public interface TicketRepository extends MongoRepository<TicketType, String> {
 
     List<TicketType> findByTripIdAndStatus(String tripId, TicketStatusEnum status);
 
+    List<TicketType> findByTripIdAndStatusIn(String tripId, List<TicketStatusEnum> statuses);
+
     List<TicketType> findByTripIdInAndStatusIn(List<String> tripIds, List<TicketStatusEnum> statuses);
 
     @Query(value = "{ 'tripId': ?0, 'status': { $in: ['PENDING', 'CONFIRMED'] }, 'seatNo': { $ne: null } }", fields = "{ 'seatNo': 1 }")

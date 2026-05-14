@@ -17,13 +17,14 @@ import {
   AMENITY_MAP,
   formatAmenityName,
 } from '../../../../core/utils/amenity-map';
+import { ScrollCarouselComponent } from '../../../../shared/components/scroll-carousel/scroll-carousel.component';
 
 type RouteStopViewModel = StopType & { city: string };
 
 @Component({
   selector: 'app-bus-details',
   standalone: true,
-  imports: [CommonModule, RouterLink],
+  imports: [CommonModule, RouterLink, ScrollCarouselComponent],
   templateUrl: './details.component.html',
   styleUrls: ['./details.component.scss'],
 })

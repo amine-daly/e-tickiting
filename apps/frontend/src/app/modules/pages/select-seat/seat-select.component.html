@@ -1,107 +1,225 @@
 <div *ngIf="trip">
   <div class="p-3">
-    <!-- Trip Summary -->
-    <div
-      class="bus-summary d-flex align-items-center p-3 bg-primary-light rounded-3 mb-4"
-    >
-      <div class="bus-icon me-3">
-        <i class="bi bi-bus-front"></i>
-      </div>
-      <div class="flex-grow-1">
-        <h6 class="fw-bold mb-1">{{ originCity }} → {{ destCity }}</h6>
-        <div class="d-flex text-muted small gap-2">
-          <span>{{ trip.departureDate }}</span>
-          <span>•</span>
-          <span>{{ duration }}m</span>
+    <div class="bus-summary p-3 rounded-4 mb-4">
+      <div class="d-flex align-items-start gap-3">
+        <div class="bus-icon">
+          <i class="bi bi-bus-front"></i>
         </div>
-      </div>
-    </div>
-
-    <!-- Booking Details -->
-    <div class="mb-4">
-      <h6 class="fw-bold mb-3">Booking Summary</h6>
-      <div class="list-group list-group-flush">
-        <div class="list-group-item d-flex justify-content-between px-0">
-          <span class="text-muted">Route</span>
-          <span class="fw-medium">{{ originCity }} → {{ destCity }}</span>
-        </div>
-        <div class="list-group-item d-flex justify-content-between px-0">
-          <span class="text-muted">Date</span>
-          <span class="fw-medium">{{ trip.departureDate }}</span>
-        </div>
-        <div class="list-group-item d-flex justify-content-between px-0">
-          <span class="text-muted">Duration</span>
-          <span class="fw-medium">{{ duration }} min</span>
-        </div>
-        <div class="list-group-item d-flex justify-content-between px-0">
-          <span class="text-muted">Available Seats</span>
-          <span class="fw-medium">{{ availableSeats }}</span>
-        </div>
-        <div
-          class="list-group-item d-flex justify-content-between px-0"
-          *ngIf="pickupPointId"
-        >
-          <span class="text-muted">Pickup</span>
-          <span class="fw-medium">{{ getPickupAddress() }}</span>
-        </div>
-        <div
-          class="list-group-item d-flex justify-content-between px-0"
-          *ngIf="dropoffPointId"
-        >
-          <span class="text-muted">Drop-off</span>
-          <span class="fw-medium">{{ getDropoffAddress() }}</span>
-        </div>
-        <div class="list-group-item d-flex justify-content-between px-0">
-          <span class="text-muted">Currency</span>
-          <span class="fw-medium">{{ trip.currency?.name || "-" }}</span>
-        </div>
-      </div>
-    </div>
-
-    <!-- Price Card -->
-    <div class="selected-seats mb-4">
-      <h6 class="fw-bold mb-3">Price Details</h6>
-      <div
-        class="selected-seat-item d-flex justify-content-between align-items-center p-3 bg-primary-light rounded-3"
-      >
-        <div class="d-flex align-items-center">
-          <div class="seat-number me-3">
-            <i class="bi bi-ticket-perforated fs-4"></i>
+        <div class="flex-grow-1">
+          <div class="text-uppercase journey-chip mb-2">Frontoffice</div>
+          <h5 class="fw-bold mb-1">{{ trip.bus.name || 'Scheduled trip' }}</h5>
+          <div class="text-muted small d-flex flex-wrap gap-2">
+            <span>{{ originCity }}</span>
+            <span>to</span>
+            <span>{{ destCity }}</span>
+            <span>•</span>
+            <span>{{ trip.departureDate | date: 'MMM d' }}</span>
+            <span>•</span>
+            <span>{{ duration }} min</span>
           </div>
-          <div>
-            <div class="fw-medium">1 × Ticket</div>
-            <div class="text-muted small">
-              {{ originCity }} → {{ destCity }}
+        </div>
+      </div>
+      <div class="route-meta row g-2 mt-3">
+        <div class="col-6">
+          <div class="route-meta-card">
+            <div class="meta-label">Pickup</div>
+            <div class="meta-value">{{ getPickupAddress() || originCity }}</div>
+          </div>
+        </div>
+        <div class="col-6">
+          <div class="route-meta-card">
+            <div class="meta-label">Dropoff</div>
+            <div class="meta-value">{{ getDropoffAddress() || destCity }}</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="passenger-panel p-3 rounded-4 mb-4">
+      <div class="d-flex justify-content-between align-items-center mb-3">
+        <div>
+          <h6 class="fw-bold mb-1">Passengers</h6>
+          <div class="text-muted small">
+            {{ availableSeats }} seats available on this route
+          </div>
+        </div>
+        <div class="passenger-counter">
+          <button
+            class="btn btn-outline-secondary rounded-circle"
+            (click)="setPassengerCount(passengerCount - 1)"
+            [disabled]="passengerCount <= 1"
+            type="button"
+          >
+            <i class="bi bi-dash"></i>
+          </button>
+          <span class="counter-value">{{ passengerCount }}</span>
+          <button
+            class="btn btn-outline-secondary rounded-circle"
+            (click)="setPassengerCount(passengerCount + 1)"
+            [disabled]="passengerCount >= availableSeats"
+            type="button"
+          >
+            <i class="bi bi-plus"></i>
+          </button>
+        </div>
+      </div>
+      <div class="alert alert-warning mb-0" *ngIf="routeAvailability?.sellable === false">
+        This route is currently unavailable for sale.
+      </div>
+    </div>
+
+    <div class="seat-layout mb-4">
+      <div class="d-flex justify-content-between align-items-center mb-3">
+        <div>
+          <h6 class="fw-bold mb-1">Select your seats</h6>
+          <div class="text-muted small">
+            Choose {{ passengerLabel.toLowerCase() }} before you continue.
+          </div>
+        </div>
+        <div class="seat-deck-selector" *ngIf="layoutTemplate?.hasDecks">
+          <button
+            class="btn btn-sm rounded-3"
+            [class.btn-app]="activeDeck === 'lower'"
+            [class.btn-outline-secondary]="activeDeck !== 'lower'"
+            type="button"
+            (click)="setActiveDeck('lower')"
+          >
+            Lower deck
+          </button>
+          <button
+            class="btn btn-sm rounded-3"
+            [class.btn-app]="activeDeck === 'upper'"
+            [class.btn-outline-secondary]="activeDeck !== 'upper'"
+            type="button"
+            (click)="setActiveDeck('upper')"
+          >
+            Upper deck
+          </button>
+        </div>
+      </div>
+
+      <div *ngIf="hasVisualLayout; else freeSeatingTemplate" class="bus-layout p-3 rounded-4 mb-3">
+        <div class="seat-status-banner mb-3" *ngIf="loadingOccupiedSeats">
+          Loading current seat availability...
+        </div>
+        <div
+          class="seat-map-grid"
+          [style.grid-template-columns]="'repeat(' + (layoutTemplate?.gridColumns || 1) + ', 1fr)'"
+          [style.grid-template-rows]="'repeat(' + (layoutTemplate?.gridRows || 1) + ', 1fr)'"
+        >
+          <ng-container *ngFor="let element of currentDeckElements; trackBy: trackByDeckElement">
+            <button
+              type="button"
+              class="seat-cell"
+              [style.grid-column]="element.gridX"
+              [style.grid-row]="element.gridY"
+              [ngClass]="{
+                'seat-available':
+                  element.type === LayoutElementType.SEAT &&
+                  element.seatNo &&
+                  !isSeatOccupied(element.seatNo) &&
+                  !isSeatSelected(element.seatNo),
+                'seat-selected':
+                  element.type === LayoutElementType.SEAT &&
+                  element.seatNo &&
+                  isSeatSelected(element.seatNo),
+                'seat-occupied':
+                  element.type === LayoutElementType.SEAT &&
+                  element.seatNo &&
+                  isSeatOccupied(element.seatNo),
+                'seat-disabled':
+                  element.type === LayoutElementType.SEAT &&
+                  element.seatNo &&
+                  !isSeatSelected(element.seatNo) &&
+                  selectedSeatNos.length >= passengerCount,
+                'element-env': element.type !== LayoutElementType.SEAT,
+                'element-driver': element.type === LayoutElementType.DRIVER,
+                'element-door': element.type === LayoutElementType.DOOR,
+                'element-stairs': element.type === LayoutElementType.STAIRS,
+                'element-toilet': element.type === LayoutElementType.TOILET
+              }"
+              [disabled]="
+                !element.seatNo ||
+                element.type !== LayoutElementType.SEAT ||
+                isSeatOccupied(element.seatNo) ||
+                (!isSeatSelected(element.seatNo) && selectedSeatNos.length >= passengerCount)
+              "
+              (click)="selectSeat(element.seatNo)"
+            >
+              <span *ngIf="element.type === LayoutElementType.SEAT">{{ element.seatNo }}</span>
+              <i *ngIf="element.type === LayoutElementType.DRIVER" class="bi bi-person-fill"></i>
+              <i *ngIf="element.type === LayoutElementType.DOOR" class="bi bi-door-open"></i>
+              <i *ngIf="element.type === LayoutElementType.STAIRS" class="bi bi-layers-half"></i>
+              <i *ngIf="element.type === LayoutElementType.TOILET" class="bi bi-droplet-half"></i>
+            </button>
+          </ng-container>
+        </div>
+      </div>
+
+      <ng-template #freeSeatingTemplate>
+        <div class="bus-layout p-4 rounded-4 mb-3 free-seating-card">
+          <div class="free-seating-title mb-2">Free seating bus</div>
+          <p class="text-muted mb-0">
+            This trip does not expose a visual seat map. Continue to verification and we will create the pending hold without seat numbers.
+          </p>
+        </div>
+      </ng-template>
+
+      <div class="seat-legend d-flex justify-content-between">
+        <div class="legend-item d-flex align-items-center">
+          <div class="legend-dot available"></div>
+          <span class="small text-muted">Available</span>
+        </div>
+        <div class="legend-item d-flex align-items-center">
+          <div class="legend-dot selected"></div>
+          <span class="small text-muted">Selected</span>
+        </div>
+        <div class="legend-item d-flex align-items-center">
+          <div class="legend-dot booked"></div>
+          <span class="small text-muted">Occupied</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="selected-seats mb-4">
+      <div class="d-flex justify-content-between align-items-center mb-3">
+        <h6 class="fw-bold mb-0">Selected seats</h6>
+        <span class="text-muted small">{{ selectedSeatNos.length }}/{{ passengerCount }}</span>
+      </div>
+      <div class="selected-seat-list" *ngIf="selectedSeats.length; else noSeatsSelected">
+        <div
+          *ngFor="let seatNo of selectedSeats"
+          class="selected-seat-item d-flex justify-content-between align-items-center p-3 rounded-4 mb-2"
+        >
+          <div class="d-flex align-items-center">
+            <div class="seat-number me-3">{{ seatNo }}</div>
+            <div>
+              <div class="fw-medium">Seat {{ seatNo }}</div>
+              <div class="text-muted small">{{ getSeatDeckLabel(seatNo) }}</div>
             </div>
           </div>
-        </div>
-        <div class="seat-price fw-bold">
-          {{ displayPrice | number: "1.2-2" }}
-          {{ trip.currency?.code || "-" }}
+          <div class="d-flex align-items-center gap-2">
+            <div class="seat-price">
+              {{ displayPrice | number: '1.2-2' }} {{ trip.currency?.code || '-' }}
+            </div>
+            <button
+              class="btn btn-sm btn-outline-danger remove-seat rounded-3"
+              type="button"
+              (click)="removeSeat(seatNo)"
+            >
+              <i class="bi bi-x-lg"></i>
+            </button>
+          </div>
         </div>
       </div>
-    </div>
-
-    <!-- Seat Legend (informational) -->
-    <div class="seat-legend d-flex justify-content-center gap-4 mb-4">
-      <div class="legend-item d-flex align-items-center">
-        <div class="legend-dot available"></div>
-        <span class="small text-muted">{{ availableSeats }} available</span>
-      </div>
-    </div>
-
-    <!-- Booking Success -->
-    <div
-      *ngIf="booked"
-      class="alert alert-success d-flex align-items-center"
-      role="alert"
-    >
-      <i class="bi bi-check-circle-fill me-2"></i>
-      <div>Booking created! Your seat is held. Proceed to confirm.</div>
+      <ng-template #noSeatsSelected>
+        <div class="empty-seat-state p-3 rounded-4 text-muted">
+          {{ hasVisualLayout ? 'Select seats from the layout to continue.' : 'Seat numbers are optional for this trip.' }}
+        </div>
+      </ng-template>
     </div>
   </div>
 
-  <!-- Bottom Fixed Bar -->
   <div class="bottom-fixed-bar p-3">
     <div class="d-flex justify-content-between align-items-center gap-3">
       <div class="lh-sm">
@@ -109,30 +227,10 @@
           {{ displayPrice | number: "1.2-2" }}
           {{ trip.currency?.code || "-" }}
         </div>
-        <div class="text-muted small">1 passenger</div>
+        <div class="text-muted small">{{ passengerLabel }}</div>
       </div>
-      <button
-        *ngIf="!booked"
-        class="btn btn-app py-2 fw-bold"
-        [disabled]="
-          booking ||
-          availableSeats <= 0 ||
-          routeAvailability?.sellable === false
-        "
-        (click)="confirmBooking()"
-      >
-        <span
-          *ngIf="booking"
-          class="spinner-border spinner-border-sm me-1"
-        ></span>
-        {{ booking ? "Booking..." : "Book Now" }}
-      </button>
-      <button
-        *ngIf="booked"
-        class="btn btn-app py-2 fw-bold"
-        (click)="goToVerification()"
-      >
-        Continue
+      <button class="btn btn-app py-2 fw-bold" [disabled]="!canContinue" (click)="continueToVerification()">
+        Continue to verification
       </button>
     </div>
   </div>

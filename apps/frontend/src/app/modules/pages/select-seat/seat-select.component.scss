@@ -1,4 +1,213 @@
 /* Responsive bottom bar for desktop */
+.bus-summary {
+    background: linear-gradient(135deg, #f5efe6 0%, #ffffff 100%);
+    border: 1px solid rgba(193, 143, 76, 0.14);
+}
+
+.bus-icon {
+    width: 56px;
+    height: 56px;
+    border-radius: 18px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(193, 143, 76, 0.12);
+    color: #9b5f22;
+    font-size: 1.5rem;
+}
+
+.journey-chip {
+    display: inline-flex;
+    padding: 0.35rem 0.65rem;
+    border-radius: 999px;
+    background: rgba(193, 143, 76, 0.12);
+    color: #9b5f22;
+    font-size: 0.72rem;
+    letter-spacing: 0.08em;
+}
+
+.route-meta-card,
+.passenger-panel,
+.selected-seat-item,
+.empty-seat-state,
+.free-seating-card {
+    background: #fff;
+    border: 1px solid rgba(15, 23, 42, 0.08);
+}
+
+.route-meta-card {
+    padding: 0.9rem 1rem;
+    border-radius: 1rem;
+}
+
+.meta-label {
+    color: #7a7f87;
+    font-size: 0.72rem;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    margin-bottom: 0.35rem;
+}
+
+.meta-value {
+    font-weight: 600;
+    color: #1f2937;
+}
+
+.passenger-panel {
+    border-radius: 1.1rem;
+}
+
+.passenger-counter {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+.passenger-counter .btn {
+    width: 2.3rem;
+    height: 2.3rem;
+    padding: 0;
+}
+
+.counter-value {
+    min-width: 1.5rem;
+    text-align: center;
+    font-weight: 700;
+}
+
+.bus-layout {
+    background: linear-gradient(180deg, #fff 0%, #f7f8fb 100%);
+    border: 1px solid rgba(15, 23, 42, 0.08);
+}
+
+.seat-status-banner {
+    padding: 0.75rem 0.9rem;
+    border-radius: 0.9rem;
+    background: rgba(14, 165, 233, 0.08);
+    color: #075985;
+    font-size: 0.9rem;
+}
+
+.seat-map-grid {
+    display: grid;
+    gap: 0.55rem;
+    justify-content: center;
+}
+
+.seat-cell {
+    width: 44px;
+    height: 44px;
+    border: 0;
+    border-radius: 0.85rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.78rem;
+    font-weight: 700;
+    transition: transform 0.15s ease, box-shadow 0.15s ease, background 0.15s ease;
+}
+
+.seat-available {
+    background: #f8fafc;
+    color: #334155;
+    box-shadow: inset 0 0 0 1px rgba(148, 163, 184, 0.4);
+}
+
+.seat-available:hover {
+    transform: translateY(-1px);
+    box-shadow: inset 0 0 0 1px rgba(14, 116, 144, 0.25), 0 10px 16px rgba(15, 23, 42, 0.06);
+}
+
+.seat-selected {
+    background: linear-gradient(135deg, #0f766e 0%, #14b8a6 100%);
+    color: #fff;
+    box-shadow: 0 10px 16px rgba(20, 184, 166, 0.22);
+}
+
+.seat-occupied,
+.seat-disabled {
+    background: #e5e7eb;
+    color: #9ca3af;
+    box-shadow: inset 0 0 0 1px rgba(156, 163, 175, 0.35);
+}
+
+.element-env {
+    background: transparent;
+    color: #64748b;
+    box-shadow: inset 0 0 0 1px rgba(148, 163, 184, 0.35);
+}
+
+.element-driver {
+    background: #fff4db;
+    color: #92400e;
+}
+
+.element-door {
+    background: #e0f2fe;
+    color: #075985;
+}
+
+.element-stairs {
+    background: #ede9fe;
+    color: #5b21b6;
+}
+
+.element-toilet {
+    background: #dcfce7;
+    color: #166534;
+}
+
+.seat-legend {
+    gap: 0.75rem;
+}
+
+.legend-dot {
+    width: 14px;
+    height: 14px;
+    border-radius: 0.35rem;
+    margin-right: 0.45rem;
+}
+
+.legend-dot.available {
+    background: #f8fafc;
+    box-shadow: inset 0 0 0 1px rgba(148, 163, 184, 0.45);
+}
+
+.legend-dot.selected {
+    background: linear-gradient(135deg, #0f766e 0%, #14b8a6 100%);
+}
+
+.legend-dot.booked {
+    background: #d1d5db;
+}
+
+.selected-seat-item,
+.empty-seat-state {
+    border-radius: 1rem;
+}
+
+.seat-number {
+    width: 3rem;
+    height: 3rem;
+    border-radius: 0.9rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(15, 118, 110, 0.1);
+    color: #0f766e;
+    font-weight: 700;
+}
+
+.seat-price {
+    font-weight: 700;
+    color: #0f172a;
+}
+
+.free-seating-title {
+    font-weight: 700;
+    color: #0f172a;
+}
+
 .bottom-fixed-bar {
     position: fixed;
     left: 0;
