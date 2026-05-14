@@ -1,5 +1,5 @@
 import { Injectable } from '@angular/core';
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { environment } from '../../environments/environment';
 import { Ticket } from '../models/ticket.model';
@@ -38,10 +38,10 @@ export class BookingService {
   createFrontofficeHold(
     request: FrontofficeCreateHoldRequest,
   ): Observable<FrontofficeHoldResponse> {
-    return this.http.post<FrontofficeHoldResponse>(
-      `${this.frontofficeUrl}/holds`,
-      request,
-    );
+    const endpoint = request.passengers?.length
+      ? `${this.frontofficeUrl}/group`
+      : this.frontofficeUrl;
+    return this.http.post<FrontofficeHoldResponse>(endpoint, request);
   }
 
   getFrontofficeHold(holdToken: string): Observable<FrontofficeHoldResponse> {
@@ -51,19 +51,35 @@ export class BookingService {
   }
 
   confirmFrontofficeHold(
-    holdToken: string,
+    hold: FrontofficeHoldResponse,
   ): Observable<FrontofficeHoldResponse> {
+    if (hold.groupBooking && hold.orderId) {
+      return this.http.post<FrontofficeHoldResponse>(
+        `${this.frontofficeUrl}/group/${hold.orderId}/confirm`,
+        {},
+      );
+    }
+
+    const ticketId = hold.passengers?.[0]?.ticketId;
     return this.http.post<FrontofficeHoldResponse>(
-      `${this.frontofficeUrl}/holds/${holdToken}/confirm`,
+      `${this.frontofficeUrl}/${ticketId}/confirm`,
       {},
     );
   }
 
   cancelFrontofficeHold(
-    holdToken: string,
+    hold: FrontofficeHoldResponse,
   ): Observable<FrontofficeHoldResponse> {
+    if (hold.groupBooking && hold.orderId) {
+      return this.http.post<FrontofficeHoldResponse>(
+        `${this.frontofficeUrl}/group/${hold.orderId}/cancel`,
+        {},
+      );
+    }
+
+    const ticketId = hold.passengers?.[0]?.ticketId;
     return this.http.post<FrontofficeHoldResponse>(
-      `${this.frontofficeUrl}/holds/${holdToken}/cancel`,
+      `${this.frontofficeUrl}/${ticketId}/cancel`,
       {},
     );
   }
@@ -73,13 +89,15 @@ export class BookingService {
     originPlaceId: string,
     destinationPlaceId: string,
   ): Observable<string[]> {
-    const params = new URLSearchParams({
-      tripId,
-      originPlaceId,
-      destinationPlaceId,
-    });
+    const params = new HttpParams()
+      .set('tripId', tripId)
+      .set('originPlaceId', originPlaceId)
+      .set('destinationPlaceId', destinationPlaceId);
     return this.http.get<string[]>(
-      `${this.frontofficeUrl}/occupied-seats?${params.toString()}`,
+      `${this.frontofficeUrl}/route-occupied-seats`,
+      {
+        params,
+      },
     );
   }
 

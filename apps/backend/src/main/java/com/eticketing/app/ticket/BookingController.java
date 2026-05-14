@@ -45,6 +45,14 @@ public class BookingController {
         return ResponseEntity.ok(seats);
     }
 
+    @GetMapping("/route-occupied-seats")
+    public ResponseEntity<java.util.List<String>> getRouteOccupiedSeats(
+            @RequestParam String tripId,
+            @RequestParam String originPlaceId,
+            @RequestParam String destinationPlaceId) {
+        return ResponseEntity.ok(bookingService.getRouteOccupiedSeats(tripId, originPlaceId, destinationPlaceId));
+    }
+
     @PostMapping
     public ResponseEntity<BookingResponse> createBooking(
             @Valid @RequestBody BookingRequest req,
@@ -66,7 +74,8 @@ public class BookingController {
                 req.getLang(),
                 req.getSeatNo(),
                 companyId,
-                posId);
+                posId,
+                BookingCreateOptions.pos(principal.getUsername(), posId));
 
         return ResponseEntity.status(HttpStatus.CREATED).body(toResponse(ticket));
     }
@@ -100,7 +109,11 @@ public class BookingController {
             HttpServletRequest httpRequest) {
 
         String[] ids = resolveCompanyAndPos(principal, httpRequest);
-        OrderType order = bookingService.createGroupBooking(req, ids[0], ids[1]);
+        OrderType order = bookingService.createGroupBooking(
+                req,
+                ids[0],
+                ids[1],
+                BookingCreateOptions.pos(principal.getUsername(), ids[1]));
         java.util.List<TicketType> tickets = ticketRepository.findByOrderId(order.getId());
         return ResponseEntity.status(HttpStatus.CREATED).body(toGroupResponse(order, tickets));
     }

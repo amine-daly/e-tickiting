@@ -67,7 +67,7 @@ export class BusService {
     );
   }
 
-  getById(id: string): Observable<BusType> {
+  getBusById(id: string): Observable<BusType> {
     return this.http.get<BusType>(`${this.baseUrl}/${id}`).pipe(
       tap((bus) => {
         this.bus.next(bus);

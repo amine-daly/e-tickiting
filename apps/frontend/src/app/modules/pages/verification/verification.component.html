@@ -26,14 +26,6 @@
       {{ notice }}
     </div>
 
-    <div class="hold-banner mb-4" *ngIf="hasPendingHold">
-      <div>
-        <div class="hold-banner__label">Seat hold active</div>
-        <div class="text-muted small">Confirm before the timer reaches zero.</div>
-      </div>
-      <div class="hold-banner__timer">{{ countdownDisplay }}</div>
-    </div>
-
     <div class="trip-summary mb-4">
       <h6 class="fw-bold mb-3">Trip Summary</h6>
       <div class="summary-card p-3 rounded-3 bg-primary-light">
@@ -42,8 +34,12 @@
             <i class="bi bi-bus-front"></i>
           </div>
           <div>
-            <h6 class="fw-bold mb-0">{{ trip?.bus?.name || 'Scheduled trip' }}</h6>
-            <div class="text-muted small">{{ passengerCount }} passenger{{ passengerCount > 1 ? 's' : '' }}</div>
+            <h6 class="fw-bold mb-0">
+              {{ trip?.bus?.name || "Scheduled trip" }}
+            </h6>
+            <div class="text-muted small">
+              {{ passengerCount }} passenger{{ passengerCount > 1 ? "s" : "" }}
+            </div>
           </div>
         </div>
         <div class="journey-details mb-3">
@@ -55,12 +51,20 @@
             </div>
             <div class="journey-info flex-grow-1">
               <div class="mb-3">
-                <div class="fw-bold">{{ getPlaceName(draft?.originPlaceId) }}</div>
-                <div class="text-muted small">{{ getPickupAddress() || 'Pickup point selected' }}</div>
+                <div class="fw-bold">
+                  {{ getPlaceName(draft?.originPlaceId) }}
+                </div>
+                <div class="text-muted small">
+                  {{ getPickupAddress() || "Pickup point selected" }}
+                </div>
               </div>
               <div>
-                <div class="fw-bold">{{ getPlaceName(draft?.destinationPlaceId) }}</div>
-                <div class="text-muted small">{{ getDropoffAddress() || 'Dropoff point selected' }}</div>
+                <div class="fw-bold">
+                  {{ getPlaceName(draft?.destinationPlaceId) }}
+                </div>
+                <div class="text-muted small">
+                  {{ getDropoffAddress() || "Dropoff point selected" }}
+                </div>
               </div>
             </div>
           </div>
@@ -68,23 +72,33 @@
         <div class="seat-details mb-3">
           <div class="text-muted small mb-1">Selected Seats</div>
           <div class="d-flex flex-wrap gap-2">
-            <span class="seat-tag" *ngFor="let seatNo of selectedSeats">{{ seatNo }}</span>
-            <span class="text-muted small" *ngIf="!selectedSeats.length">Free seating</span>
+            <span class="seat-tag" *ngFor="let seatNo of selectedSeats">{{
+              seatNo
+            }}</span>
+            <span class="text-muted small" *ngIf="!selectedSeats.length"
+              >Free seating</span
+            >
           </div>
         </div>
         <div class="fare-details">
           <div class="fare-item d-flex justify-content-between mb-1">
-            <div class="text-muted small">Base Fare ({{ passengerCount }} seats)</div>
-            <div class="small">{{ totalPrice | number: '1.2-2' }} {{ currencyCode }}</div>
+            <div class="text-muted small">
+              Base Fare ({{ passengerCount }} seats)
+            </div>
+            <div class="small">
+              {{ totalPrice | number: "1.2-2" }} {{ currencyCode }}
+            </div>
           </div>
           <div class="fare-item d-flex justify-content-between mb-1">
-            <div class="text-muted small">Hold status</div>
-            <div class="small">{{ hold?.status || 'Draft' }}</div>
+            <div class="text-muted small">Booking status</div>
+            <div class="small">{{ hold?.status || "Draft" }}</div>
           </div>
           <hr class="my-2" />
           <div class="fare-item d-flex justify-content-between">
             <div class="fw-bold">Total Amount</div>
-            <div class="fw-bold text-primary-color">{{ totalPrice | number: '1.2-2' }} {{ currencyCode }}</div>
+            <div class="fw-bold text-primary-color">
+              {{ totalPrice | number: "1.2-2" }} {{ currencyCode }}
+            </div>
           </div>
         </div>
       </div>
@@ -93,41 +107,8 @@
     <div class="passenger-details mb-4">
       <h6 class="fw-bold mb-3">Passenger Details</h6>
       <form [formGroup]="form">
-      <div formGroupName="contact" class="mb-3">
-        <label for="passName" class="form-label">Full Name</label>
-        <div class="row g-2">
-          <div class="col-6">
-            <input
-              type="text"
-              class="form-control"
-              placeholder="First name"
-              formControlName="firstName"
-            />
-          </div>
-          <div class="col-6">
-            <input
-              type="text"
-              class="form-control"
-              placeholder="Last name"
-              formControlName="lastName"
-            />
-          </div>
-        </div>
-      </div>
-      <div class="mb-3" formGroupName="contact">
-        <label for="passEmail" class="form-label">Email Address</label>
-        <input
-          type="email"
-          class="form-control"
-          id="passEmail"
-          placeholder="Enter your email"
-          formControlName="email"
-        />
-      </div>
-
-      <div class="guest-passengers" formArrayName="passengers" *ngIf="passengersArray.length">
-        <div class="guest-passenger-card p-3 rounded-4 mb-3" *ngFor="let passengerGroup of passengersArray.controls; let i = index" [formGroupName]="i">
-          <div class="fw-semibold mb-2">Passenger {{ i + 2 }}</div>
+        <div formGroupName="contact" class="mb-3">
+          <label for="passName" class="form-label">Full Name</label>
           <div class="row g-2">
             <div class="col-6">
               <input
@@ -146,34 +127,80 @@
               />
             </div>
           </div>
-          <div class="text-muted small mt-2">
-            Seat: {{ selectedSeats[i + 1] || 'Free seating' }}
+        </div>
+        <div class="mb-3" formGroupName="contact">
+          <label for="passEmail" class="form-label">Email Address</label>
+          <input
+            type="email"
+            class="form-control"
+            id="passEmail"
+            placeholder="Enter your email"
+            formControlName="email"
+          />
+        </div>
+
+        <div
+          class="guest-passengers"
+          formArrayName="passengers"
+          *ngIf="passengersArray.length"
+        >
+          <div
+            class="guest-passenger-card p-3 rounded-4 mb-3"
+            *ngFor="
+              let passengerGroup of passengersArray.controls;
+              let i = index
+            "
+            [formGroupName]="i"
+          >
+            <div class="fw-semibold mb-2">Passenger {{ i + 2 }}</div>
+            <div class="row g-2">
+              <div class="col-6">
+                <input
+                  type="text"
+                  class="form-control"
+                  placeholder="First name"
+                  formControlName="firstName"
+                />
+              </div>
+              <div class="col-6">
+                <input
+                  type="text"
+                  class="form-control"
+                  placeholder="Last name"
+                  formControlName="lastName"
+                />
+              </div>
+            </div>
+            <div class="text-muted small mt-2">
+              Seat: {{ selectedSeats[i + 1] || "Free seating" }}
+            </div>
           </div>
         </div>
-      </div>
 
-    <div class="booking-conditions mb-4">
-      <div class="form-check mb-1">
-        <input class="form-check-input" type="checkbox" id="termsCheck" formControlName="termsAccepted" />
-        <label class="form-check-label small" for="termsCheck">
-          I agree to the
-          <a href="#" class="text-decoration-none">Terms and Conditions</a> and
-          <a href="#" class="text-decoration-none">Privacy Policy</a>
-        </label>
-      </div>
-      <div class="form-check">
-        <input class="form-check-input" type="checkbox" id="priceCheck" formControlName="priceAccepted" />
-        <label class="form-check-label small" for="priceCheck">
-          I agree to the final price of {{ totalPrice | number: '1.2-2' }} {{ currencyCode }}
-        </label>
-      </div>
-    </div>
+        <div class="booking-conditions mb-4">
+          <div class="form-check mb-1">
+            <input
+              class="form-check-input"
+              type="checkbox"
+              id="termsCheck"
+              formControlName="termsAccepted"
+            />
+            <label class="form-check-label small" for="termsCheck">
+              I agree to the
+              <a href="#" class="text-decoration-none">Terms and Conditions</a>
+              and
+              <a href="#" class="text-decoration-none">Privacy Policy</a>
+            </label>
+          </div>
+        </div>
       </form>
 
       <div class="payment-placeholder mt-4" *ngIf="hasConfirmedHold">
         <div class="payment-placeholder__title">Payment placeholder</div>
         <p class="mb-0 text-muted">
-          The booking is confirmed and the payment screen will be connected next. You can keep using this summary as the source of truth for the hold data.
+          The booking is confirmed and the payment screen will be connected
+          next. You can keep using this summary as the source of truth for the
+          hold data.
         </p>
       </div>
     </div>
@@ -182,25 +209,42 @@
   <div class="bottom-fixed-bar p-3">
     <div class="d-flex justify-content-between align-items-center gap-3">
       <div class="lh-sm">
-        <div class="fw-bold fs-5 text-primary-color">{{ totalPrice | number: '1.2-2' }} {{ currencyCode }}</div>
+        <div class="fw-bold fs-5 text-primary-color">
+          {{ totalPrice | number: "1.2-2" }} {{ currencyCode }}
+        </div>
         <div class="text-muted small">Total</div>
       </div>
       <div class="d-flex gap-2 align-items-center">
-        <button class="btn btn-outline-secondary py-2 fw-bold" type="button" (click)="goBackToSeats()">
-          Back to seats
-        </button>
-        <button
-          *ngIf="hasPendingHold"
-          class="btn btn-outline-danger py-2 fw-bold"
-          type="button"
-          [disabled]="cancellingHold"
-          (click)="cancelHold()"
-        >
-          Release hold
-        </button>
-        <button class="btn btn-app py-2 fw-bold" type="button" [disabled]="mainActionDisabled" (click)="holdOrConfirm()">
-          {{ mainActionLabel }}
-        </button>
+        <div>
+          <button
+            class="btn btn-outline-secondary py-2 fw-bold"
+            type="button"
+            (click)="goBackToSeats()"
+          >
+            Back to seats
+          </button>
+        </div>
+        <div>
+          <button
+            *ngIf="hasPendingHold"
+            class="btn btn-outline-danger py-2 fw-bold"
+            type="button"
+            [disabled]="cancellingHold"
+            (click)="cancelHold()"
+          >
+            Cancel booking
+          </button>
+        </div>
+        <div>
+          <button
+            class="btn btn-app py-2 fw-bold"
+            type="button"
+            [disabled]="mainActionDisabled"
+            (click)="holdOrConfirm()"
+          >
+            {{ mainActionLabel }}
+          </button>
+        </div>
       </div>
     </div>
   </div>

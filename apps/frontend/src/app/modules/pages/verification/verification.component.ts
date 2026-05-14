@@ -1,5 +1,6 @@
 import { Component, OnDestroy, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { HttpErrorResponse } from '@angular/common/http';
 import {
   FormArray,
   FormBuilder,
@@ -8,8 +9,8 @@ import {
   ReactiveFormsModule,
   Validators,
 } from '@angular/forms';
-import { ActivatedRoute, Router } from '@angular/router';
-import { Subject, Subscription, interval, takeUntil, takeWhile } from 'rxjs';
+import { Router } from '@angular/router';
+import { Subject, takeUntil } from 'rxjs';
 import { v4 as uuid } from 'uuid';
 
 import {
@@ -39,12 +40,7 @@ export class VerificationComponent implements OnInit, OnDestroy {
   submittingHold = false;
   confirmingHold = false;
   cancellingHold = false;
-  pendingHold = false;
-  expiresAt: Date | null = null;
-  countdownDisplay = '';
-  countdownExpired = false;
   notice = '';
-  private countdownSubscription: Subscription | null = null;
 
   form = this.fb.group({
     contact: this.fb.group({
@@ -66,15 +62,10 @@ export class VerificationComponent implements OnInit, OnDestroy {
       nonNullable: true,
       validators: [Validators.requiredTrue],
     }),
-    priceAccepted: this.fb.control(false, {
-      nonNullable: true,
-      validators: [Validators.requiredTrue],
-    }),
   });
 
   constructor(
     private fb: FormBuilder,
-    private route: ActivatedRoute,
     private router: Router,
     private bookingService: BookingService,
     private draftService: FrontofficeBookingDraftService,
@@ -83,23 +74,14 @@ export class VerificationComponent implements OnInit, OnDestroy {
 
   ngOnInit(): void {
     this.draft = this.draftService.getDraft();
-    this.route.queryParamMap
-      .pipe(takeUntil(this.destroy$))
-      .subscribe((params) => {
-        const holdToken = params.get('holdToken');
-        if (holdToken) {
-          if (this.hold?.holdToken === holdToken) {
-            return;
-          }
-          this.loadHold(holdToken);
-          return;
-        }
+    if (this.draft?.holdToken) {
+      this.loadHold(this.draft.holdToken);
+      return;
+    }
 
-        this.hold = null;
-        this.notice = '';
-        this.stopCountdown();
-        this.initializeDraftState();
-      });
+    this.hold = null;
+    this.notice = '';
+    this.initializeDraftState();
   }
 
   get passengersArray(): FormArray<FormGroup> {
@@ -140,9 +122,7 @@ export class VerificationComponent implements OnInit, OnDestroy {
   }
 
   get hasPendingHold(): boolean {
-    return (
-      !!this.hold && this.hold.status === 'PENDING' && !this.countdownExpired
-    );
+    return !!this.hold && this.hold.status === 'PENDING';
   }
 
   get hasConfirmedHold(): boolean {
@@ -151,18 +131,18 @@ export class VerificationComponent implements OnInit, OnDestroy {
 
   get mainActionLabel(): string {
     if (this.submittingHold) {
-      return 'Holding seats...';
+      return 'Creating booking...';
     }
     if (this.confirmingHold) {
-      return 'Confirming booking...';
+      return 'Confirming payment...';
     }
     if (this.hasConfirmedHold) {
-      return 'Payment coming soon';
+      return 'Payment confirmed';
     }
     if (this.hasPendingHold) {
-      return 'Confirm booking';
+      return 'Complete payment';
     }
-    return 'Hold seats';
+    return 'Continue to payment';
   }
 
   get mainActionDisabled(): boolean {
@@ -192,7 +172,7 @@ export class VerificationComponent implements OnInit, OnDestroy {
     if (this.hasPendingHold && this.hold) {
       this.confirmingHold = true;
       this.bookingService
-        .confirmFrontofficeHold(this.hold.holdToken)
+        .confirmFrontofficeHold(this.hold)
         .pipe(takeUntil(this.destroy$))
         .subscribe({
           next: (hold) => {
@@ -200,13 +180,10 @@ export class VerificationComponent implements OnInit, OnDestroy {
             this.hold = hold;
             this.notice =
               'Booking confirmed. The payment step will be wired next.';
-            this.pendingHold = false;
-            this.draftService.clearDraft();
-            this.startCountdown(hold.expiresAt || null, hold.status);
+            this.updateDraft({ holdToken: null });
           },
-          error: () => {
-            this.confirmingHold = false;
-            this.notice = 'We could not confirm your booking right now.';
+          error: (error) => {
+            this.handleConfirmError(error);
           },
         });
       return;
@@ -231,19 +208,12 @@ export class VerificationComponent implements OnInit, OnDestroy {
         next: (hold) => {
           this.submittingHold = false;
           this.hold = hold;
-          this.notice = 'Seats are now held for 10 minutes.';
-          this.pendingHold = true;
-          this.draftService.updateDraft({ holdToken: hold.holdToken });
-          this.router.navigate([], {
-            relativeTo: this.route,
-            queryParams: { holdToken: hold.holdToken },
-            queryParamsHandling: 'merge',
-          });
-          this.startCountdown(hold.expiresAt || null, hold.status);
+          this.notice =
+            'Booking created. Complete payment to finish confirmation.';
+          this.updateDraft({ holdToken: hold.holdToken });
         },
-        error: () => {
-          this.submittingHold = false;
-          this.notice = 'We could not hold the selected seats.';
+        error: (error) => {
+          this.handleCreateError(error);
         },
       });
   }
@@ -263,20 +233,14 @@ export class VerificationComponent implements OnInit, OnDestroy {
 
     this.cancellingHold = true;
     this.bookingService
-      .cancelFrontofficeHold(this.hold.holdToken)
+      .cancelFrontofficeHold(this.hold)
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: () => {
           this.cancellingHold = false;
           this.hold = null;
-          this.stopCountdown();
           this.notice = successNotice;
-          this.draftService.updateDraft({ holdToken: null });
-          this.router.navigate([], {
-            relativeTo: this.route,
-            queryParams: { holdToken: null },
-            queryParamsHandling: 'merge',
-          });
+          this.updateDraft({ holdToken: null });
         },
         error: () => {
           this.cancellingHold = false;
@@ -335,7 +299,6 @@ export class VerificationComponent implements OnInit, OnDestroy {
   }
 
   ngOnDestroy(): void {
-    this.stopCountdown();
     this.destroy$.next();
     this.destroy$.complete();
   }
@@ -365,14 +328,13 @@ export class VerificationComponent implements OnInit, OnDestroy {
         next: (hold) => {
           this.loadingHold = false;
           this.hold = hold;
-          this.pendingHold = hold.status === 'PENDING';
           this.ensureGuestControls(
             Math.max((hold.passengers?.length || 1) - 1, 0),
           );
           this.patchFormFromHold(hold);
 
           const nextDraft: FrontofficeBookingDraft = {
-            holdToken: hold.holdToken,
+            holdToken: hold.status === 'PENDING' ? hold.holdToken : null,
             tripId: hold.tripId,
             originPlaceId: this.draft?.originPlaceId || '',
             destinationPlaceId: this.draft?.destinationPlaceId || '',
@@ -399,7 +361,10 @@ export class VerificationComponent implements OnInit, OnDestroy {
             nextDraft.originPlaceId,
             nextDraft.destinationPlaceId,
           );
-          this.startCountdown(hold.expiresAt || null, hold.status);
+          this.notice =
+            hold.status === 'CONFIRMED'
+              ? 'Booking confirmed. The payment step will be wired next.'
+              : 'Booking created. Complete payment to finish confirmation.';
         },
         error: () => {
           this.loadingHold = false;
@@ -526,75 +491,77 @@ export class VerificationComponent implements OnInit, OnDestroy {
     this.draftService.saveDraft(nextDraft);
   }
 
-  private startCountdown(expiresAt: string | null, status: string): void {
-    this.clearCountdownSubscription();
-    this.expiresAt = expiresAt ? new Date(expiresAt) : null;
-    this.pendingHold = !!this.expiresAt && status === 'PENDING';
-    this.countdownExpired = false;
-    this.updateCountdownDisplay();
-
-    if (!this.pendingHold) {
+  private handleCreateError(error: unknown): void {
+    this.submittingHold = false;
+    if (this.handleSeatConflict(error)) {
       return;
     }
-
-    if (this.countdownExpired) {
-      this.onCountdownExpired();
-      return;
-    }
-
-    this.countdownSubscription = interval(1000)
-      .pipe(
-        takeUntil(this.destroy$),
-        takeWhile(() => this.pendingHold && !this.countdownExpired),
-      )
-      .subscribe(() => {
-        this.updateCountdownDisplay();
-        if (this.countdownExpired) {
-          this.onCountdownExpired();
-        }
-      });
+    this.notice = 'We could not create your booking right now.';
   }
 
-  private updateCountdownDisplay(): void {
-    if (!this.expiresAt) {
-      this.countdownDisplay = '';
+  private handleConfirmError(error: unknown): void {
+    this.confirmingHold = false;
+    if (this.isHoldExpired(error)) {
+      this.hold = null;
+      this.updateDraft({ holdToken: null });
+      this.notice =
+        'Your booking expired before payment completed. Please choose seats again.';
+      this.goBackToSeats();
       return;
     }
+    this.notice = 'We could not confirm your booking right now.';
+  }
 
-    const remainingSeconds = Math.max(
-      0,
-      Math.floor((this.expiresAt.getTime() - Date.now()) / 1000),
+  private handleSeatConflict(error: unknown): boolean {
+    const conflicts = this.extractConflictingSeats(error);
+    if (!conflicts.length || !this.draft) {
+      return false;
+    }
+
+    const conflictSet = new Set(conflicts);
+    const nextDraft: FrontofficeBookingDraft = {
+      ...this.draft,
+      holdToken: null,
+      selectedSeatNos: this.draft.selectedSeatNos.filter(
+        (seatNo) => !conflictSet.has(seatNo),
+      ),
+    };
+
+    this.draft = nextDraft;
+    this.hold = null;
+    this.draftService.saveDraft(nextDraft);
+    this.notice = `Seat${conflicts.length > 1 ? 's' : ''} ${conflicts.join(', ')} ${conflicts.length > 1 ? 'are' : 'is'} no longer available. Please choose another seat.`;
+    this.goBackToSeats();
+    return true;
+  }
+
+  private extractConflictingSeats(error: unknown): string[] {
+    const httpError = error as HttpErrorResponse | null;
+    const conflicts = Array.isArray(httpError?.error?.conflicts)
+      ? httpError.error.conflicts
+      : [];
+    return conflicts
+      .filter((seat): seat is string => typeof seat === 'string')
+      .map((seat) => seat.trim())
+      .filter((seat) => !!seat);
+  }
+
+  private isHoldExpired(error: unknown): boolean {
+    const httpError = error as HttpErrorResponse | null;
+    return (
+      httpError?.status === 410 || httpError?.error?.code === 'HOLD_EXPIRED'
     );
+  }
 
-    if (remainingSeconds <= 0) {
-      this.countdownDisplay = '00:00';
-      this.countdownExpired = true;
+  private updateDraft(patch: Partial<FrontofficeBookingDraft>): void {
+    if (!this.draft) {
       return;
     }
-
-    const mins = Math.floor(remainingSeconds / 60)
-      .toString()
-      .padStart(2, '0');
-    const secs = (remainingSeconds % 60).toString().padStart(2, '0');
-    this.countdownDisplay = `${mins}:${secs}`;
-  }
-
-  private onCountdownExpired(): void {
-    this.pendingHold = false;
-    this.notice = 'The seat hold expired. Releasing it now.';
-    this.releaseCurrentHold('The seat hold expired. You can create a new one.');
-  }
-
-  private stopCountdown(): void {
-    this.pendingHold = false;
-    this.expiresAt = null;
-    this.countdownExpired = false;
-    this.countdownDisplay = '';
-    this.clearCountdownSubscription();
-  }
-
-  private clearCountdownSubscription(): void {
-    this.countdownSubscription?.unsubscribe();
-    this.countdownSubscription = null;
+    const nextDraft: FrontofficeBookingDraft = {
+      ...this.draft,
+      ...patch,
+    };
+    this.draft = nextDraft;
+    this.draftService.saveDraft(nextDraft);
   }
 }

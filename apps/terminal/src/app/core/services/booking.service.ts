@@ -36,7 +36,7 @@ export interface BookingResponse {
   lang: BookingLang;
   status: string;
   idempotencyKey: string;
-  expiresAt: string;
+  expiresAt?: string | null;
   createdAt: string;
   confirmedAt?: string;
   cancelledAt?: string;
@@ -81,7 +81,7 @@ export interface GroupBookingResponse {
   currency: string;
   status: string;
   idempotencyKey: string;
-  expiresAt: string;
+  expiresAt?: string | null;
   createdAt: string;
   confirmedAt?: string;
   cancelledAt?: string;
@@ -206,6 +206,20 @@ export class BookingService {
     return this.http.get<string[]>(
       `${this.bookingUrl}/occupied-seats/${tripId}`,
     );
+  }
+
+  getRouteOccupiedSeats(
+    tripId: string,
+    originPlaceId: string,
+    destinationPlaceId: string,
+  ): Observable<string[]> {
+    const params = new HttpParams()
+      .set('tripId', tripId)
+      .set('originPlaceId', originPlaceId)
+      .set('destinationPlaceId', destinationPlaceId);
+    return this.http.get<string[]>(`${this.bookingUrl}/route-occupied-seats`, {
+      params,
+    });
   }
 
   searchUsers(

@@ -6,6 +6,7 @@ export interface BookingRequest {
   dropoffPointId: string;
   passengerId: string;
   idempotencyKey: string;
+  seatNo?: string | null;
 }
 
 export interface BookingResponse {
@@ -18,11 +19,12 @@ export interface BookingResponse {
   pickupPointId: string;
   dropoffPointId: string;
   passengerId?: string;
+  orderId?: string;
   appliedPrice: number;
   currency: string;
   status: string;
   idempotencyKey: string;
-  expiresAt: string;
+  expiresAt?: string | null;
   createdAt: string;
   confirmedAt?: string;
   cancelledAt?: string;
@@ -74,6 +76,7 @@ export interface FrontofficeHoldPassengerSummary {
 
 export interface FrontofficeHoldResponse {
   holdToken: string;
+  orderId?: string | null;
   groupBooking: boolean;
   tripId: string;
   companyId?: string | null;

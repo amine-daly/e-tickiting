@@ -2,14 +2,19 @@ package com.eticketing.app.ticket;
 
 import com.eticketing.app.common.TargetInput;
 import com.eticketing.app.currency.CurrencyRepository;
+import com.eticketing.app.currency.CurrencyType;
 import com.eticketing.app.ticket.dto.GroupBookingRequest;
+import com.eticketing.app.trip.DropoffPointType;
+import com.eticketing.app.trip.PickupPointType;
 import com.eticketing.app.trip.SegmentType;
 import com.eticketing.app.trip.StopType;
+import com.eticketing.app.trip.TripCurrency;
 import com.eticketing.app.trip.TripPlaceRef;
 import com.eticketing.app.trip.TripStatusEnum;
 import com.eticketing.app.trip.TripType;
 import com.eticketing.app.trip.TripTypeRepository;
 import com.eticketing.app.web.error.ApiExceptions.BadRequestException;
+import com.eticketing.app.web.error.ApiExceptions.GoneException;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
@@ -27,6 +32,7 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.Mockito.never;
@@ -47,6 +53,9 @@ class BookingServiceTest {
 
     @Mock
     private SeatReservationService seatReservationService;
+
+    @Mock
+    private SeatOccupancyService seatOccupancyService;
 
     @Mock
     private CurrencyRepository currencyRepository;
@@ -156,6 +165,7 @@ class BookingServiceTest {
                 .id("ticket-1")
                 .tripId("trip-1")
                 .segmentIds(List.of("seg-1", "seg-2"))
+                .seatNo("A1")
                 .status(TicketStatusEnum.PENDING)
                 .expiresAt(futureExpiry)
                 .build();
@@ -168,8 +178,57 @@ class BookingServiceTest {
         assertEquals(TicketStatusEnum.EXPIRED, result.getStatus());
         assertNotNull(result.getExpiresAt());
         assertTrue(result.getExpiresAt().isBefore(futureExpiry));
+        verify(seatOccupancyService).releaseTicketSeat(pendingTicket);
         verify(seatReservationService).releaseSeats("trip-1", List.of("seg-1", "seg-2"), (String) null);
         verify(refundRepository, never()).save(any(RefundType.class));
+    }
+
+    @Test
+    void createBookingWithPosOptionsCreatesConfirmedTicketImmediately() {
+        TripType trip = activeSingleSegmentTrip("trip-pos");
+
+        when(ticketRepository.findByIdempotencyKey("idem-pos")).thenReturn(Optional.empty());
+        when(tripRepository.findById("trip-pos")).thenReturn(Optional.of(trip));
+        when(currencyRepository.findById("cur-1")).thenReturn(Optional.of(currency("cur-1", "TND")));
+        when(seatReservationService.reserveSeats("trip-pos", List.of("seg-1"), null)).thenReturn(true);
+        when(ticketRepository.save(any(TicketType.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        TicketType ticket = bookingService.createBooking(
+                "trip-pos",
+                "A",
+                "B",
+                "pickup-a",
+                "dropoff-b",
+                "passenger-1",
+                "idem-pos",
+                "en-gb",
+                " 12 ",
+                "company-1",
+                "pos-1",
+                BookingCreateOptions.pos("agent-1", "pos-1"));
+
+        assertEquals(TicketStatusEnum.CONFIRMED, ticket.getStatus());
+        assertEquals("12", ticket.getSeatNo());
+        assertNull(ticket.getExpiresAt());
+        assertNotNull(ticket.getConfirmedAt());
+        verify(seatOccupancyService).reserveTicketSeat(ticket);
+        verify(bookingEmailNotifier).sendTicketConfirmationEmail(ticket.getId());
+    }
+
+    @Test
+    void confirmBookingRejectsExpiredHoldWithGoneException() {
+        TicketType expiredTicket = TicketType.builder()
+                .id("ticket-expired")
+                .status(TicketStatusEnum.EXPIRED)
+                .build();
+
+        when(ticketRepository.findById("ticket-expired")).thenReturn(Optional.of(expiredTicket));
+
+        GoneException error = assertThrows(
+                GoneException.class,
+                () -> bookingService.confirmBooking("ticket-expired"));
+
+        assertEquals("HOLD_EXPIRED", error.getCode());
     }
 
     @Test
@@ -299,20 +358,53 @@ class BookingServiceTest {
                 .build();
     }
 
-        private SegmentType segmentWithMissingPlaceRefs(String segmentId, int sequence, int basePrice) {
-                return SegmentType.builder()
-                                .segmentId(segmentId)
-                                .sequence(sequence)
-                                .basePrice(BigDecimal.valueOf(basePrice))
-                                .build();
-        }
+    private SegmentType segmentWithMissingPlaceRefs(String segmentId, int sequence, int basePrice) {
+        return SegmentType.builder()
+                .segmentId(segmentId)
+                .sequence(sequence)
+                .basePrice(BigDecimal.valueOf(basePrice))
+                .build();
+    }
 
-        private StopType stop(String placeId, int sequence, boolean boardingAllowed, boolean droppingAllowed) {
-                return StopType.builder()
-                                .placeId(placeId)
-                                .sequence(sequence)
-                                .boardingAllowed(boardingAllowed)
-                                .droppingAllowed(droppingAllowed)
-                                .build();
-        }
+    private TripType activeSingleSegmentTrip(String tripId) {
+        return TripType.builder()
+                .id(tripId)
+                .status(TripStatusEnum.ACTIVE)
+                .target(new TargetInput("company-1", null))
+                .currency(TripCurrency.builder().currencyId("cur-1").build())
+                .stopSchedule(List.of(
+                        stop("A", 1, true, false),
+                        stop("B", 2, false, true)))
+                .segments(List.of(segment("seg-1", 1, "A", "B", 12)))
+                .pickupPoints(List.of(PickupPointType.builder()
+                        .pointId("pickup-a")
+                        .placeId("A")
+                        .address("Pickup A")
+                        .active(true)
+                        .build()))
+                .dropoffPoints(List.of(DropoffPointType.builder()
+                        .pointId("dropoff-b")
+                        .placeId("B")
+                        .address("Dropoff B")
+                        .active(true)
+                        .build()))
+                .build();
+    }
+
+    private CurrencyType currency(String id, String code) {
+        CurrencyType currency = new CurrencyType();
+        currency.setId(id);
+        currency.setCode(code);
+        currency.setName(code);
+        return currency;
+    }
+
+    private StopType stop(String placeId, int sequence, boolean boardingAllowed, boolean droppingAllowed) {
+        return StopType.builder()
+                .placeId(placeId)
+                .sequence(sequence)
+                .boardingAllowed(boardingAllowed)
+                .droppingAllowed(droppingAllowed)
+                .build();
+    }
 }

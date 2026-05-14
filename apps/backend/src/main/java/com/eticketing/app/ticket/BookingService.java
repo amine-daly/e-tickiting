@@ -8,8 +8,10 @@ import com.eticketing.app.ticket.dto.GroupSeatUpdateRequest;
 import com.eticketing.app.trip.*;
 import com.eticketing.app.web.error.ApiExceptions.BadRequestException;
 import com.eticketing.app.web.error.ApiExceptions.ConflictException;
+import com.eticketing.app.web.error.ApiExceptions.GoneException;
 import com.eticketing.app.web.error.ApiExceptions.NotFoundException;
 import lombok.RequiredArgsConstructor;
+import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
@@ -24,6 +26,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import java.util.UUID;
 
 /**
  * Booking orchestrator — TRIP_SPEC section 10.
@@ -47,6 +50,7 @@ public class BookingService {
     private final TicketRepository ticketRepository;
     private final OrderRepository orderRepository;
     private final SeatReservationService seatReservationService;
+    private final SeatOccupancyService seatOccupancyService;
     private final CurrencyRepository currencyRepository;
     private final BookingEmailNotifier bookingEmailNotifier;
 
@@ -72,6 +76,26 @@ public class BookingService {
             String pickupPointId, String dropoffPointId,
             String passengerId, String idempotencyKey, String lang, String seatNo,
             String companyId, String posId) {
+        return createBooking(
+                tripId,
+                originPlaceId,
+                destinationPlaceId,
+                pickupPointId,
+                dropoffPointId,
+                passengerId,
+                idempotencyKey,
+                lang,
+                seatNo,
+                companyId,
+                posId,
+                BookingCreateOptions.legacyPending());
+    }
+
+    public TicketType createBooking(String tripId, String originPlaceId, String destinationPlaceId,
+            String pickupPointId, String dropoffPointId,
+            String passengerId, String idempotencyKey, String lang, String seatNo,
+            String companyId, String posId, BookingCreateOptions options) {
+        BookingCreateOptions effectiveOptions = options != null ? options : BookingCreateOptions.legacyPending();
 
         // ── 0. Idempotency check ───────────────────────────────────────
         Optional<TicketType> existing = ticketRepository.findByIdempotencyKey(idempotencyKey);
@@ -114,17 +138,22 @@ public class BookingService {
         // ── 5. Atomic CAS reserve ───────────────────────────────────────
         boolean reserved = seatReservationService.reserveSeats(tripId, segmentIds, expressSegmentId);
         if (!reserved) {
-            throw new ConflictException("SEGMENT_CAPACITY_EXCEEDED: no seats available on one or more segments");
+            throw new ConflictException("SEGMENT_CAPACITY_EXCEEDED", "SEGMENT_CAPACITY_EXCEEDED: no seats available on one or more segments");
         }
 
         // ── 6. Create PENDING ticket ────────────────────────────────────
+        TicketType ticket = null;
         try {
             Instant now = Instant.now();
-            Instant expiresAt = now.plusSeconds(SEAT_HOLD_SECONDS);
+            Instant expiresAt = effectiveOptions.usesExpiringHold()
+                    ? now.plusSeconds(effectiveOptions.holdSeconds())
+                    : null;
             String ticketCurrency = resolveTicketCurrency(trip);
             String ticketLanguage = TicketLanguage.fromCode(lang).getCode();
 
-            TicketType ticket = TicketType.builder()
+            TicketStatusEnum initialStatus = effectiveOptions.resolvedTicketStatus();
+            ticket = TicketType.builder()
+                    .id(UUID.randomUUID().toString())
                     .tripId(tripId)
                     .target(new TargetInput(resolvedCompanyId, posId))
                     .segmentIds(new ArrayList<>(segmentIds))
@@ -132,19 +161,35 @@ public class BookingService {
                     .pickupPointId(pickupPointId)
                     .dropoffPointId(dropoffPointId)
                     .passengerId(passengerId)
-                    .seatNo(seatNo)
+                    .seatNo(normalizeSeatNo(seatNo))
+                    .sourceChannel(effectiveOptions.sourceChannel())
+                    .bookedByUserId(effectiveOptions.bookedByUserId())
+                    .bookedByPosId(StringUtils.firstNonBlank(effectiveOptions.bookedByPosId(), posId))
+                    .paymentSessionId(effectiveOptions.paymentSessionId())
+                    .paymentReference(effectiveOptions.paymentReference())
+                    .paymentStatus(effectiveOptions.paymentStatus())
                     .appliedPrice(appliedPrice)
                     .currency(ticketCurrency)
                     .lang(ticketLanguage)
-                    .status(TicketStatusEnum.PENDING)
+                    .status(initialStatus)
                     .idempotencyKey(idempotencyKey)
                     .expiresAt(expiresAt)
+                    .confirmedAt(initialStatus == TicketStatusEnum.CONFIRMED ? now : null)
                     .build();
 
-            return ticketRepository.save(ticket);
+            seatOccupancyService.reserveTicketSeat(ticket);
+            TicketType saved = ticketRepository.save(ticket);
+            if (saved.getStatus() == TicketStatusEnum.CONFIRMED) {
+                bookingEmailNotifier.sendTicketConfirmationEmail(saved.getId());
+            }
+            return saved;
         } catch (Exception e) {
             // ── 7. Rollback CAS on DB error ─────────────────────────────
             LOG.error("Ticket creation failed, rolling back seat reservation for trip={}", tripId, e);
+            if (ticket != null) {
+                seatOccupancyService.releaseTicketSeat(ticket);
+                ticketRepository.deleteById(ticket.getId());
+            }
             seatReservationService.releaseSeats(tripId, segmentIds, expressSegmentId);
             throw e;
         }
@@ -165,8 +210,25 @@ public class BookingService {
             throw new ConflictException("INVALID_TICKET_STATE: seat can only be updated on PENDING tickets, current=" + ticket.getStatus());
         }
 
-        ticket.setSeatNo(seatNo);
-        TicketType saved = ticketRepository.save(ticket);
+        String previousSeatNo = ticket.getSeatNo();
+        String normalizedSeatNo = normalizeSeatNo(seatNo);
+        if (StringUtils.equals(previousSeatNo, normalizedSeatNo)) {
+            return ticket;
+        }
+
+        ticket.setSeatNo(normalizedSeatNo);
+        seatOccupancyService.releaseTicketSeat(ticket);
+
+        TicketType saved;
+        try {
+            seatOccupancyService.reserveTicketSeat(ticket);
+            saved = ticketRepository.save(ticket);
+        } catch (RuntimeException ex) {
+            seatOccupancyService.releaseTicketSeat(ticket);
+            ticket.setSeatNo(previousSeatNo);
+            seatOccupancyService.reserveTicketSeat(ticket);
+            throw ex;
+        }
 
         if (saved.getOrderId() != null && !saved.getOrderId().isBlank()) {
             orderRepository.findById(saved.getOrderId()).ifPresent(order -> {
@@ -209,15 +271,16 @@ public class BookingService {
         Set<String> seenSeatNos = new HashSet<>();
         Map<String, String> seatByTicketId = new HashMap<>();
         List<TicketType> changedTickets = new ArrayList<>();
+        Map<String, String> previousSeatNos = new HashMap<>();
 
         for (GroupSeatUpdateRequest.SeatAssignment assignment : req.getAssignments()) {
             String ticketId = assignment.getTicketId();
-            String seatNo = assignment.getSeatNo() != null ? assignment.getSeatNo().trim() : "";
+            String seatNo = normalizeSeatNo(assignment.getSeatNo());
 
             if (!seenTicketIds.add(ticketId)) {
                 throw new BadRequestException("DUPLICATE_TICKET_ASSIGNMENT: duplicate seat assignment for ticket " + ticketId);
             }
-            if (seatNo.isBlank()) {
+            if (seatNo == null) {
                 throw new BadRequestException("INVALID_SEAT_NO: seatNo must not be blank");
             }
             if (!seenSeatNos.add(seatNo)) {
@@ -234,13 +297,25 @@ public class BookingService {
 
             seatByTicketId.put(ticketId, seatNo);
             if (!seatNo.equals(ticket.getSeatNo())) {
+                previousSeatNos.put(ticket.getId(), ticket.getSeatNo());
                 ticket.setSeatNo(seatNo);
                 changedTickets.add(ticket);
             }
         }
 
         if (!changedTickets.isEmpty()) {
-            ticketRepository.saveAll(changedTickets);
+            seatOccupancyService.releaseTicketSeats(changedTickets);
+            try {
+                seatOccupancyService.reserveTicketSeats(changedTickets);
+                ticketRepository.saveAll(changedTickets);
+            } catch (RuntimeException ex) {
+                seatOccupancyService.releaseTicketSeats(changedTickets);
+                for (TicketType ticket : changedTickets) {
+                    ticket.setSeatNo(previousSeatNos.get(ticket.getId()));
+                }
+                seatOccupancyService.reserveTicketSeats(changedTickets);
+                throw ex;
+            }
         }
 
         boolean orderChanged = false;
@@ -263,7 +338,7 @@ public class BookingService {
                 .orElseThrow(() -> new NotFoundException("Ticket not found: " + ticketId));
 
         if (ticket.getStatus() == TicketStatusEnum.EXPIRED) {
-            throw new ConflictException("TICKET_EXPIRED: cannot confirm an expired ticket — seats already released");
+            throw new GoneException("HOLD_EXPIRED", "HOLD_EXPIRED: cannot confirm an expired ticket — seats already released");
         }
         if (ticket.getStatus() != TicketStatusEnum.PENDING) {
             throw new ConflictException("INVALID_TICKET_TRANSITION: ticket is " + ticket.getStatus() + ", expected PENDING");
@@ -313,6 +388,7 @@ public class BookingService {
             ticket.setStatus(TicketStatusEnum.EXPIRED);
             ticket.setExpiresAt(Instant.now());
             TicketType saved = ticketRepository.save(ticket);
+            seatOccupancyService.releaseTicketSeat(ticket);
             seatReservationService.releaseSeats(ticket.getTripId(), ticket.getSegmentIds(), ticket.getExpressSegmentId());
             LOG.info("Pending ticket {} cancelled via expiry path - released {} segments on trip {}",
                     ticketId, ticket.getSegmentIds().size(), ticket.getTripId());
@@ -518,6 +594,11 @@ public class BookingService {
      * passenger). Seat inventory is locked atomically for the entire group.
      */
     public OrderType createGroupBooking(GroupBookingRequest req, String companyId, String posId) {
+        return createGroupBooking(req, companyId, posId, BookingCreateOptions.legacyPending());
+    }
+
+    public OrderType createGroupBooking(GroupBookingRequest req, String companyId, String posId, BookingCreateOptions options) {
+        BookingCreateOptions effectiveOptions = options != null ? options : BookingCreateOptions.legacyPending();
 
         // ── 0. Idempotency ──────────────────────────────────────────────
         Optional<OrderType> existingOrder = orderRepository.findByIdempotencyKey(req.getIdempotencyKey());
@@ -541,7 +622,7 @@ public class BookingService {
 
         // ── 2. Resolve segment chain ────────────────────────────────────
         List<String> segmentIds = resolveSegmentChain(
-            trip,
+                trip,
                 req.getOriginPlaceId(),
                 req.getDestinationPlaceId());
         if (segmentIds.isEmpty()) {
@@ -558,26 +639,32 @@ public class BookingService {
         // ── 4. Validate pickup/dropoff ──────────────────────────────────
         validatePickupPoint(trip, req.getPickupPointId(), req.getOriginPlaceId());
         validateDropoffPoint(trip, req.getDropoffPointId(), req.getDestinationPlaceId());
+        validateRequestedSeats(req.getPassengers());
 
         int passengerCount = req.getPassengers().size();
 
         // ── 5. Atomic CAS reserve for the entire group ──────────────────
         boolean reserved = seatReservationService.reserveSeats(req.getTripId(), segmentIds, expressSegmentId, passengerCount);
         if (!reserved) {
-            throw new ConflictException("SEGMENT_CAPACITY_EXCEEDED: not enough seats for " + passengerCount + " passengers");
+            throw new ConflictException("SEGMENT_CAPACITY_EXCEEDED", "SEGMENT_CAPACITY_EXCEEDED: not enough seats for " + passengerCount + " passengers");
         }
 
         // ── 6. Create individual tickets + order ────────────────────────
+        String orderId = UUID.randomUUID().toString();
+        List<TicketType> tickets = new ArrayList<>();
         try {
             Instant now = Instant.now();
-            Instant expiresAt = now.plusSeconds(SEAT_HOLD_SECONDS);
+            Instant expiresAt = effectiveOptions.usesExpiringHold()
+                    ? now.plusSeconds(effectiveOptions.holdSeconds())
+                    : null;
             String ticketCurrency = resolveTicketCurrency(trip);
             String ticketLanguage = TicketLanguage.fromCode(req.getLang()).getCode();
             BigDecimal totalPrice = unitPrice.multiply(BigDecimal.valueOf(passengerCount));
             String finalExpressSegmentId = expressSegmentId;
+            TicketStatusEnum initialTicketStatus = effectiveOptions.resolvedTicketStatus();
+            OrderStatusEnum initialOrderStatus = effectiveOptions.resolvedOrderStatus();
 
             // Create tickets
-            List<TicketType> tickets = new ArrayList<>();
             List<OrderType.OrderPassenger> orderPassengers = new ArrayList<>();
             int guestIndex = 0;
             for (GroupBookingRequest.PassengerEntry pe : req.getPassengers()) {
@@ -585,9 +672,13 @@ public class BookingService {
                 String idempKey = isGuest
                         ? req.getIdempotencyKey() + ":guest:" + guestIndex++
                         : req.getIdempotencyKey() + ":" + pe.getPassengerId();
+                String ticketId = UUID.randomUUID().toString();
+                String normalizedSeatNo = normalizeSeatNo(pe.getSeatNo());
 
                 TicketType ticket = TicketType.builder()
+                        .id(ticketId)
                         .tripId(req.getTripId())
+                        .orderId(orderId)
                         .target(new TargetInput(resolvedCompanyId, posId))
                         .segmentIds(new ArrayList<>(segmentIds))
                         .expressSegmentId(finalExpressSegmentId)
@@ -596,13 +687,20 @@ public class BookingService {
                         .passengerId(isGuest ? null : pe.getPassengerId())
                         .guestFirstName(isGuest ? pe.getFirstName() : null)
                         .guestLastName(isGuest ? pe.getLastName() : null)
-                        .seatNo(pe.getSeatNo())
+                        .seatNo(normalizedSeatNo)
+                        .sourceChannel(effectiveOptions.sourceChannel())
+                        .bookedByUserId(effectiveOptions.bookedByUserId())
+                        .bookedByPosId(StringUtils.firstNonBlank(effectiveOptions.bookedByPosId(), posId))
+                        .paymentSessionId(effectiveOptions.paymentSessionId())
+                        .paymentReference(effectiveOptions.paymentReference())
+                        .paymentStatus(effectiveOptions.paymentStatus())
                         .appliedPrice(unitPrice)
                         .currency(ticketCurrency)
                         .lang(ticketLanguage)
-                        .status(TicketStatusEnum.PENDING)
+                        .status(initialTicketStatus)
                         .idempotencyKey(idempKey)
                         .expiresAt(expiresAt)
+                        .confirmedAt(initialTicketStatus == TicketStatusEnum.CONFIRMED ? now : null)
                         .build();
                 tickets.add(ticket);
 
@@ -610,41 +708,47 @@ public class BookingService {
                         .passengerId(isGuest ? null : pe.getPassengerId())
                         .firstName(pe.getFirstName())
                         .lastName(pe.getLastName())
-                        .seatNo(pe.getSeatNo())
+                        .seatNo(normalizedSeatNo)
+                        .ticketId(ticketId)
                         .build());
             }
-            List<TicketType> savedTickets = ticketRepository.saveAll(tickets);
-            List<String> ticketIds = savedTickets.stream().map(TicketType::getId).toList();
-
-            // Link ticket IDs into order passengers
-            for (int i = 0; i < orderPassengers.size(); i++) {
-                orderPassengers.get(i).setTicketId(ticketIds.get(i));
-            }
+            List<String> ticketIds = tickets.stream().map(TicketType::getId).toList();
+            seatOccupancyService.reserveTicketSeats(tickets);
+            ticketRepository.saveAll(tickets);
 
             // Create order
             OrderType order = OrderType.builder()
+                    .id(orderId)
                     .tripId(req.getTripId())
                     .target(new TargetInput(resolvedCompanyId, posId))
                     .contactCustomerId(req.getContactCustomerId())
                     .ticketIds(new ArrayList<>(ticketIds))
                     .passengers(new ArrayList<>(orderPassengers))
                     .totalPrice(totalPrice)
+                    .sourceChannel(effectiveOptions.sourceChannel())
+                    .bookedByUserId(effectiveOptions.bookedByUserId())
+                    .bookedByPosId(StringUtils.firstNonBlank(effectiveOptions.bookedByPosId(), posId))
+                    .paymentSessionId(effectiveOptions.paymentSessionId())
+                    .paymentReference(effectiveOptions.paymentReference())
+                    .paymentStatus(effectiveOptions.paymentStatus())
                     .currency(ticketCurrency)
-                    .status(OrderStatusEnum.PENDING)
+                    .status(initialOrderStatus)
                     .idempotencyKey(req.getIdempotencyKey())
                     .expiresAt(expiresAt)
+                    .confirmedAt(initialOrderStatus == OrderStatusEnum.CONFIRMED ? now : null)
                     .build();
             OrderType savedOrder = orderRepository.save(order);
 
-            // Back-link orderId on tickets
-            for (TicketType t : savedTickets) {
-                t.setOrderId(savedOrder.getId());
+            if (savedOrder.getStatus() == OrderStatusEnum.CONFIRMED) {
+                bookingEmailNotifier.sendOrderConfirmationEmail(savedOrder.getId());
             }
-            ticketRepository.saveAll(savedTickets);
 
             return savedOrder;
         } catch (Exception e) {
             LOG.error("Group booking failed, rolling back {} seats on trip={}", passengerCount, req.getTripId(), e);
+            seatOccupancyService.releaseTicketSeats(tickets);
+            ticketRepository.deleteAllById(tickets.stream().map(TicketType::getId).toList());
+            orderRepository.deleteById(orderId);
             seatReservationService.releaseSeats(req.getTripId(), segmentIds, expressSegmentId, passengerCount);
             throw e;
         }
@@ -661,7 +765,7 @@ public class BookingService {
                 .orElseThrow(() -> new NotFoundException("Order not found: " + orderId));
 
         if (order.getStatus() == OrderStatusEnum.EXPIRED) {
-            throw new ConflictException("ORDER_EXPIRED: cannot confirm an expired order");
+            throw new GoneException("HOLD_EXPIRED", "HOLD_EXPIRED: cannot confirm an expired order");
         }
         if (order.getStatus() != OrderStatusEnum.PENDING) {
             throw new ConflictException("INVALID_ORDER_TRANSITION: order is " + order.getStatus() + ", expected PENDING");
@@ -714,6 +818,7 @@ public class BookingService {
             ticketRepository.saveAll(tickets);
 
             if (!expiredTickets.isEmpty()) {
+                seatOccupancyService.releaseTicketSeats(expiredTickets);
                 seatReservationService.releaseReservations(order.getTripId(), expiredTickets);
             }
 
@@ -778,11 +883,13 @@ public class BookingService {
             ticket.setStatus(TicketStatusEnum.EXPIRED);
             ticket.setExpiresAt(now);
             ticketRepository.save(ticket);
+            seatOccupancyService.releaseTicketSeat(ticket);
             seatReservationService.releaseSeats(ticket.getTripId(), ticket.getSegmentIds(), ticket.getExpressSegmentId());
         } else if (ticket.getStatus() == TicketStatusEnum.CONFIRMED) {
             ticket.setStatus(TicketStatusEnum.CANCELLED);
             ticket.setCancelledAt(now);
             ticketRepository.save(ticket);
+            seatOccupancyService.releaseTicketSeat(ticket);
             seatReservationService.releaseSeats(ticket.getTripId(), ticket.getSegmentIds(), ticket.getExpressSegmentId());
 
             RefundType refund = RefundType.builder()
@@ -843,5 +950,39 @@ public class BookingService {
     private OrderStatusEnum resolveActiveOrderStatus(List<TicketType> activeTickets) {
         boolean hasPending = activeTickets.stream().anyMatch(ticket -> ticket.getStatus() == TicketStatusEnum.PENDING);
         return hasPending ? OrderStatusEnum.PENDING : OrderStatusEnum.CONFIRMED;
+    }
+
+    public List<String> getRouteOccupiedSeats(String tripId, String originPlaceId, String destinationPlaceId) {
+        TripType trip = tripRepository.findById(tripId)
+                .orElseThrow(() -> new NotFoundException("Trip not found: " + tripId));
+
+        List<String> selectedSegmentIds = resolveSegmentChain(trip, originPlaceId, destinationPlaceId);
+        if (selectedSegmentIds.isEmpty()) {
+            throw new BadRequestException(
+                    "NO_SEGMENT_CHAIN: no continuous segment path from " + originPlaceId + " to " + destinationPlaceId);
+        }
+
+        return seatOccupancyService.findOccupiedSeatsForSegments(tripId, selectedSegmentIds);
+    }
+
+    private void validateRequestedSeats(List<GroupBookingRequest.PassengerEntry> passengers) {
+        if (passengers == null || passengers.isEmpty()) {
+            return;
+        }
+
+        Set<String> seenSeatNos = new HashSet<>();
+        for (GroupBookingRequest.PassengerEntry passenger : passengers) {
+            String seatNo = normalizeSeatNo(passenger.getSeatNo());
+            if (seatNo == null) {
+                continue;
+            }
+            if (!seenSeatNos.add(seatNo)) {
+                throw new BadRequestException("DUPLICATE_SEAT_ASSIGNMENT: seat " + seatNo + " is assigned more than once");
+            }
+        }
+    }
+
+    private String normalizeSeatNo(String seatNo) {
+        return StringUtils.trimToNull(seatNo);
     }
 }

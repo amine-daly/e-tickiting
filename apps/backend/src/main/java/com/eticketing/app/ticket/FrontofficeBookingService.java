@@ -3,8 +3,6 @@ package com.eticketing.app.ticket;
 import com.eticketing.app.ticket.dto.FrontofficeCreateHoldRequest;
 import com.eticketing.app.ticket.dto.FrontofficeHoldResponse;
 import com.eticketing.app.ticket.dto.GroupBookingRequest;
-import com.eticketing.app.trip.TripType;
-import com.eticketing.app.trip.TripTypeRepository;
 import com.eticketing.app.user.AppEnum;
 import com.eticketing.app.user.RoleEnum;
 import com.eticketing.app.user.UserType;
@@ -33,31 +31,34 @@ public class FrontofficeBookingService {
     private final BookingService bookingService;
     private final TicketRepository ticketRepository;
     private final OrderRepository orderRepository;
-    private final TripTypeRepository tripRepository;
     private final RefundRepository refundRepository;
     private final UserTypeRepository userRepository;
     private final PasswordEncoder passwordEncoder;
 
-    public FrontofficeHoldResponse createHold(FrontofficeCreateHoldRequest req) {
+    public FrontofficeHoldResponse createBooking(FrontofficeCreateHoldRequest req) {
         validateSeatSelections(req);
 
         UserType contactUser = resolveOrCreateContactUser(req.getContact());
-        if (req.getPassengers() == null || req.getPassengers().isEmpty()) {
-            TicketType ticket = bookingService.createBooking(
-                    req.getTripId(),
-                    req.getOriginPlaceId(),
-                    req.getDestinationPlaceId(),
-                    req.getPickupPointId(),
-                    req.getDropoffPointId(),
-                    contactUser.getId(),
-                    req.getHoldToken(),
-                    req.getLang(),
-                    normalizeSeatNo(req.getContact().getSeatNo()),
-                    null,
-                    null);
-            return toSingleHoldResponse(ticket, contactUser);
-        }
+        TicketType ticket = bookingService.createBooking(
+                req.getTripId(),
+                req.getOriginPlaceId(),
+                req.getDestinationPlaceId(),
+                req.getPickupPointId(),
+                req.getDropoffPointId(),
+                contactUser.getId(),
+                req.getHoldToken(),
+                req.getLang(),
+                normalizeSeatNo(req.getContact().getSeatNo()),
+                null,
+                null,
+                BookingCreateOptions.frontoffice());
+        return toSingleHoldResponse(ticket, contactUser);
+    }
 
+    public FrontofficeHoldResponse createGroupBooking(FrontofficeCreateHoldRequest req) {
+        validateSeatSelections(req);
+
+        UserType contactUser = resolveOrCreateContactUser(req.getContact());
         GroupBookingRequest groupReq = new GroupBookingRequest();
         groupReq.setTripId(req.getTripId());
         groupReq.setOriginPlaceId(req.getOriginPlaceId());
@@ -69,9 +70,16 @@ public class FrontofficeBookingService {
         groupReq.setLang(req.getLang());
         groupReq.setPassengers(buildPassengers(req, contactUser));
 
-        OrderType order = bookingService.createGroupBooking(groupReq, null, null);
+        OrderType order = bookingService.createGroupBooking(groupReq, null, null, BookingCreateOptions.frontoffice());
         List<TicketType> tickets = ticketRepository.findByOrderId(order.getId());
         return toGroupHoldResponse(order, tickets, contactUser);
+    }
+
+    public FrontofficeHoldResponse createHold(FrontofficeCreateHoldRequest req) {
+        if (req.getPassengers() == null || req.getPassengers().isEmpty()) {
+            return createBooking(req);
+        }
+        return createGroupBooking(req);
     }
 
     public FrontofficeHoldResponse getHold(String holdToken) {
@@ -87,57 +95,58 @@ public class FrontofficeBookingService {
     public FrontofficeHoldResponse confirmHold(String holdToken) {
         ResolvedHold resolvedHold = resolveHold(holdToken);
         if (resolvedHold.isGroup()) {
-            OrderType savedOrder = bookingService.confirmOrder(resolvedHold.order().getId());
-            List<TicketType> tickets = ticketRepository.findByOrderId(savedOrder.getId());
-            UserType contactUser = getUserById(savedOrder.getContactCustomerId());
-            return toGroupHoldResponse(savedOrder, tickets, contactUser);
+            return confirmOrder(resolvedHold.order().getId());
         }
-
-        TicketType savedTicket = bookingService.confirmBooking(resolvedHold.ticket().getId());
-        UserType contactUser = getUserById(savedTicket.getPassengerId());
-        return toSingleHoldResponse(savedTicket, contactUser);
+        return confirmBooking(resolvedHold.ticket().getId());
     }
 
     public FrontofficeHoldResponse cancelHold(String holdToken) {
         ResolvedHold resolvedHold = resolveHold(holdToken);
         if (resolvedHold.isGroup()) {
-            OrderType savedOrder = bookingService.cancelOrder(resolvedHold.order().getId(), refundRepository);
-            List<TicketType> tickets = ticketRepository.findByOrderId(savedOrder.getId());
-            UserType contactUser = getUserById(savedOrder.getContactCustomerId());
-            return toGroupHoldResponse(savedOrder, tickets, contactUser);
+            return cancelOrder(resolvedHold.order().getId());
         }
-
-        TicketType savedTicket = bookingService.cancelBooking(resolvedHold.ticket().getId(), refundRepository);
-        UserType contactUser = getUserById(savedTicket.getPassengerId());
-        return toSingleHoldResponse(savedTicket, contactUser);
+        return cancelBooking(resolvedHold.ticket().getId());
     }
 
     public List<String> getOccupiedSeats(String tripId, String originPlaceId, String destinationPlaceId) {
-        TripType trip = tripRepository.findById(tripId)
-                .orElseThrow(() -> new NotFoundException("Trip not found: " + tripId));
-
-        List<String> selectedSegmentIds = bookingService.resolveSegmentChain(
-            trip,
-                originPlaceId,
-                destinationPlaceId);
-        if (selectedSegmentIds.isEmpty()) {
-            throw new BadRequestException(
-                    "NO_SEGMENT_CHAIN: no continuous segment path from "
-                            + originPlaceId + " to " + destinationPlaceId);
-        }
-
-        return ticketRepository.findByTripIdAndStatusIn(
-                        tripId,
-                        List.of(TicketStatusEnum.PENDING, TicketStatusEnum.CONFIRMED))
+        return ticketRepository.findOccupiedSeatsByTripId(tripId)
                 .stream()
                 .filter(ticket -> StringUtils.isNotBlank(ticket.getSeatNo()))
-                .filter(ticket -> ticket.getSegmentIds() != null
-                    && ticket.getSegmentIds().stream().anyMatch(selectedSegmentIds::contains))
                 .map(TicketType::getSeatNo)
                 .map(StringUtils::trim)
                 .distinct()
                 .sorted()
                 .toList();
+    }
+
+    public List<String> getRouteOccupiedSeats(String tripId, String originPlaceId, String destinationPlaceId) {
+        return bookingService.getRouteOccupiedSeats(tripId, originPlaceId, destinationPlaceId);
+    }
+
+    public FrontofficeHoldResponse confirmBooking(String ticketId) {
+        TicketType savedTicket = bookingService.confirmBooking(ticketId);
+        UserType contactUser = getUserById(savedTicket.getPassengerId());
+        return toSingleHoldResponse(savedTicket, contactUser);
+    }
+
+    public FrontofficeHoldResponse confirmOrder(String orderId) {
+        OrderType savedOrder = bookingService.confirmOrder(orderId);
+        List<TicketType> tickets = ticketRepository.findByOrderId(savedOrder.getId());
+        UserType contactUser = getUserById(savedOrder.getContactCustomerId());
+        return toGroupHoldResponse(savedOrder, tickets, contactUser);
+    }
+
+    public FrontofficeHoldResponse cancelBooking(String ticketId) {
+        TicketType savedTicket = bookingService.cancelBooking(ticketId, refundRepository);
+        UserType contactUser = getUserById(savedTicket.getPassengerId());
+        return toSingleHoldResponse(savedTicket, contactUser);
+    }
+
+    public FrontofficeHoldResponse cancelOrder(String orderId) {
+        OrderType savedOrder = bookingService.cancelOrder(orderId, refundRepository);
+        List<TicketType> tickets = ticketRepository.findByOrderId(savedOrder.getId());
+        UserType contactUser = getUserById(savedOrder.getContactCustomerId());
+        return toGroupHoldResponse(savedOrder, tickets, contactUser);
     }
 
     private List<GroupBookingRequest.PassengerEntry> buildPassengers(
@@ -212,6 +221,7 @@ public class FrontofficeBookingService {
     private FrontofficeHoldResponse toSingleHoldResponse(TicketType ticket, UserType contactUser) {
         return FrontofficeHoldResponse.builder()
                 .holdToken(ticket.getIdempotencyKey())
+                .orderId(ticket.getOrderId())
                 .groupBooking(false)
                 .tripId(ticket.getTripId())
                 .companyId(ticket.getTarget() != null ? ticket.getTarget().getCompany() : null)
@@ -273,6 +283,7 @@ public class FrontofficeBookingService {
 
         return FrontofficeHoldResponse.builder()
                 .holdToken(order.getIdempotencyKey())
+                .orderId(order.getId())
                 .groupBooking(true)
                 .tripId(order.getTripId())
                 .companyId(order.getTarget() != null ? order.getTarget().getCompany() : null)

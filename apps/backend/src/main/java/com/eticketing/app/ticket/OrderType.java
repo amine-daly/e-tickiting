@@ -77,6 +77,30 @@ public class OrderType {
     private BigDecimal totalPrice;
 
     /**
+     * Channel that created the booking, e.g. POS or FRONTOFFICE.
+     */
+    private String sourceChannel;
+
+    /**
+     * Authenticated agent or user that initiated the booking.
+     */
+    private String bookedByUserId;
+
+    /**
+     * POS terminal attribution captured at booking time.
+     */
+    private String bookedByPosId;
+
+    /**
+     * Payment session metadata for frontoffice flows.
+     */
+    private String paymentSessionId;
+
+    private String paymentReference;
+
+    private String paymentStatus;
+
+    /**
      * Currency snapshot — same as trip currency.
      */
     private String currency;

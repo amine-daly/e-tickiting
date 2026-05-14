@@ -1,7 +1,7 @@
 import { Component, OnDestroy, OnInit } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { CommonModule } from '@angular/common';
-import { Subject, takeUntil } from 'rxjs';
+import { Subject, Subscription, interval, takeUntil } from 'rxjs';
 
 import { TripService } from '../bus/trip.service';
 import { BookingService } from '../../../core/services/booking.service';
@@ -25,6 +25,7 @@ import {
 })
 export class SeatSelectComponent implements OnInit, OnDestroy {
   private destroy$ = new Subject<void>();
+  private seatPollingSubscription: Subscription | null = null;
   readonly LayoutElementType = {
     SEAT: 'SEAT',
     DRIVER: 'DRIVER',
@@ -96,7 +97,8 @@ export class SeatSelectComponent implements OnInit, OnDestroy {
       pickupPointId: this.pickupPointId,
       dropoffPointId: this.dropoffPointId,
       displayPrice: this.displayPrice,
-      currencyCode: this.trip.currency?.code || this.routeAvailability?.currencyCode || '',
+      currencyCode:
+        this.trip.currency?.code || this.routeAvailability?.currencyCode || '',
       passengerCount: this.passengerCount,
       selectedSeatNos: [...this.selectedSeatNos],
     };
@@ -155,6 +157,7 @@ export class SeatSelectComponent implements OnInit, OnDestroy {
             : 0;
           this.setPassengerCount(this.passengerCount);
           this.loadOccupiedSeats();
+          this.startSeatPolling();
         },
         error: () => {
           this.routeAvailability = null;
@@ -162,6 +165,7 @@ export class SeatSelectComponent implements OnInit, OnDestroy {
           this.availableSeats = 0;
           this.occupiedSeats = [];
           this.selectedSeatNos = [];
+          this.stopSeatPolling();
         },
       });
   }
@@ -200,7 +204,11 @@ export class SeatSelectComponent implements OnInit, OnDestroy {
   }
 
   isSeatOccupied(seatNo: string | null | undefined): boolean {
-    return !!seatNo && this.occupiedSeats.includes(seatNo);
+    return (
+      !!seatNo &&
+      this.occupiedSeats.includes(seatNo) &&
+      !this.isSeatSelected(seatNo)
+    );
   }
 
   isSeatSelected(seatNo: string | null | undefined): boolean {
@@ -208,7 +216,11 @@ export class SeatSelectComponent implements OnInit, OnDestroy {
   }
 
   get canContinue(): boolean {
-    if (!this.trip || this.availableSeats <= 0 || this.routeAvailability?.sellable === false) {
+    if (
+      !this.trip ||
+      this.availableSeats <= 0 ||
+      this.routeAvailability?.sellable === false
+    ) {
       return false;
     }
 
@@ -220,9 +232,11 @@ export class SeatSelectComponent implements OnInit, OnDestroy {
   }
 
   get hasVisualLayout(): boolean {
-    return !!this.layoutTemplate &&
+    return (
+      !!this.layoutTemplate &&
       ((this.layoutTemplate.lowerDeck?.length || 0) > 0 ||
-        (this.layoutTemplate.upperDeck?.length || 0) > 0);
+        (this.layoutTemplate.upperDeck?.length || 0) > 0)
+    );
   }
 
   get layoutTemplate(): BusLayoutTemplate | null {
@@ -264,13 +278,21 @@ export class SeatSelectComponent implements OnInit, OnDestroy {
   }
 
   trackByDeckElement(index: number, element: BusLayoutElement): string {
-    return element.seatNo || `${element.type || 'EMPTY'}-${element.gridX}-${element.gridY}-${index}`;
+    return (
+      element.seatNo ||
+      `${element.type || 'EMPTY'}-${element.gridX}-${element.gridY}-${index}`
+    );
   }
 
   private loadOccupiedSeats(): void {
-    if (!this.trip || !this.originPlaceId || !this.destPlaceId || !this.hasVisualLayout) {
+    if (
+      !this.trip ||
+      !this.originPlaceId ||
+      !this.destPlaceId ||
+      !this.hasVisualLayout
+    ) {
       this.occupiedSeats = [];
-      this.selectedSeatNos = [];
+      this.stopSeatPolling();
       return;
     }
 
@@ -282,9 +304,6 @@ export class SeatSelectComponent implements OnInit, OnDestroy {
         next: (occupiedSeats) => {
           this.loadingOccupiedSeats = false;
           this.occupiedSeats = occupiedSeats || [];
-          this.selectedSeatNos = this.selectedSeatNos.filter(
-            (seatNo) => !this.occupiedSeats.includes(seatNo),
-          );
         },
         error: () => {
           this.loadingOccupiedSeats = false;
@@ -307,7 +326,24 @@ export class SeatSelectComponent implements OnInit, OnDestroy {
   }
 
   ngOnDestroy(): void {
+    this.stopSeatPolling();
     this.destroy$.next();
     this.destroy$.complete();
+  }
+
+  private startSeatPolling(): void {
+    this.stopSeatPolling();
+    if (!this.hasVisualLayout) {
+      return;
+    }
+
+    this.seatPollingSubscription = interval(10000)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe(() => this.loadOccupiedSeats());
+  }
+
+  private stopSeatPolling(): void {
+    this.seatPollingSubscription?.unsubscribe();
+    this.seatPollingSubscription = null;
   }
 }

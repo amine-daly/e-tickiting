@@ -34,38 +34,6 @@
         </div>
       </div>
 
-      <!-- ─── Countdown Banner (FlixBus-style persistent timer) ─── -->
-      <div
-        *ngIf="pendingBooking && !booked"
-        class="alert d-flex align-items-center gap-3 py-3 mb-4"
-        [class.alert-warning]="!countdownExpired"
-        [class.alert-danger]="countdownExpired"
-      >
-        <i
-          class="ki-duotone ki-timer fs-2"
-          [class.text-warning]="!countdownExpired"
-          [class.text-danger]="countdownExpired"
-        >
-          <span class="path1"></span><span class="path2"></span
-          ><span class="path3"></span>
-        </i>
-        <div class="flex-grow-1">
-          <div class="fw-semibold small">
-            {{ "TICKETS.SELL.SESSION_TIMER" | translate }}
-          </div>
-          <div class="text-muted small">
-            {{ "TICKETS.SELL.PENDING_MESSAGE" | translate }}
-          </div>
-        </div>
-        <div
-          class="fs-3 fw-bolder font-monospace"
-          [class.text-warning]="!countdownExpired"
-          [class.text-danger]="countdownExpired"
-        >
-          {{ countdownDisplay }}
-        </div>
-      </div>
-
       <!-- ─── Step 1: Trip Selection ─── -->
       <div *ngIf="step === 1">
         <div class="d-flex justify-content-between align-items-center mb-3">
@@ -643,21 +611,21 @@
           <button
             class="btn btn-light btn-lg"
             (click)="cancelPendingBooking()"
-            [disabled]="confirming"
+            [disabled]="booking"
           >
             {{ "COMMON.BUTTON.CANCEL" | translate }}
           </button>
           <button
             class="btn btn-success btn-lg"
-            [disabled]="confirming || countdownExpired"
+            [disabled]="booking"
             (click)="confirmPayment()"
           >
             <span
-              *ngIf="confirming"
+              *ngIf="booking"
               class="spinner-border spinner-border-sm me-1"
             ></span>
             {{
-              confirming
+              booking
                 ? ("TICKETS.SELL.CONFIRMING" | translate)
                 : ("TICKETS.SELL.CONFIRM_PAYMENT" | translate)
             }}

@@ -24,6 +24,7 @@ public class OrderExpiryWorker {
     private final OrderRepository orderRepository;
     private final TicketRepository ticketRepository;
     private final SeatReservationService seatReservationService;
+    private final SeatOccupancyService seatOccupancyService;
 
     /**
      * Runs every 60 seconds. Finds all PENDING orders whose expiresAt has
@@ -79,6 +80,7 @@ public class OrderExpiryWorker {
         ticketRepository.saveAll(tickets);
 
         if (!expiredTickets.isEmpty()) {
+            seatOccupancyService.releaseTicketSeats(expiredTickets);
             seatReservationService.releaseReservations(order.getTripId(), expiredTickets);
             LOG.info("EXPIRY_WORKER: released {} seats on trip {} for expired order {}",
                     expiredTickets.size(), order.getTripId(), order.getId());
@@ -95,6 +97,7 @@ public class OrderExpiryWorker {
         ticket.setExpiresAt(now);
         ticketRepository.save(ticket);
 
+        seatOccupancyService.releaseTicketSeat(ticket);
         seatReservationService.releaseSeats(ticket.getTripId(), ticket.getSegmentIds(), ticket.getExpressSegmentId());
         LOG.info("EXPIRY_WORKER: expired standalone ticket {} and released seats on trip {}",
                 ticket.getId(), ticket.getTripId());

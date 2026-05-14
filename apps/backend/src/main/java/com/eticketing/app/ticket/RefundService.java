@@ -23,6 +23,7 @@ public class RefundService {
     private final RefundRepository refundRepository;
     private final TicketRepository ticketRepository;
     private final SeatReservationService seatReservationService;
+    private final SeatOccupancyService seatOccupancyService;
 
     /**
      * REQUESTED → APPROVED: releases seats on refunded segments.
@@ -40,6 +41,7 @@ public class RefundService {
             TicketType ticket = ticketRepository.findById(refund.getTicketId())
                     .orElseThrow(() -> new NotFoundException("Ticket not found for refund: " + refund.getTicketId()));
 
+            seatOccupancyService.releaseTicketSeat(ticket);
             seatReservationService.releaseSeats(ticket.getTripId(), refund.getSegmentsRefunded(), ticket.getExpressSegmentId());
             refund.setSeatReleased(true);
             refund.setSeatReleasedAt(now);

@@ -12,6 +12,7 @@ import java.util.List;
 public class FrontofficeHoldResponse {
 
     private String holdToken;
+    private String orderId;
     private boolean groupBooking;
     private String tripId;
     private String companyId;

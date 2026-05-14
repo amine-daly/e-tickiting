@@ -20,7 +20,7 @@ export class BusResolver implements Resolve<BusType> {
     route: ActivatedRouteSnapshot,
     state: RouterStateSnapshot,
   ): Observable<BusType> {
-    return this.busService.getById(route.paramMap.get('busId')).pipe(
+    return this.busService.getBusById(route.paramMap.get('busId')).pipe(
       take(1),
       catchError((error) => {
         console.error(error);

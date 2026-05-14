@@ -27,6 +27,7 @@ public class TripCancellationHandler {
     private final TicketRepository ticketRepository;
     private final RefundRepository refundRepository;
     private final SeatReservationService seatReservationService;
+    private final SeatOccupancyService seatOccupancyService;
 
     /**
      * Processes all tickets for a cancelled trip.
@@ -43,6 +44,7 @@ public class TripCancellationHandler {
         }
         if (!pendingTickets.isEmpty()) {
             ticketRepository.saveAll(pendingTickets);
+            seatOccupancyService.releaseTicketSeats(pendingTickets);
             seatReservationService.releaseReservations(tripId, pendingTickets);
         }
         for (TicketType ticket : pendingTickets) {

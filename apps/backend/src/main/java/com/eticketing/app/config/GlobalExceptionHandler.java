@@ -39,7 +39,7 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(ConflictException.class)
     public ResponseEntity<ApiError> handleConflict(ConflictException ex, HttpServletRequest req) {
         return ResponseEntity.status(HttpStatus.CONFLICT)
-                .body(new ApiError(409, "Conflict", ex.getMessage(), req.getRequestURI(), null));
+                .body(new ApiError(409, "Conflict", ex.getMessage(), req.getRequestURI(), null, ex.getCode(), ex.getConflicts()));
     }
 
     @ExceptionHandler(UnauthorizedException.class)
@@ -64,6 +64,12 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ApiError> handleBadRequest(BadRequestException ex, HttpServletRequest req) {
         return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                 .body(new ApiError(400, "Bad Request", ex.getMessage(), req.getRequestURI(), null));
+    }
+
+    @ExceptionHandler(GoneException.class)
+    public ResponseEntity<ApiError> handleGone(GoneException ex, HttpServletRequest req) {
+        return ResponseEntity.status(HttpStatus.GONE)
+                .body(new ApiError(410, "Gone", ex.getMessage(), req.getRequestURI(), null, ex.getCode(), ex.getConflicts()));
     }
 
     @ExceptionHandler(DuplicateKeyException.class)

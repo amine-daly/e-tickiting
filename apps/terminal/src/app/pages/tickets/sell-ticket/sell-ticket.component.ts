@@ -5,6 +5,7 @@ import {
   OnDestroy,
   OnInit,
 } from '@angular/core';
+import { HttpErrorResponse } from '@angular/common/http';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
@@ -25,7 +26,8 @@ import {
   interval,
   map,
   switchMap,
-  takeWhile,
+  take,
+  of,
 } from 'rxjs';
 
 import { AlertService } from '../../../core/services/alert.service';
@@ -72,6 +74,7 @@ export class SellTicketComponent implements OnInit, OnDestroy {
   private destroy$ = new Subject<void>();
   private subscriptions = new Subscription();
   private customerSearch$ = new Subject<string>();
+  private seatPollingSubscription: Subscription | null = null;
 
   step = 1; // 1=trip, 2=passengers, 3=seat, 4=review
 
@@ -114,13 +117,7 @@ export class SellTicketComponent implements OnInit, OnDestroy {
   booked = false;
   bookingResult: BookingResponse | null = null;
   groupBookingResult: GroupBookingResponse | null = null;
-
-  // Countdown timer state (10-minute seat hold)
-  pendingBooking = false; // true after creating PENDING, before confirming
-  expiresAt: Date | null = null;
-  countdownDisplay = '';
-  countdownExpired = false;
-  confirming = false;
+  hasVisualLayout: boolean;
 
   constructor(
     private bookingService: BookingService,
@@ -329,70 +326,7 @@ export class SellTicketComponent implements OnInit, OnDestroy {
     // Reset seat assignments for all passengers
     this.passengers.forEach((p) => (p.seatNo = undefined));
     this.currentSeatAssignIndex = 0;
-
-    const originPlaceId = this.getSelectedPickupPlaceId() || '';
-    const destinationPlaceId = this.getSelectedDropoffPlaceId() || '';
-
-    this.booking = true;
-    this.cdr.markForCheck();
-
-    // ── Create PENDING booking (hold seats on segments) ──────────────
-    if (this.isGroupBooking) {
-      const groupReq: GroupBookingRequest = {
-        tripId: this.selectedTrip.id,
-        originPlaceId,
-        destinationPlaceId,
-        pickupPointId: this.selectedPickupId || '',
-        dropoffPointId: this.selectedDropoffId || '',
-        contactCustomerId: this.contactCustomer!.id,
-        idempotencyKey: uuid(),
-        passengers: this.passengers.map((p) => ({
-          passengerId: p.customer?.id || undefined,
-          firstName: p.isGuest ? p.firstName : p.customer?.firstName,
-          lastName: p.isGuest ? p.lastName : p.customer?.lastName,
-        })),
-      };
-
-      const sub = this.bookingService.createGroupBooking(groupReq).subscribe({
-        next: (res) => {
-          this.booking = false;
-          this.groupBookingResult = res;
-          this.startCountdown(res.expiresAt);
-          this.proceedToSeatOrReview();
-        },
-        error: () => {
-          this.booking = false;
-          this.cdr.markForCheck();
-          this.alert.error(this.t('TICKETS.SELL.ERROR'));
-        },
-      });
-      this.subscriptions.add(sub);
-    } else {
-      const p = this.passengers[0];
-      const request: BookingRequest = {
-        tripId: this.selectedTrip.id,
-        originPlaceId,
-        destinationPlaceId,
-        pickupPointId: this.selectedPickupId || '',
-        dropoffPointId: this.selectedDropoffId || '',
-        passengerId: p.customer!.id,
-        idempotencyKey: uuid(),
-      };
-      const sub = this.bookingService.createBooking(request).subscribe({
-        next: (res) => {
-          this.booking = false;
-          this.bookingResult = res;
-          this.startCountdown(res.expiresAt);
-          this.proceedToSeatOrReview();
-        },
-        error: () => {
-          this.booking = false;
-          this.cdr.markForCheck();
-          this.alert.error(this.t('TICKETS.SELL.ERROR'));
-        },
-      });
-      this.subscriptions.add(sub);
-    }
+    this.proceedToSeatOrReview();
   }
 
   /**
@@ -400,6 +334,8 @@ export class SellTicketComponent implements OnInit, OnDestroy {
    * or skip directly to review (step 4) if no layout.
    */
   private proceedToSeatOrReview(): void {
+    this.stopSeatAvailabilityPolling();
+
     const busId = this.selectedTrip?.bus?.busId;
     if (!busId) {
       this.busLayout = null;
@@ -413,43 +349,34 @@ export class SellTicketComponent implements OnInit, OnDestroy {
     this.step = 3;
     this.cdr.markForCheck();
 
-    const busSub = this.busService.getById(busId).subscribe({
-      next: (bus) => {
-        this.busLayout = bus?.layoutTemplate || null;
-        this.layoutLoading = false;
+    const busSub = this.busService
+      .getBusById(busId)
+      .pipe(
+        take(1),
+        switchMap((bus) => {
+          this.busLayout = bus?.layoutTemplate || null;
+          this.layoutLoading = false;
 
-        if (!this.busLayout) {
-          this.step = 4;
-        }
-        this.cdr.markForCheck();
-      },
-      error: () => {
-        this.busLayout = null;
-        this.layoutLoading = false;
-        this.step = 4;
-        this.cdr.markForCheck();
-      },
-    });
-    this.subscriptions.add(busSub);
-
-    const seatSub = this.bookingService
-      .getOccupiedSeats(this.selectedTrip!.id)
+          if (!this.busLayout) {
+            this.step = 4;
+          }
+          this.hasVisualLayout = !!this.busLayout;
+          this.startSeatAvailabilityPolling();
+          return of(bus);
+        }),
+      )
       .subscribe({
-        next: (seats) => {
-          this.occupiedSeats = seats || [];
+        next: (bus) => {
           this.cdr.markForCheck();
         },
         error: () => {
-          this.occupiedSeats = [];
+          this.busLayout = null;
+          this.layoutLoading = false;
+          this.step = 4;
           this.cdr.markForCheck();
         },
       });
-    this.subscriptions.add(seatSub);
-  }
-
-  /** Whether this booking uses visual seat selection */
-  get hasVisualLayout(): boolean {
-    return !!this.busLayout;
+    this.subscriptions.add(busSub);
   }
 
   selectSeat(seatNo: string | null | undefined): void {
@@ -480,7 +407,9 @@ export class SellTicketComponent implements OnInit, OnDestroy {
   }
 
   isSeatOccupied(seatNo: string): boolean {
-    return this.occupiedSeats.includes(seatNo);
+    return (
+      this.occupiedSeats.includes(seatNo) && !this.isSeatSelectedByGroup(seatNo)
+    );
   }
 
   /** Whether a seat is selected by any passenger in the current group. */
@@ -513,68 +442,13 @@ export class SellTicketComponent implements OnInit, OnDestroy {
 
   goToStep4(): void {
     if (this.hasVisualLayout && !this.allSeatsAssigned) return;
-    if (this.passengers.length === 0 || !this.selectedTrip || this.booking)
+    if (this.passengers.length === 0 || !this.selectedTrip || this.booking) {
       return;
-
-    // ── Update seat assignments on PENDING tickets ───────────────────
-    if (this.hasVisualLayout) {
-      this.booking = true;
-      this.cdr.markForCheck();
-
-      if (this.groupBookingResult) {
-        const assignments = this.buildGroupSeatAssignments();
-        if (!assignments.length) {
-          this.booking = false;
-          this.step = 4;
-          this.cdr.markForCheck();
-          return;
-        }
-
-        const sub = this.bookingService
-          .updateGroupSeats(this.groupBookingResult.orderId, { assignments })
-          .subscribe({
-            next: (res) => {
-              this.booking = false;
-              this.groupBookingResult = res;
-              this.step = 4;
-              this.cdr.markForCheck();
-            },
-            error: () => {
-              this.booking = false;
-              this.cdr.markForCheck();
-              this.alert.error(this.t('TICKETS.SELL.ERROR'));
-            },
-          });
-        this.subscriptions.add(sub);
-      } else if (this.bookingResult) {
-        const seatNo = this.passengers[0]?.seatNo;
-        if (seatNo) {
-          const sub = this.bookingService
-            .updateSeat(this.bookingResult.id, seatNo)
-            .subscribe({
-              next: (res) => {
-                this.booking = false;
-                this.bookingResult = res;
-                this.step = 4;
-                this.cdr.markForCheck();
-              },
-              error: () => {
-                this.booking = false;
-                this.cdr.markForCheck();
-                this.alert.error(this.t('TICKETS.SELL.ERROR'));
-              },
-            });
-          this.subscriptions.add(sub);
-        } else {
-          this.booking = false;
-          this.step = 4;
-          this.cdr.markForCheck();
-        }
-      }
-    } else {
-      this.step = 4;
-      this.cdr.markForCheck();
     }
+
+    this.stopSeatAvailabilityPolling();
+    this.step = 4;
+    this.cdr.markForCheck();
   }
 
   // ─── Step 1: Pickup/Dropoff change ───
@@ -659,144 +533,77 @@ export class SellTicketComponent implements OnInit, OnDestroy {
     this.subscriptions.add(sub);
   }
 
-  /** Start the countdown timer synced to expiresAt from server. */
-  private startCountdown(expiresAtStr: string): void {
-    this.expiresAt = new Date(expiresAtStr);
-    this.pendingBooking = true;
-    this.countdownExpired = false;
-    this.updateCountdownDisplay();
-
-    if (this.countdownExpired) {
-      this.onCountdownExpired();
-      return;
-    }
-
-    const sub = interval(1000)
-      .pipe(takeWhile(() => this.pendingBooking && !this.countdownExpired))
-      .subscribe(() => {
-        this.updateCountdownDisplay();
-        if (this.countdownExpired) {
-          this.onCountdownExpired();
-        }
-        this.cdr.markForCheck();
-      });
-    this.subscriptions.add(sub);
-  }
-
-  private updateCountdownDisplay(): void {
-    if (!this.expiresAt) {
-      this.countdownDisplay = '00:00';
-      return;
-    }
-    const remaining = Math.max(
-      0,
-      Math.floor((this.expiresAt.getTime() - Date.now()) / 1000),
-    );
-    if (remaining <= 0) {
-      this.countdownDisplay = '00:00';
-      this.countdownExpired = true;
-      return;
-    }
-    const mins = Math.floor(remaining / 60);
-    const secs = remaining % 60;
-    this.countdownDisplay = `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
-  }
-
-  private onCountdownExpired(): void {
-    // Cancel the pending booking on the backend to release held seats immediately
-    if (this.groupBookingResult) {
-      const sub = this.bookingService
-        .cancelOrder(this.groupBookingResult.orderId)
-        .subscribe({
-          next: () => this.loadTrips(),
-          error: () => this.loadTrips(),
-        });
-      this.subscriptions.add(sub);
-    } else if (this.bookingResult) {
-      const sub = this.bookingService
-        .cancelBooking(this.bookingResult.id)
-        .subscribe({
-          next: () => this.loadTrips(),
-          error: () => this.loadTrips(),
-        });
-      this.subscriptions.add(sub);
-    }
-    this.pendingBooking = false;
-    this.alert.error(this.t('TICKETS.SELL.SESSION_EXPIRED'));
-    this.resetBookingState();
-    this.step = 1;
-    this.cdr.markForCheck();
-  }
-
-  /** Confirm payment — calls the confirm API endpoint. */
   confirmPayment(): void {
-    if (this.confirming) return;
-    this.confirming = true;
+    if (this.booking || !this.selectedTrip) return;
+
+    const originPlaceId = this.getSelectedPickupPlaceId() || '';
+    const destinationPlaceId = this.getSelectedDropoffPlaceId() || '';
+    this.booking = true;
     this.cdr.markForCheck();
 
-    if (this.groupBookingResult) {
-      const sub = this.bookingService
-        .confirmOrder(this.groupBookingResult.orderId)
-        .subscribe({
-          next: (res) => {
-            this.confirming = false;
-            this.pendingBooking = false;
-            this.booked = true;
-            this.groupBookingResult = res;
-            this.loadTrips();
-            this.cdr.markForCheck();
-            this.alert.success(this.t('TICKETS.SELL.SUCCESS'));
-          },
-          error: () => {
-            this.confirming = false;
-            this.cdr.markForCheck();
-            this.alert.error(this.t('TICKETS.SELL.CONFIRM_ERROR'));
-          },
-        });
+    if (this.isGroupBooking) {
+      const groupReq: GroupBookingRequest = {
+        tripId: this.selectedTrip.id,
+        originPlaceId,
+        destinationPlaceId,
+        pickupPointId: this.selectedPickupId || '',
+        dropoffPointId: this.selectedDropoffId || '',
+        contactCustomerId: this.contactCustomer!.id,
+        idempotencyKey: uuid(),
+        passengers: this.passengers.map((p) => ({
+          passengerId: p.customer?.id || undefined,
+          firstName: p.isGuest ? p.firstName : p.customer?.firstName,
+          lastName: p.isGuest ? p.lastName : p.customer?.lastName,
+          seatNo: p.seatNo?.trim() || undefined,
+        })),
+      };
+
+      const sub = this.bookingService.createGroupBooking(groupReq).subscribe({
+        next: (res) => {
+          this.booking = false;
+          this.booked = true;
+          this.groupBookingResult = res;
+          this.loadTrips();
+          this.cdr.markForCheck();
+          this.alert.success(this.t('TICKETS.SELL.SUCCESS'));
+        },
+        error: (error) => {
+          this.handleBookingCreateError(error);
+        },
+      });
       this.subscriptions.add(sub);
-    } else if (this.bookingResult) {
-      const sub = this.bookingService
-        .confirmBooking(this.bookingResult.id)
-        .subscribe({
-          next: (res) => {
-            this.confirming = false;
-            this.pendingBooking = false;
-            this.booked = true;
-            this.bookingResult = res;
-            this.loadTrips();
-            this.cdr.markForCheck();
-            this.alert.success(this.t('TICKETS.SELL.SUCCESS'));
-          },
-          error: () => {
-            this.confirming = false;
-            this.cdr.markForCheck();
-            this.alert.error(this.t('TICKETS.SELL.CONFIRM_ERROR'));
-          },
-        });
+    } else {
+      const p = this.passengers[0];
+      const request: BookingRequest = {
+        tripId: this.selectedTrip.id,
+        originPlaceId,
+        destinationPlaceId,
+        pickupPointId: this.selectedPickupId || '',
+        dropoffPointId: this.selectedDropoffId || '',
+        passengerId: p.customer!.id,
+        idempotencyKey: uuid(),
+        seatNo: p.seatNo?.trim() || undefined,
+      };
+
+      const sub = this.bookingService.createBooking(request).subscribe({
+        next: (res) => {
+          this.booking = false;
+          this.booked = true;
+          this.bookingResult = res;
+          this.loadTrips();
+          this.cdr.markForCheck();
+          this.alert.success(this.t('TICKETS.SELL.SUCCESS'));
+        },
+        error: (error) => {
+          this.handleBookingCreateError(error);
+        },
+      });
       this.subscriptions.add(sub);
     }
   }
 
-  /** Cancel the pending booking (user-initiated). */
   cancelPendingBooking(): void {
-    if (this.groupBookingResult) {
-      const sub = this.bookingService
-        .cancelOrder(this.groupBookingResult.orderId)
-        .subscribe({
-          next: () => this.loadTrips(),
-          error: () => this.loadTrips(),
-        });
-      this.subscriptions.add(sub);
-    } else if (this.bookingResult) {
-      const sub = this.bookingService
-        .cancelBooking(this.bookingResult.id)
-        .subscribe({
-          next: () => this.loadTrips(),
-          error: () => this.loadTrips(),
-        });
-      this.subscriptions.add(sub);
-    }
-    this.pendingBooking = false;
+    this.stopSeatAvailabilityPolling();
     this.resetBookingState();
     this.step = 1;
     this.cdr.markForCheck();
@@ -805,10 +612,6 @@ export class SellTicketComponent implements OnInit, OnDestroy {
   private resetBookingState(): void {
     this.bookingResult = null;
     this.groupBookingResult = null;
-    this.expiresAt = null;
-    this.countdownDisplay = '';
-    this.countdownExpired = false;
-    this.confirming = false;
     this.booking = false;
     this.booked = false;
   }
@@ -823,21 +626,14 @@ export class SellTicketComponent implements OnInit, OnDestroy {
   }
 
   goBack(): void {
-    if (this.step === 3 && this.pendingBooking) {
-      // Going back from seat selection cancels the hold
-      this.cancelPendingBooking();
+    if (this.step === 4 && this.hasVisualLayout) {
+      this.step = 3;
+      this.startSeatAvailabilityPolling();
+      this.cdr.markForCheck();
       return;
     }
-    if (this.step === 4 && this.pendingBooking) {
-      // Go back to seat selection (keep the hold alive)
-      if (this.hasVisualLayout) {
-        this.step = 3;
-        this.cdr.markForCheck();
-        return;
-      }
-      // No visual layout — cancel hold and go to step 2
-      this.cancelPendingBooking();
-      return;
+    if (this.step === 3) {
+      this.stopSeatAvailabilityPolling();
     }
     if (this.step > 1) {
       this.step--;
@@ -978,29 +774,109 @@ export class SellTicketComponent implements OnInit, OnDestroy {
     const stops = [...trip.stopSchedule].sort(
       (a, b) => a.sequence - b.sequence,
     );
-    const first = stops[0]?.place?.city || stops[0]?.placeId || '-';
-    const last =
-      stops[stops.length - 1]?.place?.city ||
-      stops[stops.length - 1]?.placeId ||
-      '-';
-    if (first === last) return first;
-    return `${first} → ${last}`;
+    const names = stops.map((s) => (s.place?.city || s.placeId || '-').trim());
+    return names.join(' → ');
   }
 
   ngOnDestroy(): void {
-    // Cancel any pending booking hold to release seats immediately
-    if (this.pendingBooking) {
-      if (this.groupBookingResult) {
-        this.bookingService
-          .cancelOrder(this.groupBookingResult.orderId)
-          .subscribe();
-      } else if (this.bookingResult) {
-        this.bookingService.cancelBooking(this.bookingResult.id).subscribe();
-      }
-    }
+    this.stopSeatAvailabilityPolling();
     this.destroy$.next();
     this.destroy$.complete();
     this.subscriptions.unsubscribe();
+  }
+
+  private loadRouteOccupiedSeats(): void {
+    const tripId = this.selectedTrip?.id;
+    const originPlaceId = this.getSelectedPickupPlaceId();
+    const destinationPlaceId = this.getSelectedDropoffPlaceId();
+    if (
+      !tripId ||
+      !originPlaceId ||
+      !destinationPlaceId ||
+      !this.hasVisualLayout
+    ) {
+      this.occupiedSeats = [];
+      this.cdr.markForCheck();
+      return;
+    }
+
+    const sub = this.bookingService
+      .getRouteOccupiedSeats(tripId, originPlaceId, destinationPlaceId)
+      .subscribe({
+        next: (seats) => {
+          this.occupiedSeats = seats || [];
+          this.cdr.markForCheck();
+        },
+        error: () => {
+          this.occupiedSeats = [];
+          this.cdr.markForCheck();
+        },
+      });
+    this.subscriptions.add(sub);
+  }
+
+  private startSeatAvailabilityPolling(): void {
+    this.stopSeatAvailabilityPolling();
+    if (!this.hasVisualLayout) {
+      return;
+    }
+
+    this.loadRouteOccupiedSeats();
+    this.seatPollingSubscription = interval(10000).subscribe(() => {
+      if (this.step === 3) {
+        this.loadRouteOccupiedSeats();
+      }
+    });
+    this.subscriptions.add(this.seatPollingSubscription);
+  }
+
+  private stopSeatAvailabilityPolling(): void {
+    this.seatPollingSubscription?.unsubscribe();
+    this.seatPollingSubscription = null;
+  }
+
+  private handleBookingCreateError(error: unknown): void {
+    this.booking = false;
+
+    const conflicts = this.extractConflictingSeats(error);
+    if (conflicts.length > 0) {
+      this.clearConflictingSeats(conflicts);
+      this.currentSeatAssignIndex = this.passengers.findIndex((p) => !p.seatNo);
+      if (this.currentSeatAssignIndex < 0) {
+        this.currentSeatAssignIndex = 0;
+      }
+      this.step = this.hasVisualLayout ? 3 : this.step;
+      this.startSeatAvailabilityPolling();
+      this.cdr.markForCheck();
+      this.alert.error(
+        'Seat no longer available',
+        `Seat${conflicts.length > 1 ? 's' : ''} ${conflicts.join(', ')} ${conflicts.length > 1 ? 'are' : 'is'} no longer available. Please choose another seat.`,
+      );
+      return;
+    }
+
+    this.cdr.markForCheck();
+    this.alert.error(this.t('TICKETS.SELL.ERROR'));
+  }
+
+  private extractConflictingSeats(error: unknown): string[] {
+    const httpError = error as HttpErrorResponse | null;
+    const conflicts = Array.isArray(httpError?.error?.conflicts)
+      ? httpError?.error?.conflicts
+      : [];
+    return conflicts
+      .filter((seat): seat is string => typeof seat === 'string')
+      .map((seat) => seat.trim())
+      .filter((seat) => !!seat);
+  }
+
+  private clearConflictingSeats(conflicts: string[]): void {
+    const conflictingSet = new Set(conflicts);
+    this.passengers.forEach((passenger) => {
+      if (passenger.seatNo && conflictingSet.has(passenger.seatNo)) {
+        passenger.seatNo = undefined;
+      }
+    });
   }
 
   private t(key: string, params?: Record<string, unknown>): string {
