@@ -126,5 +126,5 @@ if check_port_in_use "$FRONTEND_HOST_PORT"; then
 fi
 
 echo "All checks passed — starting Docker Compose (file: $compose_file)" >&2
-docker buildx prune -f
+docker buildx prune --force 2>/dev/null || true
 docker compose --env-file "$env_file" -f "$compose_file" up -d --build --remove-orphans
