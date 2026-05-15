@@ -10,6 +10,8 @@ on:
       - "libs/**" # Shared helpers used by the backoffice build
       - "infra/**" # Docker and deploy assets
       - ".github/**" # Workflow changes themselves
+      - "scripts/**" # Deployment scripts
+
   pull_request:
     branches: [sandbox]
 
