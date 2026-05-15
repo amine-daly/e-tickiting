@@ -1,27 +1,30 @@
 <div class="app-header">
-    <div class="header-wrap d-flex justify-content-between align-items-center">
-        <div class="d-flex align-items-center">
-            <div routerLink="/" class="d-flex align-items-center cursor-pointer">
-                <i class="bi bi-bus-front me-2 app-header-icon"></i>
-                <span class="app-header-title">BusGo</span>
-            </div>
-        </div>
-        <div class="d-flex gap-3">
-            <a *ngIf="!(authenticated$ | async)" routerLink="/auth/login" class="btn header-btn">
-                <i class="bi bi-box-arrow-in-right fs-5"></i>
-            </a>
-            <a href="search.html" class="btn header-btn">
-                <i class="bi bi-search icon-md"></i>
-            </a>
-            <a href="notifications.html" class="btn header-btn">
-                <i class="bi bi-bell icon-md"></i>
-            </a>
-            <a href="settings.html" class="btn header-btn">
-                <i class="bi bi-person-circle icon-md"></i>
-            </a>
-            <a (click)="logout()" class="btn header-btn">
-                <i class="bi bi-box-arrow-right fs-5"></i>
-            </a>
-        </div>
+  <div class="header-wrap d-flex justify-content-between align-items-center">
+    <div class="d-flex align-items-center">
+      <div routerLink="/" class="d-flex align-items-center cursor-pointer">
+        <img [src]="logodark" alt="BusGo Logo" class="app-header-logo me-2" />
+      </div>
     </div>
+    <div class="d-flex gap-3">
+      <a
+        *ngIf="!(authenticated$ | async)"
+        routerLink="/auth/login"
+        class="btn header-btn"
+      >
+        <i class="bi bi-box-arrow-in-right fs-5"></i>
+      </a>
+      <a href="search.html" class="btn header-btn">
+        <i class="bi bi-search icon-md"></i>
+      </a>
+      <a href="notifications.html" class="btn header-btn">
+        <i class="bi bi-bell icon-md"></i>
+      </a>
+      <a href="settings.html" class="btn header-btn">
+        <i class="bi bi-person-circle icon-md"></i>
+      </a>
+      <a (click)="logout()" class="btn header-btn">
+        <i class="bi bi-box-arrow-right fs-5"></i>
+      </a>
+    </div>
+  </div>
 </div>

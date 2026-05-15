@@ -1,10 +1,13 @@
 .header-wrap {
-    width: 1170px;
-    margin: 0 auto;
+  width: 1170px;
+  margin: 0 auto;
 }
 
 @media screen and (max-width: 1024px) {
-    .header-wrap {
-        width: 100%;
-    }
+  .header-wrap {
+    width: 100%;
+  }
+}
+.app-header-logo {
+  height: 40px;
 }
