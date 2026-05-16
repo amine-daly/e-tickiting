@@ -8,7 +8,9 @@ import {
   BookingResponse,
   FrontofficeCreateHoldRequest,
   FrontofficeHoldResponse,
+  OperationSuccessResponse,
 } from '../models/booking.model';
+import { TargetInput } from '../models/shared.model';
 
 @Injectable({ providedIn: 'root' })
 export class BookingService {
@@ -53,35 +55,49 @@ export class BookingService {
   confirmFrontofficeHold(
     hold: FrontofficeHoldResponse,
   ): Observable<FrontofficeHoldResponse> {
+    const targetPayload = this.buildTargetPayload(hold.companyId || undefined);
     if (hold.groupBooking && hold.orderId) {
       return this.http.post<FrontofficeHoldResponse>(
         `${this.frontofficeUrl}/group/${hold.orderId}/confirm`,
-        {},
+        targetPayload ?? {},
       );
     }
 
     const ticketId = hold.passengers?.[0]?.ticketId;
     return this.http.post<FrontofficeHoldResponse>(
       `${this.frontofficeUrl}/${ticketId}/confirm`,
-      {},
+      targetPayload ?? {},
     );
   }
 
   cancelFrontofficeHold(
     hold: FrontofficeHoldResponse,
-  ): Observable<FrontofficeHoldResponse> {
+  ): Observable<OperationSuccessResponse> {
     if (hold.groupBooking && hold.orderId) {
-      return this.http.post<FrontofficeHoldResponse>(
+      return this.http.post<OperationSuccessResponse>(
         `${this.frontofficeUrl}/group/${hold.orderId}/cancel`,
         {},
       );
     }
 
     const ticketId = hold.passengers?.[0]?.ticketId;
-    return this.http.post<FrontofficeHoldResponse>(
+    return this.http.post<OperationSuccessResponse>(
       `${this.frontofficeUrl}/${ticketId}/cancel`,
       {},
     );
+  }
+
+  private buildTargetPayload(
+    companyId?: string,
+  ): { target: TargetInput } | null {
+    if (!companyId) {
+      return null;
+    }
+    return {
+      target: {
+        company: companyId,
+      },
+    };
   }
 
   getRouteOccupiedSeats(

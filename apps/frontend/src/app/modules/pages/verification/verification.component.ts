@@ -18,9 +18,11 @@ import {
   FrontofficeCreateHoldRequest,
   FrontofficeHoldResponse,
 } from '../../../core/models/booking.model';
+import { TargetInput } from '../../../core/models/shared.model';
 import { BookingService } from '../../../core/services/booking.service';
 import { FrontofficeBookingDraftService } from '../../../core/services/frontoffice-booking-draft.service';
 import { TripType } from '../../../core/models/trip.model';
+import { TicketStatus } from '../../../core/models/ticket.model';
 import { TripService } from '../bus/trip.service';
 
 @Component({
@@ -74,6 +76,10 @@ export class VerificationComponent implements OnInit, OnDestroy {
 
   ngOnInit(): void {
     this.draft = this.draftService.getDraft();
+    console.log(
+      '🚀 ~ VerificationComponent ~ ngOnInit ~ this.draft:',
+      this.draft,
+    );
     if (this.draft?.holdToken) {
       this.loadHold(this.draft.holdToken);
       return;
@@ -122,11 +128,11 @@ export class VerificationComponent implements OnInit, OnDestroy {
   }
 
   get hasPendingHold(): boolean {
-    return !!this.hold && this.hold.status === 'PENDING';
+    return !!this.hold && this.hold.status === TicketStatus.PENDING;
   }
 
   get hasConfirmedHold(): boolean {
-    return !!this.hold && this.hold.status === 'CONFIRMED';
+    return !!this.hold && this.hold.status === TicketStatus.CONFIRMED;
   }
 
   get mainActionLabel(): string {
@@ -168,8 +174,9 @@ export class VerificationComponent implements OnInit, OnDestroy {
     if (this.hasConfirmedHold) {
       return;
     }
-
+    console.log(1);
     if (this.hasPendingHold && this.hold) {
+      console.log(2);
       this.confirmingHold = true;
       this.bookingService
         .confirmFrontofficeHold(this.hold)
@@ -328,13 +335,18 @@ export class VerificationComponent implements OnInit, OnDestroy {
         next: (hold) => {
           this.loadingHold = false;
           this.hold = hold;
+          console.log(
+            '🚀 ~ VerificationComponent ~ loadHold ~ this.hold:',
+            this.hold,
+          );
           this.ensureGuestControls(
             Math.max((hold.passengers?.length || 1) - 1, 0),
           );
           this.patchFormFromHold(hold);
 
           const nextDraft: FrontofficeBookingDraft = {
-            holdToken: hold.status === 'PENDING' ? hold.holdToken : null,
+            holdToken:
+              hold.status === TicketStatus.PENDING ? hold.holdToken : null,
             tripId: hold.tripId,
             originPlaceId: this.draft?.originPlaceId || '',
             destinationPlaceId: this.draft?.destinationPlaceId || '',
@@ -362,7 +374,7 @@ export class VerificationComponent implements OnInit, OnDestroy {
             nextDraft.destinationPlaceId,
           );
           this.notice =
-            hold.status === 'CONFIRMED'
+            hold.status === TicketStatus.CONFIRMED
               ? 'Booking confirmed. The payment step will be wired next.'
               : 'Booking created. Complete payment to finish confirmation.';
         },
@@ -400,6 +412,7 @@ export class VerificationComponent implements OnInit, OnDestroy {
     }
 
     const formValue = this.form.getRawValue();
+    const target = this.buildTargetInput();
     return {
       holdToken: this.draft.holdToken || uuid(),
       tripId: this.draft.tripId,
@@ -407,6 +420,7 @@ export class VerificationComponent implements OnInit, OnDestroy {
       destinationPlaceId: this.draft.destinationPlaceId,
       pickupPointId: this.draft.pickupPointId,
       dropoffPointId: this.draft.dropoffPointId,
+      target: target ?? undefined,
       contact: {
         firstName: formValue.contact.firstName,
         lastName: formValue.contact.lastName,
@@ -419,6 +433,27 @@ export class VerificationComponent implements OnInit, OnDestroy {
         seatNo: this.draft?.selectedSeatNos[index + 1] || null,
       })),
     };
+  }
+
+  private buildTargetInput(): TargetInput | null {
+    const companyId = this.resolveTripCompanyId();
+    if (!companyId) {
+      return null;
+    }
+    return {
+      company: companyId,
+    };
+  }
+
+  private resolveTripCompanyId(): string | null {
+    const company = this.trip?.target?.company;
+    if (!company) {
+      return null;
+    }
+    if (typeof company === 'string') {
+      return company;
+    }
+    return company.id || null;
   }
 
   private ensureGuestControls(count: number): void {

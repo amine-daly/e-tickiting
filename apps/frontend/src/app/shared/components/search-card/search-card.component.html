@@ -17,6 +17,19 @@
       >
       </ng-select>
     </div>
+    <div class="swap-field" aria-label="Swap origin and destination">
+      <button
+        type="button"
+        class="swap-button"
+        (click)="swapLocations()"
+        [disabled]="
+          !placesForm.get('origin')?.value &&
+          !placesForm.get('destination')?.value
+        "
+      >
+        <i class="bi bi-arrow-left-right"></i>
+      </button>
+    </div>
     <div class="mb-3 form-field">
       <label for="toLocation" class="form-label">
         <i class="bi bi-geo-alt-fill me-1 text-secondary-color"></i>To

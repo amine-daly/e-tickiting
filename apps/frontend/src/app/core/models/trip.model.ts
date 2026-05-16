@@ -168,6 +168,10 @@ export interface DropoffPointType {
   location?: GeoLocation | null;
 }
 
+export interface TripWithMarketplace extends TripType {
+  marketplace: MarketplaceProjection;
+}
+
 export interface TripType {
   id: string;
   target: TargetType;

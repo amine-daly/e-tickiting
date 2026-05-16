@@ -6,20 +6,24 @@ import { FrontofficeBookingDraft } from '../models/booking.model';
 @Injectable({ providedIn: 'root' })
 export class FrontofficeBookingDraftService {
   private readonly storageKey = 'frontoffice-booking-draft';
-  private readonly draftSubject = new BehaviorSubject<FrontofficeBookingDraft | null>(
+  private readonly draft = new BehaviorSubject<FrontofficeBookingDraft | null>(
     this.readDraft(),
   );
 
   get draft$(): Observable<FrontofficeBookingDraft | null> {
-    return this.draftSubject.asObservable();
+    return this.draft.asObservable();
   }
 
   getDraft(): FrontofficeBookingDraft | null {
-    return this.draftSubject.getValue();
+    console.log(
+      '🚀 ~ FrontofficeBookingDraftService ~ getDraft ~ this.draft.value:',
+      this.draft.value,
+    );
+    return this.draft.value;
   }
 
   saveDraft(draft: FrontofficeBookingDraft): void {
-    this.draftSubject.next(draft);
+    this.draft.next(draft);
     if (typeof window === 'undefined') {
       return;
     }
@@ -35,7 +39,7 @@ export class FrontofficeBookingDraftService {
   }
 
   clearDraft(): void {
-    this.draftSubject.next(null);
+    this.draft.next(null);
     if (typeof window === 'undefined') {
       return;
     }

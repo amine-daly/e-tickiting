@@ -12,3 +12,8 @@ export interface TargetCompanySummary {
 export interface TargetType {
   company: string | TargetCompanySummary;
 }
+
+export interface TargetInput {
+  company: string;
+  pos?: string | null;
+}

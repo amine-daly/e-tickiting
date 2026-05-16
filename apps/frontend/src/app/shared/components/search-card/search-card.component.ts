@@ -13,7 +13,6 @@ import { takeUntil, startWith } from 'rxjs/operators';
 
 import { PlacesService } from '../../../modules/home/home.service';
 import { TripService } from '../../../modules/pages/bus/trip.service';
-import { ToasterService } from '../toast/toaster.service';
 import { RecentSearchesService } from '../../../core/services/recent-searches.service';
 import { PlaceType } from '../../../core/models/place-type';
 import {
@@ -40,7 +39,6 @@ export class SearchCardComponent implements OnInit, OnDestroy {
     private fb: FormBuilder,
     private tripService: TripService,
     private placesService: PlacesService,
-    private toasterService: ToasterService,
     private recentSearchesService: RecentSearchesService,
   ) {
     this.placesForm = this.fb.group({
@@ -95,9 +93,14 @@ export class SearchCardComponent implements OnInit, OnDestroy {
       this.placesForm.markAllAsTouched();
       return;
     }
+
+    const params = this.buildParamsFromForm();
+    if (!params) {
+      return;
+    }
+
     const { origin, destination, date } = this.placesForm.value;
 
-    // Add to recent searches
     this.recentSearchesService.addSearch({
       originId: origin.id,
       originLabel: origin.city,
@@ -106,20 +109,61 @@ export class SearchCardComponent implements OnInit, OnDestroy {
       date: date || '',
     });
 
-    const params: TripSearchParams = {
+    this.updateSelectedDestination(origin, destination, date);
+    this.router.navigate(['/bus-listing'], { queryParams: params });
+  }
+
+  swapLocations(): void {
+    const origin = this.placesForm.get('origin')?.value || null;
+    const destination = this.placesForm.get('destination')?.value || null;
+
+    if (!origin && !destination) {
+      return;
+    }
+
+    this.placesForm.patchValue({
+      origin: destination,
+      destination: origin,
+    });
+
+    const params = this.buildParamsFromForm();
+    if (!params) {
+      return;
+    }
+
+    this.updateSelectedDestination(
+      destination,
+      origin,
+      this.placesForm.value?.date,
+    );
+    this.router.navigate(['/bus-listing'], { queryParams: params });
+  }
+
+  private buildParamsFromForm(): TripSearchParams | null {
+    const { origin, destination, date } = this.placesForm.value;
+
+    if (!origin || !destination) {
+      return null;
+    }
+
+    return {
       originPlaceId: origin.id,
       status: TripStatusEnum.ACTIVE,
       destinationPlaceId: destination.id,
       ...(date ? { date } : {}),
     };
+  }
 
+  private updateSelectedDestination(
+    origin: PlaceType,
+    destination: PlaceType,
+    date?: string,
+  ): void {
     this.tripService.selectedDestination$ = {
       origin,
       destination,
       ...(date ? { date } : {}),
     };
-
-    this.router.navigate(['/bus-listing'], { queryParams: params });
   }
 
   ngOnDestroy(): void {

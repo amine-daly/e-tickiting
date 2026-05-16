@@ -1,3 +1,6 @@
+import { TicketStatus } from './ticket.model';
+import { TargetInput } from './shared.model';
+
 export interface BookingRequest {
   tripId: string;
   originPlaceId: string;
@@ -22,7 +25,7 @@ export interface BookingResponse {
   orderId?: string;
   appliedPrice: number;
   currency: string;
-  status: string;
+  status: TicketStatus;
   idempotencyKey: string;
   expiresAt?: string | null;
   createdAt: string;
@@ -51,8 +54,13 @@ export interface FrontofficeCreateHoldRequest {
   pickupPointId: string;
   dropoffPointId: string;
   lang?: string;
+  target?: TargetInput;
   contact: FrontofficeContactPassengerInput;
   passengers: FrontofficeGuestPassengerInput[];
+}
+
+export interface OperationSuccessResponse {
+  success: boolean;
 }
 
 export interface FrontofficeHoldContactSummary {
@@ -71,7 +79,7 @@ export interface FrontofficeHoldPassengerSummary {
   seatNo?: string | null;
   appliedPrice?: number | null;
   currency?: string | null;
-  status: string;
+  status: TicketStatus;
 }
 
 export interface FrontofficeHoldResponse {
@@ -83,7 +91,7 @@ export interface FrontofficeHoldResponse {
   pickupPointId?: string | null;
   dropoffPointId?: string | null;
   segmentIds: string[];
-  status: string;
+  status: TicketStatus;
   totalPrice: number;
   currency: string;
   expiresAt?: string | null;

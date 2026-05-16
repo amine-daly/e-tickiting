@@ -11,6 +11,7 @@ import {
   TripStatusEnum,
   TripRouteAvailabilityType,
   TripType,
+  TripWithMarketplace,
 } from '../../../core/models/trip.model';
 
 @Injectable({ providedIn: 'root' })
@@ -111,8 +112,11 @@ export class TripService {
       })
       .pipe(
         map((response: any) => {
-          this.filtredTrips.next(response.objects || []);
-          return response.objects || [];
+          const trips = response.objects.filter(
+            (trip): trip is TripWithMarketplace => !!trip.marketplace,
+          );
+          this.filtredTrips.next(trips);
+          return trips;
         }),
       );
   }

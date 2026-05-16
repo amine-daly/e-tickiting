@@ -1,5 +1,6 @@
 package com.eticketing.app.ticket.dto;
 
+import com.eticketing.app.common.TargetInput;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
@@ -31,6 +32,9 @@ public class FrontofficeCreateHoldRequest {
     private String dropoffPointId;
 
     private String lang;
+
+    @Valid
+    private TargetInput target;
 
     @Valid
     @NotNull

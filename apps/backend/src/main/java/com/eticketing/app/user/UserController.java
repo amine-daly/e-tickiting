@@ -163,7 +163,9 @@ public class UserController {
         if (companyId == null || companyId.isBlank()) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "companyId is required");
         }
-        Page<UserType> p = users.findByTargetCompany(companyId, PageRequest.of(page, limit));
+        Page<UserType> p = users.findByTargetCompany(
+                companyId,
+                PageRequest.of(page, limit, Sort.by(Sort.Direction.DESC, "createdAt")));
         // Fetch response: include both timestamps
         var list = p.getContent().stream().map(u -> UserRes.from(u)).toList();
         return new Paginated<>(list, p.getTotalElements(), p.isLast());
@@ -216,7 +218,9 @@ public class UserController {
         if (companyId == null || companyId.isBlank()) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "companyId is required");
         }
-        Page<UserType> p = users.findByTargetCompany(companyId, PageRequest.of(page, limit));
+        Page<UserType> p = users.findByTargetCompany(
+                companyId,
+                PageRequest.of(page, limit, Sort.by(Sort.Direction.DESC, "createdAt")));
         var list = p.getContent().stream().map(u -> UserRes.from(u)).toList();
         return new Paginated<>(list, p.getTotalElements(), p.isLast());
     }

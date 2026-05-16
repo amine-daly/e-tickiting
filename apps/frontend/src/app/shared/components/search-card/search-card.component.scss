@@ -2,91 +2,137 @@
 .search-card,
 .route-card,
 .offer-card {
-    margin-bottom: 24px;
+  margin-bottom: 24px;
 }
 
 /* Prepare search form for layout tweaks without affecting styling */
 .search-form {
-    display: flex;
-    flex-direction: column;
+  display: flex;
+  flex-direction: column;
 }
 
 .top-70 {
-    top: 70%;
+  top: 70%;
+}
+
+.swap-field {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 12px;
+}
+
+.swap-button {
+  width: 44px;
+  height: 44px;
+  border-radius: 14px;
+  border: 1px solid rgba(0, 128, 128, 0.18);
+  background: #ffffff;
+  color: var(--primary-color);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 10px 20px rgba(13, 51, 51, 0.08);
+  transition:
+    transform 0.2s ease,
+    box-shadow 0.2s ease,
+    color 0.2s ease;
+}
+
+.swap-button:hover:not(:disabled) {
+  transform: translateY(-1px) rotate(90deg);
+  box-shadow: 0 14px 22px rgba(13, 51, 51, 0.12);
+}
+
+.swap-button:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+  box-shadow: none;
 }
 
 /* Responsive adjustments for desktop */
 @media (min-width: 992px) {
-    .search-card {
-        margin-bottom: 32px;
-    }
+  .search-card {
+    margin-bottom: 32px;
+  }
 
-    .section-header {
-        margin-top: 32px;
-        margin-bottom: 16px;
-    }
+  .section-header {
+    margin-top: 32px;
+    margin-bottom: 16px;
+  }
 
-    /* Align search inputs and button in a single row on desktop */
-    .search-form {
-        flex-direction: row;
-        align-items: center;
-        gap: 16px;
-    }
+  /* Align search inputs and button in a single row on desktop */
+  .search-form {
+    flex-direction: row;
+    align-items: center;
+    gap: 16px;
+  }
 
-    .search-form .form-field {
-        flex: 1;
-        margin-bottom: 0;
-    }
+  .search-form .form-field {
+    flex: 1;
+    margin-bottom: 0;
+  }
 
-    .search-form .form-field-date {
-        max-width: 220px;
-        position: relative;
-    }
+  .search-form .form-field-date {
+    max-width: 220px;
+    position: relative;
+  }
 
-    .search-form .form-field-date .btn-link {
-        position: absolute;
-        right: 36px;
-        transform: translateY(-50%);
-        width: 28px;
-        height: 28px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        padding: 0;
-        color: #6c757d;
-        font-size: 1.2rem;
-        z-index: 3;
-        line-height: 1;
-        background: #f8f9fa;
-        border-radius: 50%;
-        border: none;
-        transition: background 0.2s, color 0.2s;
-        box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
-        cursor: pointer;
-        opacity: 1;
-    }
+  .search-form .swap-field {
+    margin-bottom: 0;
+    flex: 0 0 auto;
+  }
 
-    .search-form .form-field-date .btn-link:disabled {
-        opacity: 0.5;
-        cursor: not-allowed;
-        background: #f8f9fa;
-        color: #adb5bd;
-    }
+  .search-form .swap-button:hover:not(:disabled) {
+    transform: translateY(-1px) rotate(90deg);
+  }
 
-    .search-form .form-field-date .btn-link:hover {
-        background: #e2e6ea;
-        color: #d63384;
-    }
+  .search-form .form-field-date .btn-link {
+    position: absolute;
+    right: 36px;
+    transform: translateY(-50%);
+    width: 28px;
+    height: 28px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    color: #6c757d;
+    font-size: 1.2rem;
+    z-index: 3;
+    line-height: 1;
+    background: #f8f9fa;
+    border-radius: 50%;
+    border: none;
+    transition:
+      background 0.2s,
+      color 0.2s;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+    cursor: pointer;
+    opacity: 1;
+  }
 
-    .search-form .form-field-date .btn-link:focus {
-        box-shadow: none;
-    }
+  .search-form .form-field-date .btn-link:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    background: #f8f9fa;
+    color: #adb5bd;
+  }
 
-    .search-form .search-submit {
-        flex: 0 0 auto;
-        margin-bottom: 0;
-        min-width: 170px;
-    }
+  .search-form .form-field-date .btn-link:hover {
+    background: #e2e6ea;
+    color: #d63384;
+  }
+
+  .search-form .form-field-date .btn-link:focus {
+    box-shadow: none;
+  }
+
+  .search-form .search-submit {
+    flex: 0 0 auto;
+    margin-bottom: 0;
+    min-width: 170px;
+  }
 }
 
 /* No design/UX changes, only layout improvements for desktop */

@@ -2,6 +2,8 @@ package com.eticketing.app.ticket;
 
 import com.eticketing.app.ticket.dto.FrontofficeCreateHoldRequest;
 import com.eticketing.app.ticket.dto.FrontofficeHoldResponse;
+import com.eticketing.app.ticket.dto.FrontofficeTargetRequest;
+import com.eticketing.app.ticket.dto.OperationSuccessResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -36,23 +38,33 @@ public class FrontofficeBookingController {
     }
 
     @PostMapping("/{ticketId}/confirm")
-    public ResponseEntity<FrontofficeHoldResponse> confirmBooking(@PathVariable String ticketId) {
-        return ResponseEntity.ok(frontofficeBookingService.confirmBooking(ticketId));
+    public ResponseEntity<FrontofficeHoldResponse> confirmBooking(
+            @PathVariable String ticketId,
+            @RequestBody(required = false) FrontofficeTargetRequest req) {
+        return ResponseEntity.ok(frontofficeBookingService.confirmBooking(
+                ticketId,
+                req != null ? req.getTarget() : null));
     }
 
     @PostMapping("/{ticketId}/cancel")
-    public ResponseEntity<FrontofficeHoldResponse> cancelBooking(@PathVariable String ticketId) {
-        return ResponseEntity.ok(frontofficeBookingService.cancelBooking(ticketId));
+    public ResponseEntity<OperationSuccessResponse> cancelBooking(@PathVariable String ticketId) {
+        frontofficeBookingService.cancelBooking(ticketId);
+        return ResponseEntity.ok(new OperationSuccessResponse(true));
     }
 
     @PostMapping("/group/{orderId}/confirm")
-    public ResponseEntity<FrontofficeHoldResponse> confirmOrder(@PathVariable String orderId) {
-        return ResponseEntity.ok(frontofficeBookingService.confirmOrder(orderId));
+    public ResponseEntity<FrontofficeHoldResponse> confirmOrder(
+            @PathVariable String orderId,
+            @RequestBody(required = false) FrontofficeTargetRequest req) {
+        return ResponseEntity.ok(frontofficeBookingService.confirmOrder(
+                orderId,
+                req != null ? req.getTarget() : null));
     }
 
     @PostMapping("/group/{orderId}/cancel")
-    public ResponseEntity<FrontofficeHoldResponse> cancelOrder(@PathVariable String orderId) {
-        return ResponseEntity.ok(frontofficeBookingService.cancelOrder(orderId));
+    public ResponseEntity<OperationSuccessResponse> cancelOrder(@PathVariable String orderId) {
+        frontofficeBookingService.cancelOrder(orderId);
+        return ResponseEntity.ok(new OperationSuccessResponse(true));
     }
 
     @PostMapping("/holds")
@@ -67,13 +79,18 @@ public class FrontofficeBookingController {
     }
 
     @PostMapping("/holds/{holdToken}/confirm")
-    public ResponseEntity<FrontofficeHoldResponse> confirmHold(@PathVariable String holdToken) {
-        return ResponseEntity.ok(frontofficeBookingService.confirmHold(holdToken));
+    public ResponseEntity<FrontofficeHoldResponse> confirmHold(
+            @PathVariable String holdToken,
+            @RequestBody(required = false) FrontofficeTargetRequest req) {
+        return ResponseEntity.ok(frontofficeBookingService.confirmHold(
+                holdToken,
+                req != null ? req.getTarget() : null));
     }
 
     @PostMapping("/holds/{holdToken}/cancel")
-    public ResponseEntity<FrontofficeHoldResponse> cancelHold(@PathVariable String holdToken) {
-        return ResponseEntity.ok(frontofficeBookingService.cancelHold(holdToken));
+    public ResponseEntity<OperationSuccessResponse> cancelHold(@PathVariable String holdToken) {
+        frontofficeBookingService.cancelHold(holdToken);
+        return ResponseEntity.ok(new OperationSuccessResponse(true));
     }
 
     @GetMapping("/occupied-seats")

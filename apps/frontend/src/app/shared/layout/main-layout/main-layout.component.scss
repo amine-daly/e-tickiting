@@ -1,20 +1,33 @@
 .content-wrap {
-    width: 1170px;
-    margin: 0 auto;
+  width: 1170px;
+  margin: 0 auto;
 }
 
 @media screen and (max-width: 1024px) {
-    .content-wrap {
-        width: 100%;
-    }
+  .content-wrap {
+    width: 100%;
+  }
 }
 
 .layout {
-    display: flex;
-    flex-direction: column;
-    height: 100vh;
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
 }
 
 .content {
-    flex-grow: 1;
+  flex-grow: 1;
+  padding-bottom: 14.5rem;
+}
+
+@media screen and (max-width: 991.98px) {
+  .content {
+    padding-bottom: 13rem;
+  }
+}
+
+@media screen and (max-width: 575.98px) {
+  .content {
+    padding-bottom: 11.75rem;
+  }
 }

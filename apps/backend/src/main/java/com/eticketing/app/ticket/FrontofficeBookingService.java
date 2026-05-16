@@ -1,5 +1,6 @@
 package com.eticketing.app.ticket;
 
+import com.eticketing.app.common.TargetInput;
 import com.eticketing.app.ticket.dto.FrontofficeCreateHoldRequest;
 import com.eticketing.app.ticket.dto.FrontofficeHoldResponse;
 import com.eticketing.app.ticket.dto.GroupBookingRequest;
@@ -38,7 +39,9 @@ public class FrontofficeBookingService {
     public FrontofficeHoldResponse createBooking(FrontofficeCreateHoldRequest req) {
         validateSeatSelections(req);
 
-        UserType contactUser = resolveOrCreateContactUser(req.getContact());
+        TargetInput requestTarget = normalizeTarget(req.getTarget());
+        UserType contactUser = resolveOrCreateContactUser(req.getContact(), requestTarget);
+
         TicketType ticket = bookingService.createBooking(
                 req.getTripId(),
                 req.getOriginPlaceId(),
@@ -49,16 +52,18 @@ public class FrontofficeBookingService {
                 req.getHoldToken(),
                 req.getLang(),
                 normalizeSeatNo(req.getContact().getSeatNo()),
-                null,
-                null,
+                normalizeTargetCompany(requestTarget),
+                normalizeTargetPos(requestTarget),
                 BookingCreateOptions.frontoffice());
+        contactUser = ensureUserTarget(contactUser, ticket.getTarget());
         return toSingleHoldResponse(ticket, contactUser);
     }
 
     public FrontofficeHoldResponse createGroupBooking(FrontofficeCreateHoldRequest req) {
         validateSeatSelections(req);
 
-        UserType contactUser = resolveOrCreateContactUser(req.getContact());
+        TargetInput requestTarget = normalizeTarget(req.getTarget());
+        UserType contactUser = resolveOrCreateContactUser(req.getContact(), requestTarget);
         GroupBookingRequest groupReq = new GroupBookingRequest();
         groupReq.setTripId(req.getTripId());
         groupReq.setOriginPlaceId(req.getOriginPlaceId());
@@ -70,8 +75,13 @@ public class FrontofficeBookingService {
         groupReq.setLang(req.getLang());
         groupReq.setPassengers(buildPassengers(req, contactUser));
 
-        OrderType order = bookingService.createGroupBooking(groupReq, null, null, BookingCreateOptions.frontoffice());
+        OrderType order = bookingService.createGroupBooking(
+                groupReq,
+                normalizeTargetCompany(requestTarget),
+                normalizeTargetPos(requestTarget),
+                BookingCreateOptions.frontoffice());
         List<TicketType> tickets = ticketRepository.findByOrderId(order.getId());
+        contactUser = ensureUserTarget(contactUser, order.getTarget());
         return toGroupHoldResponse(order, tickets, contactUser);
     }
 
@@ -92,20 +102,21 @@ public class FrontofficeBookingService {
         return toSingleHoldResponse(resolvedHold.ticket(), contactUser);
     }
 
-    public FrontofficeHoldResponse confirmHold(String holdToken) {
+    public FrontofficeHoldResponse confirmHold(String holdToken, TargetInput requestTarget) {
         ResolvedHold resolvedHold = resolveHold(holdToken);
         if (resolvedHold.isGroup()) {
-            return confirmOrder(resolvedHold.order().getId());
+            return confirmOrder(resolvedHold.order().getId(), requestTarget);
         }
-        return confirmBooking(resolvedHold.ticket().getId());
+        return confirmBooking(resolvedHold.ticket().getId(), requestTarget);
     }
 
-    public FrontofficeHoldResponse cancelHold(String holdToken) {
+    public void cancelHold(String holdToken) {
         ResolvedHold resolvedHold = resolveHold(holdToken);
         if (resolvedHold.isGroup()) {
-            return cancelOrder(resolvedHold.order().getId());
+            cancelOrder(resolvedHold.order().getId());
+            return;
         }
-        return cancelBooking(resolvedHold.ticket().getId());
+        cancelBooking(resolvedHold.ticket().getId());
     }
 
     public List<String> getOccupiedSeats(String tripId, String originPlaceId, String destinationPlaceId) {
@@ -123,30 +134,29 @@ public class FrontofficeBookingService {
         return bookingService.getRouteOccupiedSeats(tripId, originPlaceId, destinationPlaceId);
     }
 
-    public FrontofficeHoldResponse confirmBooking(String ticketId) {
+    public FrontofficeHoldResponse confirmBooking(String ticketId, TargetInput requestTarget) {
         TicketType savedTicket = bookingService.confirmBooking(ticketId);
+        savedTicket = ensureTicketTarget(savedTicket, requestTarget);
         UserType contactUser = getUserById(savedTicket.getPassengerId());
+        contactUser = ensureUserTarget(contactUser, savedTicket.getTarget());
         return toSingleHoldResponse(savedTicket, contactUser);
     }
 
-    public FrontofficeHoldResponse confirmOrder(String orderId) {
+    public FrontofficeHoldResponse confirmOrder(String orderId, TargetInput requestTarget) {
         OrderType savedOrder = bookingService.confirmOrder(orderId);
+        savedOrder = ensureOrderTarget(savedOrder, requestTarget);
         List<TicketType> tickets = ticketRepository.findByOrderId(savedOrder.getId());
         UserType contactUser = getUserById(savedOrder.getContactCustomerId());
+        contactUser = ensureUserTarget(contactUser, savedOrder.getTarget());
         return toGroupHoldResponse(savedOrder, tickets, contactUser);
     }
 
-    public FrontofficeHoldResponse cancelBooking(String ticketId) {
-        TicketType savedTicket = bookingService.cancelBooking(ticketId, refundRepository);
-        UserType contactUser = getUserById(savedTicket.getPassengerId());
-        return toSingleHoldResponse(savedTicket, contactUser);
+    public void cancelBooking(String ticketId) {
+        bookingService.cancelBooking(ticketId, refundRepository);
     }
 
-    public FrontofficeHoldResponse cancelOrder(String orderId) {
-        OrderType savedOrder = bookingService.cancelOrder(orderId, refundRepository);
-        List<TicketType> tickets = ticketRepository.findByOrderId(savedOrder.getId());
-        UserType contactUser = getUserById(savedOrder.getContactCustomerId());
-        return toGroupHoldResponse(savedOrder, tickets, contactUser);
+    public void cancelOrder(String orderId) {
+        bookingService.cancelOrder(orderId, refundRepository);
     }
 
     private List<GroupBookingRequest.PassengerEntry> buildPassengers(
@@ -197,7 +207,9 @@ public class FrontofficeBookingService {
         return StringUtils.trimToNull(seatNo);
     }
 
-    private UserType resolveOrCreateContactUser(FrontofficeCreateHoldRequest.ContactPassenger contact) {
+    private UserType resolveOrCreateContactUser(
+            FrontofficeCreateHoldRequest.ContactPassenger contact,
+            TargetInput requestTarget) {
         String normalizedEmail = StringUtils.lowerCase(StringUtils.trimToNull(contact.getEmail()));
         if (normalizedEmail == null) {
             throw new BadRequestException("INVALID_CONTACT_EMAIL: email is required");
@@ -215,7 +227,112 @@ public class FrontofficeBookingService {
         user.setPasswordHash(passwordEncoder.encode(UUID.randomUUID().toString()));
         user.setRole(RoleEnum.CUSTOMER);
         user.setApp(AppEnum.FRONT);
+        applyUserTargetIfMissing(user, requestTarget);
         return userRepository.save(user);
+    }
+
+    private void applyUserTargetIfMissing(UserType user, TargetInput target) {
+        if (user == null || target == null) {
+            return;
+        }
+        String companyId = normalizeTargetCompany(target);
+        if (companyId == null) {
+            return;
+        }
+        UserType.TargetType currentTarget = user.getTarget();
+        String currentCompany = currentTarget != null ? StringUtils.trimToNull(currentTarget.getCompany()) : null;
+        if (currentCompany != null) {
+            return;
+        }
+        UserType.TargetType nextTarget = currentTarget != null ? currentTarget : new UserType.TargetType();
+        nextTarget.setCompany(companyId);
+        if (StringUtils.isBlank(nextTarget.getPos())) {
+            nextTarget.setPos(normalizeTargetPos(target));
+        }
+        user.setTarget(nextTarget);
+    }
+
+    private UserType ensureUserTarget(UserType user, TargetInput target) {
+        if (user == null || target == null) {
+            return user;
+        }
+        String companyId = normalizeTargetCompany(target);
+        if (companyId == null) {
+            return user;
+        }
+        UserType.TargetType currentTarget = user.getTarget();
+        String currentCompany = currentTarget != null ? StringUtils.trimToNull(currentTarget.getCompany()) : null;
+        if (currentCompany != null) {
+            return user;
+        }
+        UserType.TargetType nextTarget = currentTarget != null ? currentTarget : new UserType.TargetType();
+        nextTarget.setCompany(companyId);
+        if (StringUtils.isBlank(nextTarget.getPos())) {
+            nextTarget.setPos(normalizeTargetPos(target));
+        }
+        user.setTarget(nextTarget);
+        return userRepository.save(user);
+    }
+
+    private TicketType ensureTicketTarget(TicketType ticket, TargetInput requestTarget) {
+        if (ticket == null) {
+            return null;
+        }
+        String currentCompany = ticket.getTarget() != null
+                ? StringUtils.trimToNull(ticket.getTarget().getCompany())
+                : null;
+        if (currentCompany != null) {
+            return ticket;
+        }
+        String fallbackCompany = normalizeTargetCompany(requestTarget);
+        if (fallbackCompany == null) {
+            return ticket;
+        }
+        TargetInput nextTarget = new TargetInput(fallbackCompany, normalizeTargetPos(requestTarget));
+        ticket.setTarget(nextTarget);
+        return ticketRepository.save(ticket);
+    }
+
+    private OrderType ensureOrderTarget(OrderType order, TargetInput requestTarget) {
+        if (order == null) {
+            return null;
+        }
+        String currentCompany = order.getTarget() != null
+                ? StringUtils.trimToNull(order.getTarget().getCompany())
+                : null;
+        if (currentCompany != null) {
+            return order;
+        }
+        String fallbackCompany = normalizeTargetCompany(requestTarget);
+        if (fallbackCompany == null) {
+            return order;
+        }
+        TargetInput nextTarget = new TargetInput(fallbackCompany, normalizeTargetPos(requestTarget));
+        order.setTarget(nextTarget);
+        return orderRepository.save(order);
+    }
+
+    private TargetInput normalizeTarget(TargetInput target) {
+        if (target == null) {
+            return null;
+        }
+        String company = StringUtils.trimToNull(target.getCompany());
+        String pos = StringUtils.trimToNull(target.getPos());
+        if (company == null && pos == null) {
+            return null;
+        }
+        TargetInput normalized = new TargetInput();
+        normalized.setCompany(company);
+        normalized.setPos(pos);
+        return normalized;
+    }
+
+    private String normalizeTargetCompany(TargetInput target) {
+        return target != null ? StringUtils.trimToNull(target.getCompany()) : null;
+    }
+
+    private String normalizeTargetPos(TargetInput target) {
+        return target != null ? StringUtils.trimToNull(target.getPos()) : null;
     }
 
     private FrontofficeHoldResponse toSingleHoldResponse(TicketType ticket, UserType contactUser) {
