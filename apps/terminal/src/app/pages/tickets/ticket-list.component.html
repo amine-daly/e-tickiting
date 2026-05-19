@@ -223,6 +223,27 @@
                         </button>
                         <button
                           *ngIf="row.ticket!.status === 'CONFIRMED'"
+                          (click)="printTicket(row.ticket!.id)"
+                          [disabled]="printing[row.ticket!.id]"
+                          [ngbTooltip]="'TICKETS.ACTIONS.PRINT' | translate"
+                          class="btn btn-icon btn-active-light-info w-30px h-30px me-2"
+                        >
+                          <span
+                            *ngIf="printing[row.ticket!.id]"
+                            class="spinner-border spinner-border-sm"
+                          ></span>
+                          <i
+                            *ngIf="!printing[row.ticket!.id]"
+                            class="ki-duotone ki-printer fs-2"
+                            ><span class="path1"></span
+                            ><span class="path2"></span
+                            ><span class="path3"></span
+                            ><span class="path4"></span
+                            ><span class="path5"></span
+                          ></i>
+                        </button>
+                        <button
+                          *ngIf="row.ticket!.status === 'CONFIRMED'"
                           (click)="sendEmail(row.ticket!)"
                           [disabled]="emailSending[row.ticket!.id]"
                           [ngbTooltip]="
@@ -398,6 +419,29 @@
                           <i class="ki-duotone ki-cross fs-2"
                             ><span class="path1"></span
                             ><span class="path2"></span
+                          ></i>
+                        </button>
+                        <button
+                          *ngIf="row.status === 'CONFIRMED'"
+                          (click)="printOrder(row.orderId!, row.tickets || [])"
+                          [disabled]="printing[row.orderId!]"
+                          [ngbTooltip]="
+                            'TICKETS.ACTIONS.PRINT_ORDER' | translate
+                          "
+                          class="btn btn-icon btn-active-light-info w-30px h-30px me-2"
+                        >
+                          <span
+                            *ngIf="printing[row.orderId!]"
+                            class="spinner-border spinner-border-sm"
+                          ></span>
+                          <i
+                            *ngIf="!printing[row.orderId!]"
+                            class="ki-duotone ki-printer fs-2"
+                            ><span class="path1"></span
+                            ><span class="path2"></span
+                            ><span class="path3"></span
+                            ><span class="path4"></span
+                            ><span class="path5"></span
                           ></i>
                         </button>
                         <button

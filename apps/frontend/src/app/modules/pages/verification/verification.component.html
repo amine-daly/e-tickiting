@@ -226,17 +226,6 @@
         </div>
         <div>
           <button
-            *ngIf="hasPendingHold"
-            class="btn btn-outline-danger py-2 fw-bold"
-            type="button"
-            [disabled]="cancellingHold"
-            (click)="cancelHold()"
-          >
-            Cancel booking
-          </button>
-        </div>
-        <div>
-          <button
             class="btn btn-app py-2 fw-bold"
             type="button"
             [disabled]="mainActionDisabled"

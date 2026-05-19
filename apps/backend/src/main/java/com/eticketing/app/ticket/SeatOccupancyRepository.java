@@ -7,7 +7,7 @@ import java.util.List;
 
 public interface SeatOccupancyRepository extends MongoRepository<SeatOccupancyType, String> {
 
-    @Query(value = "{ 'tripId': ?0, 'segmentId': { $in: ?1 } }", fields = "{ 'seatNo': 1 }")
+    @Query(value = "{ 'tripId': ?0, 'segmentId': { $in: ?1 } }", fields = "{ 'seatNo': 1, 'ticketId': 1 }")
     List<SeatOccupancyType> findByTripIdAndSegmentIdIn(String tripId, List<String> segmentIds);
 
     void deleteByTicketId(String ticketId);

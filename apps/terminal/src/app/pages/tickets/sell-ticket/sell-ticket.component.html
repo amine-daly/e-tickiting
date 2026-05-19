@@ -164,45 +164,172 @@
           </button>
         </div>
 
-        <ng-select
-          [items]="customers"
-          [loading]="customerLoading"
-          [typeahead]="customerSearch$"
-          [virtualScroll]="true"
-          [minTermLength]="2"
-          bindLabel="firstName"
-          [placeholder]="'TICKETS.SELL.CUSTOMER_PLACEHOLDER' | translate"
-          (change)="addPassenger($event)"
-          (scrollToEnd)="loadMoreCustomers()"
-        >
-          <ng-template ng-label-tmp let-item="item">
-            {{ item.firstName }} {{ item.lastName }} —
-            {{ item.email || item.phone?.number }}
-          </ng-template>
-          <ng-template ng-option-tmp let-item="item">
-            <div class="fw-semibold">
-              {{ item.firstName }} {{ item.lastName }}
+        <div class="customer-entry-grid">
+          <div class="customer-panel">
+            <div class="mb-3">
+              <div>
+                <div class="fw-bold text-dark mb-1">
+                  {{ "TICKETS.SELL.SEARCH_EXISTING" | translate }}
+                </div>
+                <div class="text-muted small">
+                  {{ "TICKETS.SELL.SEARCH_EXISTING_HINT" | translate }}
+                </div>
+              </div>
             </div>
-            <div class="text-muted small">
-              {{ item.email }}
-              {{ item.phone?.number ? "— " + item.phone.number : "" }}
-            </div>
-          </ng-template>
-        </ng-select>
 
-        <!-- Contact customer badge -->
-        <div *ngIf="contactCustomer" class="mt-3">
-          <div
-            class="alert alert-light-primary d-flex align-items-center py-2 px-3 mb-0"
-          >
-            <span class="badge badge-primary me-2">{{
-              "TICKETS.SELL.CONTACT" | translate
-            }}</span>
-            <span class="fw-bold"
-              >{{ contactCustomer.firstName }}
-              {{ contactCustomer.lastName }}</span
+            <ng-select
+              [(ngModel)]="selectedCustomer"
+              [items]="customers"
+              [loading]="customerLoading"
+              [typeahead]="customerSearch$"
+              [virtualScroll]="true"
+              [minTermLength]="2"
+              [clearable]="true"
+              bindLabel="firstName"
+              [placeholder]="'TICKETS.SELL.CUSTOMER_PLACEHOLDER' | translate"
+              (change)="addPassenger($event)"
+              (clear)="clearSelectedCustomer()"
+              (scrollToEnd)="loadMoreCustomers()"
             >
-            <span class="text-muted ms-2">{{ contactCustomer.email }}</span>
+              <ng-template ng-label-tmp let-item="item">
+                {{ item.firstName }} {{ item.lastName }} —
+                {{ item.email || item.phone?.number }}
+              </ng-template>
+              <ng-template ng-option-tmp let-item="item">
+                <div class="fw-semibold">
+                  {{ item.firstName }} {{ item.lastName }}
+                </div>
+                <div class="text-muted small">
+                  {{ item.email }}
+                  {{ item.phone?.number ? "— " + item.phone.number : "" }}
+                </div>
+              </ng-template>
+            </ng-select>
+          </div>
+
+          <div class="customer-panel customer-panel--accent">
+            <div
+              class="d-flex justify-content-between align-items-start gap-3 flex-wrap mb-3"
+            >
+              <div>
+                <div class="fw-bold text-dark mb-1">
+                  {{ "TICKETS.SELL.QUICK_ENTRY_TITLE" | translate }}
+                </div>
+                <div class="text-muted small">
+                  {{ "TICKETS.SELL.QUICK_ENTRY_HINT" | translate }}
+                </div>
+              </div>
+              <button
+                *ngIf="contactCustomer"
+                type="button"
+                class="btn btn-sm btn-light-primary"
+                (click)="useQuickCustomerEntry()"
+              >
+                {{ "TICKETS.SELL.USE_QUICK_ENTRY" | translate }}
+              </button>
+            </div>
+
+            <div class="row g-3">
+              <div class="col-md-6">
+                <label class="form-label fw-semibold">{{
+                  "TICKETS.SELL.PHONE_LABEL" | translate
+                }}</label>
+                <div class="input-group quick-contact-phone">
+                  <input
+                    type="text"
+                    class="form-control quick-contact-phone__code"
+                    [placeholder]="'+216'"
+                    [(ngModel)]="quickCustomer.phoneCountryCode"
+                    [disabled]="!!contactCustomer"
+                    (ngModelChange)="onQuickCustomerChanged()"
+                  />
+                  <input
+                    type="tel"
+                    class="form-control"
+                    [placeholder]="'TICKETS.SELL.PHONE_PLACEHOLDER' | translate"
+                    [(ngModel)]="quickCustomer.phoneNumber"
+                    [disabled]="!!contactCustomer"
+                    (ngModelChange)="onQuickCustomerChanged()"
+                  />
+                </div>
+              </div>
+
+              <div class="col-md-6">
+                <label class="form-label fw-semibold">{{
+                  "TICKETS.SELL.EMAIL_LABEL" | translate
+                }}</label>
+                <input
+                  type="email"
+                  class="form-control"
+                  [placeholder]="'TICKETS.SELL.EMAIL_PLACEHOLDER' | translate"
+                  [(ngModel)]="quickCustomer.email"
+                  [disabled]="!!contactCustomer"
+                  (ngModelChange)="onQuickCustomerChanged()"
+                />
+              </div>
+
+              <div class="col-md-6">
+                <label class="form-label fw-semibold">{{
+                  "TICKETS.SELL.FIRST_NAME" | translate
+                }}</label>
+                <input
+                  type="text"
+                  class="form-control"
+                  [placeholder]="'TICKETS.SELL.FIRST_NAME' | translate"
+                  [(ngModel)]="quickCustomer.firstName"
+                  [disabled]="!!contactCustomer"
+                  (ngModelChange)="onQuickCustomerChanged()"
+                />
+              </div>
+
+              <div class="col-md-6">
+                <label class="form-label fw-semibold">{{
+                  "TICKETS.SELL.LAST_NAME" | translate
+                }}</label>
+                <input
+                  type="text"
+                  class="form-control"
+                  [placeholder]="'TICKETS.SELL.LAST_NAME' | translate"
+                  [(ngModel)]="quickCustomer.lastName"
+                  [disabled]="!!contactCustomer"
+                  (ngModelChange)="onQuickCustomerChanged()"
+                />
+              </div>
+            </div>
+
+            <div class="text-muted small mt-3">
+              {{ "TICKETS.SELL.QUICK_ENTRY_HELPER" | translate }}
+            </div>
+          </div>
+        </div>
+
+        <div *ngIf="contactPassenger" class="mt-3">
+          <div
+            class="alert d-flex align-items-center flex-wrap gap-2 py-2 px-3 mb-0 rounded-4"
+            [class.alert-light-primary]="!!contactCustomer"
+            [class.alert-light-warning]="!contactCustomer"
+          >
+            <span
+              class="badge"
+              [class.badge-primary]="!!contactCustomer"
+              [class.badge-light-warning]="!contactCustomer"
+            >
+              {{
+                (contactCustomer
+                  ? "TICKETS.SELL.CONTACT"
+                  : "TICKETS.SELL.NEW_CUSTOMER"
+                ) | translate
+              }}
+            </span>
+            <span class="fw-bold">{{
+              passengerDisplayName(contactPassenger)
+            }}</span>
+            <span
+              *ngIf="passengerContactValue(contactPassenger, 0)"
+              class="text-muted"
+            >
+              {{ passengerContactValue(contactPassenger, 0) }}
+            </span>
           </div>
         </div>
 
@@ -217,10 +344,7 @@
           <button
             class="btn btn-sm btn-light-primary"
             (click)="addGuestPassenger()"
-            [disabled]="
-              this.availableSeats === 0 ||
-              this.passengers.length === this.availableSeats
-            "
+            [disabled]="!canAddGuestPassenger"
           >
             <i class="ki-duotone ki-plus fs-5"></i>
             {{ "TICKETS.SELL.ADD_GUEST" | translate }}
@@ -236,14 +360,25 @@
             >
               <div class="d-flex justify-content-between align-items-center">
                 <div *ngIf="!p.isGuest" class="d-flex align-items-center">
-                  <span class="badge badge-light-primary me-2">
-                    {{ "TICKETS.SELL.CONTACT" | translate }}
-                  </span>
-                  <span class="fw-bold"
-                    >{{ p.customer?.firstName }}
-                    {{ p.customer?.lastName }}</span
+                  <span
+                    class="badge me-2"
+                    [class.badge-light-primary]="!!p.customer"
+                    [class.badge-light-warning]="!p.customer"
                   >
-                  <span class="text-muted ms-2">{{ p.customer?.email }}</span>
+                    {{
+                      (p.customer
+                        ? "TICKETS.SELL.CONTACT"
+                        : "TICKETS.SELL.NEW_CUSTOMER"
+                      ) | translate
+                    }}
+                  </span>
+                  <span class="fw-bold">{{ passengerDisplayName(p) }}</span>
+                  <span
+                    *ngIf="passengerContactValue(p, i)"
+                    class="text-muted ms-2"
+                  >
+                    {{ passengerContactValue(p, i) }}
+                  </span>
                 </div>
                 <div
                   *ngIf="p.isGuest"
@@ -561,8 +696,11 @@
                   <div class="fw-bold">
                     {{ passengerDisplayName(p) }}
                   </div>
-                  <div *ngIf="p.customer?.email" class="text-muted small">
-                    {{ p.customer.email }}
+                  <div
+                    *ngIf="passengerContactValue(p, i)"
+                    class="text-muted small"
+                  >
+                    {{ passengerContactValue(p, i) }}
                   </div>
                   <span
                     *ngIf="p.isGuest"

@@ -10,9 +10,12 @@
           <span class="path2"></span>
         </i>
         <input
+          #searchInput
           type="text"
           data-kt-user-table-filter="search"
           class="form-control form-control-solid w-250px ps-13"
+          [value]="searchTerm"
+          (input)="onSearchInput(searchInput.value)"
           [placeholder]="'CUSTOMERS.SEARCH_PLACEHOLDER' | translate"
         />
       </div>
@@ -58,67 +61,40 @@
                 >{{ "COMMON.LABEL.ROLE" | translate }} :</label
               >
               <select
+                #roleSelect
                 class="form-select form-select-solid fw-bold"
                 data-kt-select2="true"
                 data-placeholder="Select option"
                 data-allow-clear="true"
                 data-kt-user-table-filter="role"
                 data-hide-search="true"
+                [value]="selectedRole"
+                (change)="onRoleChange(roleSelect.value)"
               >
-                <option></option>
-                <option value="Administrator">
-                  {{ "CUSTOMERS.ROLES.ADMINISTRATOR" | translate }}
-                </option>
-                <option value="Analyst">
-                  {{ "CUSTOMERS.ROLES.ANALYST" | translate }}
-                </option>
-                <option value="Developer">
-                  {{ "CUSTOMERS.ROLES.DEVELOPER" | translate }}
-                </option>
-                <option value="Support">
-                  {{ "CUSTOMERS.ROLES.SUPPORT" | translate }}
-                </option>
-                <option value="Trial">
-                  {{ "CUSTOMERS.ROLES.TRIAL" | translate }}
+                <option
+                  *ngFor="let option of roleFilterOptions"
+                  [value]="option.value"
+                >
+                  {{ option.labelKey | translate }}
                 </option>
               </select>
             </div>
-            <!--end::Input group-->
-            <!--begin::Input group-->
-            <div class="mb-10">
-              <label class="form-label fs-6 fw-semibold"
-                >{{ "CUSTOMERS.FILTER.TWO_FACTOR" | translate }} :</label
-              >
-              <select
-                class="form-select form-select-solid fw-bold"
-                data-kt-select2="true"
-                data-placeholder="Select option"
-                data-allow-clear="true"
-                data-kt-user-table-filter="two-step"
-                data-hide-search="true"
-              >
-                <option></option>
-                <option value="Enabled">
-                  {{ "CUSTOMERS.FILTER.TWO_FACTOR_ENABLED" | translate }}
-                </option>
-              </select>
-            </div>
-            <!--end::Input group-->
-            <!--begin::Actions-->
             <div class="d-flex justify-content-end">
               <button
-                type="reset"
+                type="button"
                 class="btn btn-light btn-active-light-primary fw-semibold me-2 px-6"
                 data-kt-menu-dismiss="true"
                 data-kt-user-table-filter="reset"
+                (click)="resetFilters()"
               >
                 {{ "COMMON.BUTTON.RESET" | translate }}
               </button>
               <button
-                type="submit"
+                type="button"
                 class="btn btn-primary fw-semibold px-6"
                 data-kt-menu-dismiss="true"
                 data-kt-user-table-filter="filter"
+                (click)="applyFilters()"
               >
                 {{ "COMMON.BUTTON.APPLY" | translate }}
               </button>
@@ -133,10 +109,14 @@
         <button
           type="button"
           class="btn btn-light-primary me-3"
-          data-bs-toggle="modal"
-          data-bs-target="#kt_modal_export_users"
+          [disabled]="exporting"
+          (click)="exportCustomers()"
         >
-          <i class="ki-duotone ki-exit-up fs-2">
+          <span
+            *ngIf="exporting"
+            class="spinner-border spinner-border-sm me-2"
+          ></span>
+          <i *ngIf="!exporting" class="ki-duotone ki-exit-up fs-2">
             <span class="path1"></span>
             <span class="path2"></span> </i
           >{{ "COMMON.BUTTON.EXPORT" | translate }}
@@ -277,9 +257,15 @@
               </td>
               <td>
                 <span
-                  >+{{ user?.phone?.countryCode }}
-                  {{ user?.phone?.number }}</span
+                  *ngIf="
+                    user?.phone?.countryCode && user?.phone?.number;
+                    else noPhone
+                  "
                 >
+                  +{{ user?.phone?.countryCode }}
+                  {{ user?.phone?.number }}
+                </span>
+                <ng-template #noPhone>-</ng-template>
               </td>
               <td>
                 <span
@@ -289,6 +275,7 @@
                     'badge-light-success': user?.role === 'CUSTOMER',
                     'badge-light-warning': user?.role === 'MANAGER',
                     'badge-light-info': user?.role === 'DRIVER',
+                    'badge-light-dark': user?.role === 'POS_AGENT',
                   }"
                 >
                   {{ "CUSTOMERS.ROLES." + user?.role | translate }}

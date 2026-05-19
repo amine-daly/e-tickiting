@@ -13,6 +13,7 @@ import java.util.List;
 public class BookingResponse {
 
     private String id;
+    private String reference;
     private String tripId;
     private String orderId;
     private String companyId;

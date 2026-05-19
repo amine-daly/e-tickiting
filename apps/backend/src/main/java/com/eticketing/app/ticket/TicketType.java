@@ -38,6 +38,13 @@ public class TicketType {
     @Id
     private String id;
 
+    /**
+     * Public ticket reference shown on the printed ticket and encoded in the QR
+     * code.
+     */
+    @Indexed(unique = true)
+    private String reference;
+
     @Version
     private Long version;
 

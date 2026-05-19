@@ -452,6 +452,8 @@
       "ALL": "All statuses"
     },
     "ACTIONS": {
+      "PRINT": "Print ticket",
+      "PRINT_ORDER": "Print order ticket",
       "SEND_EMAIL": "Send ticket email",
       "SEND_ORDER_EMAIL": "Send order email",
       "VIEW_DETAILS": "View details",
@@ -489,7 +491,8 @@
       "EMAIL_CONFIRM_OK": "Yes, send it",
       "EMAIL_SUCCESS_TITLE": "Email sent",
       "EMAIL_SUCCESS_TEXT": "The ticket email was sent to {{email}}.",
-      "EMAIL_ERROR": "Unable to send the ticket email."
+      "EMAIL_ERROR": "Unable to send the ticket email.",
+      "PRINT_ERROR": "Unable to print the ticket."
     },
     "SELL": {
       "TITLE": "Sell Ticket",
@@ -498,8 +501,19 @@
       "STEP_SEAT": "Seats",
       "STEP_REVIEW": "Review & Book",
       "SEARCH_CUSTOMER": "Search & Add Passengers",
+      "SEARCH_EXISTING": "Find existing customer",
+      "SEARCH_EXISTING_HINT": "Search by name, email, or phone and keep the booking moving.",
       "CONTACT_CUSTOMER": "Contact Customer (Primary)",
       "CUSTOMER_PLACEHOLDER": "Type name, email or phone...",
+      "QUICK_ENTRY_TITLE": "Quick customer entry",
+      "QUICK_ENTRY_HINT": "Stay in the selling flow when the customer is new.",
+      "USE_QUICK_ENTRY": "Use quick entry",
+      "NEW_CUSTOMER": "New customer",
+      "PHONE_LABEL": "Phone",
+      "PHONE_PLACEHOLDER": "612345678",
+      "EMAIL_LABEL": "Email",
+      "EMAIL_PLACEHOLDER": "name@example.com",
+      "QUICK_ENTRY_HELPER": "Provide either a phone number or an email. If no customer exists yet, the booking request will create the customer automatically.",
       "PASSENGERS": "Passengers",
       "CONTACT": "Contact",
       "GUEST": "Guest",
@@ -558,6 +572,7 @@
     "FILTER": {
       "BUTTON": "Filter",
       "TITLE": "Filter options",
+      "ALL": "All",
       "TWO_FACTOR": "Two-factor authentication",
       "TWO_FACTOR_ENABLED": "Enabled"
     },

@@ -452,6 +452,8 @@
       "ALL": "Tous les statuts"
     },
     "ACTIONS": {
+      "PRINT": "Imprimer le billet",
+      "PRINT_ORDER": "Imprimer le billet de commande",
       "SEND_EMAIL": "Envoyer le billet par e-mail",
       "SEND_ORDER_EMAIL": "Envoyer l'e-mail de commande",
       "VIEW_DETAILS": "Voir les détails",
@@ -489,7 +491,8 @@
       "EMAIL_CONFIRM_OK": "Oui, envoyer",
       "EMAIL_SUCCESS_TITLE": "E-mail envoyé",
       "EMAIL_SUCCESS_TEXT": "Le billet a été envoyé à {{email}}.",
-      "EMAIL_ERROR": "Impossible d'envoyer le billet."
+      "EMAIL_ERROR": "Impossible d'envoyer le billet.",
+      "PRINT_ERROR": "Impossible d'imprimer le billet."
     },
     "SELL": {
       "TITLE": "Vendre un billet",
@@ -498,8 +501,19 @@
       "STEP_SEAT": "Sièges",
       "STEP_REVIEW": "Vérifier et réserver",
       "SEARCH_CUSTOMER": "Rechercher et ajouter des passagers",
+      "SEARCH_EXISTING": "Trouver un client existant",
+      "SEARCH_EXISTING_HINT": "Recherchez par nom, e-mail ou téléphone sans quitter la vente.",
       "CONTACT_CUSTOMER": "Client contact (principal)",
       "CUSTOMER_PLACEHOLDER": "Tapez un nom, e-mail ou téléphone...",
+      "QUICK_ENTRY_TITLE": "Saisie rapide du client",
+      "QUICK_ENTRY_HINT": "Restez dans le flux de vente quand le client est nouveau.",
+      "USE_QUICK_ENTRY": "Utiliser la saisie rapide",
+      "NEW_CUSTOMER": "Nouveau client",
+      "PHONE_LABEL": "Téléphone",
+      "PHONE_PLACEHOLDER": "612345678",
+      "EMAIL_LABEL": "E-mail",
+      "EMAIL_PLACEHOLDER": "nom@exemple.com",
+      "QUICK_ENTRY_HELPER": "Saisissez soit un téléphone soit un e-mail. Si le client n'existe pas encore, la réservation le créera automatiquement.",
       "PASSENGERS": "Passagers",
       "CONTACT": "Contact",
       "GUEST": "Invité",
@@ -558,6 +572,7 @@
     "FILTER": {
       "BUTTON": "Filtrer",
       "TITLE": "Options de filtrage",
+      "ALL": "Tous",
       "TWO_FACTOR": "Authentification à deux facteurs",
       "TWO_FACTOR_ENABLED": "Activée"
     },

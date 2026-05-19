@@ -132,6 +132,7 @@ export class SeatSelectComponent implements OnInit, OnDestroy {
   }
 
   private loadRoutePreview(): void {
+    console.log('Loading route preview with');
     if (!this.trip) return;
     const chain = this.getSegmentChain();
     this.duration =

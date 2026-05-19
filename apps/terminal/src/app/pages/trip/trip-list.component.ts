@@ -170,7 +170,7 @@ export class TripListComponent implements OnInit, OnDestroy {
     }
     filter.sortBy = this.sortBy;
     filter.order = this.sortOrder;
-    const sub = this.tripService.list(filter).subscribe({
+    const sub = this.tripService.tripList(filter).subscribe({
       next: () => this.cdr.markForCheck(),
       error: () => this.alert.error(this.t('TRIPS.MESSAGES.LOAD_ERROR')),
     });

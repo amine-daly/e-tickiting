@@ -1,13 +1,25 @@
 package com.eticketing.app.ticket;
 
+import java.io.IOException;
+import java.net.URI;
+import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
+import java.nio.charset.StandardCharsets;
+import java.time.DateTimeException;
+import java.time.Duration;
 import java.time.Instant;
 import java.time.ZoneId;
 import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
+import java.util.Base64;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -31,6 +43,16 @@ import com.eticketing.app.user.UserTypeRepository;
 
 @Service
 public class TicketDocumentService {
+
+    private static final String SAFRA_LOGO_URL = "https://eticketing-app.s3.eu-north-1.amazonaws.com/logos/logo_white.png";
+    private static final String SAFRA_BRAND_NAME = "Safra";
+    private static final HttpClient LOGO_HTTP_CLIENT = HttpClient.newBuilder()
+            .connectTimeout(Duration.ofSeconds(4))
+            .followRedirects(HttpClient.Redirect.NORMAL)
+            .build();
+    private static final Duration LOGO_REQUEST_TIMEOUT = Duration.ofSeconds(6);
+    private static final int MAX_INLINE_LOGO_BYTES = 1024 * 1024;
+    private static final ConcurrentMap<String, String> LOGO_DATA_URI_CACHE = new ConcurrentHashMap<>();
 
     private final TripTypeRepository tripRepository;
     private final UserTypeRepository userRepository;
@@ -84,9 +106,14 @@ public class TicketDocumentService {
         TicketLanguage language = TicketLanguage.fromCode(ticket.getLang());
         LocalizedEmailContent localized = LocalizedEmailContent.forLanguage(language);
 
-        String passengerName = user != null
-                ? String.format("%s %s", defaultString(user.getFirstName()), defaultString(user.getLastName())).trim()
-                : localized.defaultPassengerName();
+        String passengerName;
+        if (user != null) {
+            passengerName = String.format("%s %s", defaultString(user.getFirstName()), defaultString(user.getLastName())).trim();
+        } else {
+            passengerName = String.format("%s %s",
+                    defaultString(ticket.getGuestFirstName()),
+                    defaultString(ticket.getGuestLastName())).trim();
+        }
         if (passengerName.isBlank()) {
             passengerName = localized.defaultPassengerName();
         }
@@ -115,27 +142,63 @@ public class TicketDocumentService {
                 formatPhone(company != null && company.getContact() != null ? company.getContact().getPhone() : null),
                 "");
         String supportLine = buildSupportLine(agencyEmail, agencyPhone, localized.supportUnavailable());
-        String companyLogoUrl = resolvePictureUrl(company != null ? company.getPicture() : null);
-        String companyLogoStyle = companyLogoUrl.isBlank() ? "display:none;" : "";
+        String rawCompanyLogoUrl = resolvePictureUrl(company != null ? company.getPicture() : null);
+        String companyLogoUrl = resolveCompanyLogoSource(rawCompanyLogoUrl, companyName);
+        String emailCompanyLogoUrl = resolveEmailLogoSource(rawCompanyLogoUrl, companyName);
+        String printPoweredByHtml = buildPlatformAttributionHtml(resolveCompanyLogoSource(SAFRA_LOGO_URL, SAFRA_BRAND_NAME));
+        String emailPoweredByHtml = buildPlatformAttributionHtml(resolveEmailLogoSource(SAFRA_LOGO_URL, SAFRA_BRAND_NAME));
+        String companyLogoStyle = "";
         String salesChannel = pos != null ? pos.getTitle() : localized.defaultSalesChannel();
         String routeLabel = String.format("%s > %s",
                 origin != null ? origin.getCity() : defaultString(originId),
                 destination != null ? destination.getCity() : defaultString(destinationId));
-        String pickupSummary = resolvePickupSummary(trip, ticket, origin, localized.notProvided());
-        String dropoffSummary = resolveDropoffSummary(trip, ticket, destination, localized.notProvided());
+        String pickupSummary = resolvePickupSummary(trip, ticket, origin, localized.notProvided(), language);
+        String dropoffSummary = resolveDropoffSummary(trip, ticket, destination, localized.notProvided(), language);
 
         String totalAmount = ticket.getAppliedPrice() != null ? ticket.getAppliedPrice().toPlainString() : "-";
-        String reference = ticket.getId();
+        String amountText = formatTicketAmount(ticket);
+        String reference = firstNonBlank(ticket.getReference(), ticket.getIdempotencyKey());
         int segmentCount = ticket.getSegmentIds() != null ? ticket.getSegmentIds().size() : 0;
+        String seatValue = resolveSeatLabel(null, ticket, localized);
         String qrCodeDataUri = qrCodeService.generateDataUri(reference);
         String qrCodeUrl = qrCodeService.generatePublicUrl(reference);
-        String template = company != null && company.getEmailTemplate() != null && !company.getEmailTemplate().isBlank()
+        String emailTemplate = company != null && company.getEmailTemplate() != null && !company.getEmailTemplate().isBlank()
                 ? company.getEmailTemplate()
-                : TicketTemplateDefaults.defaultTemplate();
-        ZoneId tripZone = trip.getTimezone() != null ? ZoneId.of(trip.getTimezone()) : ZoneOffset.UTC;
+                : TicketTemplateDefaults.defaultEmailTemplate();
+        String printTemplate = TicketTemplateDefaults.defaultPrintTemplate();
+        ZoneId tripZone = resolveTripZone(trip);
         String tripDate = formatTripDate(trip.getDepartureDate(), tripZone, language);
         String tripTime = formatTripTime(trip.getDepartureDate(), tripZone, language);
         String localizedStatus = translateStatus(ticket.getStatus(), language);
+        String footerText = localized.footerText(reference, companyName, supportLine);
+        String pagesHtml = buildTicketSheetHtml(
+                localized.eyebrowText(),
+                "",
+                companyName,
+                companySubtitle,
+                companyLogoUrl,
+                routeLabel,
+                localized.heroSubtitle(tripDate, tripTime, localizedStatus),
+                localizedStatus,
+                localized.referenceLabel(),
+                reference,
+                localized.amountLabel(),
+                amountText,
+                localized.passengerLabel(),
+                passengerName,
+                localized.seatLabel(),
+                seatValue,
+                localized.supportContactLabel(),
+                supportLine,
+                localized.pickupLabel(),
+                pickupSummary,
+                localized.dropoffLabel(),
+                dropoffSummary,
+                qrCodeDataUri,
+                localized.ticketQrAltText(),
+                localized.qrHintText(),
+                footerText,
+                printPoweredByHtml);
 
         Map<String, Object> context = new HashMap<>();
         context.put("htmlLang", language.getHtmlLang());
@@ -148,7 +211,7 @@ public class TicketDocumentService {
         context.put("passengerName", passengerName);
         context.put("passengerEmail", passengerEmail != null ? passengerEmail : "");
         context.put("greetingText", localized.greetingText());
-        context.put("introText", localized.introText());
+        context.put("introText", buildEmailIntroHtml(localized.introText()));
         context.put("referenceLabel", localized.referenceLabel());
         context.put("companyLabel", localized.companyLabel());
         context.put("salesChannelLabel", localized.salesChannelLabel());
@@ -161,7 +224,7 @@ public class TicketDocumentService {
         context.put("dropoffLabel", localized.dropoffLabel());
         context.put("ticketQrAltText", localized.ticketQrAltText());
         context.put("qrHintText", localized.qrHintText());
-        context.put("footerText", localized.footerText(reference, companyName, supportLine));
+        context.put("footerText", footerText);
         context.put("heroSubtitle", localized.heroSubtitle(tripDate, tripTime, localizedStatus));
         context.put("seats", localized.segmentSummary(segmentCount));
         context.put("seatCount", segmentCount);
@@ -183,21 +246,32 @@ public class TicketDocumentService {
         context.put("supportLine", supportLine);
         context.put("pickupSummary", pickupSummary);
         context.put("dropoffSummary", dropoffSummary);
-        context.put("qrCodeUrl", qrCodeUrl);
+        context.put("qrCodeUrl", qrCodeDataUri);
         context.put("qrCode", qrCodeUrl);
+        context.put("qrSectionStyle", "");
+        context.put("pagesHtml", pagesHtml);
+        context.put("platformAttributionHtml", emailPoweredByHtml);
 
-        String html = templateEngine.render(template, context);
+        Map<String, Object> emailContext = new HashMap<>(context);
+        emailContext.put("companyLogoUrl", emailCompanyLogoUrl);
+        emailContext.put("qrCodeUrl", qrCodeUrl);
+        emailContext.put("qrCode", qrCodeUrl);
+
+        String emailHtml = templateEngine.render(emailTemplate, emailContext);
+        String printHtml = templateEngine.render(printTemplate, context);
 
         TicketDocumentView view = new TicketDocumentView();
         view.setTicketId(ticket.getId());
         view.setReference(reference);
         view.setQrCodeUrl(qrCodeUrl);
         view.setQrCodeDataUri(qrCodeDataUri);
-        view.setHtmlContent(html);
+        view.setHtmlContent(printHtml);
+        view.setPrintHtmlContent(printHtml);
+        view.setEmailHtmlContent(emailHtml);
         view.setRenderedAt(Instant.now());
         view.setPassengerEmail(passengerEmail);
         view.setSubject(localized.subject(companyName, reference));
-        view.setMetadata(buildMetadata(ticket, trip, company, passengerName, passengerEmail, agencyName, routeLabel, reference, companyLogoUrl));
+        view.setMetadata(buildMetadata(ticket, trip, company, passengerName, passengerEmail, agencyName, routeLabel, reference, rawCompanyLogoUrl));
         return view;
     }
 
@@ -263,34 +337,49 @@ public class TicketDocumentService {
                 formatPhone(pos != null ? pos.getPhone() : null),
                 formatPhone(company != null && company.getContact() != null ? company.getContact().getPhone() : null), "");
         String supportLine = buildSupportLine(agencyEmail, agencyPhone, localized.supportUnavailable());
-        String companyLogoUrl = resolvePictureUrl(company != null ? company.getPicture() : null);
-        String companyLogoStyle = companyLogoUrl.isBlank() ? "display:none;" : "";
+        String rawCompanyLogoUrl = resolvePictureUrl(company != null ? company.getPicture() : null);
+        String companyLogoUrl = resolveCompanyLogoSource(rawCompanyLogoUrl, companyName);
+        String emailCompanyLogoUrl = resolveEmailLogoSource(rawCompanyLogoUrl, companyName);
+        String printPoweredByHtml = buildPlatformAttributionHtml(resolveCompanyLogoSource(SAFRA_LOGO_URL, SAFRA_BRAND_NAME));
+        String emailPoweredByHtml = buildPlatformAttributionHtml(resolveEmailLogoSource(SAFRA_LOGO_URL, SAFRA_BRAND_NAME));
+        String companyLogoStyle = "";
         String salesChannel = pos != null ? pos.getTitle() : localized.defaultSalesChannel();
         String routeLabel = String.format("%s > %s",
                 origin != null ? origin.getCity() : defaultString(originId),
                 destination != null ? destination.getCity() : defaultString(destinationId));
-        String pickupSummary = resolvePickupSummary(trip, firstTicket, origin, localized.notProvided());
-        String dropoffSummary = resolveDropoffSummary(trip, firstTicket, destination, localized.notProvided());
+        String pickupSummary = resolvePickupSummary(trip, firstTicket, origin, localized.notProvided(), language);
+        String dropoffSummary = resolveDropoffSummary(trip, firstTicket, destination, localized.notProvided(), language);
 
-        String reference = order.getId();
+        String reference = firstNonBlank(firstTicket.getReference(), firstTicket.getIdempotencyKey());
         String totalAmount = order.getTotalPrice() != null ? order.getTotalPrice().toPlainString() : "-";
         int passengerCount = !ticketEntries.isEmpty() ? ticketEntries.size() : tickets.size();
         String qrCodeDataUri = qrCodeService.generateDataUri(reference);
         String qrCodeUrl = qrCodeService.generatePublicUrl(reference);
-        ZoneId tripZone = trip.getTimezone() != null ? ZoneId.of(trip.getTimezone()) : ZoneOffset.UTC;
+        ZoneId tripZone = resolveTripZone(trip);
         String tripDate = formatTripDate(trip.getDepartureDate(), tripZone, language);
         String tripTime = formatTripTime(trip.getDepartureDate(), tripZone, language);
         String localizedStatus = translateOrderStatus(order.getStatus(), language);
+        String pagesHtml = buildOrderTicketPagesHtml(
+                ticketEntries,
+                localized,
+                companyName,
+                companySubtitle,
+                companyLogoUrl,
+                routeLabel,
+                tripDate,
+                tripTime,
+                salesChannel,
+                supportLine,
+                pickupSummary,
+                dropoffSummary,
+                printPoweredByHtml);
 
-        // Build passenger manifest HTML table
-        String passengerTableHtml = buildPassengerManifestHtml(ticketEntries, language);
-        String individualTicketCardsHtml = buildIndividualTicketCardsHtml(ticketEntries, language);
-
-        String template = company != null && company.getEmailTemplate() != null && !company.getEmailTemplate().isBlank()
+        String emailTemplate = company != null && company.getEmailTemplate() != null && !company.getEmailTemplate().isBlank()
                 ? company.getEmailTemplate()
-                : TicketTemplateDefaults.defaultTemplate();
-
-        String orderIntroText = localized.orderIntroText(passengerCount) + passengerTableHtml + individualTicketCardsHtml;
+                : TicketTemplateDefaults.defaultEmailTemplate();
+        String printTemplate = TicketTemplateDefaults.defaultPrintTemplate();
+        String orderIntroText = buildEmailIntroHtml(localized.orderIntroText(passengerCount))
+                + buildEmailPassengerTicketCardsHtml(ticketEntries, language);
 
         Map<String, Object> context = new HashMap<>();
         context.put("htmlLang", language.getHtmlLang());
@@ -314,8 +403,8 @@ public class TicketDocumentService {
         context.put("supportContactLabel", localized.supportContactLabel());
         context.put("pickupLabel", localized.pickupLabel());
         context.put("dropoffLabel", localized.dropoffLabel());
-        context.put("ticketQrAltText", localized.orderQrAltText());
-        context.put("qrHintText", localized.orderQrHintText());
+        context.put("ticketQrAltText", localized.ticketQrAltText());
+        context.put("qrHintText", localized.qrHintText());
         context.put("footerText", localized.footerText(reference, companyName, supportLine));
         context.put("heroSubtitle", localized.heroSubtitle(tripDate, tripTime, localizedStatus));
         context.put("seats", passengerCount + " " + localized.passengersWord());
@@ -338,67 +427,50 @@ public class TicketDocumentService {
         context.put("supportLine", supportLine);
         context.put("pickupSummary", pickupSummary);
         context.put("dropoffSummary", dropoffSummary);
-        context.put("qrCodeUrl", qrCodeUrl);
+        context.put("qrCodeUrl", qrCodeDataUri);
         context.put("qrCode", qrCodeUrl);
+        context.put("qrSectionStyle", "display:none;");
+        context.put("pagesHtml", pagesHtml);
+        context.put("platformAttributionHtml", emailPoweredByHtml);
 
-        String html = templateEngine.render(template, context);
+        Map<String, Object> emailContext = new HashMap<>(context);
+        emailContext.put("companyLogoUrl", emailCompanyLogoUrl);
+        emailContext.put("qrCodeUrl", qrCodeUrl);
+        emailContext.put("qrCode", qrCodeUrl);
+
+        String emailHtml = templateEngine.render(emailTemplate, emailContext);
+        String printHtml = templateEngine.render(printTemplate, context);
 
         TicketDocumentView view = new TicketDocumentView();
         view.setTicketId(order.getId());
         view.setReference(reference);
         view.setQrCodeUrl(qrCodeUrl);
         view.setQrCodeDataUri(qrCodeDataUri);
-        view.setHtmlContent(html);
+        view.setHtmlContent(printHtml);
+        view.setPrintHtmlContent(printHtml);
+        view.setEmailHtmlContent(emailHtml);
         view.setRenderedAt(Instant.now());
         view.setPassengerEmail(contactEmail);
         view.setSubject(localized.orderSubject(companyName, reference));
         return view;
     }
 
-    private String buildPassengerManifestHtml(List<OrderTicketEntry> ticketEntries, TicketLanguage language) {
+    private String buildEmailPassengerTicketCardsHtml(List<OrderTicketEntry> ticketEntries, TicketLanguage language) {
         if (ticketEntries == null || ticketEntries.isEmpty()) {
             return "";
         }
 
         LocalizedEmailContent localized = LocalizedEmailContent.forLanguage(language);
         StringBuilder sb = new StringBuilder();
-        sb.append("<table role=\"presentation\" width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" style=\"margin-top:16px;border:1px solid #e2e8f0;border-radius:8px;overflow:hidden;\">");
-        sb.append("<tr style=\"background:#f1f5f9;\"><td style=\"padding:8px 12px;font-size:13px;font-weight:700;color:#0f172a;\">#</td>");
-        sb.append("<td style=\"padding:8px 12px;font-size:13px;font-weight:700;color:#0f172a;\">").append(localized.passengerLabel()).append("</td>");
-        sb.append("<td style=\"padding:8px 12px;font-size:13px;font-weight:700;color:#0f172a;\">").append(localized.seatLabel()).append("</td>");
-        sb.append("<td style=\"padding:8px 12px;font-size:13px;font-weight:700;color:#0f172a;text-align:right;\">").append(localized.amountLabel()).append("</td></tr>");
-
-        for (int i = 0; i < ticketEntries.size(); i++) {
-            OrderTicketEntry entry = ticketEntries.get(i);
-            String name = resolvePassengerName(entry.passenger(), entry.ticket());
-            String seat = resolveSeatLabel(entry.passenger(), entry.ticket(), localized);
-            String price = formatTicketAmount(entry.ticket());
-            String bgColor = i % 2 == 0 ? "#ffffff" : "#f8fafc";
-            sb.append("<tr style=\"background:").append(bgColor).append(";\">");
-            sb.append("<td style=\"padding:8px 12px;font-size:14px;color:#334155;\">").append(i + 1).append("</td>");
-            sb.append("<td style=\"padding:8px 12px;font-size:14px;color:#334155;\">").append(escapeHtml(name)).append("</td>");
-            sb.append("<td style=\"padding:8px 12px;font-size:14px;color:#334155;\">").append(escapeHtml(seat)).append("</td>");
-            sb.append("<td style=\"padding:8px 12px;font-size:14px;color:#334155;text-align:right;\">").append(escapeHtml(price)).append("</td>");
-            sb.append("</tr>");
-        }
-        sb.append("</table>");
-        return sb.toString();
-    }
-
-    private String buildIndividualTicketCardsHtml(List<OrderTicketEntry> ticketEntries, TicketLanguage language) {
-        if (ticketEntries == null || ticketEntries.isEmpty()) {
-            return "";
-        }
-
-        LocalizedEmailContent localized = LocalizedEmailContent.forLanguage(language);
-        StringBuilder sb = new StringBuilder();
-        sb.append("<div style=\"margin-top:24px;\">");
+        sb.append("<table role=\"presentation\" width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" style=\"margin-top:24px;\">");
+        sb.append("<tr><td>");
         sb.append("<p style=\"margin:0 0 8px 0;font-size:18px;line-height:1.4;font-weight:700;color:#0f172a;\">")
                 .append(localized.individualTicketsHeading())
                 .append("</p>");
         sb.append("<p style=\"margin:0 0 16px 0;font-size:14px;line-height:1.55;color:#475569;\">")
                 .append(localized.individualTicketsIntroText())
                 .append("</p>");
+        sb.append("</td></tr></table>");
 
         for (int i = 0; i < ticketEntries.size(); i++) {
             OrderTicketEntry entry = ticketEntries.get(i);
@@ -407,35 +479,35 @@ public class TicketDocumentService {
                 continue;
             }
 
-            String ticketReference = escapeHtml(firstNonBlank(ticket.getId(), ticket.getIdempotencyKey(), "-"));
+            String ticketReference = escapeHtml(firstNonBlank(ticket.getReference(), ticket.getIdempotencyKey()));
             String passengerName = escapeHtml(resolvePassengerName(entry.passenger(), ticket));
             String seat = escapeHtml(resolveSeatLabel(entry.passenger(), ticket, localized));
             String amount = escapeHtml(formatTicketAmount(ticket));
             String ticketStatus = escapeHtml(translateStatus(ticket.getStatus(), language));
-            String qrCodeUrl = escapeHtml(qrCodeService.generatePublicUrl(ticket.getId()));
+            String qrCodeImage = escapeHtml(qrCodeService.generatePublicUrl(firstNonBlank(ticket.getReference(), ticket.getIdempotencyKey())));
 
             sb.append("<table role=\"presentation\" width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" style=\"margin-top:16px;border:1px solid #e2e8f0;border-radius:16px;background:#ffffff;overflow:hidden;\">");
             sb.append("<tr><td style=\"padding:16px 18px;background:#f8fafc;border-bottom:1px solid #e2e8f0;\">");
             sb.append("<div style=\"font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:#64748b;\">")
                     .append(localized.passengerTicketLabel(i + 1))
                     .append("</div>");
-            sb.append("<div style=\"margin-top:6px;font-size:16px;font-weight:700;color:#0f172a;word-break:break-word;\">")
+            sb.append("<div style=\"margin-top:6px;font-size:13px;font-weight:700;letter-spacing:.08em;color:#0f172a;word-break:break-word;\">")
                     .append(ticketReference)
                     .append("</div>");
             sb.append("</td></tr>");
             sb.append("<tr><td style=\"padding:18px 18px 20px 18px;\">");
             sb.append("<table role=\"presentation\" width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" class=\"stack\"><tr>");
             sb.append("<td valign=\"top\" style=\"padding-right:12px;\">");
-            appendTicketField(sb, localized.passengerLabel(), passengerName);
-            appendTicketField(sb, localized.seatLabel(), seat);
-            appendTicketField(sb, localized.amountLabel(), amount);
-            appendTicketField(sb, localized.statusLabel(), ticketStatus);
+            appendEmailTicketField(sb, localized.passengerLabel(), passengerName);
+            appendEmailTicketField(sb, localized.seatLabel(), seat);
+            appendEmailTicketField(sb, localized.amountLabel(), amount);
+            appendEmailTicketField(sb, localized.statusLabel(), ticketStatus);
             sb.append("</td>");
             sb.append("<td class=\"stack-gap\" style=\"width:12px;\">&nbsp;</td>");
             sb.append("<td valign=\"top\" width=\"168\" style=\"width:168px;\">");
             sb.append("<div style=\"padding:12px;border:1px solid #e2e8f0;border-radius:14px;background:#ffffff;text-align:center;\">");
-            sb.append("<img src=\"").append(qrCodeUrl).append("\" alt=\"").append(escapeHtml(localized.ticketQrAltText()))
-                    .append("\" width=\"132\" height=\"132\" style=\"width:132px;max-width:100%;height:auto;margin:0 auto;\">");
+            sb.append("<img src=\"").append(qrCodeImage).append("\" alt=\"").append(escapeHtml(localized.ticketQrAltText()))
+                    .append("\" width=\"120\" height=\"120\" style=\"width:120px;max-width:100%;height:auto;margin:0 auto;\">");
             sb.append("</div>");
             sb.append("<div style=\"margin-top:8px;font-size:12px;line-height:1.5;color:#64748b;text-align:center;\">")
                     .append(localized.qrHintText())
@@ -445,11 +517,10 @@ public class TicketDocumentService {
             sb.append("</td></tr></table>");
         }
 
-        sb.append("</div>");
         return sb.toString();
     }
 
-    private void appendTicketField(StringBuilder sb, String label, String value) {
+    private void appendEmailTicketField(StringBuilder sb, String label, String value) {
         sb.append("<div style=\"margin-bottom:14px;\">");
         sb.append("<div style=\"font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:#64748b;\">")
                 .append(escapeHtml(label))
@@ -458,6 +529,202 @@ public class TicketDocumentService {
                 .append(value)
                 .append("</div>");
         sb.append("</div>");
+    }
+
+    private String buildEmailIntroHtml(String introText) {
+        return "<p style=\"margin:0 0 16px 0;font-size:15px;line-height:1.6;color:#475569;\">"
+                + escapeHtml(introText)
+                + "</p>";
+    }
+
+    private String buildOrderTicketPagesHtml(List<OrderTicketEntry> ticketEntries,
+            LocalizedEmailContent localized,
+            String companyName,
+            String companySubtitle,
+            String companyLogoUrl,
+            String routeLabel,
+            String tripDate,
+            String tripTime,
+            String salesChannel,
+            String supportLine,
+            String pickupSummary,
+            String dropoffSummary,
+            String platformAttributionHtml) {
+        if (ticketEntries == null || ticketEntries.isEmpty()) {
+            return "";
+        }
+
+        StringBuilder sb = new StringBuilder();
+        for (int i = 0; i < ticketEntries.size(); i++) {
+            OrderTicketEntry entry = ticketEntries.get(i);
+            TicketType ticket = entry.ticket();
+            if (ticket == null) {
+                continue;
+            }
+
+            String ticketReference = firstNonBlank(ticket.getReference(), ticket.getIdempotencyKey());
+            String passengerName = resolvePassengerName(entry.passenger(), ticket);
+            String seat = resolveSeatLabel(entry.passenger(), ticket, localized);
+            String amount = formatTicketAmount(ticket);
+            String ticketStatus = translateStatus(ticket.getStatus(), localized.language());
+            String qrCodeImage = qrCodeService.generateDataUri(ticketReference);
+            String footerText = localized.footerText(ticketReference, companyName, supportLine);
+            String contextTag = localized.passengerTicketLabel(i + 1) + " · " + ticketEntries.size() + " " + localized.passengersWord();
+
+            sb.append(buildTicketSheetHtml(
+                    localized.orderEyebrowText(),
+                    contextTag,
+                    companyName,
+                    companySubtitle,
+                    companyLogoUrl,
+                    routeLabel,
+                    localized.heroSubtitle(tripDate, tripTime, ticketStatus),
+                    ticketStatus,
+                    localized.referenceLabel(),
+                    ticketReference,
+                    localized.amountLabel(),
+                    amount,
+                    localized.passengerLabel(),
+                    passengerName,
+                    localized.seatLabel(),
+                    seat,
+                    localized.supportContactLabel(),
+                    supportLine,
+                    localized.pickupLabel(),
+                    pickupSummary,
+                    localized.dropoffLabel(),
+                    dropoffSummary,
+                    qrCodeImage,
+                    localized.ticketQrAltText(),
+                    localized.qrHintText(),
+                    footerText,
+                    platformAttributionHtml));
+        }
+        return sb.toString();
+    }
+
+    private String buildTicketSheetHtml(String eyebrowText,
+            String contextTag,
+            String companyName,
+            String companySubtitle,
+            String companyLogoUrl,
+            String routeLabel,
+            String heroSubtitle,
+            String status,
+            String referenceLabel,
+            String reference,
+            String amountLabel,
+            String amount,
+            String passengerLabel,
+            String passengerName,
+            String seatLabel,
+            String seatValue,
+            String supportContactLabel,
+            String supportLine,
+            String pickupLabel,
+            String pickupSummary,
+            String dropoffLabel,
+            String dropoffSummary,
+            String qrCodeDataUri,
+            String ticketQrAltText,
+            String qrHintText,
+            String footerText,
+            String platformAttributionHtml) {
+        StringBuilder sb = new StringBuilder();
+        sb.append("<section class=\"pdf-page\"><article class=\"ticket-sheet\">");
+        sb.append("<header class=\"ticket-hero\">");
+        sb.append("<div class=\"brand-lockup\">");
+        sb.append("<div class=\"brand-unit\">");
+        sb.append("<div class=\"brand-mark\"><img class=\"brand-logo\" src=\"")
+                .append(escapeHtml(companyLogoUrl))
+                .append("\" alt=\"")
+                .append(escapeHtml(companyName))
+                .append("\"></div>");
+        sb.append("<div>");
+        sb.append("<p class=\"ticket-eyebrow\">").append(escapeHtml(eyebrowText)).append("</p>");
+        sb.append("<h1 class=\"ticket-brand\">").append(escapeHtml(companyName)).append("</h1>");
+        if (!defaultString(companySubtitle).isBlank()) {
+            sb.append("<p class=\"ticket-company-copy\">").append(escapeHtml(companySubtitle)).append("</p>");
+        }
+        sb.append("</div></div>");
+        if (!defaultString(contextTag).isBlank()) {
+            sb.append("<div class=\"hero-tag\">").append(escapeHtml(contextTag)).append("</div>");
+        }
+        sb.append("</div>");
+        sb.append("<div class=\"route-row\">");
+        sb.append("<div>");
+        sb.append("<p class=\"route-title\">").append(escapeHtml(routeLabel)).append("</p>");
+        sb.append("<p class=\"route-copy\">").append(escapeHtml(heroSubtitle)).append("</p>");
+        sb.append("</div>");
+        sb.append("<div class=\"status-chip\">").append(escapeHtml(status)).append("</div>");
+        sb.append("</div>");
+        sb.append("</header>");
+
+        sb.append("<div class=\"ticket-layout\">");
+        sb.append("<div class=\"ticket-main\">");
+        sb.append("<div class=\"info-grid\">");
+        sb.append(buildInfoCard(referenceLabel, reference, "info-card info-card-wide", false));
+        sb.append(buildInfoCard(amountLabel, amount, "info-card", false));
+        sb.append(buildInfoCard(seatLabel, seatValue, "info-card", false));
+        sb.append("</div>");
+
+        sb.append("<div class=\"detail-grid\">");
+        sb.append("<div class=\"info-card detail-list\">");
+        sb.append(buildDetailItem(passengerLabel, passengerName));
+        sb.append(buildDetailItem(supportContactLabel, supportLine));
+        sb.append("</div>");
+        sb.append("<div class=\"info-card detail-list\">");
+        sb.append(buildJourneyStop(pickupLabel, pickupSummary));
+        sb.append(buildJourneyStop(dropoffLabel, dropoffSummary));
+        sb.append("</div>");
+        sb.append("</div>");
+        sb.append("</div>");
+
+        sb.append("<aside class=\"qr-panel\">");
+        sb.append("<div>");
+        sb.append("<p class=\"qr-badge\">").append(escapeHtml(referenceLabel)).append("</p>");
+        sb.append("<p class=\"qr-reference\">").append(escapeHtml(reference)).append("</p>");
+        sb.append("</div>");
+        sb.append("<div class=\"qr-frame\"><img src=\"")
+                .append(escapeHtml(qrCodeDataUri))
+                .append("\" alt=\"")
+                .append(escapeHtml(ticketQrAltText))
+                .append("\"></div>");
+        sb.append("<p class=\"qr-hint\">").append(escapeHtml(qrHintText)).append("</p>");
+        sb.append("</aside>");
+        sb.append("</div>");
+
+        sb.append("<footer class=\"ticket-footer\">").append(escapeHtml(footerText));
+        sb.append(platformAttributionHtml);
+        sb.append("</footer>");
+        sb.append("</article></section>");
+        return sb.toString();
+    }
+
+    private String buildInfoCard(String label, String value, String className, boolean compact) {
+        StringBuilder sb = new StringBuilder();
+        sb.append("<div class=\"").append(className).append("\">");
+        sb.append("<p class=\"info-label\">").append(escapeHtml(label)).append("</p>");
+        sb.append("<p class=\"").append(compact ? "info-copy" : "info-value").append("\">")
+                .append(escapeHtml(value))
+                .append("</p>");
+        sb.append("</div>");
+        return sb.toString();
+    }
+
+    private String buildDetailItem(String label, String value) {
+        return "<div><p class=\"info-label\">" + escapeHtml(label) + "</p><p class=\"info-copy\">" + escapeHtml(value) + "</p></div>";
+    }
+
+    private String buildJourneyStop(String label, String value) {
+        return "<div class=\"journey-stop\"><p class=\"info-label\">" + escapeHtml(label) + "</p><p class=\"info-copy\">" + escapeHtml(value) + "</p></div>";
+    }
+
+    private String buildPlatformAttributionHtml(String logoUrl) {
+        return "<div style=\"margin-top:10px;display:flex;align-items:center;justify-content:center;gap:6px;font-size:11px;line-height:1.4;color:#64748b;\">"
+                + "<span>Powered by</span>"
+                + "<img src=\"" + escapeHtml(logoUrl) + "\" alt=\"" + SAFRA_BRAND_NAME + "\" style=\"height:14px;width:auto;display:inline-block;vertical-align:middle;\">"
+                + "</div>";
     }
 
     private List<OrderTicketEntry> buildOrderTicketEntries(OrderType order, List<TicketType> tickets) {
@@ -554,6 +821,7 @@ public class TicketDocumentService {
     }
 
     private record OrderTicketEntry(OrderType.OrderPassenger passenger, TicketType ticket) {
+
     }
 
     private String translateOrderStatus(OrderStatusEnum status, TicketLanguage language) {
@@ -597,62 +865,161 @@ public class TicketDocumentService {
         };
     }
 
-    private String resolvePickupSummary(TripType trip, TicketType ticket, PlaceType fallbackPlace, String fallbackValue) {
+    private String resolvePickupSummary(
+            TripType trip,
+            TicketType ticket,
+            PlaceType fallbackPlace,
+            String fallbackValue,
+            TicketLanguage language) {
         if (trip.getPickupPoints() != null && ticket.getPickupPointId() != null) {
             for (var pickup : trip.getPickupPoints()) {
                 if (ticket.getPickupPointId().equals(pickup.getPointId())) {
                     PlaceType place = pickup.getPlaceId() != null ? placeRepository.findById(pickup.getPlaceId()).orElse(null) : null;
-                    return formatPointSummary(place != null ? place.getCity() : null, pickup.getAddress(), fallbackPlace != null ? fallbackPlace.getCity() : null, fallbackValue);
+                    return formatPointSummary(
+                            place != null ? place.getCity() : null,
+                            pickup.getAddress(),
+                            fallbackPlace != null ? fallbackPlace.getCity() : null,
+                            pickup.getScheduledDepartureTime(),
+                            fallbackPlace != null ? fallbackPlace.getId() : null,
+                            trip,
+                            language,
+                            true,
+                            fallbackValue);
                 }
             }
         }
-        return formatPointSummary(fallbackPlace != null ? fallbackPlace.getCity() : null, null, ticket.getPickupPointId(), fallbackValue);
+        return formatPointSummary(
+                fallbackPlace != null ? fallbackPlace.getCity() : null,
+                null,
+                ticket.getPickupPointId(),
+                null,
+                fallbackPlace != null ? fallbackPlace.getId() : null,
+                trip,
+                language,
+                true,
+                fallbackValue);
     }
 
-    private String resolveDropoffSummary(TripType trip, TicketType ticket, PlaceType fallbackPlace, String fallbackValue) {
+    private String resolveDropoffSummary(
+            TripType trip,
+            TicketType ticket,
+            PlaceType fallbackPlace,
+            String fallbackValue,
+            TicketLanguage language) {
         if (trip.getDropoffPoints() != null && ticket.getDropoffPointId() != null) {
             for (var dropoff : trip.getDropoffPoints()) {
                 if (ticket.getDropoffPointId().equals(dropoff.getPointId())) {
                     PlaceType place = dropoff.getPlaceId() != null ? placeRepository.findById(dropoff.getPlaceId()).orElse(null) : null;
-                    return formatPointSummary(place != null ? place.getCity() : null, dropoff.getAddress(), fallbackPlace != null ? fallbackPlace.getCity() : null, fallbackValue);
+                    return formatPointSummary(
+                            place != null ? place.getCity() : null,
+                            dropoff.getAddress(),
+                            fallbackPlace != null ? fallbackPlace.getCity() : null,
+                            dropoff.getScheduledArrivalTime(),
+                            fallbackPlace != null ? fallbackPlace.getId() : null,
+                            trip,
+                            language,
+                            false,
+                            fallbackValue);
                 }
             }
         }
-        return formatPointSummary(fallbackPlace != null ? fallbackPlace.getCity() : null, null, ticket.getDropoffPointId(), fallbackValue);
+        return formatPointSummary(
+                fallbackPlace != null ? fallbackPlace.getCity() : null,
+                null,
+                ticket.getDropoffPointId(),
+                null,
+                fallbackPlace != null ? fallbackPlace.getId() : null,
+                trip,
+                language,
+                false,
+                fallbackValue);
     }
 
-    private String formatPointSummary(String city, String address, String fallback, String emptyValue) {
+    private String formatPointSummary(
+            String city,
+            String address,
+            String fallback,
+            Instant scheduledTime,
+            String stopPlaceId,
+            TripType trip,
+            TicketLanguage language,
+            boolean departureTime,
+            String emptyValue) {
         String primary = firstNonBlank(city, fallback, emptyValue);
         String secondary = defaultString(address);
-        return secondary.isBlank() ? primary : primary + " - " + secondary;
+        String locationSummary = secondary.isBlank() ? primary : primary + " - " + secondary;
+        String scheduledTimeLabel = resolvePointTimeLabel(scheduledTime, stopPlaceId, trip, language, departureTime);
+        return scheduledTimeLabel.isBlank() ? locationSummary : locationSummary + " · " + scheduledTimeLabel;
+    }
+
+    private String resolvePointTimeLabel(
+            Instant scheduledTime,
+            String stopPlaceId,
+            TripType trip,
+            TicketLanguage language,
+            boolean departureTime) {
+        Instant effectiveTime = scheduledTime;
+        if (effectiveTime == null && stopPlaceId != null && trip != null && trip.getStopSchedule() != null) {
+            effectiveTime = trip.getStopSchedule().stream()
+                    .filter(stop -> stop != null && stopPlaceId.equals(stop.getPlaceId()))
+                    .map(stop -> departureTime ? stop.getDepartureTime() : stop.getArrivalTime())
+                    .filter(Objects::nonNull)
+                    .findFirst()
+                    .orElse(null);
+        }
+        if (effectiveTime == null) {
+            return "";
+        }
+        return formatTripTime(effectiveTime, resolveTripZone(trip), language);
     }
 
     private String resolveOriginPlaceId(TripType trip, TicketType ticket) {
-        if (ticket.getSegmentIds() == null || ticket.getSegmentIds().isEmpty()) {
-            List<StopType> stops = trip.getStopSchedule();
-            return stops != null && !stops.isEmpty() ? stops.get(0).getPlaceId() : null;
+        List<String> segmentIds = ticket != null ? ticket.getSegmentIds() : null;
+        List<SegmentType> segments = trip != null ? trip.getSegments() : null;
+        String originPlaceId = resolveSegmentPlaceId(segmentIds, segments, true);
+        if (originPlaceId != null) {
+            return originPlaceId;
         }
-        String firstSegId = ticket.getSegmentIds().get(0);
-        return trip.getSegments().stream()
-                .filter(s -> s.getSegmentId().equals(firstSegId))
-                .map(SegmentType::getFromPlace)
+        List<StopType> stops = trip != null ? trip.getStopSchedule() : null;
+        return stops != null && !stops.isEmpty() ? stops.get(0).getPlaceId() : null;
+    }
+
+    private String resolveDestinationPlaceId(TripType trip, TicketType ticket) {
+        List<String> segmentIds = ticket != null ? ticket.getSegmentIds() : null;
+        List<SegmentType> segments = trip != null ? trip.getSegments() : null;
+        String destinationPlaceId = resolveSegmentPlaceId(segmentIds, segments, false);
+        if (destinationPlaceId != null) {
+            return destinationPlaceId;
+        }
+        List<StopType> stops = trip != null ? trip.getStopSchedule() : null;
+        return stops != null && !stops.isEmpty() ? stops.get(stops.size() - 1).getPlaceId() : null;
+    }
+
+    private String resolveSegmentPlaceId(List<String> segmentIds, List<SegmentType> segments, boolean origin) {
+        if (segmentIds == null || segmentIds.isEmpty() || segments == null || segments.isEmpty()) {
+            return null;
+        }
+
+        String segmentId = origin ? segmentIds.get(0) : segmentIds.get(segmentIds.size() - 1);
+        return segments.stream()
+                .filter(segment -> segment != null && segmentId.equals(segment.getSegmentId()))
+                .map(segment -> origin ? segment.getFromPlace() : segment.getToPlace())
                 .map(TripPlaceRef::idOf)
+                .filter(placeId -> placeId != null && !placeId.isBlank())
                 .findFirst()
                 .orElse(null);
     }
 
-    private String resolveDestinationPlaceId(TripType trip, TicketType ticket) {
-        if (ticket.getSegmentIds() == null || ticket.getSegmentIds().isEmpty()) {
-            List<StopType> stops = trip.getStopSchedule();
-            return stops != null && !stops.isEmpty() ? stops.get(stops.size() - 1).getPlaceId() : null;
+    private ZoneId resolveTripZone(TripType trip) {
+        String timezone = trip != null ? defaultString(trip.getTimezone()) : "";
+        if (timezone.isBlank()) {
+            return ZoneOffset.UTC;
         }
-        String lastSegId = ticket.getSegmentIds().get(ticket.getSegmentIds().size() - 1);
-        return trip.getSegments().stream()
-                .filter(s -> s.getSegmentId().equals(lastSegId))
-                .map(SegmentType::getToPlace)
-                .map(TripPlaceRef::idOf)
-                .findFirst()
-                .orElse(null);
+        try {
+            return ZoneId.of(timezone);
+        } catch (DateTimeException ex) {
+            return ZoneOffset.UTC;
+        }
     }
 
     private Map<String, Object> buildMetadata(TicketType ticket,
@@ -667,7 +1034,7 @@ public class TicketDocumentService {
         Map<String, Object> ticketMeta = new HashMap<>();
         ticketMeta.put("id", ticket.getId());
         ticketMeta.put("lang", TicketLanguage.fromCode(ticket.getLang()).getCode());
-        ticketMeta.put("status", ticket.getStatus().name());
+        ticketMeta.put("status", ticket.getStatus() != null ? ticket.getStatus().name() : null);
         ticketMeta.put("reference", reference);
         ticketMeta.put("appliedPrice", ticket.getAppliedPrice());
         ticketMeta.put("currency", ticket.getCurrency());
@@ -681,7 +1048,7 @@ public class TicketDocumentService {
         tripMeta.put("route", routeLabel);
         tripMeta.put("date", trip.getDepartureDate());
         tripMeta.put("time", trip.getDepartureDate() != null
-                ? trip.getDepartureDate().atZone(trip.getTimezone() != null ? ZoneId.of(trip.getTimezone()) : ZoneOffset.UTC).toLocalTime()
+                ? trip.getDepartureDate().atZone(resolveTripZone(trip)).toLocalTime()
                 : null);
 
         String posIdValue = ticket.getTarget() != null ? ticket.getTarget().getPos() : null;
@@ -772,6 +1139,120 @@ public class TicketDocumentService {
             return "";
         }
         return baseUrl + "/" + path;
+    }
+
+    private String resolveCompanyLogoSource(String pictureUrl, String companyName) {
+        String inlinePicture = inlineRemoteImage(pictureUrl);
+        if (!inlinePicture.isBlank()) {
+            return inlinePicture;
+        }
+        return buildFallbackLogoDataUri(companyName);
+    }
+
+    private String resolveEmailLogoSource(String pictureUrl, String companyName) {
+        String cleanUrl = defaultString(pictureUrl);
+        if (!cleanUrl.isBlank()) {
+            return cleanUrl;
+        }
+        return buildFallbackLogoDataUri(companyName);
+    }
+
+    private String inlineRemoteImage(String pictureUrl) {
+        String cleanUrl = defaultString(pictureUrl);
+        if (cleanUrl.isBlank()) {
+            return "";
+        }
+        if (cleanUrl.startsWith("data:")) {
+            return cleanUrl;
+        }
+        if (!(cleanUrl.startsWith("http://") || cleanUrl.startsWith("https://"))) {
+            return cleanUrl;
+        }
+        return LOGO_DATA_URI_CACHE.computeIfAbsent(cleanUrl, this::downloadImageAsDataUri);
+    }
+
+    private String downloadImageAsDataUri(String pictureUrl) {
+        try {
+            HttpRequest request = HttpRequest.newBuilder(URI.create(pictureUrl))
+                    .GET()
+                    .timeout(LOGO_REQUEST_TIMEOUT)
+                    .header("Accept", "image/*")
+                    .build();
+            HttpResponse<byte[]> response = LOGO_HTTP_CLIENT.send(request, HttpResponse.BodyHandlers.ofByteArray());
+            byte[] body = response.body();
+            if (response.statusCode() < 200 || response.statusCode() >= 300 || body == null || body.length == 0 || body.length > MAX_INLINE_LOGO_BYTES) {
+                return "";
+            }
+
+            String contentType = response.headers()
+                    .firstValue("Content-Type")
+                    .map(String::trim)
+                    .filter(value -> !value.isBlank())
+                    .orElseGet(() -> guessImageMimeType(pictureUrl));
+            if (!contentType.startsWith("image/")) {
+                contentType = guessImageMimeType(pictureUrl);
+            }
+            return "data:" + contentType + ";base64," + Base64.getEncoder().encodeToString(body);
+        } catch (IOException ex) {
+            return "";
+        } catch (InterruptedException ex) {
+            Thread.currentThread().interrupt();
+            return "";
+        } catch (IllegalArgumentException ex) {
+            return "";
+        }
+    }
+
+    private String guessImageMimeType(String pictureUrl) {
+        String lowerUrl = defaultString(pictureUrl).toLowerCase();
+        if (lowerUrl.endsWith(".svg")) {
+            return "image/svg+xml";
+        }
+        if (lowerUrl.endsWith(".webp")) {
+            return "image/webp";
+        }
+        if (lowerUrl.endsWith(".gif")) {
+            return "image/gif";
+        }
+        if (lowerUrl.endsWith(".jpg") || lowerUrl.endsWith(".jpeg")) {
+            return "image/jpeg";
+        }
+        return "image/png";
+    }
+
+    private String buildFallbackLogoDataUri(String companyName) {
+        String initials = resolveCompanyInitials(companyName);
+        String svg = "<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160' viewBox='0 0 160 160'>"
+                + "<defs><linearGradient id='g' x1='0%' y1='0%' x2='100%' y2='100%'><stop offset='0%' stop-color='#f8fbff'/><stop offset='100%' stop-color='#dbe8f4'/></linearGradient></defs>"
+                + "<rect width='160' height='160' rx='36' fill='url(#g)'/>"
+                + "<rect x='14' y='14' width='132' height='132' rx='28' fill='#ffffff' stroke='#d8e3ef'/>"
+                + "<text x='50%' y='54%' text-anchor='middle' font-family='Arial,Helvetica,sans-serif' font-size='56' font-weight='700' fill='#0f172a'>"
+                + initials
+                + "</text></svg>";
+        return "data:image/svg+xml;base64," + Base64.getEncoder().encodeToString(svg.getBytes(StandardCharsets.UTF_8));
+    }
+
+    private String resolveCompanyInitials(String companyName) {
+        String cleanName = defaultString(companyName);
+        if (cleanName.isBlank()) {
+            return "ET";
+        }
+
+        StringBuilder initials = new StringBuilder();
+        for (String part : cleanName.split("\\s+")) {
+            if (part.isBlank()) {
+                continue;
+            }
+            initials.append(Character.toUpperCase(part.charAt(0)));
+            if (initials.length() == 2) {
+                break;
+            }
+        }
+
+        if (initials.length() == 0) {
+            initials.append(cleanName.substring(0, Math.min(2, cleanName.length())).toUpperCase());
+        }
+        return initials.toString();
     }
 
     private String formatTripDate(Instant departureDate, ZoneId tripZone, TicketLanguage language) {

@@ -154,6 +154,7 @@ public class BookingService {
             TicketStatusEnum initialStatus = effectiveOptions.resolvedTicketStatus();
             ticket = TicketType.builder()
                     .id(UUID.randomUUID().toString())
+                    .reference(TicketReferenceGenerator.generate())
                     .tripId(tripId)
                     .target(new TargetInput(resolvedCompanyId, posId))
                     .segmentIds(new ArrayList<>(segmentIds))
@@ -375,8 +376,8 @@ public class BookingService {
      * <p>
      * PENDING tickets use the expiry path: they transition to EXPIRED and
      * release their held seats immediately. CONFIRMED tickets transition to
-     * CANCELLED and create a Refund record with status REQUESTED. Seats are NOT
-     * released here — that happens on Refund APPROVED (Sprint 9).
+     * CANCELLED, release their seats immediately, and create a Refund record
+     * with status REQUESTED for financial follow-up.
      *
      * @return the updated ticket
      */
@@ -402,14 +403,19 @@ public class BookingService {
         ticket.setStatus(TicketStatusEnum.CANCELLED);
         ticket.setCancelledAt(Instant.now());
         TicketType saved = ticketRepository.save(ticket);
+        seatOccupancyService.releaseTicketSeat(ticket);
+        seatReservationService.releaseSeats(ticket.getTripId(), ticket.getSegmentIds(), ticket.getExpressSegmentId());
 
         // Create refund record
+        Instant seatReleasedAt = saved.getCancelledAt();
         RefundType refund = RefundType.builder()
                 .ticketId(ticketId)
                 .segmentsRefunded(new ArrayList<>(ticket.getSegmentIds()))
                 .amount(ticket.getAppliedPrice())
                 .currency(ticket.getCurrency())
                 .status(RefundStatusEnum.REQUESTED)
+                .seatReleased(true)
+                .seatReleasedAt(seatReleasedAt)
                 .build();
         refundRepository.save(refund);
 
@@ -677,6 +683,7 @@ public class BookingService {
 
                 TicketType ticket = TicketType.builder()
                         .id(ticketId)
+                        .reference(TicketReferenceGenerator.generate())
                         .tripId(req.getTripId())
                         .orderId(orderId)
                         .target(new TargetInput(resolvedCompanyId, posId))
@@ -796,7 +803,8 @@ public class BookingService {
     // ════════════════════════════════════════════════════════════════════
     /**
      * Cancels an entire order. PENDING orders expire immediately with seat
-     * release. CONFIRMED orders transition to CANCELLED with refund records.
+     * release. CONFIRMED orders transition to CANCELLED, release their seats,
+     * and create refund records.
      */
     public OrderType cancelOrder(String orderId, RefundRepository refundRepository) {
         OrderType order = orderRepository.findById(orderId)
@@ -833,11 +841,12 @@ public class BookingService {
 
         // Confirmed → Cancelled with refund
         Instant now = Instant.now();
+        List<TicketType> cancelledTickets = new ArrayList<>();
         for (TicketType ticket : tickets) {
             if (ticket.getStatus() == TicketStatusEnum.CONFIRMED) {
                 ticket.setStatus(TicketStatusEnum.CANCELLED);
                 ticket.setCancelledAt(now);
-                ticketRepository.save(ticket);
+                cancelledTickets.add(ticket);
 
                 RefundType refund = RefundType.builder()
                         .ticketId(ticket.getId())
@@ -845,9 +854,17 @@ public class BookingService {
                         .amount(ticket.getAppliedPrice())
                         .currency(ticket.getCurrency())
                         .status(RefundStatusEnum.REQUESTED)
+                        .seatReleased(true)
+                        .seatReleasedAt(now)
                         .build();
                 refundRepository.save(refund);
             }
+        }
+
+        if (!cancelledTickets.isEmpty()) {
+            ticketRepository.saveAll(cancelledTickets);
+            seatOccupancyService.releaseTicketSeats(cancelledTickets);
+            seatReservationService.releaseReservations(order.getTripId(), cancelledTickets);
         }
 
         order.setStatus(OrderStatusEnum.CANCELLED);

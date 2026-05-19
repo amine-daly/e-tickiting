@@ -8,6 +8,7 @@ import { Subscription } from 'rxjs';
 import { LayoutService } from '../../core/layout.service';
 import { MenuComponent } from '../../../kt/components';
 import { ILayout, LayoutType } from '../../core/configs/config';
+import { LOGO_BASE } from '../../../../../environments/environment';
 import { KeeniconComponent } from 'src/app/_metronic/shared/keenicon/keenicon.component';
 
 @Component({
@@ -45,41 +46,46 @@ export class HeaderComponent implements OnInit, OnDestroy {
   appHeaderDefaulMenuDisplay: boolean;
   appPageTitleDisplay: boolean;
 
-  constructor(private layout: LayoutService, private router: Router) {
+  logobase = LOGO_BASE;
+
+  constructor(
+    private layout: LayoutService,
+    private router: Router,
+  ) {
     this.routingChanges();
   }
 
   updateProps(config: ILayout) {
     this.appHeaderDisplay = this.layout.getProp(
       'app.header.display',
-      config
+      config,
     ) as boolean;
     // view
     this.appSidebarDefaultCollapseDesktopEnabled = this.layout.getProp(
       'app.sidebar.default.collapse.desktop.enabled',
-      config
+      config,
     ) as boolean;
     this.appSidebarDisplay = this.layout.getProp(
       'app.sidebar.display',
-      config
+      config,
     ) as boolean;
     this.appHeaderDefaultContent = this.layout.getProp(
       'app.header.default.content',
-      config
+      config,
     ) as string;
     this.appHeaderDefaulMenuDisplay = this.layout.getProp(
       'app.header.default.menu.display',
-      config
+      config,
     ) as boolean;
     this.appPageTitleDisplay = this.layout.getProp(
       'app.pageTitle.display',
-      config
+      config,
     ) as boolean;
 
     // body attrs and container css classes
     this.appHeaderDefaultFixedDesktop = this.layout.getProp(
       'app.header.default.fixed.desktop',
-      config
+      config,
     ) as boolean;
     if (this.appHeaderDefaultFixedDesktop) {
       document.body.setAttribute('data-kt-app-header-fixed', 'true');
@@ -87,7 +93,7 @@ export class HeaderComponent implements OnInit, OnDestroy {
 
     this.appHeaderDefaultFixedMobile = this.layout.getProp(
       'app.header.default.fixed.mobile',
-      config
+      config,
     ) as boolean;
     if (this.appHeaderDefaultFixedMobile) {
       document.body.setAttribute('data-kt-app-header-fixed-mobile', 'true');
@@ -95,7 +101,7 @@ export class HeaderComponent implements OnInit, OnDestroy {
 
     this.appHeaderDefaultContainer = this.layout.getProp(
       'appHeaderDefaultContainer',
-      config
+      config,
     ) as 'fixed' | 'fluid';
     this.headerContainerCssClass =
       this.appHeaderDefaultContainer === 'fixed'
@@ -104,7 +110,7 @@ export class HeaderComponent implements OnInit, OnDestroy {
 
     this.appHeaderDefaultContainerClass = this.layout.getProp(
       'app.header.default.containerClass',
-      config
+      config,
     ) as string;
     if (this.appHeaderDefaultContainerClass) {
       this.headerContainerCssClass += ` ${this.appHeaderDefaultContainerClass}`;
@@ -112,7 +118,7 @@ export class HeaderComponent implements OnInit, OnDestroy {
 
     this.appHeaderDefaultStacked = this.layout.getProp(
       'app.header.default.stacked',
-      config
+      config,
     ) as boolean;
     if (this.appHeaderDefaultStacked) {
       document.body.setAttribute('data-kt-app-header-stacked', 'true');

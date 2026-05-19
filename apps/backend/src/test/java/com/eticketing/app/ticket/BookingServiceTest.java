@@ -35,6 +35,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -248,10 +249,64 @@ class BookingServiceTest {
 
         TicketType result = bookingService.cancelBooking("ticket-2", refundRepository);
 
+        ArgumentCaptor<RefundType> refundCaptor = ArgumentCaptor.forClass(RefundType.class);
+
         assertEquals(TicketStatusEnum.CANCELLED, result.getStatus());
         assertNotNull(result.getCancelledAt());
-        verify(refundRepository).save(any(RefundType.class));
-        verify(seatReservationService, never()).releaseSeats(any(), any(), any());
+        verify(seatOccupancyService).releaseTicketSeat(confirmedTicket);
+        verify(seatReservationService).releaseSeats("trip-9", List.of("seg-9"), (String) null);
+        verify(refundRepository).save(refundCaptor.capture());
+        assertTrue(refundCaptor.getValue().isSeatReleased());
+        assertNotNull(refundCaptor.getValue().getSeatReleasedAt());
+    }
+
+    @Test
+    void cancelOrderCancelsConfirmedTicketsReleasesSeatsAndFlagsRefunds() {
+        OrderType order = OrderType.builder()
+                .id("order-9")
+                .tripId("trip-9")
+                .status(OrderStatusEnum.CONFIRMED)
+                .ticketIds(List.of("ticket-10", "ticket-11"))
+                .build();
+        TicketType firstTicket = TicketType.builder()
+                .id("ticket-10")
+                .tripId("trip-9")
+                .segmentIds(List.of("seg-1", "seg-2"))
+                .appliedPrice(BigDecimal.valueOf(15))
+                .currency("TND")
+                .status(TicketStatusEnum.CONFIRMED)
+                .build();
+        TicketType secondTicket = TicketType.builder()
+                .id("ticket-11")
+                .tripId("trip-9")
+                .segmentIds(List.of("seg-1", "seg-2"))
+                .appliedPrice(BigDecimal.valueOf(17))
+                .currency("TND")
+                .status(TicketStatusEnum.CONFIRMED)
+                .build();
+
+        when(orderRepository.findById("order-9")).thenReturn(Optional.of(order));
+        when(ticketRepository.findByOrderId("order-9")).thenReturn(List.of(firstTicket, secondTicket));
+        when(ticketRepository.saveAll(any())).thenAnswer(invocation -> invocation.getArgument(0));
+        when(orderRepository.save(any(OrderType.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        when(refundRepository.save(any(RefundType.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        OrderType result = bookingService.cancelOrder("order-9", refundRepository);
+
+        ArgumentCaptor<RefundType> refundCaptor = ArgumentCaptor.forClass(RefundType.class);
+
+        assertEquals(OrderStatusEnum.CANCELLED, result.getStatus());
+        assertNotNull(result.getCancelledAt());
+        assertEquals(TicketStatusEnum.CANCELLED, firstTicket.getStatus());
+        assertEquals(TicketStatusEnum.CANCELLED, secondTicket.getStatus());
+        assertNotNull(firstTicket.getCancelledAt());
+        assertNotNull(secondTicket.getCancelledAt());
+        verify(ticketRepository).saveAll(List.of(firstTicket, secondTicket));
+        verify(seatOccupancyService).releaseTicketSeats(List.of(firstTicket, secondTicket));
+        verify(seatReservationService).releaseReservations("trip-9", List.of(firstTicket, secondTicket));
+        verify(refundRepository, org.mockito.Mockito.times(2)).save(refundCaptor.capture());
+        assertTrue(refundCaptor.getAllValues().stream().allMatch(RefundType::isSeatReleased));
+        assertTrue(refundCaptor.getAllValues().stream().allMatch(refund -> refund.getSeatReleasedAt() != null));
     }
 
     @Test

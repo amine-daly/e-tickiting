@@ -55,6 +55,7 @@ jobs:
               - "libs/**"
               - "infra/**"
               - ".github/**"
+              - "scripts/**"
 
   build-backoffice:
     needs: filter

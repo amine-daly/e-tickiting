@@ -1,5 +1,27 @@
 /* sell-ticket component styles */
 
+.customer-entry-grid {
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+}
+
+.customer-panel {
+  border: 1px solid #e4ebf3;
+  border-radius: 18px;
+  padding: 1rem;
+  background: linear-gradient(180deg, #ffffff 0%, #f7faff 100%);
+  box-shadow: 0 12px 30px rgba(22, 34, 51, 0.06);
+}
+
+.customer-panel--accent {
+  background: linear-gradient(135deg, #f8fbff 0%, #eefbf4 100%);
+}
+
+.quick-contact-phone__code {
+  max-width: 92px;
+}
+
 // ─── Seat Map Grid ───
 .seat-map-grid {
   display: grid;
@@ -18,7 +40,10 @@
   font-size: 0.8rem;
   font-weight: 600;
   user-select: none;
-  transition: background-color 0.15s, border-color 0.15s, transform 0.1s;
+  transition:
+    background-color 0.15s,
+    border-color 0.15s,
+    transform 0.1s;
 }
 
 // Seat states

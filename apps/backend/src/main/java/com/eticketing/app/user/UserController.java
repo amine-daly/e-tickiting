@@ -176,6 +176,7 @@ public class UserController {
     public Paginated<UserRes> searchUsers(
             @RequestParam String q,
             @RequestParam(required = false) String companyId,
+            @RequestParam(required = false) String role,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int limit) {
         if (q == null || q.isBlank()) {
@@ -196,6 +197,13 @@ public class UserController {
         if (companyId != null && !companyId.isBlank()) {
             query.addCriteria(Criteria.where("target.company").is(companyId));
         }
+        if (role != null && !role.isBlank()) {
+            try {
+                query.addCriteria(Criteria.where("role").is(RoleEnum.valueOf(role.trim().toUpperCase())));
+            } catch (IllegalArgumentException ex) {
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid role");
+            }
+        }
 
         List<UserType> results = mongoTemplate.find(query, UserType.class);
         long total = mongoTemplate.count(Query.of(query).limit(-1).skip(-1), UserType.class);
@@ -213,14 +221,26 @@ public class UserController {
     @Operation(summary = "Get users by Company ID")
     public Paginated<UserRes> byCompany(
             @RequestParam String companyId,
+            @RequestParam(required = false) String role,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int limit) {
         if (companyId == null || companyId.isBlank()) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "companyId is required");
         }
-        Page<UserType> p = users.findByTargetCompany(
-                companyId,
-                PageRequest.of(page, limit, Sort.by(Sort.Direction.DESC, "createdAt")));
+        Pageable pageable = PageRequest.of(page, limit, Sort.by(Sort.Direction.DESC, "createdAt"));
+        Page<UserType> p;
+        if (role == null || role.isBlank()) {
+            p = users.findByTargetCompany(companyId, pageable);
+        } else {
+            try {
+                p = users.findByTargetCompanyAndRole(
+                        companyId,
+                        RoleEnum.valueOf(role.trim().toUpperCase()),
+                        pageable);
+            } catch (IllegalArgumentException ex) {
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid role");
+            }
+        }
         var list = p.getContent().stream().map(u -> UserRes.from(u)).toList();
         return new Paginated<>(list, p.getTotalElements(), p.isLast());
     }

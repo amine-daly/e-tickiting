@@ -9,10 +9,18 @@ export interface BookingRequest {
   destinationPlaceId: string;
   pickupPointId: string;
   dropoffPointId: string;
-  passengerId: string;
+  passengerId?: string;
+  contact?: BookingCustomerInput;
   idempotencyKey: string;
   lang?: BookingLang;
   seatNo?: string;
+}
+
+export interface BookingCustomerInput {
+  firstName?: string;
+  lastName?: string;
+  email?: string | null;
+  phone?: { countryCode: string; number: string } | null;
 }
 
 export type BookingLang = 'fr-fr' | 'en-gb' | 'ar-sa';
@@ -57,7 +65,8 @@ export interface GroupBookingRequest {
   destinationPlaceId: string;
   pickupPointId: string;
   dropoffPointId: string;
-  contactCustomerId: string;
+  contactCustomerId?: string;
+  contact?: BookingCustomerInput;
   idempotencyKey: string;
   lang?: BookingLang;
   passengers: PassengerEntry[];

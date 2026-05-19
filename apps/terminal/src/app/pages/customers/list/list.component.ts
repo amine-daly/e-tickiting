@@ -1,12 +1,24 @@
 import { CommonModule } from '@angular/common';
-import { Component, OnDestroy, OnInit, TemplateRef } from '@angular/core';
+import {
+  ChangeDetectorRef,
+  Component,
+  OnDestroy,
+  OnInit,
+  TemplateRef,
+} from '@angular/core';
 import {
   FormBuilder,
   FormGroup,
   ReactiveFormsModule,
   Validators,
 } from '@angular/forms';
-import { Subscription } from 'rxjs';
+import {
+  Subject,
+  Subscription,
+  debounceTime,
+  distinctUntilChanged,
+  firstValueFrom,
+} from 'rxjs';
 import { isEqual, values } from 'lodash';
 import Swal, { SweetAlertIcon } from 'sweetalert2';
 import { NgbModal, NgbModalModule } from '@ng-bootstrap/ng-bootstrap';
@@ -17,6 +29,7 @@ import { RoleEnum, UserType } from 'src/app/core/models/user-type';
 import {
   CustomersService,
   CustomerCreatePayload,
+  CustomerQueryOptions,
   CustomerUpdatePayload,
 } from '../customers.service';
 import { RouterLink } from '@angular/router';
@@ -39,9 +52,10 @@ import { PaginationComponent } from 'src/app/shared/components/pagination/pagina
   templateUrl: './list.component.html',
   styleUrls: ['./list.component.scss'],
 })
-export class CustomersListComponent implements OnDestroy {
+export class CustomersListComponent implements OnInit, OnDestroy {
   private initialValues: any;
   private formChangesSub?: Subscription;
+  private readonly searchTermChanges$ = new Subject<string>();
   private subscriptions = new Subscription();
   private selectedCustomer: UserType | null = null;
 
@@ -51,17 +65,36 @@ export class CustomersListComponent implements OnDestroy {
 
   page = 1;
   pageSize = this.customersService.pageLimit;
+  searchTerm = '';
+  selectedRole = '';
+  exporting = false;
 
   userForm: FormGroup;
   isButtonDisabled = true;
   roles = values(RoleEnum);
+  readonly roleFilterOptions = [
+    { value: '', labelKey: 'CUSTOMERS.FILTER.ALL' },
+    ...values(RoleEnum).map((role) => ({
+      value: role,
+      labelKey: `CUSTOMERS.ROLES.${role}`,
+    })),
+  ];
 
   constructor(
     private customersService: CustomersService,
     private modalService: NgbModal,
     private fb: FormBuilder,
+    private cdr: ChangeDetectorRef,
   ) {
     this.userForm = this.buildForm();
+  }
+
+  ngOnInit(): void {
+    this.subscriptions.add(
+      this.searchTermChanges$
+        .pipe(debounceTime(300), distinctUntilChanged())
+        .subscribe(() => this.loadPage(1)),
+    );
   }
 
   ngOnDestroy(): void {
@@ -148,6 +181,59 @@ export class CustomersListComponent implements OnDestroy {
     this.subscriptions.add(sub);
   }
 
+  onSearchInput(searchTerm: string): void {
+    this.searchTerm = searchTerm;
+    this.searchTermChanges$.next(searchTerm);
+  }
+
+  onRoleChange(role: string): void {
+    this.selectedRole = role;
+  }
+
+  applyFilters(): void {
+    this.loadPage(1);
+  }
+
+  resetFilters(): void {
+    this.searchTerm = '';
+    this.selectedRole = '';
+    this.loadPage(1);
+  }
+
+  async exportCustomers(): Promise<void> {
+    if (this.exporting) {
+      return;
+    }
+
+    this.exporting = true;
+    try {
+      const customers = await firstValueFrom(
+        this.customersService.fetchAllCustomers(this.getActiveFilters()),
+      );
+
+      if (!customers.length) {
+        this.showAlert(
+          'info',
+          'Aucun client à exporter',
+          'Aucune donnée ne correspond aux filtres actuels.',
+        );
+        return;
+      }
+
+      this.exporting = false;
+      this.downloadCsv(customers);
+      this.cdr.markForCheck();
+    } catch (err) {
+      this.showAlert(
+        'error',
+        "Échec de l'export",
+        "Une erreur est survenue lors de l'export des clients.",
+      );
+    } finally {
+      this.exporting = false;
+    }
+  }
+
   deleteCustomer(customer: UserType): void {
     if (!customer?.id) {
       return;
@@ -224,7 +310,14 @@ export class CustomersListComponent implements OnDestroy {
   private loadPage(page: number): void {
     this.page = page;
     this.customersService.pageIndex = page - 1;
-    this.customersService.getCustomers().subscribe();
+    this.customersService.getCustomers(this.getActiveFilters()).subscribe();
+  }
+
+  private getActiveFilters(): CustomerQueryOptions {
+    return {
+      searchTerm: this.searchTerm,
+      role: this.selectedRole || undefined,
+    };
   }
 
   private prepareFormForModal(customer?: UserType): void {
@@ -238,10 +331,6 @@ export class CustomersListComponent implements OnDestroy {
   }
 
   private getFormResetValue(customer?: UserType) {
-    console.log(
-      '🚀 ~ CustomersComponent ~ getFormResetValue ~ customer:',
-      customer,
-    );
     return {
       firstName: customer?.firstName ?? '',
       lastName: customer?.lastName ?? '',
@@ -269,5 +358,57 @@ export class CustomersListComponent implements OnDestroy {
     this.formChangesSub?.unsubscribe();
     this.initialValues = this.userForm.value;
     this.isButtonDisabled = true;
+  }
+
+  private downloadCsv(customers: UserType[]): void {
+    const header = [
+      'First name',
+      'Last name',
+      'Email',
+      'Phone',
+      'Role',
+      'Created at',
+    ];
+    const rows = customers.map((customer) => [
+      this.escapeCsvValue(customer.firstName),
+      this.escapeCsvValue(customer.lastName),
+      this.escapeCsvValue(customer.email || ''),
+      this.escapeCsvValue(this.formatPhone(customer.phone)),
+      this.escapeCsvValue(customer.role || ''),
+      this.escapeCsvValue(this.formatExportDate(customer.createdAt)),
+    ]);
+
+    const csv = [header, ...rows].map((row) => row.join(',')).join('\r\n');
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const anchor = document.createElement('a');
+    anchor.href = url;
+    anchor.download = `customers-export-${this.formatExportDate(new Date().toISOString())}.csv`;
+    anchor.click();
+    URL.revokeObjectURL(url);
+  }
+
+  private escapeCsvValue(value: string): string {
+    const normalized = value ?? '';
+    if (/[,"\n\r]/.test(normalized)) {
+      return `"${normalized.replace(/"/g, '""')}"`;
+    }
+    return normalized;
+  }
+
+  private formatPhone(phone: UserType['phone']): string {
+    if (!phone?.countryCode || !phone?.number) {
+      return '';
+    }
+
+    return `+${phone.countryCode} ${phone.number}`;
+  }
+
+  private formatExportDate(value?: string | null): string {
+    if (!value) {
+      return '';
+    }
+
+    return new Date(value).toISOString().replace(/[:.]/g, '-');
   }
 }

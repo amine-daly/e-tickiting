@@ -19,6 +19,7 @@ import { AlertService } from '../../core/services/alert.service';
 import { Ticket, TicketStatus } from '../../core/models/ticket.model';
 import { TicketService } from './ticket.service';
 import { BookingService } from '../../core/services/booking.service';
+import { TicketPrintService } from '../../core/services/ticket-print.service';
 import { TranslateModule, TranslateService } from '@ngx-translate/core';
 import { PaginationComponent } from '../../shared/components/pagination/pagination.component';
 import { FormsModule } from '@angular/forms';
@@ -86,10 +87,12 @@ export class TicketListComponent implements OnInit, OnDestroy {
   private subscriptions = new Subscription();
   statusUpdating: Record<string, boolean> = {};
   emailSending: Record<string, boolean> = {};
+  printing: Record<string, boolean> = {};
 
   constructor(
     private ticketService: TicketService,
     private bookingService: BookingService,
+    private ticketPrintService: TicketPrintService,
     private modalService: NgbModal,
     private alert: AlertService,
     private translate: TranslateService,
@@ -149,8 +152,10 @@ export class TicketListComponent implements OnInit, OnDestroy {
         }),
       )
       .subscribe({
-        next: () =>
-          this.alert.success(this.t('TICKETS.MESSAGES.STATUS_SUCCESS')),
+        next: async (updatedTicket) => {
+          this.alert.success(this.t('TICKETS.MESSAGES.STATUS_SUCCESS'));
+          await this.printTicket(updatedTicket?.id || ticket.id);
+        },
         error: () => this.alert.error(this.t('TICKETS.MESSAGES.STATUS_ERROR')),
       });
     this.subscriptions.add(sub);
@@ -302,6 +307,7 @@ export class TicketListComponent implements OnInit, OnDestroy {
       .subscribe({
         next: () => {
           this.alert.success(this.t('TICKETS.MESSAGES.STATUS_SUCCESS'));
+          void this.printOrder(row.orderId!, row.tickets || []);
           this.loadTickets(this.page);
         },
         error: () => this.alert.error(this.t('TICKETS.MESSAGES.STATUS_ERROR')),
@@ -337,6 +343,45 @@ export class TicketListComponent implements OnInit, OnDestroy {
         error: () => this.alert.error(this.t('TICKETS.MESSAGES.STATUS_ERROR')),
       });
     this.subscriptions.add(sub);
+  }
+
+  async printTicket(ticketId: string): Promise<void> {
+    if (!ticketId || this.printing[ticketId]) {
+      return;
+    }
+
+    this.printing[ticketId] = true;
+    this.cdr.markForCheck();
+
+    try {
+      await this.ticketPrintService.printTicket(ticketId);
+    } catch {
+      this.alert.error(this.t('TICKETS.MESSAGES.PRINT_ERROR'));
+    } finally {
+      this.printing[ticketId] = false;
+      this.cdr.markForCheck();
+    }
+  }
+
+  async printOrder(orderId: string, tickets: Ticket[] = []): Promise<void> {
+    if (!orderId || this.printing[orderId]) {
+      return;
+    }
+
+    this.printing[orderId] = true;
+    this.cdr.markForCheck();
+
+    try {
+      await this.ticketPrintService.printOrder(
+        orderId,
+        tickets.map((ticket) => ticket.id),
+      );
+    } catch {
+      this.alert.error(this.t('TICKETS.MESSAGES.PRINT_ERROR'));
+    } finally {
+      this.printing[orderId] = false;
+      this.cdr.markForCheck();
+    }
   }
 
   async cancelOrderPassenger(orderId: string, ticket: Ticket): Promise<void> {

@@ -61,12 +61,13 @@ public class TicketEmailService {
             return false;
         }
         try {
+            String emailHtml = resolveEmailHtml(documentView);
             MimeMessage message = mailSender.createMimeMessage();
             MimeMessageHelper helper = new MimeMessageHelper(message, "UTF-8");
             helper.setTo(recipientEmail);
             helper.setFrom(fromAddress);
             helper.setSubject(documentView.getSubject() != null ? documentView.getSubject() : "Votre billet");
-            helper.setText(documentView.getHtmlContent(), true);
+            helper.setText(emailHtml, true);
             mailSender.send(message);
             return true;
         } catch (Exception ex) {
@@ -81,11 +82,12 @@ public class TicketEmailService {
             return false;
         }
         try {
+            String emailHtml = resolveEmailHtml(documentView);
             var body = java.util.Map.of(
                     "from", fromAddress,
                     "to", java.util.List.of(recipientEmail),
                     "subject", documentView.getSubject() != null ? documentView.getSubject() : "Votre billet",
-                    "html", documentView.getHtmlContent()
+                    "html", emailHtml
             );
             resendClient.post()
                     .uri("/emails")
@@ -99,6 +101,17 @@ public class TicketEmailService {
             LOGGER.error("Failed to send ticket email via Resend", ex);
             return false;
         }
+    }
+
+    private String resolveEmailHtml(TicketDocumentView documentView) {
+        if (documentView == null) {
+            return "";
+        }
+        String emailHtml = documentView.getEmailHtmlContent();
+        if (emailHtml != null && !emailHtml.isBlank()) {
+            return emailHtml;
+        }
+        return documentView.getHtmlContent() != null ? documentView.getHtmlContent() : "";
     }
 
     private enum MailProvider {

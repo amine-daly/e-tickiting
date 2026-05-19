@@ -41,7 +41,6 @@ export class VerificationComponent implements OnInit, OnDestroy {
   loadingHold = false;
   submittingHold = false;
   confirmingHold = false;
-  cancellingHold = false;
   notice = '';
 
   form = this.fb.group({
@@ -152,12 +151,7 @@ export class VerificationComponent implements OnInit, OnDestroy {
   }
 
   get mainActionDisabled(): boolean {
-    if (
-      this.loadingHold ||
-      this.submittingHold ||
-      this.confirmingHold ||
-      this.cancellingHold
-    ) {
+    if (this.loadingHold || this.submittingHold || this.confirmingHold) {
       return true;
     }
     if (this.hasConfirmedHold) {
@@ -221,37 +215,6 @@ export class VerificationComponent implements OnInit, OnDestroy {
         },
         error: (error) => {
           this.handleCreateError(error);
-        },
-      });
-  }
-
-  cancelHold(): void {
-    if (!this.hold || this.hold.status !== 'PENDING') {
-      return;
-    }
-
-    this.releaseCurrentHold('The pending hold was released.');
-  }
-
-  private releaseCurrentHold(successNotice: string): void {
-    if (!this.hold || this.hold.status !== 'PENDING' || this.cancellingHold) {
-      return;
-    }
-
-    this.cancellingHold = true;
-    this.bookingService
-      .cancelFrontofficeHold(this.hold)
-      .pipe(takeUntil(this.destroy$))
-      .subscribe({
-        next: () => {
-          this.cancellingHold = false;
-          this.hold = null;
-          this.notice = successNotice;
-          this.updateDraft({ holdToken: null });
-        },
-        error: () => {
-          this.cancellingHold = false;
-          this.notice = 'We could not release the current hold.';
         },
       });
   }

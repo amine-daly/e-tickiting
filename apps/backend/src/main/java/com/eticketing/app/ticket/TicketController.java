@@ -259,6 +259,7 @@ public class TicketController {
         Map<String, Object> payload = new LinkedHashMap<>();
         payload.put("id", ticket.getId());
         payload.put("version", ticket.getVersion());
+        payload.put("reference", ticket.getReference());
         payload.put("tripId", ticket.getTripId());
         payload.put("companyId", ticket.getTarget() != null ? ticket.getTarget().getCompany() : null);
         payload.put("posId", ticket.getTarget() != null ? ticket.getTarget().getPos() : null);

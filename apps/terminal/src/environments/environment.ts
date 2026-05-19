@@ -8,6 +8,6 @@ export const environment = {
   appVersion: 'v1',
   USERDATA_KEY: 'auth',
   isMockEnabled: false, // disable in-memory mocks
-  /* apiBase: 'http://localhost:8080/api', */
-  apiBase: 'http://13.61.196.160/api',
+  /* apiBase: 'http://13.61.196.160/api', */
+  apiBase: 'http://localhost:8080/api',
 };

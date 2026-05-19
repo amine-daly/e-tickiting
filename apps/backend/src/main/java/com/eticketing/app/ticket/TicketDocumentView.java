@@ -9,6 +9,8 @@ public class TicketDocumentView {
     private String ticketId;
     private String reference;
     private String htmlContent;
+    private String emailHtmlContent;
+    private String printHtmlContent;
     private String qrCodeUrl;
     private String qrCodeDataUri;
     private Instant renderedAt;
@@ -46,6 +48,22 @@ public class TicketDocumentView {
 
     public void setHtmlContent(String htmlContent) {
         this.htmlContent = htmlContent;
+    }
+
+    public String getEmailHtmlContent() {
+        return emailHtmlContent;
+    }
+
+    public void setEmailHtmlContent(String emailHtmlContent) {
+        this.emailHtmlContent = emailHtmlContent;
+    }
+
+    public String getPrintHtmlContent() {
+        return printHtmlContent;
+    }
+
+    public void setPrintHtmlContent(String printHtmlContent) {
+        this.printHtmlContent = printHtmlContent;
     }
 
     public String getQrCodeUrl() {

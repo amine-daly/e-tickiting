@@ -230,6 +230,8 @@ Trip creation is handled by `TripService` and is currently enforced in this orde
 - `PATCH /api/bookings/group/{orderId}/seats`
 - `GET /api/bookings/occupied-seats/{tripId}`
 
+For POS ticket selling, create requests may now carry either an existing customer id (`passengerId` / `contactCustomerId`) or an inline contact payload. When the contact payload is provided, the backend resolves or creates the customer inside the booking create flow and still persists the ticket or order as company- and POS-attributed.
+
 ### Tickets
 
 - `GET /api/tickets`

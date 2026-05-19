@@ -2,6 +2,7 @@ package com.eticketing.app.ticket;
 
 import com.eticketing.app.account.AccountType;
 import com.eticketing.app.account.AccountTypeRepository;
+import com.eticketing.app.common.TargetInput;
 import com.eticketing.app.ticket.dto.BookingRequest;
 import com.eticketing.app.ticket.dto.BookingResponse;
 import com.eticketing.app.ticket.dto.GroupBookingRequest;
@@ -17,6 +18,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.userdetails.User;
 import org.springframework.web.bind.annotation.*;
+import org.apache.commons.lang3.StringUtils;
 
 /**
  * Booking REST API — TRIP_SPEC section 10. Endpoints: create booking, confirm,
@@ -33,6 +35,7 @@ public class BookingController {
     private final OrderRepository orderRepository;
     private final UserTypeRepository userRepository;
     private final AccountTypeRepository accountRepository;
+    private final BookingCustomerResolver bookingCustomerResolver;
 
     @GetMapping("/occupied-seats/{tripId}")
     public ResponseEntity<java.util.List<String>> getOccupiedSeats(@PathVariable String tripId) {
@@ -62,6 +65,8 @@ public class BookingController {
         String[] ids = resolveCompanyAndPos(principal, httpRequest);
         String companyId = ids[0];
         String posId = ids[1];
+        TargetInput requestTarget = bookingCustomerResolver.normalizeTarget(new TargetInput(companyId, posId));
+        UserType passenger = resolvePassenger(req.getPassengerId(), req.getContact(), requestTarget);
 
         TicketType ticket = bookingService.createBooking(
                 req.getTripId(),
@@ -69,13 +74,14 @@ public class BookingController {
                 req.getDestinationPlaceId(),
                 req.getPickupPointId(),
                 req.getDropoffPointId(),
-                req.getPassengerId(),
+                passenger.getId(),
                 req.getIdempotencyKey(),
                 req.getLang(),
                 req.getSeatNo(),
                 companyId,
                 posId,
                 BookingCreateOptions.pos(principal.getUsername(), posId));
+        bookingCustomerResolver.ensureUserTarget(passenger, ticket.getTarget());
 
         return ResponseEntity.status(HttpStatus.CREATED).body(toResponse(ticket));
     }
@@ -109,11 +115,15 @@ public class BookingController {
             HttpServletRequest httpRequest) {
 
         String[] ids = resolveCompanyAndPos(principal, httpRequest);
+        TargetInput requestTarget = bookingCustomerResolver.normalizeTarget(new TargetInput(ids[0], ids[1]));
+        UserType contactCustomer = resolvePassenger(req.getContactCustomerId(), req.getContact(), requestTarget);
+        req.setContactCustomerId(contactCustomer.getId());
         OrderType order = bookingService.createGroupBooking(
                 req,
                 ids[0],
                 ids[1],
                 BookingCreateOptions.pos(principal.getUsername(), ids[1]));
+        bookingCustomerResolver.ensureUserTarget(contactCustomer, order.getTarget());
         java.util.List<TicketType> tickets = ticketRepository.findByOrderId(order.getId());
         return ResponseEntity.status(HttpStatus.CREATED).body(toGroupResponse(order, tickets));
     }
@@ -202,9 +212,21 @@ public class BookingController {
         return user != null && user.getTarget() != null ? user.getTarget().getPos() : null;
     }
 
+    private UserType resolvePassenger(
+            String passengerId,
+            com.eticketing.app.ticket.dto.BookingCustomerInput contact,
+            TargetInput requestTarget) {
+        String normalizedPassengerId = StringUtils.trimToNull(passengerId);
+        if (normalizedPassengerId != null) {
+            return bookingCustomerResolver.getRequiredUser(normalizedPassengerId);
+        }
+        return bookingCustomerResolver.resolveOrCreatePosContact(contact, requestTarget);
+    }
+
     static BookingResponse toResponse(TicketType ticket) {
         return BookingResponse.builder()
                 .id(ticket.getId())
+                .reference(ticket.getReference())
                 .tripId(ticket.getTripId())
                 .orderId(ticket.getOrderId())
                 .companyId(ticket.getTarget() != null ? ticket.getTarget().getCompany() : null)

@@ -326,11 +326,13 @@ The selling workflow should be short, operational, and optimized for counter use
 1. Search for a trip.
 2. Choose the departure instance.
 3. Choose seat or seats.
-4. Find an existing customer or create a quick customer.
+4. Find an existing customer or capture a quick customer inline with phone or email.
 5. Choose payment path.
 6. Confirm the sale.
 7. Generate ticket output.
 8. Print or resend if needed.
+
+The POS sell-ticket screen should not force the agent into a separate customer-creation page. If the typed contact does not match an existing customer, the sale flow collects the minimum contact details inline and the backend resolves or creates the customer during the booking create request.
 
 ### 11.2 Ticket Creation Rules
 

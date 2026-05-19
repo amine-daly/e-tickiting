@@ -59,7 +59,7 @@ export class TripService {
   constructor(private http: HttpClient) {}
 
   // ─── LIST ────────────────────────────────────────────────
-  list(filter: TripFilterInput = {}): Observable<TripType[]> {
+  tripList(filter: TripFilterInput = {}): Observable<TripType[]> {
     this.loading.next(true);
     const sortBy = filter.sortBy ?? this.defaultSortBy;
     const order = filter.order ?? this.defaultSortOrder;

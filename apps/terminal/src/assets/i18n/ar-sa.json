@@ -452,6 +452,8 @@
       "ALL": "جميع الحالات"
     },
     "ACTIONS": {
+      "PRINT": "طباعة التذكرة",
+      "PRINT_ORDER": "طباعة تذكرة الطلب",
       "SEND_EMAIL": "إرسال التذكرة بالبريد الإلكتروني",
       "SEND_ORDER_EMAIL": "إرسال بريد الطلب",
       "VIEW_DETAILS": "عرض التفاصيل",
@@ -489,7 +491,8 @@
       "EMAIL_CONFIRM_OK": "نعم، أرسل",
       "EMAIL_SUCCESS_TITLE": "تم إرسال البريد الإلكتروني",
       "EMAIL_SUCCESS_TEXT": "تم إرسال التذكرة إلى {{email}}.",
-      "EMAIL_ERROR": "تعذّر إرسال التذكرة."
+      "EMAIL_ERROR": "تعذّر إرسال التذكرة.",
+      "PRINT_ERROR": "تعذّرت طباعة التذكرة."
     },
     "SELL": {
       "TITLE": "بيع تذكرة",
@@ -498,8 +501,19 @@
       "STEP_SEAT": "المقاعد",
       "STEP_REVIEW": "مراجعة وحجز",
       "SEARCH_CUSTOMER": "البحث وإضافة الركاب",
+      "SEARCH_EXISTING": "العثور على عميل موجود",
+      "SEARCH_EXISTING_HINT": "ابحث بالاسم أو البريد الإلكتروني أو الهاتف دون مغادرة عملية البيع.",
       "CONTACT_CUSTOMER": "عميل الاتصال (الرئيسي)",
       "CUSTOMER_PLACEHOLDER": "اكتب اسماً أو بريداً إلكترونياً أو رقم هاتف...",
+      "QUICK_ENTRY_TITLE": "إدخال سريع للعميل",
+      "QUICK_ENTRY_HINT": "ابق داخل مسار البيع عندما يكون العميل جديداً.",
+      "USE_QUICK_ENTRY": "استخدام الإدخال السريع",
+      "NEW_CUSTOMER": "عميل جديد",
+      "PHONE_LABEL": "الهاتف",
+      "PHONE_PLACEHOLDER": "612345678",
+      "EMAIL_LABEL": "البريد الإلكتروني",
+      "EMAIL_PLACEHOLDER": "name@example.com",
+      "QUICK_ENTRY_HELPER": "أدخل رقم هاتف أو بريداً إلكترونياً. إذا لم يكن العميل موجوداً بعد، سيقوم طلب الحجز بإنشائه تلقائياً.",
       "PASSENGERS": "الركاب",
       "CONTACT": "جهة الاتصال",
       "GUEST": "ضيف",
@@ -558,6 +572,7 @@
     "FILTER": {
       "BUTTON": "تصفية",
       "TITLE": "خيارات التصفية",
+      "ALL": "الكل",
       "TWO_FACTOR": "المصادقة الثنائية",
       "TWO_FACTOR_ENABLED": "مفعّلة"
     },

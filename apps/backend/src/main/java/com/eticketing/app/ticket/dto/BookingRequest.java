@@ -1,5 +1,6 @@
 package com.eticketing.app.ticket.dto;
 
+import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import lombok.Data;
 
@@ -21,8 +22,10 @@ public class BookingRequest {
     @NotBlank
     private String dropoffPointId;
 
-    @NotBlank
     private String passengerId;
+
+    @Valid
+    private BookingCustomerInput contact;
 
     @NotBlank
     private String idempotencyKey;

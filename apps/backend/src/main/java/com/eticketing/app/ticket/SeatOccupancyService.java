@@ -7,7 +7,12 @@ import org.springframework.dao.DuplicateKeyException;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
+import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -71,14 +76,41 @@ public class SeatOccupancyService {
 
         java.util.Set<String> occupiedSeats = new java.util.TreeSet<>();
 
-        seatOccupancyRepository.findByTripIdAndSegmentIdIn(tripId, segmentIds)
+        List<TicketType> activeTickets = ticketRepository.findByTripIdAndStatusIn(
+                tripId,
+                List.of(TicketStatusEnum.PENDING, TicketStatusEnum.CONFIRMED));
+        Set<String> activeTicketIds = activeTickets.stream()
+                .map(TicketType::getId)
+                .filter(StringUtils::isNotBlank)
+                .collect(Collectors.toCollection(LinkedHashSet::new));
+
+        List<SeatOccupancyType> occupancyRows = seatOccupancyRepository.findByTripIdAndSegmentIdIn(tripId, segmentIds);
+        Set<String> occupancyTicketIds = occupancyRows.stream()
+                .map(SeatOccupancyType::getTicketId)
+                .filter(StringUtils::isNotBlank)
+                .collect(Collectors.toCollection(LinkedHashSet::new));
+        Map<String, TicketType> occupancyTicketsById = ticketRepository.findAllById(occupancyTicketIds).stream()
+                .collect(Collectors.toMap(TicketType::getId, Function.identity()));
+        List<String> staleOccupancyTicketIds = occupancyTicketsById.values().stream()
+                .filter(ticket -> ticket.getStatus() != TicketStatusEnum.PENDING && ticket.getStatus() != TicketStatusEnum.CONFIRMED)
+                .map(TicketType::getId)
+                .distinct()
+                .toList();
+        if (!staleOccupancyTicketIds.isEmpty()) {
+            seatOccupancyRepository.deleteByTicketIdIn(staleOccupancyTicketIds);
+        }
+
+        occupancyRows
                 .stream()
+                .filter(occupancy -> StringUtils.isBlank(occupancy.getTicketId())
+                || !occupancyTicketsById.containsKey(occupancy.getTicketId())
+                || activeTicketIds.contains(occupancy.getTicketId()))
                 .map(SeatOccupancyType::getSeatNo)
                 .filter(StringUtils::isNotBlank)
                 .map(StringUtils::trim)
                 .forEach(occupiedSeats::add);
 
-        ticketRepository.findByTripIdAndStatusIn(tripId, List.of(TicketStatusEnum.PENDING, TicketStatusEnum.CONFIRMED))
+        activeTickets
                 .stream()
                 .filter(ticket -> StringUtils.isNotBlank(ticket.getSeatNo()))
                 .filter(ticket -> overlaps(segmentIds, ticket.getSegmentIds()))

@@ -10,10 +10,12 @@ export class TicketService {
   private baseUrl = `${environment.apiBase}/tickets`;
   private _tickets = new BehaviorSubject<Ticket[]>([]);
   private _loading = new BehaviorSubject<boolean>(false);
-  private _pagination = new BehaviorSubject<{ count: number; isLast: boolean }>({
-    count: 0,
-    isLast: true,
-  });
+  private _pagination = new BehaviorSubject<{ count: number; isLast: boolean }>(
+    {
+      count: 0,
+      isLast: true,
+    },
+  );
 
   get tickets$(): Observable<Ticket[]> {
     return this._tickets.asObservable();
@@ -33,7 +35,7 @@ export class TicketService {
     posId: string,
     page = 0,
     limit = 10,
-    status?: TicketStatus
+    status?: TicketStatus,
   ): Observable<PaginateResponse<Ticket>> {
     this._loading.next(true);
     let params = new HttpParams()
@@ -43,10 +45,9 @@ export class TicketService {
       params = params.set('status', status);
     }
     return this.http
-      .get<PaginateResponse<Ticket>>(
-        `${this.baseUrl}/by-pos/${posId}`,
-        { params }
-      )
+      .get<
+        PaginateResponse<Ticket>
+      >(`${this.baseUrl}/by-pos/${posId}`, { params })
       .pipe(
         map((res) => {
           this._tickets.next(res.objects);
@@ -56,7 +57,7 @@ export class TicketService {
           });
           return res;
         }),
-        finalize(() => this._loading.next(false))
+        finalize(() => this._loading.next(false)),
       );
   }
 
@@ -66,6 +67,10 @@ export class TicketService {
 
   getTicketDocument(id: string): Observable<any> {
     return this.http.get<any>(`${this.baseUrl}/${id}/document`);
+  }
+
+  getOrderDocument(orderId: string): Observable<any> {
+    return this.http.get<any>(`${this.baseUrl}/orders/${orderId}/document`);
   }
 
   sendTicketEmail(id: string): Observable<any> {

@@ -12,6 +12,7 @@ import java.util.List;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -64,6 +65,7 @@ class SeatOccupancyServiceTest {
                 .thenReturn(List.of(
                         SeatOccupancyType.builder().seatNo("B2").build(),
                         SeatOccupancyType.builder().seatNo("B2").build()));
+        when(ticketRepository.findAllById(any())).thenReturn(List.of());
         when(ticketRepository.findByTripIdAndStatusIn(
                 "trip-1",
                 List.of(TicketStatusEnum.PENDING, TicketStatusEnum.CONFIRMED)))
@@ -75,5 +77,29 @@ class SeatOccupancyServiceTest {
         List<String> occupiedSeats = seatOccupancyService.findOccupiedSeatsForSegments("trip-1", List.of("seg-1"));
 
         assertEquals(List.of("A1", "B2", "C3"), occupiedSeats);
+    }
+
+    @Test
+    void findOccupiedSeatsForSegmentsIgnoresCancelledOccupancyRowsAndCleansThemUp() {
+        when(seatOccupancyRepository.findByTripIdAndSegmentIdIn("trip-1", List.of("seg-1")))
+                .thenReturn(List.of(
+                        SeatOccupancyType.builder().seatNo("A1").ticketId("ticket-active").build(),
+                        SeatOccupancyType.builder().seatNo("B2").ticketId("ticket-cancelled").build(),
+                        SeatOccupancyType.builder().seatNo("C3").build()));
+        when(ticketRepository.findAllById(any()))
+                .thenReturn(List.of(
+                        TicketType.builder().id("ticket-active").status(TicketStatusEnum.CONFIRMED).build(),
+                        TicketType.builder().id("ticket-cancelled").status(TicketStatusEnum.CANCELLED).build()));
+        when(ticketRepository.findByTripIdAndStatusIn(
+                "trip-1",
+                List.of(TicketStatusEnum.PENDING, TicketStatusEnum.CONFIRMED)))
+                .thenReturn(List.of(
+                        TicketType.builder().id("ticket-active").seatNo("A1").segmentIds(List.of("seg-1")).build(),
+                        TicketType.builder().id("ticket-fallback").seatNo("D4").segmentIds(List.of("seg-1")).build()));
+
+        List<String> occupiedSeats = seatOccupancyService.findOccupiedSeatsForSegments("trip-1", List.of("seg-1"));
+
+        assertEquals(List.of("A1", "C3", "D4"), occupiedSeats);
+        verify(seatOccupancyRepository).deleteByTicketIdIn(eq(List.of("ticket-cancelled")));
     }
 }

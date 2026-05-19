@@ -1,6 +1,14 @@
 import { Injectable } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
-import { BehaviorSubject, finalize, map, Observable, of } from 'rxjs';
+import {
+  BehaviorSubject,
+  forkJoin,
+  finalize,
+  map,
+  Observable,
+  of,
+  switchMap,
+} from 'rxjs';
 
 import { environment } from 'src/environments/environment';
 import { IPagination } from 'src/app/core/models/paginate-model';
@@ -35,6 +43,11 @@ export interface CustomerListResponse {
   objects: UserType[];
   count: number;
   isLast: boolean;
+}
+
+export interface CustomerQueryOptions {
+  searchTerm?: string;
+  role?: string | null;
 }
 
 @Injectable({ providedIn: 'root' })
@@ -80,6 +93,48 @@ export class CustomersService {
     return localStorage.getItem('companyId') || undefined;
   }
 
+  private buildCustomerParams(
+    companyId: string | undefined,
+    page: number,
+    limit: number,
+    options: CustomerQueryOptions = {},
+  ): HttpParams {
+    let params = new HttpParams()
+      .set('page', page.toString())
+      .set('limit', limit.toString());
+
+    if (companyId) {
+      params = params.set('companyId', companyId);
+    }
+
+    const role = options.role?.trim();
+    if (role) {
+      params = params.set('role', role);
+    }
+
+    const searchTerm = options.searchTerm?.trim();
+    if (searchTerm) {
+      params = params.set('q', searchTerm);
+    }
+
+    return params;
+  }
+
+  private fetchCustomerPage(
+    companyId: string | undefined,
+    page: number,
+    limit: number,
+    options: CustomerQueryOptions = {},
+  ): Observable<CustomerListResponse> {
+    const searchTerm = options.searchTerm?.trim();
+    const endpoint = searchTerm
+      ? `${API_USERS_URL}/search`
+      : `${API_USERS_URL}/by-company`;
+    const params = this.buildCustomerParams(companyId, page, limit, options);
+
+    return this.http.get<CustomerListResponse>(endpoint, { params });
+  }
+
   private syncCustomerPage(
     response: CustomerListResponse,
     page: number,
@@ -119,13 +174,13 @@ export class CustomersService {
     companyId?: string,
     page = 0,
     limit = this.pageLimit,
+    role?: string,
   ): Observable<CustomerListResponse> {
-    const params = new HttpParams()
-      .set('companyId', companyId)
-      .set('page', page.toString())
-      .set('limit', limit.toString());
+    const params = this.buildCustomerParams(companyId, page, limit, { role });
 
-    return this.http.get<any>(`${API_USERS_URL}/by-company`, { params });
+    return this.http.get<CustomerListResponse>(`${API_USERS_URL}/by-company`, {
+      params,
+    });
   }
 
   searchCustomers(
@@ -133,17 +188,16 @@ export class CustomersService {
     companyId?: string,
     page = 0,
     limit = this.pageLimit,
+    role?: string,
   ): Observable<CustomerListResponse> {
-    let params = new HttpParams()
-      .set('q', q)
-      .set('page', page.toString())
-      .set('limit', limit.toString());
+    const params = this.buildCustomerParams(companyId, page, limit, {
+      searchTerm: q,
+      role,
+    });
 
-    if (companyId) {
-      params = params.set('companyId', companyId);
-    }
-
-    return this.http.get<any>(`${API_USERS_URL}/search`, { params });
+    return this.http.get<CustomerListResponse>(`${API_USERS_URL}/search`, {
+      params,
+    });
   }
 
   getUserById(id: string): Observable<UserType> {
@@ -164,18 +218,48 @@ export class CustomersService {
     );
   }
 
-  getCustomers(): Observable<UserType[]> {
+  getCustomers(options: CustomerQueryOptions = {}): Observable<UserType[]> {
     this.loading.next(true);
     const companyId = this.getCurrentCompanyId();
-    return this.getCustomersByCompany(
+    return this.fetchCustomerPage(
       companyId,
       this.pageIndex,
       this.pageLimit,
+      options,
     ).pipe(
       map((response) => {
         return this.syncCustomerPage(response, this.pageIndex, this.pageLimit);
       }),
       finalize(() => this.loading.next(false)),
+    );
+  }
+
+  fetchAllCustomers(
+    options: CustomerQueryOptions = {},
+  ): Observable<UserType[]> {
+    const companyId = this.getCurrentCompanyId();
+    const pageSize = 100;
+
+    return this.fetchCustomerPage(companyId, 0, pageSize, options).pipe(
+      switchMap((firstPage) => {
+        const total = firstPage?.count ?? firstPage?.objects?.length ?? 0;
+        if (total <= pageSize) {
+          return of(firstPage?.objects ?? []);
+        }
+
+        const totalPages = Math.ceil(total / pageSize);
+        const pageRequests = Array.from(
+          { length: Math.max(0, totalPages - 1) },
+          (_, index) =>
+            this.fetchCustomerPage(companyId, index + 1, pageSize, options),
+        );
+
+        return forkJoin(pageRequests).pipe(
+          map((responses) =>
+            [firstPage, ...responses].flatMap((page) => page?.objects ?? []),
+          ),
+        );
+      }),
     );
   }
 

@@ -32,8 +32,10 @@ public class GroupBookingRequest {
     /**
      * The contact customer who initiated the order at the POS.
      */
-    @NotBlank
     private String contactCustomerId;
+
+    @Valid
+    private BookingCustomerInput contact;
 
     @NotBlank
     private String idempotencyKey;
