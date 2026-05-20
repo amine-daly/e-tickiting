@@ -1,5 +1,6 @@
 {
   "COMMON": {
+    "SUBMIT": "تقديم",
     "STATUS": {
       "ACTIVE": "نشط",
       "INACTIVE": "غير نشط",

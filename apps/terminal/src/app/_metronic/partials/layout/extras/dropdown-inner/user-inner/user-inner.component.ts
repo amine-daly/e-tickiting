@@ -1,8 +1,7 @@
 import { CommonModule } from '@angular/common';
-import { Observable, Subscription } from 'rxjs';
-import { CookieService } from 'ngx-cookie-service';
+import { Observable } from 'rxjs';
 import { TranslateModule } from '@ngx-translate/core';
-import { Component, HostBinding, OnDestroy, OnInit } from '@angular/core';
+import { Component, HostBinding, OnInit } from '@angular/core';
 
 import { UserType } from 'src/app/core/models/user-type';
 import { TranslationService } from '../../../../../../modules/i18n';
@@ -14,16 +13,15 @@ import { AuthService } from '../../../../../../modules/auth';
   imports: [CommonModule, TranslateModule],
   templateUrl: './user-inner.component.html',
 })
-export class UserInnerComponent implements OnInit, OnDestroy {
+export class UserInnerComponent implements OnInit {
   @HostBinding('class')
   class =
     `menu menu-sub menu-sub-dropdown menu-column menu-rounded menu-gray-600 menu-state-bg menu-state-primary fw-bold py-4 fs-6 w-275px`;
   @HostBinding('attr.data-kt-menu') dataKtMenu = 'true';
 
-  language: LanguageFlag;
-  user$: Observable<UserType>;
-  langs = languages;
-  private unsubscribe: Subscription[] = [];
+  language?: LanguageFlag;
+  user$!: Observable<UserType>;
+  readonly langs: LanguageFlag[] = languages;
 
   constructor(
     private auth: AuthService,
@@ -32,28 +30,18 @@ export class UserInnerComponent implements OnInit, OnDestroy {
 
   ngOnInit(): void {
     this.user$ = this.auth.currentUser.asObservable();
-    const lang = localStorage.getItem('lang') || 'fr-fr';
-    this.selectLanguage(lang);
+    this.selectLanguage(this.translationService.getCurrentLanguage());
   }
 
   logout() {
     this.auth.logout();
   }
 
-  selectLanguage(lang: string) {
-    this.langs.forEach((language: LanguageFlag) => {
-      if (language.lang === lang) {
-        language.active = true;
-        this.language = language;
-      } else {
-        language.active = false;
-      }
-    });
-    this.translationService.setLanguage(lang);
-  }
-
-  ngOnDestroy() {
-    this.unsubscribe.forEach((sb) => sb.unsubscribe());
+  selectLanguage(lang: string): void {
+    const normalizedLanguage = this.translationService.setLanguage(lang);
+    this.language =
+      this.langs.find((language) => language.lang === normalizedLanguage) ??
+      this.langs[0];
   }
 }
 
@@ -61,10 +49,9 @@ interface LanguageFlag {
   lang: string;
   name: string;
   flag: string;
-  active?: boolean;
 }
 
-const languages = [
+const languages: LanguageFlag[] = [
   {
     lang: 'en-gb',
     name: 'English',

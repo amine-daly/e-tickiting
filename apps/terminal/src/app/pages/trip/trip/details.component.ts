@@ -315,7 +315,7 @@ export class TripDetailsComponent implements OnInit, OnDestroy {
   private buildForm(): void {
     this.tripForm = this.fb.group({
       // Step 1 — Basic info
-      busId: ['', Validators.required],
+      bus: [null, Validators.required],
       departureDate: [null, Validators.required],
       timezone: ['', Validators.required],
       currencyId: ['', Validators.required],
@@ -369,7 +369,7 @@ export class TripDetailsComponent implements OnInit, OnDestroy {
     this.syncSelectedBusCapacity();
 
     this.tripForm
-      .get('busId')
+      .get('bus')
       ?.valueChanges.pipe(takeUntil(this.destroy$))
       .subscribe(() => {
         this.syncSelectedBusCapacity();
@@ -396,14 +396,13 @@ export class TripDetailsComponent implements OnInit, OnDestroy {
 
     // Step 0 — Basic info
     this.tripForm.patchValue({
-      busId: trip.bus?.busId || '',
+      bus: trip.bus || null,
       departureDate: trip.departureDate || null,
       timezone: trip.timezone || '',
       currencyId: trip.currency?.id || '',
     });
-
     // Track bus seats
-    const bus = this.buses.find((b) => b.id === trip.bus?.busId);
+    const bus = this.tripForm.get('bus')?.value as BusType;
     this.selectedBusTotalSeats =
       bus?.totalSeats ?? trip.bus?.totalSeats ?? null;
     this.maxPhysicalOccupancy = computeTripMaxPhysicalOccupancy(trip);
@@ -638,7 +637,7 @@ export class TripDetailsComponent implements OnInit, OnDestroy {
       case 0: {
         const f = this.tripForm;
         return (
-          f.get('busId')!.valid &&
+          f.get('bus')!.valid &&
           f.get('departureDate')!.valid &&
           f.get('timezone')!.valid &&
           f.get('currencyId')!.valid &&
@@ -744,7 +743,7 @@ export class TripDetailsComponent implements OnInit, OnDestroy {
   private markCurrentStepTouched(): void {
     switch (this.currentStep) {
       case 0:
-        ['busId', 'departureDate', 'timezone', 'currencyId'].forEach((name) =>
+        ['bus', 'departureDate', 'timezone', 'currencyId'].forEach((name) =>
           this.tripForm.get(name)?.markAsTouched(),
         );
         break;
@@ -1026,9 +1025,6 @@ export class TripDetailsComponent implements OnInit, OnDestroy {
     });
   }
 
-  getBusName(busId: string): string {
-    return this.buses.find((b) => b.id === busId)?.name ?? busId;
-  }
   // ══════════════════════════════════════════════════
   //  Step 3 — Segment auto-generation
   // ══════════════════════════════════════════════════
@@ -1205,7 +1201,7 @@ export class TripDetailsComponent implements OnInit, OnDestroy {
     }
 
     if (this.hasInsufficientBusCapacity) {
-      this.tripForm.get('busId')?.markAsTouched();
+      this.tripForm.get('bus')?.markAsTouched();
       this.showBusCapacityError();
       return;
     }
@@ -1239,7 +1235,7 @@ export class TripDetailsComponent implements OnInit, OnDestroy {
     const raw = this.tripForm.getRawValue();
 
     const payload: TripCreatePayload = {
-      bus: { busId: raw.busId },
+      bus: { busId: raw.bus?.id },
       departureDate: this.toISOString(raw.departureDate),
       timezone: raw.timezone,
       currencyId: raw.currencyId,
@@ -1311,8 +1307,8 @@ export class TripDetailsComponent implements OnInit, OnDestroy {
       this.buildExpressSegmentSyncOperations(raw.expressSegments || []);
 
     const payload: Partial<TripUpdatePayload> = {
-      ...(changed.busId !== undefined && {
-        bus: { busId: changed.busId },
+      ...(changed.bus !== undefined && {
+        bus: { busId: changed.bus?.id },
       }),
       ...(changed.departureDate !== undefined && {
         departureDate: this.toISOString(changed.departureDate),
@@ -1595,7 +1591,7 @@ export class TripDetailsComponent implements OnInit, OnDestroy {
   }
 
   private syncSelectedBusCapacity(): void {
-    const busId = this.tripForm?.get('busId')?.value;
+    const busId = this.tripForm?.get('bus')?.value?.id;
 
     if (!busId) {
       this.selectedBusTotalSeats = null;

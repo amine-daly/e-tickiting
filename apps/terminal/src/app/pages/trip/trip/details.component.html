@@ -97,9 +97,8 @@
             {{ "TRIPS.FIELDS.BUS" | translate }}
           </label>
           <ng-select
-            formControlName="busId"
+            formControlName="bus"
             [items]="buses"
-            bindValue="id"
             bindLabel="name"
             [placeholder]="'TRIPS.CREATE.BASIC.BUS_PLACEHOLDER' | translate"
             [clearable]="true"
@@ -114,7 +113,7 @@
               </div>
             </ng-template>
           </ng-select>
-          <div *ngIf="isInvalid('busId')" class="text-danger small mt-1">
+          <div *ngIf="isInvalid('bus')" class="text-danger small mt-1">
             {{ "TRIPS.CREATE.ERRORS.BUS_REQUIRED" | translate }}
           </div>
           <div
@@ -143,7 +142,7 @@
             class="form-control form-control-solid"
             formControlName="departureDate"
             mwlFlatpickr
-            [minDate]="today"
+            [minDate]="isEditMode ? null : today"
             [altInput]="flatpickrDatetime.altInput"
             [altFormat]="flatpickrDatetime.altFormat"
             [enableTime]="flatpickrDatetime.enableTime"
@@ -348,7 +347,7 @@
                     class="form-control form-control-solid form-control-sm"
                     formControlName="arrivalTime"
                     mwlFlatpickr
-                    [minDate]="today"
+                    [minDate]="isEditMode ? null : today"
                     [altInput]="flatpickrDatetime.altInput"
                     [altFormat]="flatpickrDatetime.altFormat"
                     [enableTime]="flatpickrDatetime.enableTime"
@@ -367,7 +366,7 @@
                     class="form-control form-control-solid form-control-sm"
                     formControlName="departureTime"
                     mwlFlatpickr
-                    [minDate]="today"
+                    [minDate]="isEditMode ? null : today"
                     [altInput]="flatpickrDatetime.altInput"
                     [altFormat]="flatpickrDatetime.altFormat"
                     [enableTime]="flatpickrDatetime.enableTime"
@@ -505,8 +504,8 @@
               <tr *ngFor="let seg of segments.controls; let i = index">
                 <td class="text-muted">{{ i + 1 }}</td>
                 <td class="fw-semibold" *ngIf="segmentDisplays[i]">
-                  {{ segmentDisplays[i].fromPlaceName }} →
-                  {{ segmentDisplays[i].toPlaceName }}
+                  {{ segmentDisplays[i].originPlaceName }} →
+                  {{ segmentDisplays[i].destinationPlaceName }}
                 </td>
                 <td>
                   {{ seg.get("basePrice")?.value | number: "1.2-2" }}
@@ -547,11 +546,11 @@
                   {{ "TRIPS.SEGMENTS.TITLE" | translate }} {{ i + 1 }}
                 </span>
                 <span class="fw-semibold" *ngIf="segmentDisplays[i]">
-                  {{ segmentDisplays[i].fromPlaceName }}
+                  {{ segmentDisplays[i].originPlaceName }}
                   <i class="ki-duotone ki-arrow-right fs-6 mx-1">
                     <span class="path1"></span><span class="path2"></span>
                   </i>
-                  {{ segmentDisplays[i].toPlaceName }}
+                  {{ segmentDisplays[i].destinationPlaceName }}
                 </span>
               </div>
 
@@ -714,7 +713,7 @@
                       class="form-control form-control-solid form-control-sm"
                       formControlName="scheduledDepartureTime"
                       mwlFlatpickr
-                      [minDate]="today"
+                      [minDate]="isEditMode ? null : today"
                       [altInput]="flatpickrDatetime.altInput"
                       [altFormat]="flatpickrDatetime.altFormat"
                       [enableTime]="flatpickrDatetime.enableTime"
@@ -832,7 +831,7 @@
                       type="text"
                       class="form-control form-control-solid form-control-sm"
                       formControlName="scheduledArrivalTime"
-                      [minDate]="today"
+                      [minDate]="isEditMode ? null : today"
                       mwlFlatpickr
                       [altInput]="flatpickrDatetime.altInput"
                       [altFormat]="flatpickrDatetime.altFormat"
@@ -953,8 +952,8 @@
                       *ngIf="segmentDisplays[idx]"
                       class="badge badge-light-info me-1"
                     >
-                      {{ segmentDisplays[idx].fromPlaceName }} →
-                      {{ segmentDisplays[idx].toPlaceName }}
+                      {{ segmentDisplays[idx].originPlaceName }} →
+                      {{ segmentDisplays[idx].destinationPlaceName }}
                     </span>
                   </ng-container>
                 </td>
@@ -1095,7 +1094,7 @@
                     class="form-control form-control-solid form-control-sm"
                     formControlName="validFrom"
                     mwlFlatpickr
-                    [minDate]="today"
+                    [minDate]="isEditMode ? null : today"
                     [altInput]="flatpickrDatetime.altInput"
                     [altFormat]="flatpickrDatetime.altFormat"
                     [enableTime]="flatpickrDatetime.enableTime"
@@ -1113,7 +1112,7 @@
                     class="form-control form-control-solid form-control-sm"
                     formControlName="validUntil"
                     mwlFlatpickr
-                    [minDate]="today"
+                    [minDate]="isEditMode ? null : today"
                     [altInput]="flatpickrDatetime.altInput"
                     [altFormat]="flatpickrDatetime.altFormat"
                     [enableTime]="flatpickrDatetime.enableTime"
@@ -1164,7 +1163,7 @@
                   "TRIPS.FIELDS.BUS" | translate
                 }}</span>
                 <span class="fw-semibold">{{
-                  getBusName(tripForm.get("busId")?.value)
+                  this.tripForm?.get("bus")?.value.name
                 }}</span>
               </div>
               <div class="col-md-4 mb-2">
@@ -1253,8 +1252,8 @@
                 <tbody>
                   <tr *ngFor="let seg of segments.controls; let i = index">
                     <td class="fw-semibold" *ngIf="segmentDisplays[i]">
-                      {{ segmentDisplays[i].fromPlaceName }} →
-                      {{ segmentDisplays[i].toPlaceName }}
+                      {{ segmentDisplays[i].originPlaceName }} →
+                      {{ segmentDisplays[i].destinationPlaceName }}
                     </td>
                     <td>
                       {{ seg.get("basePrice")?.value }}
@@ -1357,8 +1356,8 @@
                           *ngIf="segmentDisplays[idx]"
                           class="badge badge-light-info me-1"
                         >
-                          {{ segmentDisplays[idx].fromPlaceName }} →
-                          {{ segmentDisplays[idx].toPlaceName }}
+                          {{ segmentDisplays[idx].originPlaceName }} →
+                          {{ segmentDisplays[idx].destinationPlaceName }}
                         </span>
                       </ng-container>
                     </td>
@@ -1398,19 +1397,22 @@
          Footer / Navigation
          ──────────────────────────────────────────── -->
     <div class="card-footer d-flex justify-content-between">
-      <button
-        type="button"
-        class="btn btn-light"
-        *ngIf="currentStep > 0"
-        (click)="prevStep()"
-        [disabled]="isSubmitting"
-      >
-        <i class="ki-duotone ki-arrow-left fs-4 me-1">
-          <span class="path1"></span><span class="path2"></span>
-        </i>
-        {{ "TRIPS.CREATE.PREVIOUS" | translate }}
-      </button>
-      <div *ngIf="currentStep === 0"></div>
+      <div>
+        <button
+          type="button"
+          class="btn btn-light"
+          *ngIf="currentStep > 0"
+          (click)="prevStep()"
+          [disabled]="isSubmitting"
+        >
+          <span class="d-flex align-items-center gap-1">
+            <i class="ki-duotone ki-arrow-left fs-4 me-1">
+              <span class="path1"></span><span class="path2"></span>
+            </i>
+            {{ "TRIPS.CREATE.PREVIOUS" | translate }}
+          </span>
+        </button>
+      </div>
 
       <div class="d-flex gap-3">
         <button
@@ -1444,10 +1446,7 @@
             *ngIf="isSubmitting"
             class="spinner-border spinner-border-sm me-2"
           ></span>
-          {{
-            (isEditMode ? "TRIPS.EDIT_MODE.SUBMIT" : "TRIPS.CREATE.SUBMIT")
-              | translate
-          }}
+          {{ "COMMON.SUBMIT" | translate }}
         </button>
       </div>
     </div>

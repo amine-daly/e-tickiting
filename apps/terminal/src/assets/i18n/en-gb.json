@@ -1,5 +1,6 @@
 {
   "COMMON": {
+    "SUBMIT": "Submit",
     "STATUS": {
       "ACTIVE": "Active",
       "INACTIVE": "Inactive",
