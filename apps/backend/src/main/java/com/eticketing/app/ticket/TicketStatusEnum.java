@@ -7,8 +7,10 @@ import com.fasterxml.jackson.annotation.JsonValue;
  * Ticket state machine per TRIP_SPEC section 8.
  * <pre>
  * PENDING   → CONFIRMED  (payment success)
+ * CONFIRMED → BOARDED    (successful POS scan)
  * PENDING   → EXPIRED    (timeout, payment failure, or operator cancellation)
  * CONFIRMED → CANCELLED  (triggers Refund)
+ * BOARDED   → terminal
  * EXPIRED   → terminal
  * CANCELLED → terminal
  * </pre>
@@ -16,6 +18,7 @@ import com.fasterxml.jackson.annotation.JsonValue;
 public enum TicketStatusEnum {
     PENDING,
     CONFIRMED,
+    BOARDED,
     EXPIRED,
     CANCELLED;
 

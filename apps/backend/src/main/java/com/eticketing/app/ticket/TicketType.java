@@ -142,5 +142,9 @@ public class TicketType {
 
     private Instant confirmedAt;
 
+    private Instant scannedAt;
+
+    private String scannedBy;
+
     private Instant cancelledAt;
 }

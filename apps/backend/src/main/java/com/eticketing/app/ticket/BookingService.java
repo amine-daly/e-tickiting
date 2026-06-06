@@ -8,6 +8,7 @@ import com.eticketing.app.ticket.dto.GroupSeatUpdateRequest;
 import com.eticketing.app.trip.*;
 import com.eticketing.app.web.error.ApiExceptions.BadRequestException;
 import com.eticketing.app.web.error.ApiExceptions.ConflictException;
+import com.eticketing.app.web.error.ApiExceptions.ForbiddenException;
 import com.eticketing.app.web.error.ApiExceptions.GoneException;
 import com.eticketing.app.web.error.ApiExceptions.NotFoundException;
 import lombok.RequiredArgsConstructor;
@@ -354,6 +355,29 @@ public class BookingService {
             bookingEmailNotifier.sendTicketConfirmationEmail(saved.getId());
         }
         return saved;
+    }
+
+    public TicketType boardTicket(String ticketId, String agentUserId, String companyId) {
+        TicketType ticket = ticketRepository.findById(ticketId)
+                .orElseThrow(() -> new NotFoundException("Ticket not found: " + ticketId));
+
+        String ticketCompanyId = ticket.getTarget() != null ? ticket.getTarget().getCompany() : null;
+        if (StringUtils.isNotBlank(companyId)
+                && StringUtils.isNotBlank(ticketCompanyId)
+                && !StringUtils.equals(companyId, ticketCompanyId)) {
+            throw new ForbiddenException("Ticket does not belong to company " + companyId);
+        }
+
+        if (ticket.getStatus() != TicketStatusEnum.CONFIRMED) {
+            throw new ConflictException(
+                    "INVALID_TICKET_TRANSITION: ticket is " + ticket.getStatus() + ", expected CONFIRMED");
+        }
+
+        Instant now = Instant.now();
+        ticket.setStatus(TicketStatusEnum.BOARDED);
+        ticket.setScannedAt(now);
+        ticket.setScannedBy(StringUtils.trimToNull(agentUserId));
+        return ticketRepository.save(ticket);
     }
 
     private String resolveTicketCurrency(TripType trip) {
@@ -812,6 +836,12 @@ public class BookingService {
 
         List<TicketType> tickets = ticketRepository.findByOrderId(orderId);
 
+        boolean hasBoardedTickets = tickets.stream()
+                .anyMatch(ticket -> ticket.getStatus() == TicketStatusEnum.BOARDED);
+        if (hasBoardedTickets) {
+            throw new ConflictException("INVALID_ORDER_TRANSITION: boarded tickets cannot be cancelled");
+        }
+
         if (order.getStatus() == OrderStatusEnum.PENDING) {
             // Expire path — release seats for all tickets
             Instant now = Instant.now();
@@ -961,7 +991,9 @@ public class BookingService {
     }
 
     private boolean isActiveOrderTicket(TicketType ticket) {
-        return ticket.getStatus() == TicketStatusEnum.PENDING || ticket.getStatus() == TicketStatusEnum.CONFIRMED;
+        return ticket.getStatus() == TicketStatusEnum.PENDING
+                || ticket.getStatus() == TicketStatusEnum.CONFIRMED
+                || ticket.getStatus() == TicketStatusEnum.BOARDED;
     }
 
     private OrderStatusEnum resolveActiveOrderStatus(List<TicketType> activeTickets) {

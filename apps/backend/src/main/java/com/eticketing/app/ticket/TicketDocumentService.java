@@ -1282,6 +1282,8 @@ public class TicketDocumentService {
                         "Pending";
                     case CONFIRMED ->
                         "Confirmed";
+                    case BOARDED ->
+                        "Boarded";
                     case CANCELLED ->
                         "Cancelled";
                     case EXPIRED ->
@@ -1293,6 +1295,8 @@ public class TicketDocumentService {
                         "قيد الانتظار";
                     case CONFIRMED ->
                         "مؤكد";
+                    case BOARDED ->
+                        "تم الصعود";
                     case CANCELLED ->
                         "ملغى";
                     case EXPIRED ->
@@ -1304,6 +1308,8 @@ public class TicketDocumentService {
                         "En attente";
                     case CONFIRMED ->
                         "Confirmé";
+                    case BOARDED ->
+                        "Monte a bord";
                     case CANCELLED ->
                         "Annulé";
                     case EXPIRED ->

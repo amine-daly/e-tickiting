@@ -98,6 +98,16 @@ public class BookingController {
         return ResponseEntity.ok(toResponse(ticket));
     }
 
+    @PostMapping("/{ticketId}/board")
+    public ResponseEntity<BookingResponse> boardBooking(
+            @PathVariable String ticketId,
+            @AuthenticationPrincipal User principal,
+            HttpServletRequest httpRequest) {
+        String[] ids = resolveCompanyAndPos(principal, httpRequest);
+        TicketType ticket = bookingService.boardTicket(ticketId, principal.getUsername(), ids[0]);
+        return ResponseEntity.ok(toResponse(ticket));
+    }
+
     @PatchMapping("/{ticketId}/seat")
     public ResponseEntity<BookingResponse> updateSeat(
             @PathVariable String ticketId,
@@ -247,6 +257,8 @@ public class BookingController {
                 .expiresAt(ticket.getExpiresAt())
                 .createdAt(ticket.getCreatedAt())
                 .confirmedAt(ticket.getConfirmedAt())
+                .scannedAt(ticket.getScannedAt())
+                .scannedBy(ticket.getScannedBy())
                 .cancelledAt(ticket.getCancelledAt())
                 .build();
     }

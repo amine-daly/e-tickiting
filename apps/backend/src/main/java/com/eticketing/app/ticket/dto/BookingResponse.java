@@ -34,5 +34,7 @@ public class BookingResponse {
     private Instant expiresAt;
     private Instant createdAt;
     private Instant confirmedAt;
+    private Instant scannedAt;
+    private String scannedBy;
     private Instant cancelledAt;
 }

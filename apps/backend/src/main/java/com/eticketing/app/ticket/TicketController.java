@@ -252,6 +252,28 @@ public class TicketController {
         return ResponseEntity.ok(buildTicketResponse(ticket));
     }
 
+    @GetMapping("/by-reference/{reference}")
+    public ResponseEntity<?> getTicketByReference(@PathVariable String reference, @AuthenticationPrincipal User principal) {
+        if (reference == null || reference.isBlank()) {
+            return ResponseEntity.badRequest().body(Map.of("error", "reference is required"));
+        }
+
+        String normalizedReference = reference.trim();
+        Optional<TicketType> ticketOpt = ticketRepository.findByReference(normalizedReference);
+        if (ticketOpt.isEmpty()) {
+            ticketOpt = ticketRepository.findByIdempotencyKey(normalizedReference);
+        }
+        if (ticketOpt.isEmpty()) {
+            return ResponseEntity.notFound().build();
+        }
+
+        TicketType ticket = ticketOpt.get();
+        if (!canViewTicket(ticket, principal)) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(Map.of("error", "Access denied"));
+        }
+        return ResponseEntity.ok(buildTicketResponse(ticket));
+    }
+
     //  Response builder
     private Map<String, Object> buildTicketResponse(TicketType ticket) {
         TripType trip = tripRepository.findById(ticket.getTripId()).orElse(null);
@@ -280,6 +302,8 @@ public class TicketController {
         payload.put("expiresAt", formatInstant(ticket.getExpiresAt()));
         payload.put("createdAt", formatInstant(ticket.getCreatedAt()));
         payload.put("confirmedAt", formatInstant(ticket.getConfirmedAt()));
+        payload.put("scannedAt", formatInstant(ticket.getScannedAt()));
+        payload.put("scannedBy", ticket.getScannedBy());
         payload.put("cancelledAt", formatInstant(ticket.getCancelledAt()));
         Map<String, Object> userPayload = new LinkedHashMap<>();
         userPayload.put("id", ticket.getPassengerId());

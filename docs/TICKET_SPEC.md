@@ -23,26 +23,27 @@ The live model is order-aware. A single booking may produce one ticket or an ord
 
 ## 3. Ticket Document Shape
 
-| Field                                     | Meaning                                        |
-| ----------------------------------------- | ---------------------------------------------- |
-| `tripId`                                  | Trip reference                                 |
-| `orderId`                                 | Optional group order reference                 |
-| `target.company`                          | Owning company                                 |
-| `target.pos`                              | Optional original POS attribution              |
-| `segmentIds`                              | Ordered covered segments                       |
-| `expressSegmentId`                        | Optional express segment reference             |
-| `pickupPointId`                           | Boarding point snapshot                        |
-| `dropoffPointId`                          | Dropoff point snapshot                         |
-| `passengerId`                             | Registered passenger reference when present    |
-| `guestFirstName` / `guestLastName`        | Guest passenger fallback names                 |
-| `seatNo`                                  | Optional seat assignment                       |
-| `appliedPrice`                            | Immutable price snapshot                       |
-| `currency`                                | Immutable currency snapshot                    |
-| `lang`                                    | Ticket language snapshot                       |
-| `status`                                  | `PENDING`, `CONFIRMED`, `EXPIRED`, `CANCELLED` |
-| `idempotencyKey`                          | Unique replay key                              |
-| `expiresAt`                               | Pending hold expiry                            |
-| `createdAt`, `confirmedAt`, `cancelledAt` | Lifecycle timestamps                           |
+| Field                                                  | Meaning                                                   |
+| ------------------------------------------------------ | --------------------------------------------------------- |
+| `tripId`                                               | Trip reference                                            |
+| `orderId`                                              | Optional group order reference                            |
+| `target.company`                                       | Owning company                                            |
+| `target.pos`                                           | Optional original POS attribution                         |
+| `segmentIds`                                           | Ordered covered segments                                  |
+| `expressSegmentId`                                     | Optional express segment reference                        |
+| `pickupPointId`                                        | Boarding point snapshot                                   |
+| `dropoffPointId`                                       | Dropoff point snapshot                                    |
+| `passengerId`                                          | Registered passenger reference when present               |
+| `guestFirstName` / `guestLastName`                     | Guest passenger fallback names                            |
+| `seatNo`                                               | Optional seat assignment                                  |
+| `appliedPrice`                                         | Immutable price snapshot                                  |
+| `currency`                                             | Immutable currency snapshot                               |
+| `lang`                                                 | Ticket language snapshot                                  |
+| `status`                                               | `PENDING`, `CONFIRMED`, `BOARDED`, `EXPIRED`, `CANCELLED` |
+| `idempotencyKey`                                       | Unique replay key                                         |
+| `expiresAt`                                            | Pending hold expiry                                       |
+| `createdAt`, `confirmedAt`, `scannedAt`, `cancelledAt` | Lifecycle timestamps                                      |
+| `scannedBy`                                            | POS agent user id that boarded the ticket                 |
 
 ## 4. Order Document Shape
 
@@ -100,9 +101,10 @@ Current behavior:
 ### 6.1 Ticket lifecycle
 
 - `PENDING` -> `CONFIRMED`
+- `CONFIRMED` -> `BOARDED`
 - `PENDING` -> `EXPIRED`
 - `CONFIRMED` -> `CANCELLED`
-- `EXPIRED` and `CANCELLED` are terminal
+- `BOARDED`, `EXPIRED`, and `CANCELLED` are terminal
 
 ### 6.2 Order lifecycle
 
@@ -115,6 +117,7 @@ Current behavior:
 
 - Pending tickets and pending orders expire and release seats.
 - Confirmed tickets and confirmed orders cancel through the refund path.
+- Boarded tickets are not cancellable and keep their occupancy.
 - Trip cancellation side effects also expire pending tickets and create refund records for confirmed tickets.
 
 ## 7. Inventory And Expiry
@@ -141,6 +144,7 @@ Current behavior:
 
 - `POST /api/bookings`
 - `POST /api/bookings/{ticketId}/confirm`
+- `POST /api/bookings/{ticketId}/board`
 - `POST /api/bookings/{ticketId}/cancel`
 - `PATCH /api/bookings/{ticketId}/seat`
 - `POST /api/bookings/group`
@@ -181,6 +185,12 @@ Current behavior:
 
 - The operational sell flow supports contact customer selection, guest passengers, seat assignment, and order confirmation.
 - The UI follows the same pending/confirm/expiry lifecycle as the backend.
+
+### POS scan to board
+
+- The POS scanner reads the QR reference and resolves the ticket.
+- `CONFIRMED` tickets are boarded via `POST /api/bookings/{ticketId}/board`.
+- `scannedAt` and `scannedBy` are recorded at boarding time.
 
 ## 10. Document Generation
 

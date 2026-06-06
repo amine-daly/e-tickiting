@@ -25,6 +25,10 @@ public class TripInventoryReconciliationService {
     private static final List<TripStatusEnum> RECONCILABLE_STATUSES = List.of(
             TripStatusEnum.SCHEDULED,
             TripStatusEnum.ACTIVE);
+    private static final List<TicketStatusEnum> ACTIVE_TICKET_STATUSES = List.of(
+            TicketStatusEnum.PENDING,
+            TicketStatusEnum.CONFIRMED,
+            TicketStatusEnum.BOARDED);
 
     private final TripTypeRepository tripRepository;
     private final TicketRepository ticketRepository;
@@ -97,7 +101,7 @@ public class TripInventoryReconciliationService {
 
         List<TicketType> activeTickets = ticketRepository.findByTripIdInAndStatusIn(
                 tripIds,
-                List.of(TicketStatusEnum.PENDING, TicketStatusEnum.CONFIRMED));
+                ACTIVE_TICKET_STATUSES);
 
         Map<String, List<TicketType>> ticketsByTripId = activeTickets.stream()
                 .collect(Collectors.groupingBy(TicketType::getTripId));

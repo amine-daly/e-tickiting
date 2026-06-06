@@ -57,6 +57,28 @@ paths:
       responses:
         "200":
           description: Trips list
+  /tickets/by-reference/{reference}:
+    get:
+      summary: Find a ticket by QR reference
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: reference
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Ticket found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Ticket"
+        "403":
+          description: Ticket exists but the current user cannot access it
+        "404":
+          description: No ticket matched the provided reference
   /bookings/group/{orderId}/tickets/{ticketId}/cancel:
     post:
       summary: Cancel one passenger from a group booking
@@ -98,3 +120,18 @@ components:
       properties:
         email: { type: string, format: email }
         password: { type: string }
+    Ticket:
+      type: object
+      properties:
+        id: { type: string }
+        reference: { type: string }
+        tripId: { type: string }
+        orderId: { type: string, nullable: true }
+        seatNo: { type: string, nullable: true }
+        status:
+          type: string
+          enum: [PENDING, CONFIRMED, EXPIRED, CANCELLED]
+        expiresAt:
+          type: string
+          format: date-time
+          nullable: true

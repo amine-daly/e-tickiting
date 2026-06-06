@@ -13,6 +13,8 @@ public interface TicketRepository extends MongoRepository<TicketType, String> {
 
     List<TicketType> findByTripId(String tripId);
 
+    Optional<TicketType> findByReference(String reference);
+
     Optional<TicketType> findByIdempotencyKey(String idempotencyKey);
 
     @Query("{ 'target.pos': ?0 }")
@@ -35,7 +37,7 @@ public interface TicketRepository extends MongoRepository<TicketType, String> {
 
     List<TicketType> findByTripIdInAndStatusIn(List<String> tripIds, List<TicketStatusEnum> statuses);
 
-    @Query(value = "{ 'tripId': ?0, 'status': { $in: ['PENDING', 'CONFIRMED'] }, 'seatNo': { $ne: null } }", fields = "{ 'seatNo': 1 }")
+    @Query(value = "{ 'tripId': ?0, 'status': { $in: ['PENDING', 'CONFIRMED', 'BOARDED'] }, 'seatNo': { $ne: null } }", fields = "{ 'seatNo': 1 }")
     List<TicketType> findOccupiedSeatsByTripId(String tripId);
 
     @Query("{ 'status': 'PENDING', 'expiresAt': { $lt: ?0 } }")

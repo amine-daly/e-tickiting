@@ -18,6 +18,11 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class SeatOccupancyService {
 
+    private static final List<TicketStatusEnum> ACTIVE_OCCUPANCY_STATUSES = List.of(
+            TicketStatusEnum.PENDING,
+            TicketStatusEnum.CONFIRMED,
+            TicketStatusEnum.BOARDED);
+
     private final SeatOccupancyRepository seatOccupancyRepository;
     private final TicketRepository ticketRepository;
 
@@ -78,7 +83,7 @@ public class SeatOccupancyService {
 
         List<TicketType> activeTickets = ticketRepository.findByTripIdAndStatusIn(
                 tripId,
-                List.of(TicketStatusEnum.PENDING, TicketStatusEnum.CONFIRMED));
+                ACTIVE_OCCUPANCY_STATUSES);
         Set<String> activeTicketIds = activeTickets.stream()
                 .map(TicketType::getId)
                 .filter(StringUtils::isNotBlank)
@@ -92,7 +97,7 @@ public class SeatOccupancyService {
         Map<String, TicketType> occupancyTicketsById = ticketRepository.findAllById(occupancyTicketIds).stream()
                 .collect(Collectors.toMap(TicketType::getId, Function.identity()));
         List<String> staleOccupancyTicketIds = occupancyTicketsById.values().stream()
-                .filter(ticket -> ticket.getStatus() != TicketStatusEnum.PENDING && ticket.getStatus() != TicketStatusEnum.CONFIRMED)
+                .filter(ticket -> !ACTIVE_OCCUPANCY_STATUSES.contains(ticket.getStatus()))
                 .map(TicketType::getId)
                 .distinct()
                 .toList();
@@ -150,7 +155,7 @@ public class SeatOccupancyService {
         boolean hasConflict = ticketRepository.findByTripIdAndSeatNoAndStatusIn(
                 ticket.getTripId(),
                 normalizedSeatNo,
-                List.of(TicketStatusEnum.PENDING, TicketStatusEnum.CONFIRMED))
+                ACTIVE_OCCUPANCY_STATUSES)
                 .stream()
                 .filter(existingTicket -> !StringUtils.equals(existingTicket.getId(), ticket.getId()))
                 .anyMatch(existingTicket -> overlaps(ticket.getSegmentIds(), existingTicket.getSegmentIds()));
