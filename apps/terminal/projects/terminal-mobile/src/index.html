@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>E-Ticketing Terminal</title>
+    <base href="/" />
+    <!-- Capacitor / mobile viewport -->
+    <meta
+      name="viewport"
+      content="viewport-fit=cover, width=device-width, initial-scale=1.0, minimum-scale=1.0, maximum-scale=1.0, user-scalable=no"
+    />
+    <meta name="color-scheme" content="light dark" />
+    <meta name="format-detection" content="telephone=no" />
+    <meta name="msapplication-tap-highlight" content="no" />
+    <link rel="shortcut icon" href="./assets/media/logos/favicon.ico" />
+    <link
+      rel="stylesheet"
+      href="https://fonts.googleapis.com/css?family=Inter:300,400,500,600,700"
+    />
+    <link
+      rel="stylesheet"
+      id="layout-styles-anchor"
+      href="./assets/splash-screen.css"
+    />
+    <link rel="preconnect" href="https://fonts.gstatic.com" />
+  </head>
+
+  <body id="kt_body" class="mat-typography">
+    <!--begin::Theme mode setup on page load-->
+    <script>
+      if (document.documentElement) {
+        var defaultThemeMode = "system";
+        var hasKTName = document.body.hasAttribute("data-kt-name");
+        var lsKey = "kt_" + (hasKTName ? name + "_" : "") + "theme_mode_value";
+        var themeMode = localStorage.getItem(lsKey);
+        if (!themeMode) {
+          themeMode =
+            defaultThemeMode === "system"
+              ? window.matchMedia("(prefers-color-scheme: dark)").matches
+                ? "dark"
+                : "light"
+              : defaultThemeMode;
+        }
+        document.documentElement.setAttribute("data-bs-theme", themeMode);
+      }
+    </script>
+    <!--end::Theme mode setup on page load-->
+
+    <div id="splash-screen" class="splash-screen">
+      <img src="./assets/media/logos/default-small.svg" alt="E-Ticketing" />
+      <span>Loading ...</span>
+    </div>
+
+    <!-- Angular app root — Ionic wraps inside app.component.html -->
+    <app-root></app-root>
+  </body>
+</html>

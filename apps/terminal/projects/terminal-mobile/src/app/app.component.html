@@ -1,0 +1,17 @@
+<ion-app>
+  <!-- Primary Ionic router outlet — handles page stack + native transitions -->
+  <ion-router-outlet></ion-router-outlet>
+
+  <!-- Mobile bottom navigation (hidden on auth/error pages) -->
+  <app-mobile-footer
+    *ngIf="showFooter"
+    (scanClicked)="openScanner()"
+  ></app-mobile-footer>
+
+  <!-- Full-screen QR scanner overlay -->
+  <app-scan-qr-code
+    *ngIf="showScanner"
+    (scanned)="onScanned($event)"
+    (closed)="onScannerClosed()"
+  ></app-scan-qr-code>
+</ion-app>

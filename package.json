@@ -8,11 +8,13 @@
         "format": "echo format placeholder",
         "lint": "echo lint placeholder",
         "test": "echo test placeholder",
-        "start:terminal": "npm --prefix apps/terminal run start -- --open",
-        "build:terminal": "npm --prefix apps/terminal run build",
         "start": "npm --prefix apps/terminal run start -- --open",
+        "start:terminal": "npm --prefix apps/terminal run start -- --open",
+        "start:terminal-mobile": "npm --prefix apps/terminal run start:mobile -- --open",
         "start:safra": "npm --prefix apps/frontend run start -- --open",
         "start:backend": "cd apps/backend && mvnw.cmd spring-boot:run",
+        "build:terminal": "npm --prefix apps/terminal run build",
+        "build:terminal-mobile": "npm --prefix apps/terminal run build:mobile",
         "build:backend": "cd apps/backend && mvnw.cmd -DskipTests clean package"
     },
     "dependencies": {

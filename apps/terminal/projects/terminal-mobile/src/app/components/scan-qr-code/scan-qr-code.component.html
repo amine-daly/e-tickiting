@@ -1,0 +1,36 @@
+<div class="scan-overlay">
+  <!-- Header -->
+  <div class="scan-overlay__header d-flex justify-content-between align-items-center p-4">
+    <h5 class="mb-0 text-white fw-semibold">Scan Ticket QR</h5>
+    <button type="button" class="btn btn-icon btn-sm text-white" (click)="close()">
+      <app-keenicon name="cross" class="fs-2"></app-keenicon>
+    </button>
+  </div>
+
+  <!-- Camera viewport -->
+  <div class="scan-overlay__viewport">
+    <video #videoEl autoplay playsinline class="scan-overlay__video"></video>
+    <div class="scan-overlay__frame"></div>
+    <p class="scan-overlay__hint text-white text-center mt-4">
+      Position the QR code inside the frame
+    </p>
+  </div>
+
+  <!-- Error -->
+  <div *ngIf="error" class="alert alert-danger mx-4 mt-4">{{ error }}</div>
+
+  <!-- Not supported -->
+  <div *ngIf="!supported && !error" class="text-center text-white mt-8 px-4">
+    <app-keenicon name="information-5" class="fs-3x mb-4"></app-keenicon>
+    <p>QR scanning is not supported in this browser.</p>
+    <p class="text-gray-400 fs-7">Use Chrome on Android for best results.</p>
+  </div>
+
+  <!-- Start button (shown before scanning) -->
+  <div *ngIf="supported && !scanning && !error" class="text-center mt-8">
+    <button class="btn btn-primary btn-lg" (click)="start()">
+      <app-keenicon name="scan-barcode" class="fs-2 me-2"></app-keenicon>
+      Start Camera
+    </button>
+  </div>
+</div>

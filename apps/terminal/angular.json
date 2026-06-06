@@ -131,6 +131,113 @@
           }
         }
       }
+    },
+    "terminal-mobile": {
+      "projectType": "application",
+      "schematics": {
+        "@schematics/angular:component": {
+          "style": "scss"
+        },
+        "@schematics/angular:application": {
+          "strict": true
+        }
+      },
+      "root": "projects/terminal-mobile",
+      "sourceRoot": "projects/terminal-mobile/src",
+      "prefix": "app",
+      "architect": {
+        "build": {
+          "builder": "@angular-devkit/build-angular:browser",
+          "options": {
+            "outputPath": "dist/terminal-mobile",
+            "allowedCommonJsDependencies": [
+              "object-path",
+              "apexcharts",
+              "clipboard.js",
+              "prismjs",
+              "@ionic/angular",
+              "@ionic/core"
+            ],
+            "index": "projects/terminal-mobile/src/index.html",
+            "main": "projects/terminal-mobile/src/main.ts",
+            "polyfills": [
+              "zone.js",
+              "@angular/localize/init"
+            ],
+            "tsConfig": "projects/terminal-mobile/tsconfig.app.json",
+            "inlineStyleLanguage": "scss",
+            "assets": [
+              {
+                "glob": "favicon.ico",
+                "input": "src",
+                "output": "/"
+              },
+              {
+                "glob": "**/*",
+                "input": "src/assets",
+                "output": "assets"
+              }
+            ],
+            "styles": [
+              "projects/terminal-mobile/src/styles.scss",
+              "node_modules/flatpickr/dist/flatpickr.css",
+              "node_modules/leaflet/dist/leaflet.css",
+              "src/assets/plugins/keenicons/duotone/style.css",
+              "src/assets/plugins/keenicons/outline/style.css",
+              "src/assets/plugins/keenicons/solid/style.css"
+            ],
+            "scripts": []
+          },
+          "configurations": {
+            "production": {
+              "budgets": [
+                {
+                  "type": "initial",
+                  "maximumWarning": "2mb",
+                  "maximumError": "5mb"
+                },
+                {
+                  "type": "anyComponentStyle",
+                  "maximumWarning": "2kb",
+                  "maximumError": "4kb"
+                }
+              ],
+              "fileReplacements": [
+                {
+                  "replace": "projects/terminal-mobile/src/environments/environment.ts",
+                  "with": "projects/terminal-mobile/src/environments/environment.prod.ts"
+                }
+              ],
+              "outputHashing": "all"
+            },
+            "development": {
+              "buildOptimizer": false,
+              "optimization": false,
+              "vendorChunk": true,
+              "extractLicenses": false,
+              "sourceMap": true,
+              "namedChunks": true
+            }
+          },
+          "defaultConfiguration": "production"
+        },
+        "serve": {
+          "builder": "@angular-devkit/build-angular:dev-server",
+          "options": {
+            "buildTarget": "terminal-mobile:build:development",
+            "port": 4201
+          },
+          "configurations": {
+            "production": {
+              "buildTarget": "terminal-mobile:build:production"
+            },
+            "development": {
+              "buildTarget": "terminal-mobile:build:development"
+            }
+          },
+          "defaultConfiguration": "development"
+        }
+      }
     }
   },
   "cli": {

@@ -1,0 +1,24 @@
+/* ─── Ionic core (must come before Metronic) ───────────────────────────────── */
+@import "@ionic/angular/css/core.css";
+@import "@ionic/angular/css/normalize.css";
+@import "@ionic/angular/css/structure.css";
+@import "@ionic/angular/css/typography.css";
+
+/* ─── Metronic global styles ────────────────────────────────────────────────── */
+/* Depth: projects/terminal-mobile/src/ → 3 levels up to apps/terminal/ */
+@import "../../../src/assets/sass/style.scss";
+@import "../../../src/assets/sass/plugins.scss";
+@import "../../../src/assets/sass/style.angular.scss";
+
+/* ─── Third-party component themes ─────────────────────────────────────────── */
+@import "~@ng-select/ng-select/themes/default.theme.css";
+
+/* ─── Mobile safe-area / bottom nav spacing ─────────────────────────────────── */
+ion-app {
+  --ion-safe-area-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+/* Push Metronic layout content above the fixed footer */
+.app-page {
+  padding-bottom: calc(64px + env(safe-area-inset-bottom, 0px));
+}

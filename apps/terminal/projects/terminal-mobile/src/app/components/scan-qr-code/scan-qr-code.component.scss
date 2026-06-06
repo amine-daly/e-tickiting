@@ -1,0 +1,67 @@
+.scan-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1100;
+  background: rgba(0, 0, 0, 0.92);
+  display: flex;
+  flex-direction: column;
+
+  &__header {
+    flex-shrink: 0;
+  }
+
+  &__viewport {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+  }
+
+  &__video {
+    width: 100%;
+    max-width: 360px;
+    border-radius: 12px;
+    object-fit: cover;
+    aspect-ratio: 1 / 1;
+  }
+
+  &__frame {
+    position: absolute;
+    width: 240px;
+    height: 240px;
+    border: 3px solid var(--bs-primary);
+    border-radius: 12px;
+    pointer-events: none;
+
+    &::before,
+    &::after {
+      content: '';
+      position: absolute;
+      width: 32px;
+      height: 32px;
+      border-color: var(--bs-primary);
+      border-style: solid;
+    }
+
+    &::before {
+      top: -3px;
+      left: -3px;
+      border-width: 4px 0 0 4px;
+      border-radius: 12px 0 0 0;
+    }
+
+    &::after {
+      bottom: -3px;
+      right: -3px;
+      border-width: 0 4px 4px 0;
+      border-radius: 0 0 12px 0;
+    }
+  }
+
+  &__hint {
+    font-size: 0.85rem;
+    opacity: 0.75;
+  }
+}

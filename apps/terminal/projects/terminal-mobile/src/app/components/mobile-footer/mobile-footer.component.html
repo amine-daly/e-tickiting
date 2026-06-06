@@ -1,0 +1,17 @@
+<ion-tab-bar class="mobile-tab-bar">
+  <!-- Route tabs -->
+  <ion-tab-button
+    *ngFor="let tab of tabs"
+    [class.tab-selected]="isActive(tab.route)"
+    (click)="navigate(tab.route)"
+  >
+    <app-keenicon [name]="tab.icon" class="fs-2x"></app-keenicon>
+    <ion-label>{{ tab.label }}</ion-label>
+  </ion-tab-button>
+
+  <!-- Scan button -->
+  <ion-tab-button class="tab-scan" (click)="openScan()">
+    <app-keenicon name="scan-barcode" class="fs-2x"></app-keenicon>
+    <ion-label>Scan</ion-label>
+  </ion-tab-button>
+</ion-tab-bar>
