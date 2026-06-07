@@ -357,9 +357,8 @@ public class BookingService {
         return saved;
     }
 
-    public TicketType boardTicket(String ticketId, String agentUserId, String companyId) {
-        TicketType ticket = ticketRepository.findById(ticketId)
-                .orElseThrow(() -> new NotFoundException("Ticket not found: " + ticketId));
+    public TicketType boardTicket(String ticketReference, String agentUserId, String companyId) {
+        TicketType ticket = resolveTicketForBoarding(ticketReference);
 
         String ticketCompanyId = ticket.getTarget() != null ? ticket.getTarget().getCompany() : null;
         if (StringUtils.isNotBlank(companyId)
@@ -378,6 +377,29 @@ public class BookingService {
         ticket.setScannedAt(now);
         ticket.setScannedBy(StringUtils.trimToNull(agentUserId));
         return ticketRepository.save(ticket);
+    }
+
+    /**
+     * Resolves a ticket for boarding. QR codes and manual entry use the ticket
+     * reference (e.g. "DA4FA48B2672"), not the MongoDB _id.
+     */
+    private TicketType resolveTicketForBoarding(String ticketReference) {
+        if (StringUtils.isBlank(ticketReference)) {
+            throw new BadRequestException("Ticket reference is required");
+        }
+
+        String normalized = ticketReference.trim();
+
+        Optional<TicketType> ticketOpt = ticketRepository.findByReference(normalized);
+        if (ticketOpt.isEmpty()) {
+            ticketOpt = ticketRepository.findByIdempotencyKey(normalized);
+        }
+        if (ticketOpt.isEmpty()) {
+            ticketOpt = ticketRepository.findById(normalized);
+        }
+
+        return ticketOpt.orElseThrow(
+                () -> new NotFoundException("Ticket not found: " + normalized));
     }
 
     private String resolveTicketCurrency(TripType trip) {

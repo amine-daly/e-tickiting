@@ -8,11 +8,15 @@ import { AuthService } from '../../services/auth.service';
 import { AlertService } from '../../../../core/services/alert.service';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { resolveUserErrorMessage } from 'src/app/core/helpers/user-error-message.helper';
-
 @Component({
   selector: 'app-login',
   standalone: true,
-  imports: [CommonModule, FormsModule, ReactiveFormsModule, RouterLink],
+  imports: [
+    CommonModule,
+    FormsModule,
+    ReactiveFormsModule,
+    RouterLink,
+  ],
   templateUrl: './login.component.html',
   styleUrls: ['./login.component.scss'],
 })

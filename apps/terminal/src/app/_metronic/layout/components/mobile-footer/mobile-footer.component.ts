@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { ChangeDetectionStrategy, Component, EventEmitter, Output } from '@angular/core';
+import { ChangeDetectionStrategy, Component } from '@angular/core';
 import { Router } from '@angular/router';
 import {
   IonTabBar,
@@ -7,6 +7,7 @@ import {
   IonLabel,
 } from '@ionic/angular/standalone';
 import { KeeniconComponent } from 'src/app/_metronic/shared/keenicon/keenicon.component';
+import { MobileShellService } from 'src/app/core/services/mobile-shell.service';
 
 interface NavTab {
   label: string;
@@ -23,15 +24,16 @@ interface NavTab {
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class MobileFooterComponent {
-  @Output() scanClicked = new EventEmitter<void>();
-
   tabs: NavTab[] = [
-    { label: 'Dashboard', icon: 'element-11',       route: '/dashboard' },
-    { label: 'Trips',     icon: 'arrow-right-left', route: '/trips' },
-    { label: 'Tickets',  icon: 'ticket',            route: '/tickets' },
+    { label: 'Dashboard', icon: 'element-11', route: '/dashboard' },
+    { label: 'Trips', icon: 'arrow-right-left', route: '/trips' },
+    { label: 'Tickets', icon: 'ticket', route: '/tickets' },
   ];
 
-  constructor(private router: Router) {}
+  constructor(
+    private router: Router,
+    private mobileShell: MobileShellService,
+  ) {}
 
   navigate(route: string): void {
     this.router.navigateByUrl(route);
@@ -42,6 +44,6 @@ export class MobileFooterComponent {
   }
 
   openScan(): void {
-    this.scanClicked.emit();
+    this.mobileShell.requestScan();
   }
 }

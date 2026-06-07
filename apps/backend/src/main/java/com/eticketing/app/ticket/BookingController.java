@@ -98,13 +98,13 @@ public class BookingController {
         return ResponseEntity.ok(toResponse(ticket));
     }
 
-    @PostMapping("/{ticketId}/board")
+    @PostMapping("/{ticketReference}/board")
     public ResponseEntity<BookingResponse> boardBooking(
-            @PathVariable String ticketId,
+            @PathVariable String ticketReference,
             @AuthenticationPrincipal User principal,
             HttpServletRequest httpRequest) {
         String[] ids = resolveCompanyAndPos(principal, httpRequest);
-        TicketType ticket = bookingService.boardTicket(ticketId, principal.getUsername(), ids[0]);
+        TicketType ticket = bookingService.boardTicket(ticketReference, principal.getUsername(), ids[0]);
         return ResponseEntity.ok(toResponse(ticket));
     }
 

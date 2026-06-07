@@ -251,6 +251,24 @@ class BookingServiceTest {
     }
 
     @Test
+    void boardTicketResolvesTicketByReference() {
+        TicketType confirmedTicket = TicketType.builder()
+                .id("ticket-board")
+                .reference("DA4FA48B2672")
+                .status(TicketStatusEnum.CONFIRMED)
+                .target(new TargetInput("company-1", "pos-1"))
+                .build();
+
+        when(ticketRepository.findByReference("DA4FA48B2672")).thenReturn(Optional.of(confirmedTicket));
+        when(ticketRepository.save(any(TicketType.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        TicketType saved = bookingService.boardTicket("DA4FA48B2672", "agent-1", "company-1");
+
+        assertEquals(TicketStatusEnum.BOARDED, saved.getStatus());
+        assertEquals("agent-1", saved.getScannedBy());
+    }
+
+    @Test
     void cancelBookingCancelsConfirmedTicketAndCreatesRefund() {
         TicketType confirmedTicket = TicketType.builder()
                 .id("ticket-2")

@@ -21,6 +21,7 @@ import { NgbModule } from '@ng-bootstrap/ng-bootstrap';
 import { HTTP_INTERCEPTORS } from '@angular/common/http';
 import { AuthTokenClassInterceptor } from 'src/app/core/interceptors/auth-token.class.interceptor';
 import { TranslateHttpLoader } from '@ngx-translate/http-loader';
+import { IS_MOBILE_SHELL } from 'src/app/core/tokens/is-mobile-shell.token';
 
 export function HttpLoaderFactory(http: HttpClient) {
   return new TranslateHttpLoader(http);
@@ -28,6 +29,7 @@ export function HttpLoaderFactory(http: HttpClient) {
 
 bootstrapApplication(AppComponent, {
   providers: [
+    { provide: IS_MOBILE_SHELL, useValue: true },
     provideIonicAngular({ mode: 'md' }),
     provideRouter(routes, withEnabledBlockingInitialNavigation()),
     provideHttpClient(withInterceptorsFromDi()),

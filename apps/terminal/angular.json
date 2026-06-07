@@ -198,8 +198,8 @@
                 },
                 {
                   "type": "anyComponentStyle",
-                  "maximumWarning": "2kb",
-                  "maximumError": "4kb"
+                  "maximumWarning": "10kb",
+                  "maximumError": "15kb"
                 }
               ],
               "fileReplacements": [
@@ -225,7 +225,8 @@
           "builder": "@angular-devkit/build-angular:dev-server",
           "options": {
             "buildTarget": "terminal-mobile:build:development",
-            "port": 4201
+            "port": 4201,
+            "proxyConfig": "projects/terminal-mobile/proxy.conf.json"
           },
           "configurations": {
             "production": {

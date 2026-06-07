@@ -1,7 +1,7 @@
-import { Component, OnInit } from '@angular/core';
+import { AfterViewInit, Component } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { NgApexchartsModule } from 'ng-apexcharts';
-import { getCSSVariableValue } from '../../../../../kt/_utils';
+import { deferChartRender, getChartCssColor } from '../chart-widget.utils';
 
 @Component({
   selector: 'app-charts-widget3',
@@ -9,21 +9,25 @@ import { getCSSVariableValue } from '../../../../../kt/_utils';
   standalone: true,
   imports: [CommonModule, NgApexchartsModule],
 })
-export class ChartsWidget3Component implements OnInit {
-  chartOptions: any = {};
+export class ChartsWidget3Component implements AfterViewInit {
+  chartReady = false;
+  chartOptions: any;
 
   constructor() {}
 
-  ngOnInit(): void {
-    this.chartOptions = getChartOptions(350);
+  ngAfterViewInit(): void {
+    deferChartRender(() => {
+      this.chartOptions = getChartOptions(350);
+      this.chartReady = true;
+    });
   }
 }
 
 function getChartOptions(height: number) {
-  const labelColor = getCSSVariableValue('--bs-gray-500');
-  const borderColor = getCSSVariableValue('--bs-gray-200');
-  const baseColor = getCSSVariableValue('--bs-info');
-  const lightColor = getCSSVariableValue('--bs-info-light');
+  const labelColor = getChartCssColor('--bs-gray-500');
+  const borderColor = getChartCssColor('--bs-gray-200');
+  const baseColor = getChartCssColor('--bs-info');
+  const lightColor = getChartCssColor('--bs-info-light');
 
   return {
     series: [

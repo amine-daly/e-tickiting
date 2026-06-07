@@ -13,12 +13,73 @@
 /* ─── Third-party component themes ─────────────────────────────────────────── */
 @import "~@ng-select/ng-select/themes/default.theme.css";
 
-/* ─── Mobile safe-area / bottom nav spacing ─────────────────────────────────── */
+/* ─── Ionic scroll host chain (Metronic height:100% overrides) ─────────────── */
+html,
+body {
+  height: 100%;
+  overflow: hidden;
+}
+
 ion-app {
+  height: 100%;
   --ion-safe-area-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+ion-router-outlet {
+  display: block;
+  height: 100%;
+}
+
+ion-content {
+  display: block;
+  height: 100%;
+}
+
+/* Metronic fixed heights block ion-content scroll — reset inside scroll areas */
+ion-content .app-root,
+ion-content .app-page,
+ion-content #kt_app_root,
+ion-content #kt_app_page {
+  min-height: auto !important;
+  height: auto !important;
+}
+
+/* Auth: stack branding + form vertically on phones */
+@media (max-width: 991.98px) {
+  app-auth .flex-lg-row {
+    flex-direction: column !important;
+  }
+
+  app-auth .w-lg-50 {
+    width: 100% !important;
+  }
+
+  app-auth .order-1.order-lg-2 {
+    min-height: 280px;
+  }
 }
 
 /* Push Metronic layout content above the fixed footer */
 .app-page {
   padding-bottom: calc(64px + env(safe-area-inset-bottom, 0px));
+}
+
+/* Mobile drawer + footer stacking (sidebar is reparented to body during animation) */
+@media (max-width: 991.98px) {
+  #kt_app_sidebar.drawer {
+    will-change: transform;
+  }
+
+  #kt_app_sidebar.drawer.drawer-on {
+    z-index: 1101 !important;
+  }
+
+  .drawer-overlay {
+    z-index: 1100 !important;
+  }
+
+  body[data-kt-drawer='on'] app-mobile-footer {
+    visibility: hidden;
+    pointer-events: none;
+  }
 }

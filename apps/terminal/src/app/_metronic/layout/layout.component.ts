@@ -4,6 +4,8 @@ import {
   ViewChild,
   ElementRef,
   OnDestroy,
+  ChangeDetectorRef,
+  Inject,
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterModule } from '@angular/router';
@@ -21,6 +23,11 @@ import { LayoutService } from './core/layout.service';
 import { LayoutInitService } from './core/layout-init.service';
 import { ILayout, LayoutType } from './core/configs/config';
 import { SidebarComponent } from './components/sidebar/sidebar.component';
+import { IonContent } from '@ionic/angular/standalone';
+import { DrawerComponent } from '../kt/components';
+import { filter } from 'rxjs/operators';
+import { IS_MOBILE_SHELL } from 'src/app/core/tokens/is-mobile-shell.token';
+import { MobileFooterComponent } from './components/mobile-footer/mobile-footer.component';
 
 @Component({
   selector: 'app-layout',
@@ -39,10 +46,24 @@ import { SidebarComponent } from './components/sidebar/sidebar.component';
     MainModalComponent,
     InviteUsersModalComponent,
     UpgradePlanModalComponent,
+    IonContent,
+    MobileFooterComponent,
   ],
 })
 export class LayoutComponent implements OnInit, OnDestroy {
   private unsubscribe: Subscription[] = [];
+  private mobileDrawerCloseRegistered = false;
+  private mobileDrawerReparentRegistered = false;
+  private sidebarRestoreAnchor: Comment | null = null;
+  private sidebarRestoreTimer: ReturnType<typeof setTimeout> | null = null;
+  private sidebarTransitionHandler: ((e: TransitionEvent) => void) | null = null;
+
+  private static readonly DRAWER_TRANSITION_MS = 300;
+
+  readonly isMobileShell: boolean;
+  showMobileFooter = false;
+
+  private readonly GUEST_PATHS = ['/auth', '/error'];
 
   // Public variables
   // page
@@ -99,10 +120,21 @@ export class LayoutComponent implements OnInit, OnDestroy {
     private initService: LayoutInitService,
     private layout: LayoutService,
     private router: Router,
-    private activatedRoute: ActivatedRoute
+    private activatedRoute: ActivatedRoute,
+    private cd: ChangeDetectorRef,
+    @Inject(IS_MOBILE_SHELL) isMobileShell: boolean,
   ) {
+    this.isMobileShell = isMobileShell;
+
     this.router.events.subscribe((event) => {
       if (event instanceof NavigationEnd) {
+        if (this.isMobileShell) {
+          this.showMobileFooter = !this.GUEST_PATHS.some((path) =>
+            event.urlAfterRedirects.startsWith(path),
+          );
+          this.cd.markForCheck();
+        }
+
         const currentLayoutType = this.layout.currentLayoutTypeSubject.value;
 
         const nextLayoutType: LayoutType =
@@ -118,6 +150,12 @@ export class LayoutComponent implements OnInit, OnDestroy {
   }
 
   ngOnInit() {
+    if (this.isMobileShell) {
+      this.showMobileFooter = !this.GUEST_PATHS.some((path) =>
+        this.router.url.startsWith(path),
+      );
+    }
+
     const subscr = this.layout.layoutConfigSubject
       .asObservable()
       .subscribe((config) => {
@@ -129,44 +167,44 @@ export class LayoutComponent implements OnInit, OnDestroy {
   updateProps(config: ILayout) {
     this.scrolltopDisplay = this.layout.getProp(
       'scrolltop.display',
-      config
+      config,
     ) as boolean;
     this.pageContainerCSSClasses =
       this.layout.getStringCSSClasses('pageContainer');
     this.appHeaderDefaultClass = this.layout.getProp(
       'app.header.default.class',
-      config
+      config,
     ) as string;
     this.appHeaderDisplay = this.layout.getProp(
       'app.header.display',
-      config
+      config,
     ) as boolean;
     this.appFooterDisplay = this.layout.getProp(
       'app.footer.display',
-      config
+      config,
     ) as boolean;
     this.appSidebarDisplay = this.layout.getProp(
       'app.sidebar.display',
-      config
+      config,
     ) as boolean;
     this.appSidebarPanelDisplay = this.layout.getProp(
       'app.sidebar-panel.display',
-      config
+      config,
     ) as boolean;
     this.appToolbarDisplay = this.layout.getProp(
       'app.toolbar.display',
-      config
+      config,
     ) as boolean;
     this.contentCSSClasses = this.layout.getStringCSSClasses('content');
     this.contentContainerCSSClass =
       this.layout.getStringCSSClasses('contentContainer');
     this.appContentContiner = this.layout.getProp(
       'app.content.container',
-      config
+      config,
     ) as 'fixed' | 'fluid';
     this.appContentContainerClass = this.layout.getProp(
       'app.content.containerClass',
-      config
+      config,
     ) as string;
     // footer
     if (this.appFooterDisplay) {
@@ -189,28 +227,216 @@ export class LayoutComponent implements OnInit, OnDestroy {
   updateSidebar(config: ILayout) {
     this.appSidebarDefaultClass = this.layout.getProp(
       'app.sidebar.default.class',
-      config
+      config,
     ) as string;
 
     this.appSidebarDefaultDrawerEnabled = this.layout.getProp(
       'app.sidebar.default.drawer.enabled',
-      config
+      config,
     ) as boolean;
     if (this.appSidebarDefaultDrawerEnabled) {
       this.appSidebarDefaultDrawerAttributes = this.layout.getProp(
         'app.sidebar.default.drawer.attributes',
-        config
+        config,
       ) as { [attrName: string]: string };
     }
 
     this.appSidebarDefaultStickyEnabled = this.layout.getProp(
       'app.sidebar.default.sticky.enabled',
-      config
+      config,
     ) as boolean;
     if (this.appSidebarDefaultStickyEnabled) {
       this.appSidebarDefaultStickyAttributes = this.layout.getProp(
         'app.sidebar.default.sticky.attributes',
-        config
+        config,
+      ) as { [attrName: string]: string };
+    }
+
+    setTimeout(() => {
+      const sidebarElement = document.getElementById('kt_app_sidebar');
+      if (this.appSidebarDisplay && sidebarElement) {
+        const sidebarAttributes = sidebarElement
+          .getAttributeNames()
+          .filter((t) => t.indexOf('data-') > -1);
+        sidebarAttributes.forEach((attr) =>
+          sidebarElement.removeAttribute(attr),
+        );
+
+        if (this.appSidebarDefaultDrawerEnabled) {
+          for (const key in this.appSidebarDefaultDrawerAttributes) {
+            if (this.appSidebarDefaultDrawerAttributes.hasOwnProperty(key)) {
+              sidebarElement.setAttribute(
+                key,
+                this.appSidebarDefaultDrawerAttributes[key],
+              );
+            }
+          }
+          this.cd.markForCheck();
+        }
+
+        if (this.appSidebarDefaultStickyEnabled) {
+          for (const key in this.appSidebarDefaultStickyAttributes) {
+            if (this.appSidebarDefaultStickyAttributes.hasOwnProperty(key)) {
+              sidebarElement.setAttribute(
+                key,
+                this.appSidebarDefaultStickyAttributes[key],
+              );
+            }
+          }
+        }
+
+        this.registerMobileDrawerCloseOnNavigate();
+        this.registerMobileDrawerReparent();
+      }
+    }, 0);
+  }
+
+  private registerMobileDrawerReparent(): void {
+    if (!this.isMobileShell || this.mobileDrawerReparentRegistered) {
+      return;
+    }
+
+    this.mobileDrawerReparentRegistered = true;
+
+    const attachHandlers = (attempt = 0) => {
+      const drawer = DrawerComponent.getInstance('kt_app_sidebar');
+      if (!drawer) {
+        if (attempt < 20) {
+          setTimeout(() => attachHandlers(attempt + 1), 50);
+        }
+        return;
+      }
+
+      drawer.on('kt.drawer.show', () => {
+        this.cancelSidebarRestore(drawer);
+        this.reparentSidebarToBody(drawer);
+      });
+
+      drawer.on('kt.drawer.hide', () => {
+        this.scheduleSidebarRestore(drawer);
+      });
+    };
+
+    setTimeout(() => attachHandlers(), 0);
+  }
+
+  private reparentSidebarToBody(drawer: DrawerComponent): void {
+    if (window.innerWidth >= 992) {
+      return;
+    }
+
+    const sidebar = drawer.goElement();
+    const parent = sidebar.parentNode;
+    if (!parent || parent === document.body) {
+      return;
+    }
+
+    const anchor = document.createComment('sidebar-anchor');
+    parent.insertBefore(anchor, sidebar);
+    this.sidebarRestoreAnchor = anchor;
+    document.body.appendChild(sidebar);
+  }
+
+  private scheduleSidebarRestore(drawer: DrawerComponent): void {
+    if (window.innerWidth >= 992) {
+      return;
+    }
+
+    this.cancelSidebarRestore(drawer);
+
+    const sidebar = drawer.goElement();
+    const restore = () => this.restoreSidebarFromBody(drawer);
+
+    this.sidebarTransitionHandler = (event: TransitionEvent) => {
+      if (event.target !== sidebar || event.propertyName !== 'transform') {
+        return;
+      }
+      restore();
+    };
+    sidebar.addEventListener('transitionend', this.sidebarTransitionHandler);
+    this.sidebarRestoreTimer = setTimeout(
+      restore,
+      LayoutComponent.DRAWER_TRANSITION_MS + 20,
+    );
+  }
+
+  private cancelSidebarRestore(drawer?: DrawerComponent): void {
+    if (this.sidebarRestoreTimer) {
+      clearTimeout(this.sidebarRestoreTimer);
+      this.sidebarRestoreTimer = null;
+    }
+
+    if (drawer && this.sidebarTransitionHandler) {
+      drawer
+        .goElement()
+        .removeEventListener('transitionend', this.sidebarTransitionHandler);
+      this.sidebarTransitionHandler = null;
+    }
+  }
+
+  private restoreSidebarFromBody(drawer: DrawerComponent): void {
+    if (window.innerWidth >= 992) {
+      return;
+    }
+
+    this.cancelSidebarRestore(drawer);
+
+    const sidebar = drawer.goElement();
+    const anchor = this.sidebarRestoreAnchor;
+    if (!anchor?.parentNode) {
+      return;
+    }
+
+    anchor.parentNode.insertBefore(sidebar, anchor);
+    anchor.parentNode.removeChild(anchor);
+    this.sidebarRestoreAnchor = null;
+  }
+
+  private registerMobileDrawerCloseOnNavigate(): void {
+    if (this.mobileDrawerCloseRegistered) {
+      return;
+    }
+
+    this.mobileDrawerCloseRegistered = true;
+    const closeSub = this.router.events
+      .pipe(filter((event) => event instanceof NavigationEnd))
+      .subscribe(() => {
+        if (window.innerWidth >= 992) {
+          return;
+        }
+
+        setTimeout(() => {
+          DrawerComponent.getInstance('kt_app_sidebar')?.hide();
+        }, 150);
+      });
+    this.unsubscribe.push(closeSub);
+  }
+
+  updateSidebar1(config: ILayout) {
+    this.appSidebarDefaultClass = this.layout.getProp(
+      'app.sidebar.default.class',
+      config,
+    ) as string;
+
+    this.appSidebarDefaultDrawerEnabled = this.layout.getProp(
+      'app.sidebar.default.drawer.enabled',
+      config,
+    ) as boolean;
+    if (this.appSidebarDefaultDrawerEnabled) {
+      this.appSidebarDefaultDrawerAttributes = this.layout.getProp(
+        'app.sidebar.default.drawer.attributes',
+        config,
+      ) as { [attrName: string]: string };
+    }
+
+    this.appSidebarDefaultStickyEnabled = this.layout.getProp(
+      'app.sidebar.default.sticky.enabled',
+      config,
+    ) as boolean;
+    if (this.appSidebarDefaultStickyEnabled) {
+      this.appSidebarDefaultStickyAttributes = this.layout.getProp(
+        'app.sidebar.default.sticky.attributes',
+        config,
       ) as { [attrName: string]: string };
     }
 
@@ -222,7 +448,7 @@ export class LayoutComponent implements OnInit, OnDestroy {
           .getAttributeNames()
           .filter((t) => t.indexOf('data-') > -1);
         sidebarAttributes.forEach((attr) =>
-          sidebarElement.removeAttribute(attr)
+          sidebarElement.removeAttribute(attr),
         );
 
         if (this.appSidebarDefaultDrawerEnabled) {
@@ -230,7 +456,7 @@ export class LayoutComponent implements OnInit, OnDestroy {
             if (this.appSidebarDefaultDrawerAttributes.hasOwnProperty(key)) {
               sidebarElement.setAttribute(
                 key,
-                this.appSidebarDefaultDrawerAttributes[key]
+                this.appSidebarDefaultDrawerAttributes[key],
               );
             }
           }
@@ -241,7 +467,7 @@ export class LayoutComponent implements OnInit, OnDestroy {
             if (this.appSidebarDefaultStickyAttributes.hasOwnProperty(key)) {
               sidebarElement.setAttribute(
                 key,
-                this.appSidebarDefaultStickyAttributes[key]
+                this.appSidebarDefaultStickyAttributes[key],
               );
             }
           }
@@ -253,23 +479,23 @@ export class LayoutComponent implements OnInit, OnDestroy {
   updateHeader(config: ILayout) {
     this.appHeaderDefaultStickyEnabled = this.layout.getProp(
       'app.header.default.sticky.enabled',
-      config
+      config,
     ) as boolean;
     if (this.appHeaderDefaultStickyEnabled) {
       this.appHeaderDefaultStickyAttributes = this.layout.getProp(
         'app.header.default.sticky.attributes',
-        config
+        config,
       ) as { [attrName: string]: string };
     }
 
     this.appHeaderDefaultMinimizeEnabled = this.layout.getProp(
       'app.header.default.minimize.enabled',
-      config
+      config,
     ) as boolean;
     if (this.appHeaderDefaultMinimizeEnabled) {
       this.appHeaderDefaultMinimizeAttributes = this.layout.getProp(
         'app.header.default.minimize.attributes',
-        config
+        config,
       ) as { [attrName: string]: string };
     }
 
@@ -287,7 +513,7 @@ export class LayoutComponent implements OnInit, OnDestroy {
             if (this.appHeaderDefaultStickyAttributes.hasOwnProperty(key)) {
               headerElement.setAttribute(
                 key,
-                this.appHeaderDefaultStickyAttributes[key]
+                this.appHeaderDefaultStickyAttributes[key],
               );
             }
           }
@@ -298,7 +524,7 @@ export class LayoutComponent implements OnInit, OnDestroy {
             if (this.appHeaderDefaultMinimizeAttributes.hasOwnProperty(key)) {
               headerElement.setAttribute(
                 key,
-                this.appHeaderDefaultMinimizeAttributes[key]
+                this.appHeaderDefaultMinimizeAttributes[key],
               );
             }
           }
@@ -310,15 +536,15 @@ export class LayoutComponent implements OnInit, OnDestroy {
   updateFooter(config: ILayout) {
     this.appFooterCSSClass = this.layout.getProp(
       'app.footer.class',
-      config
+      config,
     ) as string;
     this.appFooterContainer = this.layout.getProp(
       'app.footer.container',
-      config
+      config,
     ) as string;
     this.appFooterContainerCSSClass = this.layout.getProp(
       'app.footer.containerClass',
-      config
+      config,
     ) as string;
     if (this.appFooterContainer === 'fixed') {
       this.appFooterContainerCSSClass += ' container-xxl';
@@ -330,14 +556,14 @@ export class LayoutComponent implements OnInit, OnDestroy {
 
     this.appFooterFixedDesktop = this.layout.getProp(
       'app.footer.fixed.desktop',
-      config
+      config,
     ) as boolean;
     if (this.appFooterFixedDesktop) {
       document.body.setAttribute('data-kt-app-footer-fixed', 'true');
     }
 
     this.appFooterFixedMobile = this.layout.getProp(
-      'app.footer.fixed.mobile'
+      'app.footer.fixed.mobile',
     ) as boolean;
     if (this.appFooterFixedMobile) {
       document.body.setAttribute('data-kt-app-footer-fixed-mobile', 'true');
@@ -347,27 +573,27 @@ export class LayoutComponent implements OnInit, OnDestroy {
   updateToolbar(config: ILayout) {
     this.appToolbarLayout = this.layout.getProp(
       'app.toolbar.layout',
-      config
+      config,
     ) as 'classic' | 'accounting' | 'extended' | 'reports' | 'saas';
     this.appToolbarSwapEnabled = this.layout.getProp(
       'app.toolbar.swap.enabled',
-      config
+      config,
     ) as boolean;
     if (this.appToolbarSwapEnabled) {
       this.appToolbarSwapAttributes = this.layout.getProp(
         'app.toolbar.swap.attributes',
-        config
+        config,
       ) as { [attrName: string]: string };
     }
 
     this.appToolbarStickyEnabled = this.layout.getProp(
       'app.toolbar.sticky.enabled',
-      config
+      config,
     ) as boolean;
     if (this.appToolbarStickyEnabled) {
       this.appToolbarStickyAttributes = this.layout.getProp(
         'app.toolbar.sticky.attributes',
-        config
+        config,
       ) as { [attrName: string]: string };
     }
 
@@ -375,12 +601,12 @@ export class LayoutComponent implements OnInit, OnDestroy {
       (this.layout.getProp('app.toolbar.class', config) as string) || '';
     this.appToolbarMinimizeEnabled = this.layout.getProp(
       'app.toolbar.minimize.enabled',
-      config
+      config,
     ) as boolean;
     if (this.appToolbarMinimizeEnabled) {
       this.appToolbarMinimizeAttributes = this.layout.getProp(
         'app.toolbar.minimize.attributes',
-        config
+        config,
       ) as { [attrName: string]: string };
       this.appToolbarCSSClass += ' app-toolbar-minimize';
     }
@@ -393,7 +619,7 @@ export class LayoutComponent implements OnInit, OnDestroy {
           .getAttributeNames()
           .filter((t) => t.indexOf('data-') > -1);
         toolbarAttributes.forEach((attr) =>
-          toolbarElement.removeAttribute(attr)
+          toolbarElement.removeAttribute(attr),
         );
 
         if (this.appToolbarSwapEnabled) {
@@ -401,7 +627,7 @@ export class LayoutComponent implements OnInit, OnDestroy {
             if (this.appToolbarSwapAttributes.hasOwnProperty(key)) {
               toolbarElement.setAttribute(
                 key,
-                this.appToolbarSwapAttributes[key]
+                this.appToolbarSwapAttributes[key],
               );
             }
           }
@@ -412,7 +638,7 @@ export class LayoutComponent implements OnInit, OnDestroy {
             if (this.appToolbarStickyAttributes.hasOwnProperty(key)) {
               toolbarElement.setAttribute(
                 key,
-                this.appToolbarStickyAttributes[key]
+                this.appToolbarStickyAttributes[key],
               );
             }
           }
@@ -423,7 +649,7 @@ export class LayoutComponent implements OnInit, OnDestroy {
             if (this.appToolbarMinimizeAttributes.hasOwnProperty(key)) {
               toolbarElement.setAttribute(
                 key,
-                this.appToolbarMinimizeAttributes[key]
+                this.appToolbarMinimizeAttributes[key],
               );
             }
           }
@@ -433,6 +659,10 @@ export class LayoutComponent implements OnInit, OnDestroy {
   }
 
   ngOnDestroy() {
+    const drawer = DrawerComponent.getInstance('kt_app_sidebar');
+    if (drawer) {
+      this.cancelSidebarRestore(drawer);
+    }
     this.unsubscribe.forEach((sb) => sb.unsubscribe());
   }
 }

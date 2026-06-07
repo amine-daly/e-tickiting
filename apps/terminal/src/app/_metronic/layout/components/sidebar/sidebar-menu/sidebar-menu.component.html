@@ -21,8 +21,8 @@
     <div class="menu-item">
       <a
         class="menu-link without-sub"
-        routerLink="/dashboard"
-        routerLinkActive="active"
+        (click)="navigateTo($event, '/dashboard')"
+        [class.active]="isActive('/dashboard')"
       >
         <span class="menu-icon">
           <app-keenicon name="element-11" class="fs-2"></app-keenicon>
@@ -43,8 +43,8 @@
     <div class="menu-item">
       <a
         class="menu-link without-sub"
-        routerLink="/customers"
-        routerLinkActive="active"
+        (click)="navigateTo($event, '/customers')"
+        [class.active]="isActive('/customers')"
       >
         <span class="menu-icon">
           <app-keenicon name="people" class="fs-2"></app-keenicon>
@@ -56,8 +56,8 @@
     <div class="menu-item">
       <a
         class="menu-link without-sub"
-        routerLink="/business-profile"
-        routerLinkActive="active"
+        (click)="navigateTo($event, '/business-profile')"
+        [class.active]="isActive('/business-profile')"
       >
         <span class="menu-icon">
           <app-keenicon name="briefcase" class="fs-2"></app-keenicon>
@@ -84,8 +84,8 @@
         <div class="menu-item">
           <a
             class="menu-link without-sub"
-            routerLinkActive="active"
-            routerLink="/places"
+            (click)="navigateTo($event, '/places')"
+            [class.active]="isActive('/places')"
           >
             <span class="menu-bullet"
               ><span class="bullet bullet-dot"></span
@@ -96,8 +96,8 @@
         <div class="menu-item">
           <a
             class="menu-link without-sub"
-            routerLinkActive="active"
-            routerLink="/buses"
+            (click)="navigateTo($event, '/buses')"
+            [class.active]="isActive('/buses')"
           >
             <span class="menu-bullet"
               ><span class="bullet bullet-dot"></span
@@ -108,8 +108,8 @@
         <div class="menu-item">
           <a
             class="menu-link without-sub"
-            routerLinkActive="active"
-            routerLink="/trips"
+            (click)="navigateTo($event, '/trips')"
+            [class.active]="isActive('/trips')"
           >
             <span class="menu-bullet"
               ><span class="bullet bullet-dot"></span
@@ -120,8 +120,8 @@
         <div class="menu-item">
           <a
             class="menu-link without-sub"
-            routerLinkActive="active"
-            routerLink="/tickets"
+            (click)="navigateTo($event, '/tickets')"
+            [class.active]="isActive('/tickets')"
           >
             <span class="menu-bullet"
               ><span class="bullet bullet-dot"></span
@@ -144,7 +144,8 @@
     <div class="menu-item">
       <a
         class="menu-link without-sub"
-        routerLink="/permissions"
+        (click)="navigateTo($event, '/permissions')"
+        [class.active]="isActive('/permissions')"
         routerLinkActive="active"
       >
         <span class="menu-icon">
@@ -157,7 +158,8 @@
     <div class="menu-item">
       <a
         class="menu-link without-sub"
-        routerLink="/companies"
+        (click)="navigateTo($event, '/companies')"
+        [class.active]="isActive('/companies')"
         routerLinkActive="active"
       >
         <span class="menu-icon">
@@ -170,8 +172,8 @@
     <div class="menu-item">
       <a
         class="menu-link without-sub"
-        routerLink="/team"
-        routerLinkActive="active"
+        (click)="navigateTo($event, '/team')"
+        [class.active]="isActive('/team')"
       >
         <span class="menu-icon">
           <app-keenicon name="profile-user" class="fs-2"></app-keenicon>

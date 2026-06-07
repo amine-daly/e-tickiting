@@ -1,36 +1,215 @@
-<div class="scan-overlay">
-  <!-- Header -->
-  <div class="scan-overlay__header d-flex justify-content-between align-items-center p-4">
-    <h5 class="mb-0 text-white fw-semibold">Scan Ticket QR</h5>
-    <button type="button" class="btn btn-icon btn-sm text-white" (click)="close()">
-      <app-keenicon name="cross" class="fs-2"></app-keenicon>
-    </button>
-  </div>
+<!-- ============================================================
+     Ticket Scanner — full-screen boarding terminal overlay
+     States: idle | scanning | success | rejected | manual
+     ============================================================ -->
+<div
+  class="scanner-terminal"
+  [ngClass]="{
+    'scanner-terminal--success':  state === 'success',
+    'scanner-terminal--rejected': state === 'rejected',
+    'scanner-terminal--scanning': state === 'scanning'
+  }"
+>
 
-  <!-- Camera viewport -->
-  <div class="scan-overlay__viewport">
-    <video #videoEl autoplay playsinline class="scan-overlay__video"></video>
-    <div class="scan-overlay__frame"></div>
-    <p class="scan-overlay__hint text-white text-center mt-4">
-      Position the QR code inside the frame
+  <!-- ── TOP BAR ─────────────────────────────────────────────── -->
+  <header class="scanner-terminal__topbar">
+    <span class="scanner-terminal__topbar-label">
+      {{ tripLabel || 'Boarding Terminal' }}
+    </span>
+    <!-- Close button is hidden during the rejection lock-screen -->
+    <button
+      *ngIf="state !== 'rejected'"
+      type="button"
+      class="scanner-terminal__close-btn"
+      (click)="close()"
+      aria-label="Close scanner"
+    >
+      ✕
+    </button>
+  </header>
+
+
+  <!-- ══════════════════════════════════════════════════════════
+       STATE 1 — IDLE: Ready to scan
+       ══════════════════════════════════════════════════════════ -->
+  <section *ngIf="state === 'idle'" class="scanner-terminal__pane scanner-terminal__pane--idle">
+
+    <!-- Permission error banner (native only — camera denied) -->
+    <div *ngIf="permissionError" class="scanner-terminal__error-banner">
+      ⚠️ {{ permissionError }}
+    </div>
+
+    <!-- QR icon & prompt -->
+    <div class="scanner-terminal__idle-icon">
+      <svg viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+        <rect x="4"  y="4"  width="22" height="22" rx="3" stroke="currentColor" stroke-width="3.5"/>
+        <rect x="38" y="4"  width="22" height="22" rx="3" stroke="currentColor" stroke-width="3.5"/>
+        <rect x="4"  y="38" width="22" height="22" rx="3" stroke="currentColor" stroke-width="3.5"/>
+        <rect x="10" y="10" width="10" height="10" rx="1" fill="currentColor"/>
+        <rect x="44" y="10" width="10" height="10" rx="1" fill="currentColor"/>
+        <rect x="10" y="44" width="10" height="10" rx="1" fill="currentColor"/>
+        <line x1="38" y1="38" x2="60" y2="38" stroke="currentColor" stroke-width="3.5" stroke-linecap="round"/>
+        <line x1="38" y1="50" x2="50" y2="50" stroke="currentColor" stroke-width="3.5" stroke-linecap="round"/>
+        <line x1="38" y1="62" x2="60" y2="62" stroke="currentColor" stroke-width="3.5" stroke-linecap="round"/>
+        <line x1="56" y1="38" x2="56" y2="62" stroke="currentColor" stroke-width="3.5" stroke-linecap="round"/>
+      </svg>
+    </div>
+
+    <h1 class="scanner-terminal__idle-title">Ready to Scan</h1>
+    <p class="scanner-terminal__idle-hint">
+      {{ isNative
+        ? "Point the camera at the passenger's ticket QR code."
+        : "Tap below to enter the ticket reference manually." }}
     </p>
-  </div>
 
-  <!-- Error -->
-  <div *ngIf="error" class="alert alert-danger mx-4 mt-4">{{ error }}</div>
-
-  <!-- Not supported -->
-  <div *ngIf="!supported && !error" class="text-center text-white mt-8 px-4">
-    <app-keenicon name="information-5" class="fs-3x mb-4"></app-keenicon>
-    <p>QR scanning is not supported in this browser.</p>
-    <p class="text-gray-400 fs-7">Use Chrome on Android for best results.</p>
-  </div>
-
-  <!-- Start button (shown before scanning) -->
-  <div *ngIf="supported && !scanning && !error" class="text-center mt-8">
-    <button class="btn btn-primary btn-lg" (click)="start()">
-      <app-keenicon name="scan-barcode" class="fs-2 me-2"></app-keenicon>
-      Start Camera
+    <!--
+      Primary scan CTA.
+      • Native (Capacitor APK): opens the ML Kit barcode scanner.
+      • Browser / PWA:          ML Kit is unavailable — routes to manual entry automatically.
+      The button is always enabled; only `isSubmitting` disables it.
+    -->
+    <button
+      class="scanner-terminal__btn scanner-terminal__btn--primary"
+      [disabled]="isSubmitting"
+      (click)="startScan()"
+    >
+      <span class="scanner-terminal__btn-icon">{{ isNative ? '📷' : '⌨️' }}</span>
+      {{ isNative ? 'Scan QR Code' : 'Enter Ticket ID' }}
     </button>
-  </div>
+
+    <!-- Secondary controls row -->
+    <div class="scanner-terminal__controls-row">
+
+      <!--
+        Torch / Flashlight button.
+        • Native: uses BarcodeScanner.toggleTorch() (ML Kit torch API).
+        • Browser: uses MediaDevices torch constraint on the rear camera.
+      -->
+      <button
+        class="scanner-terminal__btn scanner-terminal__btn--ghost"
+        [class.scanner-terminal__btn--ghost-active]="torchEnabled"
+        (click)="toggleTorch()"
+        aria-label="Toggle flashlight"
+      >
+        <span class="scanner-terminal__btn-icon">{{ torchEnabled ? '🔦' : '💡' }}</span>
+        {{ torchEnabled ? 'Torch On' : 'Flashlight' }}
+      </button>
+
+      <!-- Manual entry — always available as fallback -->
+      <button
+        class="scanner-terminal__btn scanner-terminal__btn--ghost"
+        (click)="openManualEntry()"
+      >
+        <span class="scanner-terminal__btn-icon">⌨️</span>
+        Manual Entry
+      </button>
+
+    </div>
+  </section>
+
+
+  <!-- ══════════════════════════════════════════════════════════
+       STATE: SCANNING — native scanner is active / API in-flight
+       ══════════════════════════════════════════════════════════ -->
+  <section *ngIf="state === 'scanning'" class="scanner-terminal__pane scanner-terminal__pane--scanning">
+    <div class="scanner-terminal__spinner" aria-label="Processing…"></div>
+    <p class="scanner-terminal__scanning-label">Processing ticket…</p>
+  </section>
+
+
+  <!-- ══════════════════════════════════════════════════════════
+       STATE 2 — SUCCESS: Boarding approved (green flash)
+       ══════════════════════════════════════════════════════════ -->
+  <section *ngIf="state === 'success'" class="scanner-terminal__pane scanner-terminal__pane--success">
+
+    <div class="scanner-terminal__result-icon scanner-terminal__result-icon--success">✅</div>
+
+    <h1 class="scanner-terminal__result-title">BOARDING APPROVED</h1>
+
+    <dl class="scanner-terminal__passenger-card">
+      <div *ngIf="scanResponse?.passengerName" class="scanner-terminal__passenger-row">
+        <dt>Name</dt>
+        <dd>{{ scanResponse?.passengerName }}</dd>
+      </div>
+      <div *ngIf="scanResponse?.seatNumber" class="scanner-terminal__passenger-row">
+        <dt>Seat</dt>
+        <dd>{{ scanResponse?.seatNumber }}</dd>
+      </div>
+    </dl>
+
+    <p class="scanner-terminal__auto-reset-hint">
+      Returning to scanner in 2 seconds…
+    </p>
+
+  </section>
+
+
+  <!-- ══════════════════════════════════════════════════════════
+       STATE 3 — REJECTED: Scan failed (red flash, locked)
+       ══════════════════════════════════════════════════════════ -->
+  <section *ngIf="state === 'rejected'" class="scanner-terminal__pane scanner-terminal__pane--rejected">
+
+    <div class="scanner-terminal__result-icon scanner-terminal__result-icon--rejected">❌</div>
+
+    <h1 class="scanner-terminal__result-title">
+      {{ rejectionConfig?.headline }}
+    </h1>
+
+    <p class="scanner-terminal__rejection-subtext">
+      {{ rejectionSubtext }}
+    </p>
+
+    <!-- The only way out of the rejection lock-screen -->
+    <button
+      class="scanner-terminal__btn scanner-terminal__btn--acknowledge"
+      (click)="acknowledgeRejection()"
+    >
+      ✓ Acknowledge &amp; Return
+    </button>
+
+  </section>
+
+
+  <!-- ══════════════════════════════════════════════════════════
+       STATE 4 — MANUAL: Manual ticket-ID entry
+       ══════════════════════════════════════════════════════════ -->
+  <section *ngIf="state === 'manual'" class="scanner-terminal__pane scanner-terminal__pane--manual">
+
+    <h1 class="scanner-terminal__manual-title">Enter Ticket ID</h1>
+    <p class="scanner-terminal__manual-hint">Type the ticket reference or scan code manually.</p>
+
+    <input
+      class="scanner-terminal__manual-input"
+      type="text"
+      inputmode="text"
+      autocomplete="off"
+      autocorrect="off"
+      spellcheck="false"
+      placeholder="e.g. TK-20241234"
+      [(ngModel)]="manualTicketId"
+      (keyup.enter)="submitManual()"
+      aria-label="Ticket ID"
+      autofocus
+    />
+
+    <div class="scanner-terminal__manual-actions">
+      <button
+        class="scanner-terminal__btn scanner-terminal__btn--primary"
+        [disabled]="!manualTicketId.trim() || isSubmitting"
+        (click)="submitManual()"
+      >
+        {{ isSubmitting ? 'Validating…' : 'Submit' }}
+      </button>
+
+      <button
+        class="scanner-terminal__btn scanner-terminal__btn--ghost"
+        [disabled]="isSubmitting"
+        (click)="cancelManualEntry()"
+      >
+        Cancel
+      </button>
+    </div>
+
+  </section>
+
 </div>

@@ -1,67 +1,464 @@
-.scan-overlay {
+// ─────────────────────────────────────────────────────────────────────────────
+// Design tokens — single source of truth for colors used in state flashes
+// ─────────────────────────────────────────────────────────────────────────────
+
+$color-idle-bg:        #1a1a2e;   // deep navy-dark for the waiting terminal
+$color-idle-text:      #e0e0e0;
+$color-idle-hint:      #9e9e9e;
+$color-idle-border:    #2e2e4a;
+$color-primary:        #4f8ef7;   // action-blue for primary CTA
+$color-primary-dark:   #3a72d4;
+$color-ghost-border:   #3a3a5a;
+$color-ghost-text:     #b0b0cc;
+$color-ghost-active:   #ffd54f;   // amber for "torch on" active state
+
+$color-success:        #00c853;   // bright green for happy path flash
+$color-success-dark:   #00a040;
+$color-success-text:   #ffffff;
+
+$color-rejected:       #d32f2f;   // bright red for rejection flash
+$color-rejected-dark:  #b71c1c;
+$color-rejected-text:  #ffffff;
+
+$color-scanning-bg:    #0d0d1a;
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Layout shell
+// ─────────────────────────────────────────────────────────────────────────────
+
+.scanner-terminal {
   position: fixed;
   inset: 0;
-  z-index: 1100;
-  background: rgba(0, 0, 0, 0.92);
+  z-index: 1200;
   display: flex;
   flex-direction: column;
+  background-color: $color-idle-bg;
+  color: $color-idle-text;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
 
-  &__header {
-    flex-shrink: 0;
+  // Smooth background-color transitions between states
+  transition: background-color 0.25s ease-in-out;
+
+  // ── State modifiers ──────────────────────────────────────────────────────
+
+  &--success {
+    background-color: $color-success;
+    color: $color-success-text;
   }
 
-  &__viewport {
+  &--rejected {
+    background-color: $color-rejected;
+    color: $color-rejected-text;
+  }
+
+  &--scanning {
+    background-color: $color-scanning-bg;
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Top bar
+// ─────────────────────────────────────────────────────────────────────────────
+
+.scanner-terminal__topbar {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 20px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(0, 0, 0, 0.25);
+}
+
+.scanner-terminal__topbar-label {
+  font-size: 0.9rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  opacity: 0.85;
+}
+
+.scanner-terminal__close-btn {
+  background: none;
+  border: none;
+  color: inherit;
+  font-size: 1.35rem;
+  line-height: 1;
+  cursor: pointer;
+  opacity: 0.75;
+  padding: 4px 8px;
+  border-radius: 6px;
+  transition: opacity 0.15s, background 0.15s;
+
+  &:hover,
+  &:focus-visible {
+    opacity: 1;
+    background: rgba(255, 255, 255, 0.1);
+    outline: none;
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Common pane layout — shared by all state panels
+// ─────────────────────────────────────────────────────────────────────────────
+
+.scanner-terminal__pane {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 24px 28px 40px;
+  text-align: center;
+  overflow-y: auto;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// STATE 1 — IDLE
+// ─────────────────────────────────────────────────────────────────────────────
+
+.scanner-terminal__pane--idle {
+  gap: 16px;
+}
+
+.scanner-terminal__idle-icon {
+  width: 96px;
+  height: 96px;
+  color: $color-primary;
+  opacity: 0.85;
+  margin-bottom: 4px;
+}
+
+.scanner-terminal__idle-title {
+  font-size: 1.7rem;
+  font-weight: 700;
+  margin: 0;
+  letter-spacing: -0.01em;
+}
+
+.scanner-terminal__idle-hint {
+  font-size: 0.95rem;
+  color: $color-idle-hint;
+  max-width: 280px;
+  margin: 0;
+  line-height: 1.5;
+}
+
+.scanner-terminal__error-banner {
+  background: rgba(255, 100, 80, 0.18);
+  border: 1px solid rgba(255, 100, 80, 0.5);
+  border-radius: 10px;
+  padding: 12px 16px;
+  font-size: 0.88rem;
+  color: #ff7f6a;
+  width: 100%;
+  max-width: 360px;
+  margin-bottom: 8px;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Shared button styles
+// ─────────────────────────────────────────────────────────────────────────────
+
+.scanner-terminal__btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  border: none;
+  border-radius: 12px;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 14px 28px;
+  transition: background 0.15s, transform 0.1s, opacity 0.15s;
+  white-space: nowrap;
+
+  &:active {
+    transform: scale(0.97);
+  }
+
+  &:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+  }
+
+  // Primary CTA — blue
+  &--primary {
+    background: $color-primary;
+    color: #fff;
+    width: 100%;
+    max-width: 320px;
+    font-size: 1.1rem;
+    padding: 16px 28px;
+    box-shadow: 0 4px 16px rgba($color-primary, 0.4);
+
+    &:not(:disabled):hover {
+      background: $color-primary-dark;
+    }
+  }
+
+  // Ghost — outlined, for secondary actions
+  &--ghost {
+    background: transparent;
+    border: 1.5px solid $color-ghost-border;
+    color: $color-ghost-text;
     flex: 1;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    position: relative;
+    max-width: 160px;
+
+    &:not(:disabled):hover {
+      border-color: lighten($color-ghost-border, 15%);
+      color: #fff;
+    }
+
+    &-active {
+      border-color: $color-ghost-active;
+      color: $color-ghost-active;
+    }
   }
 
-  &__video {
+  // Large red acknowledge button — must be unmissable
+  &--acknowledge {
+    background: rgba(0, 0, 0, 0.3);
+    border: 2.5px solid rgba(255, 255, 255, 0.7);
+    color: #fff;
+    font-size: 1.15rem;
+    padding: 18px 36px;
+    border-radius: 14px;
     width: 100%;
     max-width: 360px;
-    border-radius: 12px;
-    object-fit: cover;
-    aspect-ratio: 1 / 1;
-  }
+    box-shadow: 0 0 0 6px rgba(255, 255, 255, 0.12);
+    margin-top: 8px;
 
-  &__frame {
-    position: absolute;
-    width: 240px;
-    height: 240px;
-    border: 3px solid var(--bs-primary);
-    border-radius: 12px;
-    pointer-events: none;
-
-    &::before,
-    &::after {
-      content: '';
-      position: absolute;
-      width: 32px;
-      height: 32px;
-      border-color: var(--bs-primary);
-      border-style: solid;
-    }
-
-    &::before {
-      top: -3px;
-      left: -3px;
-      border-width: 4px 0 0 4px;
-      border-radius: 12px 0 0 0;
-    }
-
-    &::after {
-      bottom: -3px;
-      right: -3px;
-      border-width: 0 4px 4px 0;
-      border-radius: 0 0 12px 0;
+    &:hover {
+      background: rgba(0, 0, 0, 0.45);
     }
   }
+}
 
-  &__hint {
+.scanner-terminal__btn-icon {
+  font-size: 1.2rem;
+}
+
+.scanner-terminal__controls-row {
+  display: flex;
+  gap: 12px;
+  width: 100%;
+  max-width: 320px;
+  justify-content: center;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// STATE: SCANNING spinner
+// ─────────────────────────────────────────────────────────────────────────────
+
+.scanner-terminal__pane--scanning {
+  gap: 20px;
+}
+
+.scanner-terminal__spinner {
+  width: 56px;
+  height: 56px;
+  border: 5px solid rgba(255, 255, 255, 0.15);
+  border-top-color: $color-primary;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.scanner-terminal__scanning-label {
+  font-size: 1.05rem;
+  color: $color-idle-hint;
+  margin: 0;
+  letter-spacing: 0.03em;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// STATE 2 — SUCCESS
+// ─────────────────────────────────────────────────────────────────────────────
+
+.scanner-terminal__pane--success {
+  gap: 20px;
+  animation: flash-in 0.22s ease-out;
+}
+
+@keyframes flash-in {
+  from { opacity: 0.1; transform: scale(0.96); }
+  to   { opacity: 1;   transform: scale(1); }
+}
+
+.scanner-terminal__result-icon {
+  font-size: 4.5rem;
+  line-height: 1;
+  filter: drop-shadow(0 0 24px rgba(255, 255, 255, 0.5));
+
+  &--success {
+    animation: pop-in 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  }
+
+  &--rejected {
+    animation: shake 0.45s ease-in-out;
+  }
+}
+
+@keyframes pop-in {
+  0%   { transform: scale(0.3); opacity: 0; }
+  80%  { transform: scale(1.15); }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  20%      { transform: translateX(-10px); }
+  40%      { transform: translateX(10px); }
+  60%      { transform: translateX(-8px); }
+  80%      { transform: translateX(8px); }
+}
+
+.scanner-terminal__result-title {
+  font-size: 2rem;
+  font-weight: 800;
+  margin: 0;
+  letter-spacing: 0.02em;
+  line-height: 1.15;
+  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
+}
+
+.scanner-terminal__passenger-card {
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 16px;
+  padding: 18px 28px;
+  width: 100%;
+  max-width: 340px;
+  margin: 0;
+
+  // Override browser dl default margin
+  dd, dt { margin: 0; }
+}
+
+.scanner-terminal__passenger-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 16px;
+  padding: 6px 0;
+
+  &:not(:last-child) {
+    border-bottom: 1px solid rgba(255, 255, 255, 0.15);
+  }
+
+  dt {
     font-size: 0.85rem;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
     opacity: 0.75;
+    font-weight: 500;
+    white-space: nowrap;
+  }
+
+  dd {
+    font-size: 1.15rem;
+    font-weight: 700;
+    text-align: right;
+  }
+}
+
+.scanner-terminal__auto-reset-hint {
+  font-size: 0.85rem;
+  opacity: 0.65;
+  margin: 0;
+  letter-spacing: 0.02em;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// STATE 3 — REJECTED
+// ─────────────────────────────────────────────────────────────────────────────
+
+.scanner-terminal__pane--rejected {
+  gap: 20px;
+  animation: flash-in 0.22s ease-out;
+}
+
+.scanner-terminal__rejection-subtext {
+  font-size: 1.05rem;
+  max-width: 320px;
+  line-height: 1.55;
+  opacity: 0.9;
+  margin: 0;
+  background: rgba(0, 0, 0, 0.2);
+  padding: 14px 20px;
+  border-radius: 12px;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// STATE 4 — MANUAL ENTRY
+// ─────────────────────────────────────────────────────────────────────────────
+
+.scanner-terminal__pane--manual {
+  gap: 18px;
+}
+
+.scanner-terminal__manual-title {
+  font-size: 1.6rem;
+  font-weight: 700;
+  margin: 0;
+}
+
+.scanner-terminal__manual-hint {
+  font-size: 0.9rem;
+  color: $color-idle-hint;
+  margin: 0;
+  max-width: 280px;
+  line-height: 1.5;
+}
+
+.scanner-terminal__manual-input {
+  width: 100%;
+  max-width: 360px;
+  padding: 18px 20px;
+  background: rgba(255, 255, 255, 0.07);
+  border: 2px solid $color-ghost-border;
+  border-radius: 12px;
+  color: #fff;
+  font-size: 1.35rem;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-align: center;
+  caret-color: $color-primary;
+  outline: none;
+  transition: border-color 0.2s;
+
+  &::placeholder {
+    color: rgba(255, 255, 255, 0.25);
+    font-weight: 400;
+    font-size: 1rem;
+    letter-spacing: 0;
+  }
+
+  &:focus {
+    border-color: $color-primary;
+    background: rgba(255, 255, 255, 0.1);
+    box-shadow: 0 0 0 3px rgba($color-primary, 0.2);
+  }
+}
+
+.scanner-terminal__manual-actions {
+  display: flex;
+  gap: 12px;
+  width: 100%;
+  max-width: 360px;
+  flex-direction: column;
+
+  .scanner-terminal__btn--primary {
+    max-width: unset;
+  }
+
+  .scanner-terminal__btn--ghost {
+    max-width: unset;
+    width: 100%;
+    padding: 13px 20px;
   }
 }

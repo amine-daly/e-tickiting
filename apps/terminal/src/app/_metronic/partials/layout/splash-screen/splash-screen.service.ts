@@ -25,6 +25,13 @@ export class SplashScreenService {
     this.el = element;
   }
 
+  initFromDocument() {
+    const splash = document.getElementById('splash-screen');
+    if (splash) {
+      this.el = new ElementRef(splash);
+    }
+  }
+
   /**
    * Hide
    */
@@ -41,7 +48,7 @@ export class SplashScreenService {
       if (typeof this.el.nativeElement.remove === 'function') {
         this.el.nativeElement.remove();
       } else {
-        this.el.nativeElement.style.display = 'none !important';
+        this.el.nativeElement.style.setProperty('display', 'none', 'important');
       }
       this.stopped = true;
     });

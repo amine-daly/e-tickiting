@@ -7,7 +7,7 @@ export const routes: Routes = [
     path: 'auth',
     loadChildren: () =>
       import('./modules/auth/auth.routes').then((m) => m.authRoutes),
-    /* canActivate: [guestGuard], */
+    canActivate: [guestGuard],
   },
   {
     path: 'error',
@@ -21,7 +21,7 @@ export const routes: Routes = [
         (c) => c.LayoutComponent,
       ),
     children: [...childRoutes],
-    /* canActivate: [authGuard], */
+    canActivate: [authGuard],
   },
   { path: '**', redirectTo: 'error/404' },
 ];

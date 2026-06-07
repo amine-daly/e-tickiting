@@ -1,0 +1,6 @@
+{
+  "name": "terminal-mobile",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Capacitor native shell for the terminal-mobile Angular app"
+}
