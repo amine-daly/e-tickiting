@@ -31,7 +31,7 @@
             ],
             "styles": [
               "src/styles.scss",
-              "node_modules/@ng-select/ng-select/themes/default.theme.css",
+              "../../node_modules/@ng-select/ng-select/themes/default.theme.css",
               "src/assets/vender/bootstrap/css/bootstrap.min.css",
               "src/assets/css/style.css"
             ],
