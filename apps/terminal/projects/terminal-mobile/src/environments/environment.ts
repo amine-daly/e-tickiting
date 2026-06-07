@@ -8,8 +8,5 @@ export const environment = {
   appVersion: 'v1',
   USERDATA_KEY: 'auth',
   isMockEnabled: false,
-  // Proxied by projects/terminal-mobile/proxy.conf.json during ng serve
-  apiBase: '/api',
-  // apiBase: 'http://13.61.196.160/api',
-  // apiBase: 'http://localhost:8080/api',
+  apiBase: 'https://safra-app.duckdns.org/api',
 };
