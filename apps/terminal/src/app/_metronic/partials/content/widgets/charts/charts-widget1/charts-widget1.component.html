@@ -30,7 +30,12 @@
 <!-- begin::Body-->
 <div class="card-body">
   <!-- begin::Chart-->
-  <div #chartRef id="kt_charts_widget_1_chart" [style.height]="'350px'">
+  <div
+    #chartRef
+    *ngIf="chartOptions"
+    id="kt_charts_widget_1_chart"
+    [style.height]="'350px'"
+  >
     <apx-chart
       [series]="chartOptions.series"
       [chart]="chartOptions.chart"

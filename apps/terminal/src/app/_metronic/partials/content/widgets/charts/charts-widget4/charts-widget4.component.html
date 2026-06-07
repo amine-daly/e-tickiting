@@ -7,12 +7,7 @@
 
   <div class="card-toolbar" data-kt-buttons="true">
     <a
-      class="
-        btn btn-sm btn-color-muted btn-active btn-active-primary
-        active
-        px-4
-        me-1
-      "
+      class="btn btn-sm btn-color-muted btn-active btn-active-primary active px-4 me-1"
       id="kt_charts_widget_4_year_btn"
     >
       Year
@@ -35,7 +30,12 @@
 </div>
 
 <div class="card-body">
-  <div #chartRef id="kt_charts_widget_4_chart" [style.height]="'350px'">
+  <div
+    #chartRef
+    *ngIf="chartOptions"
+    id="kt_charts_widget_4_chart"
+    [style.height]="'350px'"
+  >
     <apx-chart
       [series]="chartOptions.series"
       [chart]="chartOptions.chart"
