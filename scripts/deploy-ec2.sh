@@ -60,7 +60,7 @@ FRONTEND_HOST_PORT="$(strip_quotes "$(get_env_value FRONTEND_HOST_PORT || true)"
 FRONTEND_HOST_PORT="${FRONTEND_HOST_PORT:-80}"
 
 # Stop the existing stack first so redeploys do not fail on their own published port.
-docker compose --env-file "$env_file" -f "$compose_file" down --remove-orphans >/dev/null 2>&1 || true
+docker compose --env-file "$env_file" -f "$compose_file" down --remove-orphans --volumes=false >/dev/null 2>&1 || true
 
 # Check if port is already in use on the host
 check_port_in_use() {
