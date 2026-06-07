@@ -140,6 +140,11 @@ export class AuthService {
           }
           return this.getCurrentAccount();
         }),
+        catchError(() => {
+          this.logout();
+          this.authenticated.next(false);
+          return of([] as AccountType[]);
+        }),
       );
   }
 
@@ -181,7 +186,9 @@ export class AuthService {
       return of(false);
     }
     // If the access token exists and it didn't expire, sign in using it
-    return this.getUserByToken(this.accessToken);
+    return this.getUserByToken(this.accessToken).pipe(
+      map((accounts) => accounts.length > 0),
+    );
   }
 
   // Your server should check email => If email exists send link to the user and return true | If email doesn't exist return false
