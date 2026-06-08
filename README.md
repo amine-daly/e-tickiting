@@ -27,7 +27,7 @@ cd apps/backend
 Frontend (Angular dev server):
 
 ```powershell
-cd apps/frontend
+cd apps/safra
 npm install
 npm run start
 ```
@@ -199,7 +199,7 @@ Import `postman_collection.json` from the repo root. Set variables:
 
 ## Repo structure
 
-- apps/frontend: Angular frontoffice app (SSR-ready)
+- apps/safra: Angular frontoffice app (SSR-ready)
 - apps/terminal: Angular backoffice app
 - apps/backend: Spring Boot service
 - contracts: OpenAPI spec and generators

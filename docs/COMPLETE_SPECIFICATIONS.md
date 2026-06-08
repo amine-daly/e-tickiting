@@ -9,7 +9,7 @@ This workspace implements a bus ticketing platform with a MongoDB backend and tw
 
 - `apps/backend`: Spring Boot 3 service layer, MongoDB persistence, scheduled expiry workers, asynchronous email hooks
 - `apps/terminal`: operational/admin Angular app for trip management, ticket selling, ticket lists, and group bookings
-- `apps/frontend`: passenger-facing Angular app for trip search and customer flows
+- `apps/safra`: passenger-facing Angular app for trip search and customer flows
 
 The current implementation is no longer based on PostgreSQL/JPA. The source of truth is MongoDB documents and service-layer rules.
 

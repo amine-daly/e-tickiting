@@ -384,8 +384,16 @@ public class BookingService {
      * reference (e.g. "DA4FA48B2672"), not the MongoDB _id.
      */
     private TicketType resolveTicketForBoarding(String ticketReference) {
+        return findTicketForBoarding(ticketReference)
+                .orElseThrow(() -> new NotFoundException("Ticket not found: " + ticketReference.trim()));
+    }
+
+    /**
+     * Looks up a ticket by QR reference, idempotency key, or internal id (in that order).
+     */
+    public Optional<TicketType> findTicketForBoarding(String ticketReference) {
         if (StringUtils.isBlank(ticketReference)) {
-            throw new BadRequestException("Ticket reference is required");
+            return Optional.empty();
         }
 
         String normalized = ticketReference.trim();
@@ -397,9 +405,7 @@ public class BookingService {
         if (ticketOpt.isEmpty()) {
             ticketOpt = ticketRepository.findById(normalized);
         }
-
-        return ticketOpt.orElseThrow(
-                () -> new NotFoundException("Ticket not found: " + normalized));
+        return ticketOpt;
     }
 
     private String resolveTicketCurrency(TripType trip) {

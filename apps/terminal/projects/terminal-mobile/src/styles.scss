@@ -83,3 +83,50 @@ ion-content #kt_app_page {
     pointer-events: none;
   }
 }
+
+/* ─── ML Kit embedded scanner (transparent WebView — Loyalcraft pattern) ─── */
+html.barcode-scanning-active,
+html.barcode-scanning-active body,
+html.barcode-scanning-active body.barcode-scanning-active,
+body.barcode-scanning-active {
+  --background: transparent !important;
+  --ion-background-color: transparent !important;
+  background: transparent !important;
+}
+
+body.barcode-scanning-active {
+  visibility: hidden !important;
+}
+
+body.barcode-scanning-active ion-app {
+  --background: transparent !important;
+  --ion-background-color: transparent !important;
+  background: transparent !important;
+}
+
+body.barcode-scanning-active ion-modal.barcode-scanning-modal {
+  visibility: visible !important;
+  --background: transparent !important;
+  --ion-background-color: transparent !important;
+}
+
+body.barcode-scanning-active ion-modal.barcode-scanning-modal ion-header,
+body.barcode-scanning-active ion-modal.barcode-scanning-modal ion-content,
+body.barcode-scanning-active ion-modal.barcode-scanning-modal ion-footer {
+  --background: transparent !important;
+  --ion-background-color: transparent !important;
+}
+
+ion-modal.barcode-scanning-modal {
+  --background: transparent !important;
+  --ion-background-color: transparent !important;
+}
+
+ion-modal.barcode-scanning-modal ion-toolbar {
+  --background: rgba(0, 0, 0, 0.7);
+  --color: white;
+}
+
+ion-modal.barcode-scanning-modal ion-content {
+  --background: transparent !important;
+}

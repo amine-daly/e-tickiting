@@ -25,6 +25,7 @@ export interface TicketUser {
 
 export interface Ticket {
   id: string;
+  reference?: string | null;
   tripId: string;
   orderId?: string | null;
   companyId?: string | null;

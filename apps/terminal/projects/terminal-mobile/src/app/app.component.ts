@@ -67,9 +67,9 @@ export class AppComponent implements OnInit {
     this.cdr.markForCheck();
   }
 
-  onScanned(value: string): void {
-    this.showScanner = false;
-    this.cdr.markForCheck();
-    this.router.navigate(['/tickets'], { queryParams: { scan: value } });
+  onScanned(_value: string): void {
+    // Do NOT close the scanner or navigate here — that destroys the component
+    // and aborts the in-flight boarding HTTP request (NS_BINDING_ABORTED).
+    // The scanner overlay manages its own success/rejection/idle states.
   }
 }

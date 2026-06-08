@@ -8,8 +8,14 @@ import com.eticketing.app.ticket.dto.BookingResponse;
 import com.eticketing.app.ticket.dto.GroupBookingRequest;
 import com.eticketing.app.ticket.dto.GroupBookingResponse;
 import com.eticketing.app.ticket.dto.GroupSeatUpdateRequest;
+import com.eticketing.app.ticket.dto.ScanRejectionReason;
+import com.eticketing.app.ticket.dto.ScanRequest;
+import com.eticketing.app.ticket.dto.ScanResponse;
 import com.eticketing.app.user.UserType;
 import com.eticketing.app.user.UserTypeRepository;
+import com.eticketing.app.web.error.ApiExceptions.ConflictException;
+import com.eticketing.app.web.error.ApiExceptions.ForbiddenException;
+import com.eticketing.app.web.error.ApiExceptions.NotFoundException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -96,6 +102,43 @@ public class BookingController {
     public ResponseEntity<BookingResponse> cancelBooking(@PathVariable String ticketId) {
         TicketType ticket = bookingService.cancelBooking(ticketId, refundRepository);
         return ResponseEntity.ok(toResponse(ticket));
+    }
+
+    @PostMapping("/scan")
+    public ResponseEntity<ScanResponse> scanTicket(
+            @Valid @RequestBody ScanRequest req,
+            @AuthenticationPrincipal User principal,
+            HttpServletRequest httpRequest) {
+        String reference = StringUtils.trimToNull(req.getReference());
+        if (reference == null) {
+            return ResponseEntity.ok(ScanResponse.rejected(ScanRejectionReason.INVALID_TICKET));
+        }
+
+        String[] ids = resolveCompanyAndPos(principal, httpRequest);
+        java.util.Optional<TicketType> ticketOpt = bookingService.findTicketForBoarding(reference);
+
+        try {
+            TicketType ticket = bookingService.boardTicket(reference, principal.getUsername(), ids[0]);
+            return ResponseEntity.ok(ScanResponse.approved(
+                    resolvePassengerName(ticket),
+                    ticket.getSeatNo()));
+        } catch (NotFoundException e) {
+            return ResponseEntity.ok(ScanResponse.rejected(ScanRejectionReason.INVALID_TICKET));
+        } catch (ForbiddenException e) {
+            return ResponseEntity.ok(ScanResponse.rejected(
+                    ScanRejectionReason.WRONG_TRIP,
+                    ticketOpt.map(this::resolvePassengerName).orElse(null),
+                    ticketOpt.map(TicketType::getSeatNo).orElse(null)));
+        } catch (ConflictException e) {
+            String message = e.getMessage() != null ? e.getMessage() : "";
+            ScanRejectionReason reason = message.contains("BOARDED")
+                    ? ScanRejectionReason.ALREADY_SCANNED
+                    : ScanRejectionReason.INVALID_TICKET;
+            return ResponseEntity.ok(ScanResponse.rejected(
+                    reason,
+                    ticketOpt.map(this::resolvePassengerName).orElse(null),
+                    ticketOpt.map(TicketType::getSeatNo).orElse(null)));
+        }
     }
 
     @PostMapping("/{ticketReference}/board")
@@ -231,6 +274,21 @@ public class BookingController {
             return bookingCustomerResolver.getRequiredUser(normalizedPassengerId);
         }
         return bookingCustomerResolver.resolveOrCreatePosContact(contact, requestTarget);
+    }
+
+    private String resolvePassengerName(TicketType ticket) {
+        if (ticket.getPassengerId() != null) {
+            return userRepository.findById(ticket.getPassengerId())
+                    .map(user -> {
+                        String name = ((user.getFirstName() != null ? user.getFirstName() : "") + " "
+                                + (user.getLastName() != null ? user.getLastName() : "")).trim();
+                        return name.isEmpty() ? null : name;
+                    })
+                    .orElse(null);
+        }
+        String guestName = ((ticket.getGuestFirstName() != null ? ticket.getGuestFirstName() : "") + " "
+                + (ticket.getGuestLastName() != null ? ticket.getGuestLastName() : "")).trim();
+        return guestName.isEmpty() ? null : guestName;
     }
 
     static BookingResponse toResponse(TicketType ticket) {

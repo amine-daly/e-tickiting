@@ -6,9 +6,9 @@ coverage/
 *.log
 
 # Angular cache
-apps/frontend/.angular/
-apps/frontend/dist/
-apps/frontend/node_modules/
+apps/safra/.angular/
+apps/safra/dist/
+apps/safra/node_modules/
 apps/terminal/.angular/
 apps/*/.angular/
 **/.angular/cache/
@@ -81,8 +81,8 @@ logs/
 coverage/
 
 # Angular
-apps/frontend/.cache/
-apps/frontend/.angular/
+apps/safra/.cache/
+apps/safra/.angular/
 
 # Misc
 *.local

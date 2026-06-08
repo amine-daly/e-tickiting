@@ -24,4 +24,4 @@ _.log
 # Large source trees not used by the Docker deployment images
 
 apps/e-ticketing
-apps/frontend
+apps/safra

@@ -4,7 +4,7 @@ on:
   push:
     branches: [sandbox]
     paths:
-      - "apps/frontend/**" # Only triggers if frontend changes
+      - "apps/safra/**" # Only triggers if frontend changes
       - "apps/terminal/**" # Only triggers if backoffice changes
       - "apps/backend/**" # Only triggers if backend changes
       - "libs/**" # Shared helpers used by the backoffice build
@@ -37,7 +37,7 @@ jobs:
         with:
           filters: |
             frontend:
-              - "apps/frontend/**"
+              - "apps/safra/**"
             terminal:
               - "apps/terminal/**"
             backend:
@@ -49,7 +49,7 @@ jobs:
             github:
               - ".github/**"
             deploy:
-              - "apps/frontend/**"
+              - "apps/safra/**"
               - "apps/terminal/**"
               - "apps/backend/**"
               - "libs/**"
@@ -102,16 +102,16 @@ jobs:
         uses: actions/cache@v4
         with:
           path: ~/.npm
-          key: ${{ runner.os }}-node-${{ hashFiles('apps/frontend/package-lock.json') }}
+          key: ${{ runner.os }}-node-${{ hashFiles('apps/safra/package-lock.json') }}
           restore-keys: |
             ${{ runner.os }}-node-
 
       - name: Frontoffice install
-        working-directory: apps/frontend
+        working-directory: apps/safra
         run: npm ci
 
       - name: Frontoffice lint & build
-        working-directory: apps/frontend
+        working-directory: apps/safra
         run: |
           if [ -f package.json ]; then npm run lint --if-present && npm run build --if-present; fi
 

@@ -531,6 +531,16 @@
             {{ statusLabelMap[ticket.status] || ticket.status | translate }}
           </span>
         </div>
+        <div class="col-md-6" *ngIf="selectedTickets.length === 1">
+          <h6 class="text-muted text-uppercase">
+            {{ "COMMON.LABEL.REFERENCE" | translate }}
+          </h6>
+          <p class="mb-0 fw-semibold text-break">
+            {{
+              ticket.reference || ("COMMON.LABEL.NOT_AVAILABLE" | translate)
+            }}
+          </p>
+        </div>
         <div class="col-md-6">
           <h6 class="text-muted text-uppercase">
             {{ "TICKETS.LABEL.TRIP" | translate }}
@@ -672,6 +682,7 @@
                 <tr>
                   <th>#</th>
                   <th>{{ "TICKETS.LABEL.PASSENGER" | translate }}</th>
+                  <th>{{ "COMMON.LABEL.REFERENCE" | translate }}</th>
                   <th>{{ "TICKETS.SELL.SEAT_LABEL" | translate }}</th>
                   <th class="text-end">
                     {{ "COMMON.LABEL.ACTIONS" | translate }}
@@ -688,6 +699,12 @@
                     <div class="text-muted small" *ngIf="passenger.user?.email">
                       {{ passenger.user?.email }}
                     </div>
+                  </td>
+                  <td class="text-break">
+                    {{
+                      passenger.reference ||
+                        ("COMMON.LABEL.NOT_AVAILABLE" | translate)
+                    }}
                   </td>
                   <td>
                     <span

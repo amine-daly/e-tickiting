@@ -1,0 +1,52 @@
+ion-content {
+  --background: transparent;
+}
+
+.scan-instructions {
+  position: absolute;
+  top: 16px;
+  left: 0;
+  right: 0;
+  z-index: 2;
+  text-align: center;
+  padding: 0 24px;
+  color: #fff;
+}
+
+.scan-title {
+  font-size: 16px;
+  font-weight: 600;
+  margin-bottom: 6px;
+}
+
+.scan-subtitle {
+  font-size: 13px;
+  line-height: 1.35;
+  color: rgba(255, 255, 255, 0.85);
+}
+
+.square {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  border-radius: 16px;
+  width: 240px;
+  height: 240px;
+  border: 4px solid #fff;
+  box-shadow: 0 0 0 4000px rgba(0, 0, 0, 0.45);
+  z-index: 1;
+}
+
+.video {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+ion-fab-button.torch-on {
+  --background: #ffd54f;
+  --color: #1a1a2e;
+}

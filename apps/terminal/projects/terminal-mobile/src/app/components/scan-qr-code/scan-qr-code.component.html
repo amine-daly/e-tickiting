@@ -133,7 +133,7 @@
     -->
     <button
       class="scanner-terminal__btn scanner-terminal__btn--primary"
-      [disabled]="isSubmitting"
+      [disabled]="isSubmitting || isScanning"
       (click)="startScan()"
     >
       <span class="scanner-terminal__btn-icon">{{
@@ -144,12 +144,9 @@
 
     <!-- Secondary controls row -->
     <div class="scanner-terminal__controls-row">
-      <!--
-        Torch / Flashlight button.
-        • Native: uses BarcodeScanner.toggleTorch() (ML Kit torch API).
-        • Browser: uses MediaDevices torch constraint on the rear camera.
-      -->
+      <!-- Torch is only available in-browser; on native it appears inside the camera modal -->
       <button
+        *ngIf="!isNative"
         class="scanner-terminal__btn scanner-terminal__btn--ghost"
         [class.scanner-terminal__btn--ghost-active]="torchEnabled"
         (click)="toggleTorch()"

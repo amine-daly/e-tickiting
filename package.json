@@ -2,7 +2,7 @@
     "name": "e-ticketing-monorepo",
     "private": true,
     "workspaces": [
-        "apps/frontend"
+        "apps/safra"
     ],
     "scripts": {
         "format": "echo format placeholder",
@@ -11,8 +11,8 @@
         "start": "npm --prefix apps/terminal run start -- --open",
         "start:terminal": "npm --prefix apps/terminal run start -- --open",
         "start:terminal-mobile": "npm --prefix apps/terminal run start:mobile -- --open",
-        "start:safra": "npm --prefix apps/frontend run start -- --open",
-        "build:safra": "npm --prefix apps/frontend run build",
+        "start:safra": "npm --prefix apps/safra run start -- --open",
+        "build:safra": "npm --prefix apps/safra run build",
         "start:backend": "cd apps/backend && mvnw.cmd spring-boot:run",
         "build:terminal": "npm --prefix apps/terminal run build",
         "build:terminal-mobile": "npm --prefix apps/terminal run build:mobile",
