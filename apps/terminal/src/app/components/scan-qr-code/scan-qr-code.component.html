@@ -118,28 +118,16 @@
 
     <h1 class="scanner-terminal__idle-title">Ready to Scan</h1>
     <p class="scanner-terminal__idle-hint">
-      {{
-        isNative
-          ? "Point the camera at the passenger's ticket QR code."
-          : "Tap below to enter the ticket reference manually."
-      }}
+      Point the camera at the passenger's ticket QR code, or use manual entry.
     </p>
 
-    <!--
-      Primary scan CTA.
-      • Native (Capacitor APK): opens the ML Kit barcode scanner.
-      • Browser / PWA:          ML Kit is unavailable — routes to manual entry automatically.
-      The button is always enabled; only `isSubmitting` disables it.
-    -->
     <button
       class="scanner-terminal__btn scanner-terminal__btn--primary"
       [disabled]="isSubmitting || isScanning"
       (click)="startScan()"
     >
-      <span class="scanner-terminal__btn-icon">{{
-        isNative ? "📷" : "⌨️"
-      }}</span>
-      {{ isNative ? "Scan QR Code" : "Enter Ticket ID" }}
+      <span class="scanner-terminal__btn-icon">📷</span>
+      Scan QR Code
     </button>
 
     <!-- Secondary controls row -->

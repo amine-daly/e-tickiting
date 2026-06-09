@@ -7,6 +7,12 @@
   }
 }
 
+.app-layout-ion-content {
+  --ion-background-color: var(--bs-body-bg);
+  --background: var(--bs-body-bg);
+  --color: var(--bs-body-color);
+}
+
 .page-loaded {
   app-layout {
     opacity: 1;

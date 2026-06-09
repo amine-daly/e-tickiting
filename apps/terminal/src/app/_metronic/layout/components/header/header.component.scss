@@ -1,0 +1,14 @@
+:host {
+  display: block;
+}
+
+@media (max-width: 991.98px) {
+  :host-context([data-kt-app-header-fixed-mobile='true']) {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    z-index: 105;
+    padding-top: env(safe-area-inset-top, 0px);
+  }
+}

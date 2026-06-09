@@ -2,15 +2,20 @@
 <html lang="en">
   <head>
     <meta charset="utf-8" />
-    <title>Angular - Demo1</title>
+    <title>Safra</title>
     <base href="/" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <link rel="shortcut icon" href="./assets/media/logos/favicon.ico" />
+
+    <link
+      rel="shortcut icon"
+      href="https://eticketing-app.s3.eu-north-1.amazonaws.com/logos/logo_base.png"
+      type="image/png"
+    />
+
     <link
       rel="stylesheet"
       href="https://fonts.googleapis.com/css?family=Inter:300,400,500,600,700"
     />
-    <!-- SPLASH SCREEN-->
     <link
       rel="stylesheet"
       id="layout-styles-anchor"
@@ -20,8 +25,6 @@
   </head>
 
   <body root id="kt_body" class="mat-typography">
-    <!-- <body root id="kt_body" class="mat-typography" direction="rtl" dir="rtl" style="direction: rtl"></body> -->
-    <!--begin::Theme mode setup on page load-->
     <script>
       if (document.documentElement) {
         var defaultThemeMode = "system";
@@ -43,11 +46,16 @@
         document.documentElement.setAttribute("data-bs-theme", themeMode);
       }
     </script>
-    <!--end::Theme mode setup on page load-->
     <div id="splash-screen" class="splash-screen">
       <img
+        class="splash-logo splash-logo-light"
         src="https://eticketing-app.s3.eu-north-1.amazonaws.com/logos/logo_white.png"
-        alt="Metronic logo"
+        alt="Safra logo"
+      />
+      <img
+        class="splash-logo splash-logo-dark"
+        src="https://eticketing-app.s3.eu-north-1.amazonaws.com/logos/logo_dark.png"
+        alt="Safra logo"
       />
       <span>Loading ...</span>
     </div>

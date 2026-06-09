@@ -12,7 +12,7 @@ import { IonApp, IonRouterOutlet } from '@ionic/angular/standalone';
 import { ThemeModeService } from 'src/app/_metronic/partials/layout/theme-mode-switcher/theme-mode.service';
 import { SplashScreenService } from 'src/app/_metronic/partials/layout/splash-screen/splash-screen.service';
 import { TranslationService } from 'src/app/modules/i18n/translation.service';
-import { ScanQrCodeComponent } from './components/scan-qr-code/scan-qr-code.component';
+import { ScanQrCodeComponent } from 'src/app/components/scan-qr-code/scan-qr-code.component';
 import { MobileShellService } from 'src/app/core/services/mobile-shell.service';
 
 @Component({

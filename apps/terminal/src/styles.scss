@@ -12,6 +12,24 @@
 @import "./assets/plugins/keenicons/outline/style.css";
 @import "./assets/plugins/keenicons/solid/style.css";
 
+/* ion-content {
+  --background: transparent;
+} */
+
+ion-toolbar,
+ion-content {
+  --ion-background-color: var(--bs-body-bg, #f9fafb);
+  --background: var(--bs-body-bg, #f9fafb);
+  --color: var(--bs-body-color, #4b5563);
+}
+
+[data-bs-theme="dark"] ion-toolbar,
+[data-bs-theme="dark"] ion-content {
+  --ion-background-color: var(--bs-body-bg, #1e1e2d);
+  --background: var(--bs-body-bg, #1e1e2d);
+  --color: var(--bs-body-color, #fff);
+}
+
 // Custom dark mode styles for ng-select
 [data-bs-theme="dark"] .flatpickr-time .flatpickr-am-pm:focus {
   background: #2f3653;
@@ -57,45 +75,10 @@
   border-top-color: #fff !important;
 }
 
-[data-bs-theme="dark"] .ng-select {
-  background: #1e1e2d !important;
-  color: #92929f !important;
-}
-
-[data-bs-theme="dark"] .ng-select .ng-select-container {
-  background: #1e1e2d !important;
-  border-color: #444 !important;
-  color: #92929f !important;
-}
-
-[data-bs-theme="dark"] .ng-select .ng-dropdown-panel {
-  background: #1e1e2d !important;
-  color: #92929f !important;
-  border-color: #444 !important;
-}
-
-[data-bs-theme="dark"] .ng-select .ng-option {
-  background: #1e1e2d !important;
-  color: #92929f !important;
-}
-
-[data-bs-theme="dark"] .ng-select .ng-option-selected,
-[data-bs-theme="dark"] .ng-select .ng-option-marked {
-  background: #2b2e3e !important;
-  color: #fff !important;
-}
-
-[data-bs-theme="dark"] .ng-select .ng-select-clear {
-  color: #bbb !important;
-}
+@import "./assets/sass/ng-select-dark";
 
 label {
   margin-bottom: 0.75rem;
-}
-
-// Input text color for dark mode
-[data-bs-theme="dark"] .ng-select .ng-input > input {
-  color: #fff !important;
 }
 
 // Custom dark mode styles for mwl-Flatpickr
@@ -194,4 +177,64 @@ label {
     height: 340px !important;
     width: 100% !important;
   }
+}
+
+/* Mobile bottom nav (terminal web + shared footer component) */
+@media (max-width: 991.98px) {
+  .app-page {
+    padding-bottom: calc(68px + env(safe-area-inset-bottom, 0px));
+  }
+
+  body[data-kt-drawer='on'] app-mobile-footer {
+    visibility: hidden;
+    pointer-events: none;
+  }
+}
+
+/* ML Kit barcode scanner — transparent overlay (native + web camera modal) */
+html.barcode-scanning-active,
+html.barcode-scanning-active body,
+html.barcode-scanning-active body.barcode-scanning-active,
+body.barcode-scanning-active {
+  --background: transparent !important;
+  --ion-background-color: transparent !important;
+  background: transparent !important;
+}
+
+body.barcode-scanning-active {
+  visibility: hidden !important;
+}
+
+body.barcode-scanning-active ion-app,
+body.barcode-scanning-active app-root {
+  --background: transparent !important;
+  --ion-background-color: transparent !important;
+  background: transparent !important;
+}
+
+body.barcode-scanning-active ion-modal.barcode-scanning-modal {
+  visibility: visible !important;
+  --background: transparent !important;
+  --ion-background-color: transparent !important;
+}
+
+body.barcode-scanning-active ion-modal.barcode-scanning-modal ion-header,
+body.barcode-scanning-active ion-modal.barcode-scanning-modal ion-content,
+body.barcode-scanning-active ion-modal.barcode-scanning-modal ion-footer {
+  --background: transparent !important;
+  --ion-background-color: transparent !important;
+}
+
+ion-modal.barcode-scanning-modal {
+  --background: transparent !important;
+  --ion-background-color: transparent !important;
+}
+
+ion-modal.barcode-scanning-modal ion-toolbar {
+  --background: rgba(0, 0, 0, 0.7);
+  --color: white;
+}
+
+ion-modal.barcode-scanning-modal ion-content {
+  --background: transparent !important;
 }

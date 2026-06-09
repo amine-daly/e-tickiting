@@ -56,14 +56,21 @@ export class LayoutComponent implements OnInit, OnDestroy {
   private mobileDrawerReparentRegistered = false;
   private sidebarRestoreAnchor: Comment | null = null;
   private sidebarRestoreTimer: ReturnType<typeof setTimeout> | null = null;
-  private sidebarTransitionHandler: ((e: TransitionEvent) => void) | null = null;
+  private sidebarTransitionHandler: ((e: TransitionEvent) => void) | null =
+    null;
 
   private static readonly DRAWER_TRANSITION_MS = 300;
 
   readonly isMobileShell: boolean;
   showMobileFooter = false;
+  isMobileViewport = false;
 
   private readonly GUEST_PATHS = ['/auth', '/error'];
+  private mobileViewportQuery?: MediaQueryList;
+  private readonly onMobileViewportChange = (event: MediaQueryListEvent) => {
+    this.isMobileViewport = event.matches;
+    this.cd.markForCheck();
+  };
 
   // Public variables
   // page
@@ -128,12 +135,7 @@ export class LayoutComponent implements OnInit, OnDestroy {
 
     this.router.events.subscribe((event) => {
       if (event instanceof NavigationEnd) {
-        if (this.isMobileShell) {
-          this.showMobileFooter = !this.GUEST_PATHS.some((path) =>
-            event.urlAfterRedirects.startsWith(path),
-          );
-          this.cd.markForCheck();
-        }
+        this.updateShowMobileFooter(event.urlAfterRedirects);
 
         const currentLayoutType = this.layout.currentLayoutTypeSubject.value;
 
@@ -150,9 +152,14 @@ export class LayoutComponent implements OnInit, OnDestroy {
   }
 
   ngOnInit() {
-    if (this.isMobileShell) {
-      this.showMobileFooter = !this.GUEST_PATHS.some((path) =>
-        this.router.url.startsWith(path),
+    this.updateShowMobileFooter(this.router.url);
+
+    if (typeof window !== 'undefined') {
+      this.mobileViewportQuery = window.matchMedia('(max-width: 991.98px)');
+      this.isMobileViewport = this.mobileViewportQuery.matches;
+      this.mobileViewportQuery.addEventListener(
+        'change',
+        this.onMobileViewportChange,
       );
     }
 
@@ -663,6 +670,21 @@ export class LayoutComponent implements OnInit, OnDestroy {
     if (drawer) {
       this.cancelSidebarRestore(drawer);
     }
+    this.mobileViewportQuery?.removeEventListener(
+      'change',
+      this.onMobileViewportChange,
+    );
     this.unsubscribe.forEach((sb) => sb.unsubscribe());
+  }
+
+  get showMobileChrome(): boolean {
+    return this.isMobileShell || this.isMobileViewport;
+  }
+
+  private updateShowMobileFooter(url: string): void {
+    this.showMobileFooter = !this.GUEST_PATHS.some((path) =>
+      url.startsWith(path),
+    );
+    this.cd.markForCheck();
   }
 }

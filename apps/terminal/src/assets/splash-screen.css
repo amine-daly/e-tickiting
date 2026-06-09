@@ -27,10 +27,23 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 
-.splash-screen img {
+.splash-screen img,
+.splash-screen .splash-logo {
   margin-left: calc(100vw - 100%);
   margin-bottom: 30px;
   height: 30px !important;
+}
+
+.splash-logo-dark {
+  display: none;
+}
+
+[data-bs-theme='dark'] .splash-logo-light {
+  display: none;
+}
+
+[data-bs-theme='dark'] .splash-logo-dark {
+  display: block;
 }
 
 [data-bs-theme="dark"] .splash-screen {

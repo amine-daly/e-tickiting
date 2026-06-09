@@ -23,6 +23,9 @@ body {
 ion-app {
   height: 100%;
   --ion-safe-area-bottom: env(safe-area-inset-bottom, 0px);
+  --ion-background-color: var(--bs-body-bg);
+  --background: var(--bs-body-bg);
+  --color: var(--bs-body-color);
 }
 
 ion-router-outlet {
@@ -33,6 +36,9 @@ ion-router-outlet {
 ion-content {
   display: block;
   height: 100%;
+  --ion-background-color: var(--bs-body-bg);
+  --background: var(--bs-body-bg);
+  --color: var(--bs-body-color);
 }
 
 /* Metronic fixed heights block ion-content scroll — reset inside scroll areas */
@@ -59,9 +65,28 @@ ion-content #kt_app_page {
   }
 }
 
-/* Push Metronic layout content above the fixed footer */
+label {
+  margin-bottom: 0.75rem;
+}
+
+@import "../../../src/assets/sass/ng-select-dark";
+
+/* Mobile fixed header lives outside ion-content */
+@media (max-width: 991.98px) {
+  body[data-kt-app-header-fixed-mobile='true'] ion-content.app-layout-ion-content {
+    --offset-top: 0px;
+  }
+
+  body[data-kt-app-header-fixed-mobile='true'] ion-content .app-wrapper {
+    margin-top: calc(
+      var(--bs-app-header-height, 60px) + env(safe-area-inset-top, 0px)
+    );
+  }
+}
+
+/* Push Metronic layout content above the fixed footer (+ scan button lift) */
 .app-page {
-  padding-bottom: calc(64px + env(safe-area-inset-bottom, 0px));
+  padding-bottom: calc(68px + env(safe-area-inset-bottom, 0px));
 }
 
 /* Mobile drawer + footer stacking (sidebar is reparented to body during animation) */

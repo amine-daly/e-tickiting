@@ -1,3 +1,57 @@
+.ticket-group-row {
+  background-color: rgba(var(--bs-primary-rgb), 0.06);
+  border-left: 3px solid var(--bs-primary);
+
+  &__trip {
+    max-width: 180px;
+    color: var(--bs-body-color);
+  }
+
+  &__name {
+    color: var(--bs-body-color);
+  }
+
+  &__avatar {
+    background-color: rgba(var(--bs-primary-rgb), 0.15);
+    color: var(--bs-primary);
+  }
+
+  &__badge {
+    font-size: 0.7rem;
+    font-weight: 600;
+    color: var(--bs-primary);
+    background-color: rgba(var(--bs-primary-rgb), 0.12);
+  }
+
+  td {
+    border-bottom-color: rgba(var(--bs-border-color-rgb, 50, 50, 72), 0.35);
+  }
+}
+
+[data-bs-theme='dark'] .ticket-group-row {
+  background-color: rgba(var(--bs-primary-rgb), 0.1);
+
+  &__avatar {
+    background-color: rgba(var(--bs-primary-rgb), 0.22);
+    color: #fff;
+
+    .ki-duotone {
+      .path1::before,
+      .path2::before,
+      .path3::before,
+      .path4::before,
+      .path5::before {
+        color: #fff !important;
+      }
+    }
+  }
+
+  &__badge {
+    color: #fff;
+    background-color: rgba(var(--bs-primary-rgb), 0.28);
+  }
+}
+
 .seats-column {
     max-width: 260px;
 }

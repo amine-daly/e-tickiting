@@ -1,4 +1,4 @@
-import { Component, OnDestroy, OnInit } from '@angular/core';
+import { Component, Inject, OnDestroy, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterModule } from '@angular/router';
 import { HeaderMenuComponent } from './header-menu/header-menu.component';
@@ -10,6 +10,7 @@ import { MenuComponent } from '../../../kt/components';
 import { ILayout, LayoutType } from '../../core/configs/config';
 import { LOGO_BASE } from '../../../../../environments/environment';
 import { KeeniconComponent } from 'src/app/_metronic/shared/keenicon/keenicon.component';
+import { IS_MOBILE_SHELL } from 'src/app/core/tokens/is-mobile-shell.token';
 
 @Component({
   selector: 'app-header',
@@ -47,11 +48,14 @@ export class HeaderComponent implements OnInit, OnDestroy {
   appPageTitleDisplay: boolean;
 
   logobase = LOGO_BASE;
+  readonly isMobileShell: boolean;
 
   constructor(
     private layout: LayoutService,
     private router: Router,
+    @Inject(IS_MOBILE_SHELL) isMobileShell: boolean,
   ) {
+    this.isMobileShell = isMobileShell;
     this.routingChanges();
   }
 
@@ -95,8 +99,13 @@ export class HeaderComponent implements OnInit, OnDestroy {
       'app.header.default.fixed.mobile',
       config,
     ) as boolean;
-    if (this.appHeaderDefaultFixedMobile) {
+
+    const fixedMobile =
+      this.appHeaderDefaultFixedMobile || this.isMobileShell;
+    if (fixedMobile) {
       document.body.setAttribute('data-kt-app-header-fixed-mobile', 'true');
+    } else {
+      document.body.removeAttribute('data-kt-app-header-fixed-mobile');
     }
 
     this.appHeaderDefaultContainer = this.layout.getProp(
@@ -153,6 +162,9 @@ export class HeaderComponent implements OnInit, OnDestroy {
   }
 
   ngOnDestroy() {
+    if (this.isMobileShell) {
+      document.body.removeAttribute('data-kt-app-header-fixed-mobile');
+    }
     this.unsubscribe.forEach((sb) => sb.unsubscribe());
   }
 }

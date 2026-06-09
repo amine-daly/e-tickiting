@@ -12,6 +12,7 @@ import {
 } from '@angular/common/http';
 import { provideAnimations } from '@angular/platform-browser/animations';
 import { importProvidersFrom } from '@angular/core';
+import { provideIonicAngular } from '@ionic/angular/standalone';
 import { AppComponent } from './app/app.component';
 import { routes } from './app/app.routes';
 import { TranslateLoader, TranslateModule } from '@ngx-translate/core';
@@ -30,6 +31,7 @@ export function HttpLoaderFactory(http: HttpClient) {
 
 bootstrapApplication(AppComponent, {
   providers: [
+    provideIonicAngular({ mode: 'md' }),
     provideRouter(routes, withEnabledBlockingInitialNavigation()),
     provideHttpClient(withInterceptorsFromDi()),
     provideAnimations(),

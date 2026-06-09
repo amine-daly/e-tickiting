@@ -1,9 +1,17 @@
 <!--begin::App-->
-<ion-content [fullscreen]="true">
+<ng-container *ngIf="appHeaderDisplay && isMobileShell">
+  <app-header
+    id="kt_app_header"
+    class="app-header"
+    [ngClass]="appHeaderDefaultClass"
+  ></app-header>
+</ng-container>
+
+<ion-content [fullscreen]="true" class="app-layout-ion-content">
   <div class="d-flex flex-column flex-root app-root" id="kt_app_root">
     <!--begin::Page-->
     <div class="app-page flex-column flex-column-fluid" id="kt_app_page">
-      <ng-container *ngIf="appHeaderDisplay">
+      <ng-container *ngIf="appHeaderDisplay && !isMobileShell">
         <!--begin::Header-->
         <app-header
           id="kt_app_header"
@@ -43,7 +51,7 @@
             </app-content>
           </div>
           <!--end::Content wrapper-->
-          <ng-container *ngIf="appFooterDisplay">
+          <ng-container *ngIf="appFooterDisplay && !showMobileChrome">
             <app-footer
               class="app-footer"
               [ngClass]="appFooterCSSClass"
@@ -60,7 +68,7 @@
   </div>
 </ion-content>
 
-<app-mobile-footer *ngIf="isMobileShell && showMobileFooter"></app-mobile-footer>
+<app-mobile-footer *ngIf="showMobileFooter && showMobileChrome"></app-mobile-footer>
 <!--end::App-->
 
 <app-scripts-init></app-scripts-init>

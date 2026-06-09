@@ -279,12 +279,9 @@
                   </tr>
 
                   <!-- ── Order Row (group booking) ── -->
-                  <tr *ngIf="row.type === 'order'" class="table-light">
+                  <tr *ngIf="row.type === 'order'" class="ticket-group-row">
                     <td>
-                      <div
-                        class="fw-semibold text-dark"
-                        style="max-width: 180px"
-                      >
+                      <div class="fw-semibold ticket-group-row__trip">
                         <span
                           *ngIf="
                             row.contactTicket?.originCity &&
@@ -321,7 +318,7 @@
                           class="symbol symbol-circle symbol-50px overflow-hidden me-3"
                         >
                           <div
-                            class="symbol-label fs-3 bg-light-primary text-primary"
+                            class="symbol-label fs-3 ticket-group-row__avatar"
                           >
                             <i class="ki-duotone ki-people fs-2"
                               ><span class="path1"></span
@@ -333,16 +330,15 @@
                           </div>
                         </div>
                         <div class="d-flex flex-column">
-                          <span class="text-gray-800 mb-1 fw-semibold">
+                          <span class="ticket-group-row__name mb-1 fw-semibold">
                             {{ getTicketUserName(row.contactTicket!) }}
                           </span>
                           <span class="text-muted small">
                             {{ row.passengerCount }}
                             {{ "TICKETS.LABEL.PASSENGERS" | translate }}
-                            <span
-                              class="badge badge-light-info badge-sm ms-1"
-                              >{{ "TICKETS.LABEL.GROUP" | translate }}</span
-                            >
+                            <span class="badge ticket-group-row__badge ms-1">{{
+                              "TICKETS.LABEL.GROUP" | translate
+                            }}</span>
                           </span>
                         </div>
                       </div>

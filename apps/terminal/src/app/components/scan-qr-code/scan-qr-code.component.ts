@@ -207,13 +207,13 @@ export class ScanQrCodeComponent implements OnInit, OnDestroy {
   async startScan(): Promise<void> {
     if (this.isSubmitting || this.isScanning) return;
 
-    if (!this.isNative) {
-      this.openManualEntry();
+    const granted = await this.ensureCameraPermission();
+    if (!granted) {
+      if (!this.isNative) {
+        this.openManualEntry();
+      }
       return;
     }
-
-    const granted = await this.ensureCameraPermission();
-    if (!granted) return;
 
     this.isScanning = true;
     this.cdr.markForCheck();

@@ -2,17 +2,16 @@
 <html lang="en">
   <head>
     <meta charset="utf-8" />
-    <title>E-Ticketing Terminal</title>
+    <title>Safra</title>
     <base href="/" />
-    <!-- Capacitor / mobile viewport -->
-    <meta
-      name="viewport"
-      content="viewport-fit=cover, width=device-width, initial-scale=1.0, minimum-scale=1.0, maximum-scale=1.0, user-scalable=no"
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <link
+      rel="shortcut icon"
+      href="https://eticketing-app.s3.eu-north-1.amazonaws.com/logos/logo_base.png"
+      type="image/png"
     />
-    <meta name="color-scheme" content="light dark" />
-    <meta name="format-detection" content="telephone=no" />
-    <meta name="msapplication-tap-highlight" content="no" />
-    <link rel="shortcut icon" href="./assets/media/logos/favicon.ico" />
+
     <link
       rel="stylesheet"
       href="https://fonts.googleapis.com/css?family=Inter:300,400,500,600,700"
@@ -25,8 +24,7 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" />
   </head>
 
-  <body id="kt_body" class="mat-typography">
-    <!--begin::Theme mode setup on page load-->
+  <body root id="kt_body" class="mat-typography">
     <script>
       if (document.documentElement) {
         var defaultThemeMode = "system";
@@ -44,17 +42,19 @@
         document.documentElement.setAttribute("data-bs-theme", themeMode);
       }
     </script>
-    <!--end::Theme mode setup on page load-->
-
     <div id="splash-screen" class="splash-screen">
       <img
+        class="splash-logo splash-logo-light"
         src="https://eticketing-app.s3.eu-north-1.amazonaws.com/logos/logo_white.png"
-        alt="E-Ticketing"
+        alt="Safra logo"
+      />
+      <img
+        class="splash-logo splash-logo-dark"
+        src="https://eticketing-app.s3.eu-north-1.amazonaws.com/logos/logo_dark.png"
+        alt="Safra logo"
       />
       <span>Loading ...</span>
     </div>
-
-    <!-- Angular app root — Ionic wraps inside app.component.html -->
     <app-root></app-root>
   </body>
 </html>
