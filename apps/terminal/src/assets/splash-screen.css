@@ -13,15 +13,15 @@ body {
   justify-content: center;
   flex-direction: column;
   font-family: Helvetica, 'sans-serif';
-  background-color: #f2f3f8;
-  color: #5E6278;
+  background-color: #000000;
+  color: #ffffff;
   line-height: 1;
   font-size: 14px;
   font-weight: 400;
 }
 
 .splash-screen span {
-  color: #5E6278;
+  color: rgba(255, 255, 255, 0.72);
   transition: none !important;
   text-size-adjust: 100%;
   -webkit-font-smoothing: antialiased;
@@ -29,30 +29,11 @@ body {
 
 .splash-screen img,
 .splash-screen .splash-logo {
-  margin-left: calc(100vw - 100%);
-  margin-bottom: 30px;
-  height: 30px !important;
-}
-
-.splash-logo-dark {
-  display: none;
-}
-
-[data-bs-theme='dark'] .splash-logo-light {
-  display: none;
-}
-
-[data-bs-theme='dark'] .splash-logo-dark {
-  display: block;
-}
-
-[data-bs-theme="dark"] .splash-screen {
-  background-color: #151521;
-  color: #92929F;
-}
-
-[data-bs-theme="dark"] .splash-screen span {
-  color: #92929F;
+  margin-bottom: 24px;
+  width: min(72vw, 320px);
+  height: auto !important;
+  max-height: 96px;
+  object-fit: contain;
 }
 
 
