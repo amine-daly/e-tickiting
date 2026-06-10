@@ -9,4 +9,5 @@ export const environment = {
   USERDATA_KEY: 'auth',
   isMockEnabled: false, // disable in-memory mocks
   apiBase: 'https://safra-app.duckdns.org/api',
+  /* apiBase: 'http://localhost:8080/api', */
 };

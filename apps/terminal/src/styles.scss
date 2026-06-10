@@ -238,3 +238,8 @@ ion-modal.barcode-scanning-modal ion-toolbar {
 ion-modal.barcode-scanning-modal ion-content {
   --background: transparent !important;
 }
+
+/* Web/PWA: camera stream is rendered inside the modal <video>, not behind the WebView */
+body.barcode-scanning-active-web ion-modal.barcode-scanning-modal ion-content {
+  --background: #000 !important;
+}

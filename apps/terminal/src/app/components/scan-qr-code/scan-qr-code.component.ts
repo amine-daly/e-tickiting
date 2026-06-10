@@ -11,7 +11,7 @@ import {
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { HttpClient } from '@angular/common/http';
-import { Subject, timer, of } from 'rxjs';
+import { Subject, timer, of, switchMap } from 'rxjs';
 import { catchError, finalize, map, takeUntil } from 'rxjs';
 import { Capacitor } from '@capacitor/core';
 import {
@@ -24,6 +24,7 @@ import { Haptics, ImpactStyle } from '@capacitor/haptics';
 import { environment } from 'src/environments/environment';
 import { DialogService } from '../../shared/services/dialog.service';
 import { BarcodeScanningModalComponent } from '../../shared/components/barcode-scanning-modal/barcode-scanning-modal.component';
+import { TicketService } from 'src/app/pages/tickets/ticket.service';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Public types
@@ -116,6 +117,7 @@ export class ScanQrCodeComponent implements OnInit, OnDestroy {
     private readonly http: HttpClient,
     private readonly cdr: ChangeDetectorRef,
     private readonly dialogService: DialogService,
+    private readonly ticketService: TicketService,
   ) {}
 
   // ── Lifecycle ──────────────────────────────────────────────────────────────
@@ -308,14 +310,16 @@ export class ScanQrCodeComponent implements OnInit, OnDestroy {
           this.isSubmitting = false;
           this.cdr.markForCheck();
         }),
+        switchMap((response) => {
+          if (response.success) {
+            this.scanned.emit(ticketReference.trim());
+          }
+          this.handleResponse(response);
+          return this.ticketService.fetchTickets();
+        }),
         takeUntil(this.destroy$),
       )
-      .subscribe((response) => {
-        if (response.success) {
-          this.scanned.emit(ticketReference.trim());
-        }
-        this.handleResponse(response);
-      });
+      .subscribe();
   }
 
   private mapScanResponse(res: BackendScanResponse): ScanResponse {

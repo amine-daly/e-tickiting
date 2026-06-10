@@ -9,7 +9,8 @@ import {
 import { NavigationEnd, Router } from '@angular/router';
 import { filter, Subject, takeUntil } from 'rxjs';
 import { KeeniconComponent } from 'src/app/_metronic/shared/keenicon/keenicon.component';
-import { MobileShellService } from 'src/app/core/services/mobile-shell.service';
+import { BottomSheetComponent } from 'src/app/shared/components/bottom-sheet/bottom-sheet.component';
+import { ScanQrCodeComponent } from 'src/app/components/scan-qr-code/scan-qr-code.component';
 
 interface NavTab {
   label: string;
@@ -20,7 +21,12 @@ interface NavTab {
 @Component({
   selector: 'app-mobile-footer',
   standalone: true,
-  imports: [CommonModule, KeeniconComponent],
+  imports: [
+    CommonModule,
+    KeeniconComponent,
+    BottomSheetComponent,
+    ScanQrCodeComponent,
+  ],
   templateUrl: './mobile-footer.component.html',
   styleUrls: ['./mobile-footer.component.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -39,11 +45,12 @@ export class MobileFooterComponent implements OnInit, OnDestroy {
   /** Normalized path (no query/hash) used for active tab highlighting. */
   activeUrl = '/';
 
+  scanSheetOpen = false;
+
   private readonly destroy$ = new Subject<void>();
 
   constructor(
     private router: Router,
-    private mobileShell: MobileShellService,
     private cdr: ChangeDetectorRef,
   ) {}
 
@@ -77,7 +84,17 @@ export class MobileFooterComponent implements OnInit, OnDestroy {
   }
 
   openScan(): void {
-    this.mobileShell.requestScan();
+    this.scanSheetOpen = true;
+    this.cdr.markForCheck();
+  }
+
+  closeScanSheet(): void {
+    this.scanSheetOpen = false;
+    this.cdr.markForCheck();
+  }
+
+  onScanned(_value: string): void {
+    // Keep the sheet open — closing here would abort the boarding HTTP request.
   }
 
   private normalizeUrl(url: string): string {

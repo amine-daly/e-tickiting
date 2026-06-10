@@ -16,7 +16,14 @@
   </div>
 
   <div #square class="square"></div>
-  <video #video class="video" hidden playsinline></video>
+  <video
+    #video
+    class="video"
+    [hidden]="!isWeb"
+    playsinline
+    autoplay
+    muted
+  ></video>
 
   <ion-fab
     *ngIf="isTorchAvailable"

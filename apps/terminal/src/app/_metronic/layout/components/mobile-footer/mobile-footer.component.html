@@ -50,3 +50,19 @@
     </div>
   </div>
 </nav>
+
+<!-- Scan Bottom Sheet -->
+<app-bottom-sheet
+  [open]="scanSheetOpen"
+  (close)="closeScanSheet()"
+  ariaLabel="Scan ticket"
+  [edgeToEdge]="true"
+  height="100vh"
+>
+  <div sheetBody class="bottom-sheet-slot">
+    <app-scan-qr-code
+      (scanned)="onScanned($event)"
+      (closed)="closeScanSheet()"
+    ></app-scan-qr-code>
+  </div>
+</app-bottom-sheet>

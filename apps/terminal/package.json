@@ -8,6 +8,7 @@
     "watch": "ng build --watch --configuration development",
     "start:mobile": "ng serve terminal-mobile --port 4201",
     "build:mobile": "ng build terminal-mobile",
+    "icons:android": "node scripts/generate-android-icons.mjs",
     "cap:sync": "cap sync android",
     "cap:android": "cap open android",
     "apk:debug": "npm run build:mobile && npm run cap:sync && cd projects/terminal-mobile/android && gradlew.bat assembleDebug",

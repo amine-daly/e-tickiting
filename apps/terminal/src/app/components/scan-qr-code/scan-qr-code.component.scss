@@ -2,39 +2,49 @@
 // Design tokens — single source of truth for colors used in state flashes
 // ─────────────────────────────────────────────────────────────────────────────
 
-$color-idle-bg:        #1a1a2e;   // deep navy-dark for the waiting terminal
-$color-idle-text:      #e0e0e0;
-$color-idle-hint:      #9e9e9e;
-$color-idle-border:    #2e2e4a;
-$color-primary:        #4f8ef7;   // action-blue for primary CTA
-$color-primary-dark:   #3a72d4;
-$color-ghost-border:   #3a3a5a;
-$color-ghost-text:     #b0b0cc;
-$color-ghost-active:   #ffd54f;   // amber for "torch on" active state
+$color-idle-bg: #1a1a2e; // deep navy-dark for the waiting terminal
+$color-idle-text: #e0e0e0;
+$color-idle-hint: #9e9e9e;
+$color-idle-border: #2e2e4a;
+$color-primary: #4f8ef7; // action-blue for primary CTA
+$color-primary-dark: #3a72d4;
+$color-ghost-border: #3a3a5a;
+$color-ghost-text: #b0b0cc;
+$color-ghost-active: #ffd54f; // amber for "torch on" active state
 
-$color-success:        #00c853;   // bright green for happy path flash
-$color-success-dark:   #00a040;
-$color-success-text:   #ffffff;
+$color-success: #00c853; // bright green for happy path flash
+$color-success-dark: #00a040;
+$color-success-text: #ffffff;
 
-$color-rejected:       #d32f2f;   // bright red for rejection flash
-$color-rejected-dark:  #b71c1c;
-$color-rejected-text:  #ffffff;
+$color-rejected: #d32f2f; // bright red for rejection flash
+$color-rejected-dark: #b71c1c;
+$color-rejected-text: #ffffff;
 
-$color-scanning-bg:    #0d0d1a;
+$color-scanning-bg: #0d0d1a;
+
+:host {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  height: 100%;
+  min-height: 100%;
+}
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Layout shell
 // ─────────────────────────────────────────────────────────────────────────────
 
 .scanner-terminal {
-  position: fixed;
-  inset: 0;
-  z-index: 1200;
+  position: relative;
+  flex: 1 1 auto;
+  height: 100%;
+  min-height: 100%;
   display: flex;
   flex-direction: column;
   background-color: $color-idle-bg;
   color: $color-idle-text;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-family:
+    -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
 
   // Smooth background-color transitions between states
   transition: background-color 0.25s ease-in-out;
@@ -88,7 +98,9 @@ $color-scanning-bg:    #0d0d1a;
   opacity: 0.75;
   padding: 4px 8px;
   border-radius: 6px;
-  transition: opacity 0.15s, background 0.15s;
+  transition:
+    opacity 0.15s,
+    background 0.15s;
 
   &:hover,
   &:focus-visible {
@@ -171,7 +183,10 @@ $color-scanning-bg:    #0d0d1a;
   font-weight: 600;
   cursor: pointer;
   padding: 14px 28px;
-  transition: background 0.15s, transform 0.1s, opacity 0.15s;
+  transition:
+    background 0.15s,
+    transform 0.1s,
+    opacity 0.15s;
   white-space: nowrap;
 
   &:active {
@@ -266,7 +281,9 @@ $color-scanning-bg:    #0d0d1a;
 }
 
 @keyframes spin {
-  to { transform: rotate(360deg); }
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 .scanner-terminal__scanning-label {
@@ -286,8 +303,14 @@ $color-scanning-bg:    #0d0d1a;
 }
 
 @keyframes flash-in {
-  from { opacity: 0.1; transform: scale(0.96); }
-  to   { opacity: 1;   transform: scale(1); }
+  from {
+    opacity: 0.1;
+    transform: scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
 }
 
 .scanner-terminal__result-icon {
@@ -305,17 +328,36 @@ $color-scanning-bg:    #0d0d1a;
 }
 
 @keyframes pop-in {
-  0%   { transform: scale(0.3); opacity: 0; }
-  80%  { transform: scale(1.15); }
-  100% { transform: scale(1); opacity: 1; }
+  0% {
+    transform: scale(0.3);
+    opacity: 0;
+  }
+  80% {
+    transform: scale(1.15);
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
 }
 
 @keyframes shake {
-  0%, 100% { transform: translateX(0); }
-  20%      { transform: translateX(-10px); }
-  40%      { transform: translateX(10px); }
-  60%      { transform: translateX(-8px); }
-  80%      { transform: translateX(8px); }
+  0%,
+  100% {
+    transform: translateX(0);
+  }
+  20% {
+    transform: translateX(-10px);
+  }
+  40% {
+    transform: translateX(10px);
+  }
+  60% {
+    transform: translateX(-8px);
+  }
+  80% {
+    transform: translateX(8px);
+  }
 }
 
 .scanner-terminal__result-title {
@@ -336,7 +378,10 @@ $color-scanning-bg:    #0d0d1a;
   margin: 0;
 
   // Override browser dl default margin
-  dd, dt { margin: 0; }
+  dd,
+  dt {
+    margin: 0;
+  }
 }
 
 .scanner-terminal__passenger-row {

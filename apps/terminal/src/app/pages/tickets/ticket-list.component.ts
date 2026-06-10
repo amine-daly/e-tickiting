@@ -90,13 +90,13 @@ export class TicketListComponent implements OnInit, OnDestroy {
   printing: Record<string, boolean> = {};
 
   constructor(
+    private alert: AlertService,
+    private modalService: NgbModal,
+    private cdr: ChangeDetectorRef,
+    private translate: TranslateService,
     private ticketService: TicketService,
     private bookingService: BookingService,
     private ticketPrintService: TicketPrintService,
-    private modalService: NgbModal,
-    private alert: AlertService,
-    private translate: TranslateService,
-    private cdr: ChangeDetectorRef,
   ) {}
 
   ngOnInit(): void {
@@ -130,7 +130,11 @@ export class TicketListComponent implements OnInit, OnDestroy {
   ): void {
     this.selectedTicket = ticket;
     this.selectedTickets = tickets.length ? tickets : [ticket];
-    this.modalService.open(modal, { size: 'lg' });
+    this.modalService.open(modal, {
+      size: 'lg',
+      backdrop: 'static',
+      centered: true,
+    });
   }
 
   async confirmTicket(ticket: Ticket): Promise<void> {

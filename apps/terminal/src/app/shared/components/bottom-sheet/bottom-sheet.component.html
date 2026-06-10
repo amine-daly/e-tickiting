@@ -1,0 +1,29 @@
+<ng-container *ngIf="shouldRender">
+  <div
+    class="bottom-sheet-backdrop"
+    [class.visible]="isVisible"
+    (click)="onBackdropClick()"
+  ></div>
+  <section
+    #sheet
+    class="bottom-sheet"
+    [class.bottom-sheet--edge-to-edge]="edgeToEdge"
+    [attr.aria-label]="ariaLabel"
+    [class.bottom-sheet-open]="isVisible"
+    [style.inset]="'auto 0 0 0'"
+    role="dialog"
+    aria-modal="true"
+    [style.height]="height"
+  >
+    <div
+      *ngIf="!edgeToEdge"
+      class="bottom-sheet-handle"
+      aria-hidden="true"
+      (pointerdown)="onHandlePointerDown($event)"
+    ></div>
+    <ng-content select="[sheetHeader]"></ng-content>
+    <div class="bottom-sheet-body">
+      <ng-content select="[sheetBody]"></ng-content>
+    </div>
+  </section>
+</ng-container>

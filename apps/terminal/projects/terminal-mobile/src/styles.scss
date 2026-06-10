@@ -155,3 +155,7 @@ ion-modal.barcode-scanning-modal ion-toolbar {
 ion-modal.barcode-scanning-modal ion-content {
   --background: transparent !important;
 }
+
+body.barcode-scanning-active-web ion-modal.barcode-scanning-modal ion-content {
+  --background: #000 !important;
+}

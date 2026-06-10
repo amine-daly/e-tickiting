@@ -1,9 +1,3 @@
 <ion-app>
   <ion-router-outlet></ion-router-outlet>
-
-  <app-scan-qr-code
-    *ngIf="showScanner"
-    (scanned)="onScanned($event)"
-    (closed)="onScannerClosed()"
-  ></app-scan-qr-code>
 </ion-app>

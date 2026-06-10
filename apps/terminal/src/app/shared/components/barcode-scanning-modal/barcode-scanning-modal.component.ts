@@ -59,6 +59,9 @@ export class BarcodeScanningModalComponent implements AfterViewInit, OnDestroy {
   @ViewChild('square') squareElement!: ElementRef<HTMLDivElement>;
   @ViewChild('video') videoElement!: ElementRef<HTMLVideoElement>;
 
+  /** Web renders the camera stream into <video>; native uses a transparent WebView overlay. */
+  readonly isWeb = Capacitor.getPlatform() === 'web';
+
   isTorchAvailable = false;
   torchEnabled = false;
 
@@ -96,8 +99,13 @@ export class BarcodeScanningModalComponent implements AfterViewInit, OnDestroy {
   }
 
   private async startScan(): Promise<void> {
-    document.documentElement.classList.add('barcode-scanning-active');
-    document.body.classList.add('barcode-scanning-active');
+    if (!this.isWeb) {
+      document.documentElement.classList.add('barcode-scanning-active');
+      document.body.classList.add('barcode-scanning-active');
+    } else {
+      document.documentElement.classList.add('barcode-scanning-active-web');
+      document.body.classList.add('barcode-scanning-active-web');
+    }
 
     const options: StartScanOptions = {
       formats: this.formats,
@@ -166,8 +174,14 @@ export class BarcodeScanningModalComponent implements AfterViewInit, OnDestroy {
   }
 
   private async stopScan(): Promise<void> {
-    document.documentElement.classList.remove('barcode-scanning-active');
-    document.body.classList.remove('barcode-scanning-active');
+    document.documentElement.classList.remove(
+      'barcode-scanning-active',
+      'barcode-scanning-active-web',
+    );
+    document.body.classList.remove(
+      'barcode-scanning-active',
+      'barcode-scanning-active-web',
+    );
     await this.listener?.remove();
     this.listener = undefined;
     await BarcodeScanner.stopScan();
