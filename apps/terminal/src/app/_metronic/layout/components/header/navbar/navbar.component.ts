@@ -66,7 +66,9 @@ export class NavbarComponent implements OnInit, OnDestroy {
     this.authService.accounts$
       .pipe(takeUntil(this.destroy$))
       .subscribe((accounts) => {
-        this.accounts = accounts || [];
+        this.accounts = accounts.filter(
+          (account) => account.target?.company?.id,
+        );
         this.cdr.markForCheck();
       });
 
