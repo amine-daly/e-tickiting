@@ -66,6 +66,8 @@
                   "with": "src/environments/environment.prod.ts"
                 }
               ],
+              "baseHref": "/terminal/",
+              "deployUrl": "/terminal/",
               "outputHashing": "all"
             },
             "development": {
