@@ -4,7 +4,7 @@ import { fileURLToPath } from "node:url";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const root = path.resolve(__dirname, "..");
-const iconSource = path.join(root, "src/assets/media/logos/safra_base.png");
+const iconSource = path.join(root, "src/assets/media/logos/app_icon.svg");
 const splashSource = path.join(root, "src/assets/media/logos/safra_dark.png");
 const resDir = path.join(
   root,
@@ -63,7 +63,7 @@ async function writeIcon(folder, filename, size, padding) {
       width: size,
       height: size,
       channels: 4,
-      background: "#000000",
+      background: "#ffffff",
     },
   })
     .composite([{ input: resized, left: offset, top: offset }])
