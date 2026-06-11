@@ -25,13 +25,14 @@ import { DOCUMENT } from '@angular/common';
   encapsulation: ViewEncapsulation.None,
 })
 export class BottomSheetComponent implements OnDestroy {
-  @ViewChild('sheet', { static: false }) private sheetRef?: ElementRef<HTMLElement>;
+  @ViewChild('sheet', { static: false })
+  private sheetRef?: ElementRef<HTMLElement>;
 
   @Input() ariaLabel = '';
   @Input() height = '100vh';
   @Input() edgeToEdge = false;
 
-  @Output() close = new EventEmitter<void>();
+  @Output() sheetClose = new EventEmitter<void>();
 
   public shouldRender = false;
   public isVisible = false;
@@ -98,12 +99,20 @@ export class BottomSheetComponent implements OnDestroy {
       (event.target as Element).setPointerCapture(event.pointerId);
     }
 
-    this.removeMoveListener = this.renderer.listen(this.doc, 'pointermove', (moveEvent: PointerEvent) => {
-      this.onHandlePointerMove(moveEvent);
-    });
-    this.removeUpListener = this.renderer.listen(this.doc, 'pointerup', (upEvent: PointerEvent) => {
-      this.onHandlePointerUp(upEvent);
-    });
+    this.removeMoveListener = this.renderer.listen(
+      this.doc,
+      'pointermove',
+      (moveEvent: PointerEvent) => {
+        this.onHandlePointerMove(moveEvent);
+      },
+    );
+    this.removeUpListener = this.renderer.listen(
+      this.doc,
+      'pointerup',
+      (upEvent: PointerEvent) => {
+        this.onHandlePointerUp(upEvent);
+      },
+    );
   }
 
   requestClose(): void {
@@ -111,7 +120,7 @@ export class BottomSheetComponent implements OnDestroy {
       return;
     }
     this.hideSheet('internal');
-    this.close.emit();
+    this.sheetClose.emit();
   }
 
   private showSheet(): void {
@@ -185,7 +194,7 @@ export class BottomSheetComponent implements OnDestroy {
 
     if (deltaY >= threshold || fastSwipe) {
       this.hideSheet('internal');
-      this.close.emit();
+      this.sheetClose.emit();
       return;
     }
 
@@ -258,7 +267,7 @@ export class BottomSheetComponent implements OnDestroy {
       this.removeUpListener = undefined;
     }
   }
-  
+
   ngOnDestroy(): void {
     this.clearCloseTimer();
     this.cleanupDragListeners();
