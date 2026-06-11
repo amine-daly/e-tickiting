@@ -14,6 +14,14 @@ on:
 
   pull_request:
     branches: [sandbox]
+    paths:
+      - "apps/safra/**"
+      - "apps/terminal/**"
+      - "apps/backend/**"
+      - "libs/**"
+      - "infra/**"
+      - ".github/**"
+      - "scripts/**"
 
 concurrency:
   group: production-${{ github.ref }}
@@ -32,9 +40,15 @@ jobs:
       deploy: ${{ steps.filter.outputs.deploy }}
     steps:
       - uses: actions/checkout@v4
+        with:
+          # Required so paths-filter can diff against the previous commit on push.
+          fetch-depth: 0
+
       - uses: dorny/paths-filter@v3
         id: filter
         with:
+          # On push to sandbox, diff only the commits in this push (not vs main).
+          base: ${{ github.ref }}
           filters: |
             frontend:
               - "apps/safra/**"
@@ -56,6 +70,16 @@ jobs:
               - "infra/**"
               - ".github/**"
               - "scripts/**"
+
+      - name: Log changed areas
+        run: |
+          echo "frontend=${{ steps.filter.outputs.frontend }}"
+          echo "terminal=${{ steps.filter.outputs.terminal }}"
+          echo "backend=${{ steps.filter.outputs.backend }}"
+          echo "libs=${{ steps.filter.outputs.libs }}"
+          echo "infra=${{ steps.filter.outputs.infra }}"
+          echo "github=${{ steps.filter.outputs.github }}"
+          echo "deploy=${{ steps.filter.outputs.deploy }}"
 
   build-backoffice:
     needs: filter
