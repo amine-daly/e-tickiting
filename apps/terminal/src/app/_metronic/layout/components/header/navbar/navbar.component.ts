@@ -66,10 +66,16 @@ export class NavbarComponent implements OnInit, OnDestroy {
     this.authService.accounts$
       .pipe(takeUntil(this.destroy$))
       .subscribe((accounts) => {
-        if (!localStorage.getItem('companyId')) {
-          this.selectCompany(accounts[0] as AccountType);
+        this.accounts = accounts.filter(
+          (account) => !!account?.target?.company?.id,
+        );
+        console.log(
+          '🚀 ~ NavbarComponent ~ ngOnInit ~ this.accounts:',
+          this.accounts,
+        );
+        if (!localStorage.getItem('companyId') && this.accounts[0]) {
+          this.selectCompany(this.accounts[0]);
         }
-        this.accounts = accounts;
         this.cdr.markForCheck();
       });
 

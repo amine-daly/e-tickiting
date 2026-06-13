@@ -21,6 +21,14 @@ const API_AUTH_URL = `${environment.apiBase}/auth`;
 const API_USERS_URL = `${environment.apiBase}/users`;
 const API_CURRENT_ACCOUNT_URL = `${environment.apiBase}/accounts`;
 
+function hasCompanyTarget(account?: AccountType | null): boolean {
+  return !!account?.target?.company?.id;
+}
+
+function filterCompanyAccounts(accounts?: AccountType[] | null): AccountType[] {
+  return (accounts ?? []).filter(hasCompanyTarget);
+}
+
 @Injectable({
   providedIn: 'root',
 })
@@ -103,14 +111,14 @@ export class AuthService {
           return of(undefined);
         }),
         map((accounts) => {
-          this.accounts.next(accounts);
-          const company = accounts?.[0]?.target?.company;
-          console.log('🚀 ~ AuthService ~ login ~ company:', company);
-          this.company.next(company || null);
+          const companyAccounts = filterCompanyAccounts(accounts);
+          this.accounts.next(companyAccounts);
+          const company = companyAccounts[0]?.target?.company ?? null;
+          this.company.next(company);
           if (company?.id) {
             localStorage.setItem('companyId', company.id);
           }
-          return accounts;
+          return companyAccounts;
         }),
       );
   }
@@ -153,23 +161,25 @@ export class AuthService {
       .get<AccountType[]>(`${API_CURRENT_ACCOUNT_URL}/current`)
       .pipe(
         map((accounts) => {
-          this.accounts.next(accounts);
-          const user = accounts?.[0]?.user;
+          const companyAccounts = filterCompanyAccounts(accounts);
+          this.accounts.next(companyAccounts);
+          const user = companyAccounts[0]?.user ?? accounts?.[0]?.user;
           this.currentUser.next(user);
           const companyId = localStorage.getItem('companyId');
           const account = find(
-            accounts,
+            companyAccounts,
             (account: AccountType) =>
               account?.target?.company?.id === companyId,
           );
           const selectedCompany =
-            account?.target?.company || accounts?.[0]?.target?.company || null;
+            account?.target?.company ||
+            companyAccounts[0]?.target?.company ||
+            null;
           this.company.next(selectedCompany);
           if (selectedCompany?.id) {
             localStorage.setItem('companyId', selectedCompany.id);
           }
-          this.accounts.next(accounts);
-          return accounts;
+          return companyAccounts;
         }),
       );
   }

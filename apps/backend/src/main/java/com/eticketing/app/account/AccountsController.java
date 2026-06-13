@@ -265,10 +265,10 @@ public class AccountsController {
             throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Authentication required");
         }
         String userId = principal.getUsername();
-        List<AccountType> accounts = accountRepo.findByUserIdWithCompanyTarget(userId);
-        return accounts.stream()
+        return accountRepo.findByUserId(userId).stream()
                 .filter(AccountsController::hasCompanyTarget)
                 .map(this::toRes)
+                .filter(AccountsController::hasCompanyTargetRes)
                 .toList();
     }
 
@@ -278,6 +278,14 @@ public class AccountsController {
                 && account.getTarget().getCompany() != null
                 && account.getTarget().getCompany().getId() != null
                 && !account.getTarget().getCompany().getId().isBlank();
+    }
+
+    private static boolean hasCompanyTargetRes(AccountRes account) {
+        return account != null
+                && account.target() != null
+                && account.target().company() != null
+                && account.target().company().id() != null
+                && !account.target().company().id().isBlank();
     }
 
     /**
