@@ -7,6 +7,6 @@ export const environment = {
   production: false,
   appVersion: 'v1',
   USERDATA_KEY: 'auth',
-  /* apiBase: 'https://safra-express.duckdns.org/api', */
-  apiBase: 'http://localhost:8080/api',
+  apiBase: 'https://safra-express.duckdns.org/api',
+  /* apiBase: 'http://localhost:8080/api', */
 };
