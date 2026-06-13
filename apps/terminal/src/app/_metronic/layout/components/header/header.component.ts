@@ -1,29 +1,22 @@
-import { Component, Inject, OnDestroy, OnInit } from '@angular/core';
+import { Subscription } from 'rxjs';
 import { CommonModule } from '@angular/common';
 import { RouterModule } from '@angular/router';
-import { HeaderMenuComponent } from './header-menu/header-menu.component';
-import { NavbarComponent } from './navbar/navbar.component';
-import { NavigationCancel, NavigationEnd, Router } from '@angular/router';
-import { Subscription } from 'rxjs';
-import { LayoutService } from '../../core/layout.service';
 import { MenuComponent } from '../../../kt/components';
+import { LayoutService } from '../../core/layout.service';
+import { NavbarComponent } from './navbar/navbar.component';
 import { ILayout, LayoutType } from '../../core/configs/config';
 import { LOGO_BASE } from '../../../../../environments/environment';
-import { KeeniconComponent } from 'src/app/_metronic/shared/keenicon/keenicon.component';
+import { Component, Inject, OnDestroy, OnInit } from '@angular/core';
+import { NavigationCancel, NavigationEnd, Router } from '@angular/router';
 import { IS_MOBILE_SHELL } from 'src/app/core/tokens/is-mobile-shell.token';
+import { KeeniconComponent } from 'src/app/_metronic/shared/keenicon/keenicon.component';
 
 @Component({
   selector: 'app-header',
   templateUrl: './header.component.html',
   styleUrls: ['./header.component.scss'],
   standalone: true,
-  imports: [
-    CommonModule,
-    RouterModule,
-    HeaderMenuComponent,
-    NavbarComponent,
-    KeeniconComponent,
-  ],
+  imports: [CommonModule, RouterModule, NavbarComponent, KeeniconComponent],
 })
 export class HeaderComponent implements OnInit, OnDestroy {
   private unsubscribe: Subscription[] = [];
@@ -100,8 +93,7 @@ export class HeaderComponent implements OnInit, OnDestroy {
       config,
     ) as boolean;
 
-    const fixedMobile =
-      this.appHeaderDefaultFixedMobile || this.isMobileShell;
+    const fixedMobile = this.appHeaderDefaultFixedMobile || this.isMobileShell;
     if (fixedMobile) {
       document.body.setAttribute('data-kt-app-header-fixed-mobile', 'true');
     } else {
