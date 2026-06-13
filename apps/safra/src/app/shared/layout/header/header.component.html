@@ -2,17 +2,17 @@
   <div class="header-wrap d-flex justify-content-between align-items-center">
     <div class="d-flex align-items-center">
       <div routerLink="/" class="d-flex align-items-center cursor-pointer">
-        <img [src]="logodark" alt="BusGo Logo" class="app-header-logo me-2" />
+        <img [src]="logodark" alt="Safra Logo" class="app-header-logo me-2" />
       </div>
     </div>
     <div class="d-flex gap-3">
-      <a
+      <!-- <a
         *ngIf="!(authenticated$ | async)"
         routerLink="/auth/login"
         class="btn header-btn"
       >
         <i class="bi bi-box-arrow-in-right fs-5"></i>
-      </a>
+      </a> -->
       <a href="search.html" class="btn header-btn">
         <i class="bi bi-search icon-md"></i>
       </a>
@@ -22,9 +22,13 @@
       <a href="settings.html" class="btn header-btn">
         <i class="bi bi-person-circle icon-md"></i>
       </a>
-      <a (click)="logout()" class="btn header-btn">
+      <!-- <a
+        *ngIf="authenticated$ | async"
+        (click)="logout()"
+        class="btn header-btn"
+      >
         <i class="bi bi-box-arrow-right fs-5"></i>
-      </a>
+      </a> -->
     </div>
   </div>
 </div>

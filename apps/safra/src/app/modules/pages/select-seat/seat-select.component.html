@@ -3,7 +3,19 @@
     <div class="bus-summary p-3 rounded-4 mb-4">
       <div class="d-flex align-items-start gap-3">
         <div class="bus-icon">
-          <i class="bi bi-bus-front"></i>
+          <img
+            *ngIf="trip?.company?.picture?.baseUrl; else defaultLogo"
+            class="img-fluid logo-base"
+            [src]="
+              trip?.company?.picture?.baseUrl +
+              '/' +
+              trip?.company?.picture?.path
+            "
+            alt="Logo"
+          />
+          <ng-template #defaultLogo>
+            <img class="img-fluid logo-base" [src]="logoBase" alt="Logo" />
+          </ng-template>
         </div>
         <div class="flex-grow-1">
           <div class="text-uppercase journey-chip mb-2">

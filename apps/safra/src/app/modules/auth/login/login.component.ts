@@ -9,6 +9,7 @@ import {
 } from '@angular/forms';
 import { AuthService } from '../../../core/services/auth.service';
 import { ToasterService } from '../../../shared/components/toast/toaster.service';
+import { LOGO_BASE } from 'src/app/environments/environment';
 
 @Component({
   selector: 'app-login',
@@ -20,6 +21,7 @@ import { ToasterService } from '../../../shared/components/toast/toaster.service
 export class LoginComponent {
   loginForm: FormGroup;
   loading = false;
+  logoBase = LOGO_BASE;
 
   get email() {
     return this.loginForm.get('email');
@@ -32,7 +34,7 @@ export class LoginComponent {
     private router: Router,
     private fb: FormBuilder,
     private auth: AuthService,
-    private toasterService: ToasterService
+    private toasterService: ToasterService,
   ) {
     this.loginForm = this.fb.group({
       email: ['', [Validators.required, Validators.email]],
@@ -53,7 +55,7 @@ export class LoginComponent {
       error: (err) => {
         this.loading = false;
         this.toasterService.error(
-          err?.error?.message || 'Login failed. Please try again.'
+          err?.error?.message || 'Login failed. Please try again.',
         );
       },
     });

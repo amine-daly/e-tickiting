@@ -24,14 +24,13 @@ import { TripService } from '../trip.service';
 import { AmenityEnum } from '../../../../core/models/amenity.enum';
 import { DurationPipe } from '../../../../shared/pipes/duration.pipe';
 import {
-  MarketplaceProjection,
   TripSearchParams,
   TripStatusEnum,
-  TripType,
   TripWithMarketplace,
 } from '../../../../core/models/trip.model';
-import { SearchCardComponent } from '../../../../shared/components/search-card/search-card.component';
 import { PlacesService } from '../../../home/home.service';
+import { LOGO_BASE } from '../../../../environments/environment';
+import { SearchCardComponent } from '../../../../shared/components/search-card/search-card.component';
 
 @Component({
   selector: 'app-bus-list',
@@ -48,7 +47,7 @@ export class BusListComponent {
   shimmerItems = Array.from({ length: 4 });
   shimmerTags = Array.from({ length: 3 });
   trips$ = this.tripService.filtredTrips$;
-
+  logoBase = LOGO_BASE;
   // Public mapping used by the template to render amenity icons and labels
   amenityMap: Record<AmenityEnum, { icon: string; label: string }> = {
     [AmenityEnum.WIFI]: { icon: 'bi-wifi', label: 'WiFi' },

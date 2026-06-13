@@ -8,13 +8,14 @@ import { BookingService } from '../../../core/services/booking.service';
 import { FrontofficeBookingDraftService } from '../../../core/services/frontoffice-booking-draft.service';
 import { FrontofficeBookingDraft } from '../../../core/models/booking.model';
 import {
+  TripType,
+  SegmentType,
   BusLayoutElement,
   BusLayoutTemplate,
-  SegmentType,
-  TripRouteAvailabilityType,
   TripRouteSelection,
-  TripType,
+  TripRouteAvailabilityType,
 } from '../../../core/models/trip.model';
+import { LOGO_BASE } from 'src/app/environments/environment';
 
 @Component({
   selector: 'app-seat-select',
@@ -40,17 +41,18 @@ export class SeatSelectComponent implements OnInit, OnDestroy {
   pickupPointId = '';
   dropoffPointId = '';
 
+  duration = 0;
+  destCity = '';
+  originCity = '';
   displayPrice = 0;
   availableSeats = 0;
-  routeAvailability: TripRouteAvailabilityType | null = null;
-  duration = 0;
-  originCity = '';
-  destCity = '';
   passengerCount = 1;
+  logoBase = LOGO_BASE;
   occupiedSeats: string[] = [];
+  loadingOccupiedSeats = false;
   selectedSeatNos: string[] = [];
   activeDeck: 'lower' | 'upper' = 'lower';
-  loadingOccupiedSeats = false;
+  routeAvailability: TripRouteAvailabilityType | null = null;
 
   constructor(
     private route: ActivatedRoute,

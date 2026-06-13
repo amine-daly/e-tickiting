@@ -18,12 +18,13 @@ import {
   FrontofficeCreateHoldRequest,
   FrontofficeHoldResponse,
 } from '../../../core/models/booking.model';
+import { TripService } from '../bus/trip.service';
+import { TripType } from '../../../core/models/trip.model';
+import { LOGO_BASE } from '../../../environments/environment';
 import { TargetInput } from '../../../core/models/shared.model';
+import { TicketStatus } from '../../../core/models/ticket.model';
 import { BookingService } from '../../../core/services/booking.service';
 import { FrontofficeBookingDraftService } from '../../../core/services/frontoffice-booking-draft.service';
-import { TripType } from '../../../core/models/trip.model';
-import { TicketStatus } from '../../../core/models/ticket.model';
-import { TripService } from '../bus/trip.service';
 
 @Component({
   selector: 'app-verification',
@@ -42,7 +43,7 @@ export class VerificationComponent implements OnInit, OnDestroy {
   submittingHold = false;
   confirmingHold = false;
   notice = '';
-
+  logoBase = LOGO_BASE;
   form = this.fb.group({
     contact: this.fb.group({
       firstName: this.fb.control('', {

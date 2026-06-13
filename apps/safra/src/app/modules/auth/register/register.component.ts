@@ -11,6 +11,7 @@ import {
 import { RouterLink, Router } from '@angular/router';
 
 import { RoleEnum } from '../../../core/models/user-type';
+import { LOGO_BASE } from '../../../environments/environment';
 import { FormHelper } from '../../../core/helpers/form-helper';
 import { AuthService } from '../../../core/services/auth.service';
 import { ToasterService } from '../../../shared/components/toast/toaster.service';
@@ -28,13 +29,13 @@ export class RegisterComponent {
   showPassword = false;
   usePhone = false;
   initialValues: any;
-
+  logoBase = LOGO_BASE;
   constructor(
     private router: Router,
     private cdr: ChangeDetectorRef,
     private formBuilder: FormBuilder,
     private authService: AuthService,
-    private toastService: ToasterService
+    private toastService: ToasterService,
   ) {
     this.registerForm = this.formBuilder.group(
       {
@@ -50,7 +51,7 @@ export class RegisterComponent {
         password: ['', [Validators.required]],
         confirmPassword: ['', Validators.required],
       },
-      { validators: this.passwordMatchValidator }
+      { validators: this.passwordMatchValidator },
     );
     this.initialValues = this.registerForm.value;
   }
@@ -122,7 +123,7 @@ export class RegisterComponent {
     const formValue = this.registerForm.value;
     const payload: any = FormHelper.getChangedValues(
       omit(formValue, 'confirmPassword'),
-      omit(this.initialValues, 'confirmPassword', 'role')
+      omit(this.initialValues, 'confirmPassword', 'role'),
     );
     this.authService.register(payload).subscribe({
       next: () => {

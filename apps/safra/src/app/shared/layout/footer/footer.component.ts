@@ -1,6 +1,8 @@
-import { CommonModule } from '@angular/common';
 import { Component } from '@angular/core';
 import { RouterLink } from '@angular/router';
+import { CommonModule } from '@angular/common';
+
+import { LOGO_BASE } from '../../../environments/environment';
 
 @Component({
   standalone: true,
@@ -9,4 +11,6 @@ import { RouterLink } from '@angular/router';
   templateUrl: './footer.component.html',
   styleUrls: ['./footer.component.scss'],
 })
-export class FooterComponent {}
+export class FooterComponent {
+  logoBase = LOGO_BASE;
+}
