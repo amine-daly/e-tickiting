@@ -10,7 +10,7 @@
       [queryParams]="{
         originPlaceId: route.route.origin.placeId,
         destinationPlaceId: route.route.destination.placeId,
-        date: route.schedule.travelDate,
+        date: route.schedule.travelDate || route.schedule.departureDate,
       }"
       class="scroll-item"
     >

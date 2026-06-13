@@ -81,9 +81,6 @@
                   <div>
                     <h6 class="fw-bold mb-0">{{ trip.company?.name }}</h6>
                     <div class="text-muted small">
-                      {{ trip.departureDate | date: "MMM d, y HH:mm a" }}
-                    </div>
-                    <div class="text-muted small">
                       {{ trip.marketplace.route.origin.city }} →
                       {{ trip.marketplace.route.destination.city }}
                     </div>
@@ -108,7 +105,8 @@
                   <div class="text-center">
                     <div class="fw-bold">
                       {{
-                        trip.marketplace.schedule.departureTime
+                        trip.marketplace.schedule.departureTime ||
+                          trip.marketplace.schedule.departureDate
                           | date: "hh:mm a"
                       }}
                     </div>
@@ -150,7 +148,7 @@
           <ng-template #emptyState>
             <div class="bus-card empty-state">
               <div class="empty-state-icon" aria-hidden="true">
-                <img class="img-fluid logo-base" [src]="logoBase" alt="Logo" />
+                <i class="bi bi-bus-front"></i>
               </div>
               <div class="empty-state-body">
                 <h6 class="empty-state-title">No buses for this route</h6>

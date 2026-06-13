@@ -211,6 +211,39 @@ class TripMarketplaceProjectionFactoryTest {
         assertEquals(0, availability.getAvailableSeats());
     }
 
+    @Test
+    void buildResolvesDepartureTimeFromPickupPointWhenOriginStopDepartureIsNull() {
+        TripType trip = TripType.builder()
+                .departureDate(Instant.parse("2026-06-15T11:00:00Z"))
+                .status(TripStatusEnum.ACTIVE)
+                .bus(TripBusRef.builder().busId("bus-1").build())
+                .currency(TripCurrency.builder().currencyId("currency-1").build())
+                .stopSchedule(List.of(
+                        stop("A", 1, null, Instant.parse("2026-04-15T11:00:00Z"), true, false),
+                        stop("B", 2, Instant.parse("2026-04-15T13:00:00Z"), null, true, true),
+                        stop("C", 3, Instant.parse("2026-04-15T15:00:00Z"), null, false, true)))
+                .segments(List.of(
+                        segment("seg-1", 1, "A", "B", 120, 20, 0),
+                        segment("seg-2", 2, "B", "C", 120, 25, 0)))
+                .pickupPoints(List.of(PickupPointType.builder()
+                        .placeId("B")
+                        .scheduledDepartureTime(Instant.parse("2026-04-15T13:15:00Z"))
+                        .active(true)
+                        .build()))
+                .build();
+
+        TripResponse.MarketplaceView projection = TripMarketplaceProjectionFactory.build(
+                trip,
+                "B",
+                "C",
+                BusType.builder().id("bus-1").totalSeats(40).build(),
+                "DT",
+                placeMap());
+
+        assertNotNull(projection);
+        assertEquals(Instant.parse("2026-04-15T13:15:00Z"), projection.getSchedule().getDepartureTime());
+    }
+
     private Map<String, PlaceType> placeMap() {
         return Map.of(
                 "A", place("A", "Tunis"),

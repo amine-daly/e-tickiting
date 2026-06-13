@@ -89,8 +89,12 @@ export class TripMarketplaceService {
     const schedule: MarketplaceSchedule = {
       departureDate: trip.departureDate,
       travelDate: this.toTravelDate(trip.departureDate),
-      departureTime: originStop.departureTime,
-      arrivalTime: destinationStop.arrivalTime,
+      departureTime: this.resolveOriginDepartureTime(trip, originStop, chain),
+      arrivalTime: this.resolveDestinationArrivalTime(
+        trip,
+        destinationStop,
+        chain,
+      ),
       durationMinutes:
         expressSegment?.totalDurationMinutes ??
         chain.reduce((sum, segment) => sum + (segment.durationMinutes || 0), 0),
@@ -382,5 +386,59 @@ export class TripMarketplaceService {
 
   private toTravelDate(value: string | null | undefined): string | null {
     return value ? value.slice(0, 10) : null;
+  }
+
+  private resolveOriginDepartureTime(
+    trip: TripType,
+    originStop: StopType,
+    chain: SegmentType[],
+  ): string | null {
+    if (originStop.departureTime) {
+      return originStop.departureTime;
+    }
+
+    const segmentDeparture = chain[0]?.departureTime;
+    if (segmentDeparture) {
+      return segmentDeparture;
+    }
+
+    const pickupDeparture = (trip.pickupPoints || [])
+      .filter(
+        (pickup) =>
+          pickup.active && pickup.placeId === originStop.placeId && pickup.scheduledDepartureTime,
+      )
+      .map((pickup) => pickup.scheduledDepartureTime as string)
+      .sort()[0];
+    if (pickupDeparture) {
+      return pickupDeparture;
+    }
+
+    return originStop.arrivalTime;
+  }
+
+  private resolveDestinationArrivalTime(
+    trip: TripType,
+    destinationStop: StopType,
+    chain: SegmentType[],
+  ): string | null {
+    if (destinationStop.arrivalTime) {
+      return destinationStop.arrivalTime;
+    }
+
+    const segmentArrival = chain[chain.length - 1]?.arrivalTime;
+    if (segmentArrival) {
+      return segmentArrival;
+    }
+
+    const dropoffArrivals = (trip.dropoffPoints || [])
+      .filter(
+        (dropoff) =>
+          dropoff.active &&
+          dropoff.placeId === destinationStop.placeId &&
+          dropoff.scheduledArrivalTime,
+      )
+      .map((dropoff) => dropoff.scheduledArrivalTime as string)
+      .sort();
+    return dropoffArrivals[dropoffArrivals.length - 1] ?? null;
   }
 }

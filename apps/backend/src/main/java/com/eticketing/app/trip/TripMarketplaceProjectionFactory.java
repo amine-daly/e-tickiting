@@ -60,8 +60,8 @@ public final class TripMarketplaceProjectionFactory {
                 .schedule(TripResponse.MarketplaceSchedule.builder()
                         .departureDate(trip.getDepartureDate())
                         .travelDate(toTravelDate(trip.getDepartureDate()))
-                        .departureTime(resolvedRoute.originStop().getDepartureTime())
-                        .arrivalTime(resolvedRoute.destinationStop().getArrivalTime())
+                        .departureTime(resolveOriginDepartureTime(trip, resolvedRoute))
+                        .arrivalTime(resolveDestinationArrivalTime(trip, resolvedRoute))
                         .durationMinutes(expressSegment != null
                                 ? ExpressSegmentValidator.computeTotalDurationMinutes(expressSegment, trip.getSegments())
                                 : resolvedRoute.chain().stream()
@@ -281,6 +281,58 @@ public final class TripMarketplaceProjectionFactory {
 
     private static String toTravelDate(Instant departureDate) {
         return departureDate != null ? ISO_LOCAL_DATE.format(departureDate) : null;
+    }
+
+    private static Instant resolveOriginDepartureTime(TripType trip, ResolvedRoute resolvedRoute) {
+        StopType originStop = resolvedRoute.originStop();
+        if (originStop.getDepartureTime() != null) {
+            return originStop.getDepartureTime();
+        }
+
+        if (!resolvedRoute.chain().isEmpty()) {
+            Instant segmentDeparture = resolvedRoute.chain().get(0).getDepartureTime();
+            if (segmentDeparture != null) {
+                return segmentDeparture;
+            }
+        }
+
+        String originPlaceId = originStop.getPlaceId();
+        Instant pickupDeparture = (trip.getPickupPoints() == null ? List.<PickupPointType>of() : trip.getPickupPoints())
+                .stream()
+                .filter(pickupPoint -> pickupPoint.isActive() && Objects.equals(originPlaceId, pickupPoint.getPlaceId()))
+                .map(PickupPointType::getScheduledDepartureTime)
+                .filter(Objects::nonNull)
+                .min(Instant::compareTo)
+                .orElse(null);
+        if (pickupDeparture != null) {
+            return pickupDeparture;
+        }
+
+        return originStop.getArrivalTime();
+    }
+
+    private static Instant resolveDestinationArrivalTime(TripType trip, ResolvedRoute resolvedRoute) {
+        StopType destinationStop = resolvedRoute.destinationStop();
+        if (destinationStop.getArrivalTime() != null) {
+            return destinationStop.getArrivalTime();
+        }
+
+        if (!resolvedRoute.chain().isEmpty()) {
+            Instant segmentArrival = resolvedRoute.chain().get(resolvedRoute.chain().size() - 1).getArrivalTime();
+            if (segmentArrival != null) {
+                return segmentArrival;
+            }
+        }
+
+        String destinationPlaceId = destinationStop.getPlaceId();
+        return (trip.getDropoffPoints() == null ? List.<DropoffPointType>of() : trip.getDropoffPoints())
+                .stream()
+                .filter(dropoffPoint -> dropoffPoint.isActive()
+                        && Objects.equals(destinationPlaceId, dropoffPoint.getPlaceId()))
+                .map(DropoffPointType::getScheduledArrivalTime)
+                .filter(Objects::nonNull)
+                .max(Instant::compareTo)
+                .orElse(null);
     }
 
     private record ResolvedRoute(StopType originStop, StopType destinationStop, List<SegmentType> chain) {
