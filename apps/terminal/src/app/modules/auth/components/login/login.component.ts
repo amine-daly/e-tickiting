@@ -11,12 +11,7 @@ import { resolveUserErrorMessage } from 'src/app/core/helpers/user-error-message
 @Component({
   selector: 'app-login',
   standalone: true,
-  imports: [
-    CommonModule,
-    FormsModule,
-    ReactiveFormsModule,
-    RouterLink,
-  ],
+  imports: [CommonModule, FormsModule, ReactiveFormsModule, RouterLink],
   templateUrl: './login.component.html',
   styleUrls: ['./login.component.scss'],
 })
@@ -87,8 +82,8 @@ export class LoginComponent implements OnInit, OnDestroy {
       .subscribe({
         next: (res) => {
           if (res) {
-            this.alert.success('Welcome back!');
             this.router.navigate([this.returnUrl]);
+            this.alert.success('Welcome back!');
           } else {
             this.hasError = true;
             this.alert.error('Login failed', 'Please check your credentials.');

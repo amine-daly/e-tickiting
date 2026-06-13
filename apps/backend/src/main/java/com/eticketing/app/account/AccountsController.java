@@ -254,19 +254,18 @@ public class AccountsController {
     }
 
     /**
-     * GET /api/accounts/current Returns all accounts for the authenticated
-     * user. Used by terminal after login to get user's company list and set
-     * active companyId.
+     * GET /api/accounts/current Returns company-linked accounts for the
+     * authenticated user. Used by terminal after login to get user's company
+     * list and set active companyId.
      */
     @GetMapping("/current")
-    @Operation(summary = "Get current user's accounts (for terminal login flow)")
+    @Operation(summary = "Get current user's company accounts (for terminal login flow)")
     public List<AccountRes> current(@AuthenticationPrincipal User principal) {
         if (principal == null) {
             throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Authentication required");
         }
         String userId = principal.getUsername();
-        List<AccountType> accounts = accountRepo.findByUserId(userId);
-        // Fetch response: include both timestamps
+        List<AccountType> accounts = accountRepo.findByUserIdWithCompanyTarget(userId);
         return accounts.stream().map(acc -> toRes(acc)).toList();
     }
 

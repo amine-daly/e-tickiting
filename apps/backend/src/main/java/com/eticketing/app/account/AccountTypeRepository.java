@@ -11,6 +11,9 @@ public interface AccountTypeRepository extends MongoRepository<AccountType, Stri
 
     List<AccountType> findByUserId(String userId);
 
+    @Query("{ 'userId': ?0, 'target.company.id': { $exists: true, $ne: null } }")
+    List<AccountType> findByUserIdWithCompanyTarget(String userId);
+
     @Query("{ 'target.company.id': ?0 }")
     List<AccountType> findByTargetCompanyId(String companyId);
 
