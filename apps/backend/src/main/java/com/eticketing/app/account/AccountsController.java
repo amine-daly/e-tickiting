@@ -266,7 +266,18 @@ public class AccountsController {
         }
         String userId = principal.getUsername();
         List<AccountType> accounts = accountRepo.findByUserIdWithCompanyTarget(userId);
-        return accounts.stream().map(acc -> toRes(acc)).toList();
+        return accounts.stream()
+                .filter(AccountsController::hasCompanyTarget)
+                .map(this::toRes)
+                .toList();
+    }
+
+    private static boolean hasCompanyTarget(AccountType account) {
+        return account != null
+                && account.getTarget() != null
+                && account.getTarget().getCompany() != null
+                && account.getTarget().getCompany().getId() != null
+                && !account.getTarget().getCompany().getId().isBlank();
     }
 
     /**
