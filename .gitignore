@@ -86,3 +86,6 @@ apps/safra/.angular/
 
 # Misc
 *.local
+
+# Personal / local only
+docs/resume-dali-amine.tex
